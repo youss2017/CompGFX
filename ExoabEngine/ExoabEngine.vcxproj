@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{05ce23e3-835e-4d04-a6ec-2a098411e16a}</ProjectGuid>
+    <RootNamespace>ExoabEngine</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Configuration)_$(Platform)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Configuration)_$(Platform)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Configuration)_$(Platform)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)bin\int\$(Configuration)_$(Platform)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;BUILD_X64;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <Optimization>Disabled</Optimization>
+      <DisableSpecificWarnings>4267;4244</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.198.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;BUILD_X64;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DisableSpecificWarnings>C4267;C4244</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(ProjectName)\external\bin\release;C:\VulkanSDK\1.2.198.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="external\glad\include\glad\glad.h" />
+    <ClInclude Include="external\glad\include\KHR\khrplatform.h" />
+    <ClInclude Include="external\imgui\backends\imgui_impl_glfw.h" />
+    <ClInclude Include="external\imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="external\imgui\backends\imgui_impl_vulkan.h" />
+    <ClInclude Include="external\imgui\imconfig.h" />
+    <ClInclude Include="external\imgui\imgui.h" />
+    <ClInclude Include="external\imgui\imgui_internal.h" />
+    <ClInclude Include="external\imgui\imstb_rectpack.h" />
+    <ClInclude Include="external\imgui\imstb_textedit.h" />
+    <ClInclude Include="external\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Camera.hpp" />
+    <ClInclude Include="src\core\backend\backend_base.h" />
+    <ClInclude Include="src\core\backend\GLGraphicsCard.hpp" />
+    <ClInclude Include="src\core\backend\GLSwapchain.hpp" />
+    <ClInclude Include="src\core\backend\Swapchain.hpp" />
+    <ClInclude Include="src\core\backend\Synchronization.hpp" />
+    <ClInclude Include="src\core\backend\VkGraphicsCard.hpp" />
+    <ClInclude Include="src\core\backend\VulkanLoader.h" />
+    <ClInclude Include="src\core\EngineBase.h" />
+    <ClInclude Include="src\core\GUI.h" />
+    <ClInclude Include="src\core\MaxEnergyMath.h" />
+    <ClInclude Include="src\core\memory\Buffers.hpp" />
+    <ClInclude Include="src\core\memory\cvector.h" />
+    <ClInclude Include="src\core\memory\Textures.hpp" />
+    <ClInclude Include="src\core\memory\vulkan_memory.h" />
+    <ClInclude Include="src\core\pipeline\Framebuffer.hpp" />
+    <ClInclude Include="src\core\pipeline\Pipeline.hpp" />
+    <ClInclude Include="src\core\shaders\Shader.hpp" />
+    <ClInclude Include="src\core\shaders\ShaderReflection.hpp" />
+    <ClInclude Include="src\graphics\CommandDefines.hpp" />
+    <ClInclude Include="src\graphics\CommandList.hpp" />
+    <ClInclude Include="src\graphics\Font.hpp" />
+    <ClInclude Include="src\graphics\Graphics.hpp" />
+    <ClInclude Include="src\graphics\material_system\FramebufferReserve.hpp" />
+    <ClInclude Include="src\graphics\material_system\Material.hpp" />
+    <ClInclude Include="src\graphics\material_system\MaterialConfiguration.hpp" />
+    <ClInclude Include="src\graphics\material_system\ShaderProgramData.hpp" />
+    <ClInclude Include="src\graphics\RenderState.hpp" />
+    <ClInclude Include="src\mesh\mesh.hpp" />
+    <ClInclude Include="src\mesh\Model.hpp" />
+    <ClInclude Include="src\mesh\Model.ipp" />
+    <ClInclude Include="src\physics\PhysicsMain.hpp" />
+    <ClInclude Include="src\units\Entity.hpp" />
+    <ClInclude Include="src\units\Map.hpp" />
+    <ClInclude Include="src\units\unit_common.hpp" />
+    <ClInclude Include="src\utils\common.hpp" />
+    <ClInclude Include="src\utils\defines.h" />
+    <ClInclude Include="src\utils\Logger.hpp" />
+    <ClInclude Include="src\utils\MBox.hpp" />
+    <ClInclude Include="src\utils\Profiling.hpp" />
+    <ClInclude Include="src\utils\StringUtils.hpp" />
+    <ClInclude Include="src\Exoab.hpp" />
+    <ClInclude Include="src\window\NMB.h" />
+    <ClInclude Include="src\window\PlatformWindow.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="external\glad\glad.c" />
+    <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="external\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="external\imgui\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="external\imgui\imgui.cpp" />
+    <ClCompile Include="external\imgui\imgui_draw.cpp" />
+    <ClCompile Include="external\imgui\imgui_tables.cpp" />
+    <ClCompile Include="external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="external\stb.cpp" />
+    <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\core\backend\GLGraphicsCard.cpp" />
+    <ClCompile Include="src\core\backend\GLSwapchain.cpp" />
+    <ClCompile Include="src\core\backend\Swapchain.cpp" />
+    <ClCompile Include="src\core\backend\Synchronization.cpp" />
+    <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
+    <ClCompile Include="src\core\backend\VulkanLoader.cpp" />
+    <ClCompile Include="src\core\GUI.cpp" />
+    <ClCompile Include="src\core\MaxEnergyMath.cpp" />
+    <ClCompile Include="src\core\memory\Buffers.cpp" />
+    <ClCompile Include="src\core\memory\Textures.cpp" />
+    <ClCompile Include="src\core\memory\vulkan_memory.c" />
+    <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
+    <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
+    <ClCompile Include="src\core\shaders\Shader.cpp" />
+    <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
+    <ClCompile Include="src\graphics\CommandList.cpp" />
+    <ClCompile Include="src\graphics\CommandPool.cpp" />
+    <ClCompile Include="src\graphics\Font.cpp" />
+    <ClCompile Include="src\graphics\GLCommandList.cpp" />
+    <ClCompile Include="src\graphics\GLGraphics3D.cpp" />
+    <ClCompile Include="src\graphics\Graphics.cpp" />
+    <ClCompile Include="src\graphics\material_system\FramebufferReserve.cpp" />
+    <ClCompile Include="src\graphics\material_system\Material.cpp" />
+    <ClCompile Include="src\graphics\material_system\MaterialConfiguration.cpp" />
+    <ClCompile Include="src\graphics\material_system\ShaderProgramData.cpp" />
+    <ClCompile Include="src\graphics\RenderState.cpp" />
+    <ClCompile Include="src\graphics\VulkanCommandList.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\mesh\mesh.cpp" />
+    <ClCompile Include="src\physics\PhysicsMain.cpp" />
+    <ClCompile Include="src\PrepareDLLs.cpp" />
+    <ClCompile Include="src\units\Entity.cpp" />
+    <ClCompile Include="src\units\Map.cpp" />
+    <ClCompile Include="src\utils\common.cpp" />
+    <ClCompile Include="src\utils\Logger.cpp" />
+    <ClCompile Include="src\utils\MBox.cpp" />
+    <ClCompile Include="src\utils\Profiling.cpp" />
+    <ClCompile Include="src\utils\StringUtils.cpp" />
+    <ClCompile Include="src\Exoab.cpp" />
+    <ClCompile Include="src\window\PlatformWindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\graphics\material_system\ShaderProgramData_Internal.inl" />
+    <None Include="src\utils\common.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

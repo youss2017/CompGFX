@@ -1,0 +1,6 @@
+.vs/*
+bin/*
+ExoabEngine/external/bin/*
+ExoabEngine/external/*
+*.dll
+*.lib
