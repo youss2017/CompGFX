@@ -123,7 +123,7 @@ Shader::Shader(GraphicsContext context, const char *__ShaderPath, const char *En
         options.SetOptimizationLevel(OptimizeShaders ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
         options.SetAutoBindUniforms(true);
         options.SetAutoSampledTextures(true);
-        options.SetTargetSpirv(shaderc_spirv_version_1_4);
+        options.SetTargetSpirv(shaderc_spirv_version_1_5);
 
         assert(compiler.IsValid());
         auto spv = compiler.CompileGlslToSpv(m_Source.c_str(), m_Source.length(), shader_type, m_ShaderFilename.c_str(), m_EntryPointFunction.c_str(), options);
@@ -440,7 +440,7 @@ void Shader::CompileVulkanSPIRVText(const char *source_code, const char *filenam
     /*
         A Vulkan 1.2 implementation must support the 1.0, 1.1, 1.2, 1.3, 1.4, and 1.5 versions of SPIR-V and the 1.0 version of the SPIR-V Extended Instructions for GLSL.
     */
-    options.SetTargetSpirv(shaderc_spirv_version_1_4);
+    options.SetTargetSpirv(shaderc_spirv_version_1_5);
 
     assert(compiler.IsValid());
 

@@ -106,6 +106,7 @@ void GPUFence_LinkFunctions(GraphicsContext context)
 // =============================================== GPU SEMAPHORE ===============================================
 
 PFN_GPUSemaphore_Create* GPUSemaphore_Create = nullptr;
+PFN_GPUSemaphore_WaitOnSemaphore* GPUSemaphore_WaitOnSemaphore = nullptr;
 PFN_GPUSemaphore_Destroy* GPUSemaphore_Destroy = nullptr;
 
 IGPUSemaphore Vulkan_GPUSemaphore_Create(GraphicsContext context, bool TimelineSemaphore)
@@ -122,6 +123,23 @@ IGPUSemaphore Vulkan_GPUSemaphore_Create(GraphicsContext context, bool TimelineS
     return semaphore;
 }
 
+void Vulkan_GPUSemaphore_WaitOnSemaphore(IGPUSemaphore semaphore)
+{
+    uint64_t counter = 0;
+    VkDevice device = ToVKContext(semaphore->m_context)->defaultDevice;
+    VkSemaphore sem = (semaphore->m_semaphoreptr[semaphore->m_FrameInfo->m_LastFrameIndex]);
+    vkGetSemaphoreCounterValue(device, sem, &counter);
+    counter++;
+    VkSemaphoreWaitInfo waitInfo;
+    waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO_KHR;
+    waitInfo.pNext = nullptr;
+    waitInfo.flags = 0;
+    waitInfo.semaphoreCount = 1;
+    waitInfo.pSemaphores = &sem;
+    waitInfo.pValues = &counter;
+    vkcheck(vkWaitSemaphores(device, &waitInfo, 10e9));
+}
+
 void Vulkan_GPUSemaphore_Destroy(IGPUSemaphore semaphore)
 {
     auto vcont = ToVKContext(semaphore->m_context);
@@ -131,6 +149,7 @@ void Vulkan_GPUSemaphore_Destroy(IGPUSemaphore semaphore)
 }
 
 IGPUSemaphore GL_GPUSemaphore_Create(GraphicsContext context, bool TimelineSemaphore) { return nullptr; }
+void GL_GPUSemaphore_WaitOnSemaphore(IGPUSemaphore semaphore) {}
 void GL_GPUSemaphore_Destroy(IGPUSemaphore) {}
 
 void GPUSemaphore_LinkFunctions(GraphicsContext context)
@@ -139,11 +158,13 @@ void GPUSemaphore_LinkFunctions(GraphicsContext context)
     if (at == 0)
     {
         GPUSemaphore_Create = Vulkan_GPUSemaphore_Create;
+        GPUSemaphore_WaitOnSemaphore = Vulkan_GPUSemaphore_WaitOnSemaphore;
         GPUSemaphore_Destroy = Vulkan_GPUSemaphore_Destroy;
     }
     else if (at == 1)
     {
         GPUSemaphore_Create = GL_GPUSemaphore_Create;
+        GPUSemaphore_WaitOnSemaphore = GL_GPUSemaphore_WaitOnSemaphore;
         GPUSemaphore_Destroy = GL_GPUSemaphore_Destroy;
     }
     else

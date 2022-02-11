@@ -46,7 +46,7 @@ void ShaderProgramData_UpdateBindingData(IShaderProgramData program_data, IPipel
 			uni.second.FrameChanged = FrameChanged;
 	dynamicInfo->lastFrameIndex = c->FrameInfo->m_FrameIndex;
 
-	for (int dataID = 0; dataID < count; dataID++)
+	for (uint32_t dataID = 0; dataID < count; dataID++)
 	{
 		EntityBindingData &data = bindingData[dataID];
 		if (data.bindingData.size() == 0)
@@ -92,7 +92,7 @@ void ShaderProgramData_UpdateEntityBindingData(IShaderProgramData program_data, 
     // Upload Data All at once
     {
         PROFILE_SCOPE("Copying Data to Driver Memory.");
-        for (int entityID = 0; entityID < count; entityID++)
+        for (uint32_t entityID = 0; entityID < count; entityID++)
         {
             DefaultEntity *entity = entities[entityID];
             for (int dataID = 0; dataID < entity->size(); dataID++)
@@ -126,7 +126,7 @@ void ShaderProgramData_UpdateEntityBindingData(IShaderProgramData program_data, 
 void ShaderProgramData_FlushShaderProgramData(uint32_t count, IShaderProgramData* pShaderDatas)
 {
     PROFILE_FUNCTION();
-    for (int i = 0; i < count; i++)
+    for (uint32_t i = 0; i < count; i++)
     {
         IShaderProgramData shader_data = pShaderDatas[i];
         ShaderProgramDataReserved* reserved = (ShaderProgramDataReserved*)shader_data->m_reserved;

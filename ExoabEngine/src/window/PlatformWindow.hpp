@@ -142,8 +142,8 @@ public:
 
 	static void Poll();
 
-	bool IsKeyDown(unsigned char key);
-	bool IsKeyUp(unsigned char key);
+	bool IsKeyDown(uint16_t key);
+	bool IsKeyUp(uint16_t key);
 	
 	inline GLFWwindow* GetWindow() { return m_window; }
 	bool ShouldClose();

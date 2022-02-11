@@ -3,6 +3,7 @@
 #include "graphics/material_system/ShaderProgramData.hpp"
 #include "units/Entity.hpp"
 #include "units/Map.hpp"
+#include <memory/Buffer2.hpp>
 
 /*
     *** NOTE *** The file is only used for testing.
@@ -42,6 +43,7 @@ FramebufferReserve* g_FramebufferReserve = nullptr;
     PhysX
     Audio
     Quick ImGui Menu
+    VK_EXT_memory_budget
 */
 
 static constexpr const char* ss_ShaderCache = "assets/materials/shaders/spirv_cache/";
@@ -70,7 +72,7 @@ bool Exoab_Initalize(ConfigurationSettings config)
     Shader::ConfigureShaderCache(ss_ShaderCache);
     g_FramebufferReserve = new FramebufferReserve(s_Context, config, ss_FramebufferReserve);
 
-    s_Cube = Entity_CreateDefaultEntity(s_Context, "assets/mesh/ball.obj"); //new OmegaModel<OmegaBasicVertex>(s_Context, "assets/mesh/cube.obj");
+    s_Cube = Entity_CreateDefaultEntity(s_Context, "assets/mesh/ball.obj");
     MaterialConfiguration uniform_material_mc = MaterialConfiguration("assets/materials/uniforms.mc");
 
     PipelineVertexInputDescription input_description;
@@ -78,7 +80,7 @@ bool Exoab_Initalize(ConfigurationSettings config)
     input_description.AddInputElement("inNormal", 1, 0, 3, true, false, false);
     input_description.AddInputElement("inTexCoord", 2, 0, 2, true, false, false);
 
-    //input_description.AddInputElement("XYOffset", 3, 1, 2, true, false, true, 1u);
+    input_description.AddInputElement("XYOffset", 3, 1, 2, true, false, true, 1u);
     
     IPipelineShaders shaders = Material_CreatePipelineShaders(s_Context, &uniform_material_mc);
     IMaterialPipelineLayout layout = Material_CreatePipelineLayout(s_Context, input_description, shaders);
@@ -116,8 +118,8 @@ bool Exoab_Initalize(ConfigurationSettings config)
     s_InstanceBuffer = GPUBuffer_Create(s_Context, &InstanceSpecification);
     GPUBuffer_UploadData(s_InstanceBuffer, InstanceData, 0, sizeof(InstanceData));
 
-    //s_Cube->SetInstanceCount(sizeof(InstanceData) / sizeof(glm::vec2));
-    //s_Cube->AddVertexInstanceBuffer(s_InstanceBuffer);
+    s_Cube->SetInstanceCount(sizeof(InstanceData) / sizeof(glm::vec2));
+    s_Cube->AddVertexInstanceBuffer(s_InstanceBuffer);
 
     s_Semaphore = GPUSemaphore_Create(s_Context, false);
 
@@ -133,9 +135,20 @@ bool Exoab_Initalize(ConfigurationSettings config)
     s_T0Layout = Material_CreatePipelineLayout(s_Context, terrain_input_description, s_T0Shaders);
     s_T0State = Material_CreatePipelineState(s_Context, &uniform_material_mc, s_T0Layout, state_managment);
     s_T0ProgramData = ShaderProgramData_Create(s_T0Layout->m_layout);
-
+    
     s_T0 = Terrain_Create(s_T0Layout->m_layout, 6, 8, 6, 8, s_Sampler0, s_Tex0, 1, 0);
     ShaderProgramData_SetConstantTextureArray(s_T0ProgramData, 1, 0, s_Sampler0, { s_Tex0 });
+
+    struct newvertex
+    {
+        float x, y;
+        float r, g, b;
+    };
+
+    newvertex v[50];
+
+    IBuffer2 new_buffer = Buffer2_Create(s_Context, BufferType::VertexBuffer, sizeof(v), BufferMemoryType::STATIC);
+    Buffer2_UploadData(new_buffer, (char8_t*)& v, 0, sizeof(v));
 
     return true;
 }
@@ -151,12 +164,13 @@ void Exoab_Render(double dTimeStart, double dElapsedTime)
         return; // window is minimized cannot create a swapchain size 0,0
     IGPUSemaphore SwapchainReady;
     Graphics3D_PrepareNextFrame(s_Gfx, &SwapchainReady);
-
+    
     BuildCommandBuffers(0);
 
     Graphics3D_ExecuteCommandList(s_Gfx, s_Cmd, nullptr, 1, &SwapchainReady, 1, &s_Semaphore);
     Exoab_GUI();
     Graphics3D_Present(s_Gfx, s_Material0.m_framebuffer->m_framebuffer, s_ShowDepthBuffer ? 1 : 0, 1, &s_Semaphore);
+    Graphics3D_WaitGPUIdle(s_Gfx);
 }
 
 void BuildCommandBuffers(double dTimeStart)
@@ -184,7 +198,7 @@ void BuildCommandBuffers(double dTimeStart)
     CommandList_BindPipeline(s_Cmd, s_Material0.m_pipeline_state);
     ShaderProgramData_UpdateEntityBindingData(s_ProgramData0, s_Material0.m_pipeline_layout->m_layout, 1, (void**)&entities);
     CommandList_SetRenderState(s_Cmd, &render_state, s_Cube);
-    CommandList_DrawIndexed(s_Cmd, s_Material0.m_pipeline_layout->m_layout, s_ProgramData0, 0, 0, render_state.m_IndicesCount, 1);
+    CommandList_DrawIndexed(s_Cmd, s_Material0.m_pipeline_layout->m_layout, s_ProgramData0, 0, 0, render_state.m_IndicesCount, 3);
 
     glm::vec3 LightDirection = glm::vec3(0, 1, 0);
 
@@ -193,15 +207,15 @@ void BuildCommandBuffers(double dTimeStart)
     s_T0->m_binding_data[2].dataunion.matrix4 = glm::transpose(glm::inverse(glm::scale(glm::translate(glm::mat4(1.0), glm::vec3(0, 2, 0)), glm::vec3(24.0))));
     s_T0->m_binding_data[3].dataunion.matrix4 = data[1];
     
-    //CommandList_BindPipeline(s_Cmd, s_T0State);
-    //CommandList_SetRenderState(s_Cmd, &s_T0->m_render_state, nullptr);
-    //ShaderProgramData_UpdateBindingData(s_T0ProgramData, s_T0Layout->m_layout, 1, &s_T0->m_binding_data);
-    //CommandList_SetPushconstants(s_Cmd, s_T0State, "LightInfo", 0, sizeof(glm::vec3), &LightDirection);
-    //CommandList_DrawIndexed(s_Cmd, s_T0Layout->m_layout, s_T0ProgramData, 0, 0, s_T0->m_render_state.m_IndicesCount, 1);
+    CommandList_BindPipeline(s_Cmd, s_T0State);
+    CommandList_SetRenderState(s_Cmd, &s_T0->m_render_state, nullptr);
+    ShaderProgramData_UpdateBindingData(s_T0ProgramData, s_T0Layout->m_layout, 1, &s_T0->m_binding_data);
+    CommandList_SetPushconstants(s_Cmd, s_T0State, "LightInfo", 0, sizeof(glm::vec3), &LightDirection);
+    CommandList_DrawIndexed(s_Cmd, s_T0Layout->m_layout, s_T0ProgramData, 0, 0, s_T0->m_render_state.m_IndicesCount, 1);
 
     CommandList_StopRecording(s_Cmd);
-    IShaderProgramData program_data[2] = { s_ProgramData0, s_T0ProgramData };
-    ShaderProgramData_FlushShaderProgramData(1, program_data);
+    IShaderProgramData program_data[2] = { s_T0ProgramData, s_ProgramData0 };
+    ShaderProgramData_FlushShaderProgramData(2, program_data);
 }
 
 void Exoab_GUI()
@@ -212,7 +226,7 @@ void Exoab_GUI()
     ImGui::Button("Accept Graphics");
     if (ImGui::Button("Toggle Wireframe View"))
     {
-        //CheckActionTime(Graphics3D_WaitGPUIdle(s_Gfx));
+        CheckActionTime(Graphics3D_WaitGPUIdle(s_Gfx));
         auto spec = s_Material0.m_pipeline_state->m_spec;
         auto spec2 = s_T0State->m_spec;
         if (spec.m_PolygonMode == PolygonMode::LINE)
@@ -267,9 +281,9 @@ Tristate Exoab_Update(double dTimeStart, double dElapsedTime)
         s_Camera.Pitch(dElapsedTime * RotateRate, true);
     }if (s_Window->IsKeyDown('x')) {
         s_Camera.Pitch(dElapsedTime * -RotateRate, true);
-    }if (s_Window->IsKeyDown('c')) {
+    }if (s_Window->IsKeyDown(GLFW_KEY_UP)) {
         s_Camera.MoveAlongUpAxis(dElapsedTime * -22.0);
-    }if (s_Window->IsKeyDown('v')) {
+    }if (s_Window->IsKeyDown(GLFW_KEY_DOWN)) {
         s_Camera.MoveAlongUpAxis(dElapsedTime * 22.0);
     }
     if (s_Window->IsKeyUp(GLFW_KEY_ESCAPE))

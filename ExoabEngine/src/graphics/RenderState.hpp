@@ -13,7 +13,6 @@ public:
 
 public:
 	friend class RendererAPI;
-	friend class CommandList;
 	EngineAPIType m_ApiType;
 	IGPUBuffer m_VertexBuffer;
 	IGPUBuffer m_IndexBuffer;

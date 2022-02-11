@@ -441,7 +441,7 @@ IGPUTexture2D GL_GPUTexture2D_Create(GraphicsContext context, GPUTexture2DSpecif
 		logalert("Invalid TextureSample Count in EngineTexture2D::Create(...)");
 	}
 
-	auto GetTarget = [](u32 Multisample) throw()->GLenum { return (Multisample <= 1) ? GL_TEXTURE_2D : GL_TEXTURE_2D_MULTISAMPLE; };
+	auto GetTarget = [](uint32_t Multisample) throw()->GLenum { return (Multisample <= 1) ? GL_TEXTURE_2D : GL_TEXTURE_2D_MULTISAMPLE; };
 	auto GetWrap = [](TextureWrapping w) throw()->GLenum
 	{
 		if (w == TextureWrapping::ClampToBorder)
@@ -530,7 +530,7 @@ IGPUTexture2D GL_GPUTexture2D_Create(GraphicsContext context, GPUTexture2DSpecif
 	{
 		GLint MaxAnistropy;
 		glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &MaxAnistropy);
-		float AnsitropyLevel = std::min(std::max(1.0f, specification.m_Sampler.MaxAnisotropicLevel), (f32)MaxAnistropy);
+		float AnsitropyLevel = std::min(std::max(1.0f, specification.m_Sampler.MaxAnisotropicLevel), (float)MaxAnistropy);
 		glTexParameterf(GetTarget(SampleCount), GL_TEXTURE_MAX_ANISOTROPY_EXT, AnsitropyLevel);
 	}
 	// Get Format
@@ -756,7 +756,7 @@ IGPUTextureSampler GL_GPUTextureSampler_Create(GraphicsContext context, TextureS
 	{
 		GLint MaxAnistropy;
 		glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &MaxAnistropy);
-		float AnsitropyLevel = std::min(std::max(1.0f, sampler.MaxAnisotropicLevel), (f32)MaxAnistropy);
+		float AnsitropyLevel = std::min(std::max(1.0f, sampler.MaxAnisotropicLevel), (float)MaxAnistropy);
 		glSamplerParameterf(samplerID, GL_TEXTURE_MAX_ANISOTROPY, AnsitropyLevel);
 	}
 	result->m_NativeHandle = (void *)uint64_t(samplerID);

@@ -35,7 +35,7 @@ void GL_Graphics3D_ExecuteCommandList(IGraphics3D gfx, ICommandList CmdList, IGP
             // TODO: Set Blend State
             IFramebufferStateManagement state_managment = pipeline->m_StateManagment;
             GLenum draw_buffers[31];
-            for (int i = 0; i < state_managment->m_ColorAttachmentCount; i++)
+            for (uint32_t i = 0; i < state_managment->m_ColorAttachmentCount; i++)
             {
                 draw_buffers[i] = GL_COLOR_ATTACHMENT0 + i;
                 glDrawBuffer(draw_buffers[i]);
@@ -171,8 +171,8 @@ void GL_Graphics3D_ExecuteCommandList(IGraphics3D gfx, ICommandList CmdList, IGP
                     glDepthRange(spec.m_NearField, spec.m_FarField);
                 if (current_spec.m_DepthWriteEnable != new_spec.m_DepthWriteEnable)
                     glDepthMask(spec.m_DepthWriteEnable);
-                if (current_spec.m_FrontFaceCCW != new_spec.m_FrontFaceCCW)
-                    ;
+                //if (current_spec.m_FrontFaceCCW != new_spec.m_FrontFaceCCW)
+                //    ;
                 glFrontFace(spec.m_FrontFaceCCW ? GL_CW : GL_CCW);
                 if (current_spec.m_PolygonMode != new_spec.m_PolygonMode)
                 {

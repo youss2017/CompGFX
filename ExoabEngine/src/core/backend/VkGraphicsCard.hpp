@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include "VulkanLoader.h"
+#include <memory/vulkan_memory_allocator.hpp>
+
 
 #ifndef MEM_KB
 #define MEM_KB(x) (x * 1024)
@@ -71,6 +73,7 @@ namespace vk {
 		TextureSamples m_MaxMSAASamples;
 		bool debugEnabled;
 		void* m_memory_context;
+		VkAlloc::CONTEXT m_future_memory_context;
 		VkAllocationCallbacks* m_allocation_callback;
 	} typedef* VkContext;
 

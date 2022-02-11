@@ -9,8 +9,11 @@
 
 enum class BufferMemoryType
 {
+	// GPU_ONLY
 	STATIC = 0x0, // written once, read a lot
+	// CPU_TO_GPU
 	STREAM = 0x1, // written a somtimes, read a lot
+	// CPU_ONLY
 	DYNAMIC = 0x2 // written every frame
 };
 
@@ -94,14 +97,14 @@ struct TextureSamplerSpecification
 	TextureSwizzle SwizzleGreen = TextureSwizzle::Identity;
 	TextureSwizzle SwizzleBlue = TextureSwizzle::Identity;
 	TextureSwizzle SwizzleAlpha = TextureSwizzle::Identity;
-	f32 MipMapLODBias = -1.0f; // they say this is a good value
+	float MipMapLODBias = -1.0f; // they say this is a good value
 	bool EnableAnisotropicFiltering = false;
-	f32 MaxAnisotropicLevel = 0; // MAX 16 (on most gpus)
+	float MaxAnisotropicLevel = 0; // MAX 16 (on most gpus)
 	// Lower end of the mipmap range to clamp access to, where 0 is the largest and most detailed mipmap level and any level higher than that is less detailed.
-	f32 MinLOD = 0.0f;
+	float MinLOD = 0.0f;
 	// Upper end of the mipmap range to clamp access to, where 0 is the largest and most detailed mipmap level and any level higher than that is less detailed.
 	// This value must be greater than or equal to MinLOD. To have no upper limit on LOD set this to a large value.
-	f32 MaxLOD = 1000.0f;
+	float MaxLOD = 1000.0f;
 };
 
 // TODO: Maybe add support for texture compression formats (not really needed though since were propabaly not going to use more than 150mb vram for textures)

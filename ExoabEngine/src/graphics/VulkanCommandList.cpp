@@ -44,7 +44,7 @@ void Vulkan_CommandList_Destroy(ICommandList command_list, CommandPool *pool, bo
     {
         auto vcont = ToVKContext(command_list->m_context);
         if (pool)
-            ; // vkFreeCommandBuffers(vcont->defaultDevice, pool->GetPool(), 1, &command_list->m_Cmd);
+            vkFreeCommandBuffers(vcont->defaultDevice, pool->GetPool(), ToVKContext(command_list->m_context)->FrameInfo->m_FrameCount, command_list->m_Cmd);
         delete command_list->m_Cmd;
     }
     delete command_list;
@@ -185,7 +185,7 @@ void Vulkan_CommandList_SetRenderState(ICommandList list, RenderState *render_st
     PROGRAM_GUARD();
     if (render_state->m_UsingIndexBuffer)
         vkCmdBindIndexBuffer(VULKAN_COMMAND_LIST, (VkBuffer)render_state->m_IndexBuffer->m_NativeVulkanHandle, 0, VK_INDEX_TYPE_UINT32);
-    VkDeviceSize pOffset[1] = {1};
+    VkDeviceSize pOffset[1] = {0};
     vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 0, 1, &render_state->m_VertexBuffer->m_NativeVulkanHandle, pOffset);
     if (entity_for_instance_buffers)
     {
@@ -224,7 +224,7 @@ void Vulkan_CommandList_DrawArrays(ICommandList list, IPipelineLayout layout, IS
         // When entityCount is greater than 1, startUsedCopies is not restored to zero idk
         // This bugoffset is used to make sure the dynamic offsets are correct.
         int BugOffset = update_index > 1 ? -1 : 0;
-        for (int i = 0; i < reserved->descriptorSetCount; i++)
+        for (uint32_t i = 0; i < reserved->descriptorSetCount; i++)
         {
             auto& setInfo = reserved->setInformations[i];
             if (setInfo.isTexture)
@@ -234,7 +234,7 @@ void Vulkan_CommandList_DrawArrays(ICommandList list, IPipelineLayout layout, IS
             }
             pDescriptorSets[i] = reserved->pDescriptorSets[i];
             uint32_t dynamicOffsetCount = setInfo.uniformInformation.size();
-            for (int q = 0; q < dynamicOffsetCount; q++)
+            for (uint32_t q = 0; q < dynamicOffsetCount; q++)
             {
                 auto& uniformInfo = setInfo.uniformInformation[q];
                 dynamicOffsets.push_back(uniformInfo.bufferSize * (update_index + uniformInfo.startUsedCopies + BugOffset));
@@ -261,7 +261,7 @@ void Vulkan_CommandList_DrawIndexed(ICommandList list, IPipelineLayout layout, I
         // When entityCount is greater than 1, startUsedCopies is not restored to zero idk
         // This bugoffset is used to make sure the dynamic offsets are correct.
         int BugOffset = update_index > 1 ? -1 : 0;
-        for (int i = 0; i < reserved->descriptorSetCount; i++)
+        for (uint32_t i = 0; i < reserved->descriptorSetCount; i++)
         {
             auto& setInfo = reserved->setInformations[i];
             if (setInfo.isTexture)
@@ -271,7 +271,7 @@ void Vulkan_CommandList_DrawIndexed(ICommandList list, IPipelineLayout layout, I
             }
             pDescriptorSets[i] = reserved->pDescriptorSets[i];
             uint32_t dynamicOffsetCount = setInfo.uniformInformation.size();
-            for (int q = 0; q < dynamicOffsetCount; q++)
+            for (uint32_t q = 0; q < dynamicOffsetCount; q++)
             {
                 auto& uniformInfo = setInfo.uniformInformation[q];
                 dynamicOffsets.push_back(uniformInfo.bufferSize * (update_index + uniformInfo.startUsedCopies + BugOffset));

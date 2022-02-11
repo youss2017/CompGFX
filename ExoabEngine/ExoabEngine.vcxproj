@@ -59,13 +59,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;BUILD_X64;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <Optimization>Disabled</Optimization>
-      <DisableSpecificWarnings>4267;4244</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4267;4244;4305;26812</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -82,11 +82,11 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;BUILD_X64;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <DisableSpecificWarnings>C4267;C4244</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4267;4244;4305;26812</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -120,10 +120,12 @@
     <ClInclude Include="src\core\EngineBase.h" />
     <ClInclude Include="src\core\GUI.h" />
     <ClInclude Include="src\core\MaxEnergyMath.h" />
+    <ClInclude Include="src\core\memory\Buffer2.hpp" />
     <ClInclude Include="src\core\memory\Buffers.hpp" />
     <ClInclude Include="src\core\memory\cvector.h" />
     <ClInclude Include="src\core\memory\Textures.hpp" />
     <ClInclude Include="src\core\memory\vulkan_memory.h" />
+    <ClInclude Include="src\core\memory\vulkan_memory_allocator.hpp" />
     <ClInclude Include="src\core\pipeline\Framebuffer.hpp" />
     <ClInclude Include="src\core\pipeline\Pipeline.hpp" />
     <ClInclude Include="src\core\shaders\Shader.hpp" />
@@ -170,12 +172,14 @@
     <ClCompile Include="src\core\backend\Swapchain.cpp" />
     <ClCompile Include="src\core\backend\Synchronization.cpp" />
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
-    <ClCompile Include="src\core\backend\VulkanLoader.cpp" />
+    <ClCompile Include="src\core\backend\VulkanLoader.c" />
     <ClCompile Include="src\core\GUI.cpp" />
     <ClCompile Include="src\core\MaxEnergyMath.cpp" />
+    <ClCompile Include="src\core\memory\Buffer2.cpp" />
     <ClCompile Include="src\core\memory\Buffers.cpp" />
     <ClCompile Include="src\core\memory\Textures.cpp" />
     <ClCompile Include="src\core\memory\vulkan_memory.c" />
+    <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />
     <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
     <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
     <ClCompile Include="src\core\shaders\Shader.cpp" />

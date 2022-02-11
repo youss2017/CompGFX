@@ -195,7 +195,7 @@ IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, P
 				allocInfo.pSetLayouts = pipeline_layout->m_layout->m_real_setlayouts.data();
 				VkDescriptorSet *pSets = (VkDescriptorSet *)stack_allocate(sizeof(VkDescriptorSet) * pipeline_layout->m_layout->m_real_setlayouts.size());
 				vkcheck(vkAllocateDescriptorSets(vcont->defaultDevice, &allocInfo, pSets));
-				for (int j = 0; j < allocInfo.descriptorSetCount; j++)
+				for (uint32_t j = 0; j < allocInfo.descriptorSetCount; j++)
 					pipeline_layout->m_descriptor_sets.push_back(pSets[j]);
 				stack_free(pSets);
 			}

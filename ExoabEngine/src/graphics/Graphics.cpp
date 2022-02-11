@@ -50,9 +50,13 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     if (config->ApiType == EngineAPIType::Vulkan)
     {
         gfx->m_ApiType = 0;
+        VkPhysicalDeviceTimelineSemaphoreFeatures TimelineSemaphoreFeature;
+        TimelineSemaphoreFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+        TimelineSemaphoreFeature.pNext = nullptr;
+        TimelineSemaphoreFeature.timelineSemaphore = VK_TRUE;
         VkPhysicalDeviceSynchronization2FeaturesKHR Synchronization2Feature;
         Synchronization2Feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
-        Synchronization2Feature.pNext = nullptr;
+        Synchronization2Feature.pNext = &TimelineSemaphoreFeature;
         Synchronization2Feature.synchronization2 = VK_FALSE;
         VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT DivisorFeature;
         DivisorFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT;
@@ -65,17 +69,11 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
         features.features.fillModeNonSolid = VK_TRUE;
         features.features.samplerAnisotropy = VK_TRUE;
         features.features.sampleRateShading = VK_TRUE;
-        // features.shaderInt16 = VK_TRUE;
-        // features.shaderInt64 = VK_TRUE;
-        // features.shaderFloat64 = VK_TRUE;
         std::vector<const char *> layer_extensions;
         layer_extensions.push_back("VK_KHR_get_physical_device_properties2");
-        layer_extensions.push_back("VK_KHR_surface");
-#if defined(_WIN32)
-        layer_extensions.push_back("VK_KHR_win32_surface");
-#endif
-        // layer_extensions.push_back("VK_KHR_display");
-        // layer_extensions.push_back("VK_KHR_display_swapchain");
+        uint32_t extensions_count;
+        const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
+        for (uint32_t i = 0; i < extensions_count; i++) layer_extensions.push_back(extensions[i]);
         std::vector<const char *> layers;
         if (DebugMode)
         {
@@ -88,12 +86,12 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
                                                 VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
-                                                //VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+                                                VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                                                 VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
                                                 VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
                                                 VK_KHR_16BIT_STORAGE_EXTENSION_NAME,
                                                 VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME},
-                                               features, VK_MAKE_API_VERSION(0, 1, 3, 0));
+                                               features, VK_API_VERSION_1_2);
         Graphics3D_LinkFunctions(gfx);
         auto vcont = ToVKContext(gfx->m_context);
         gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, config->FutureFrameCount, config->VSync, &vcont->FrameInfo, EnableImGui);
@@ -223,7 +221,7 @@ void Vulkan_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32
     }
 #endif
     VkSemaphore wait_semaphores[50];
-    for (int i = 0; i < WaitSemaphoreCount; i++)
+    for (uint32_t i = 0; i < WaitSemaphoreCount; i++)
         wait_semaphores[i] = VkGPUSemaphore_GetSemaphore(pWaitSemahpores[i]);
     gfx->m_vswapchain.Present((VkImage)Framebuffer_GetImage(framebuffer, AttachmentIndex), (VkImageView)Framebuffer_GetView(framebuffer, AttachmentIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, WaitSemaphoreCount, wait_semaphores);
 }
@@ -382,7 +380,7 @@ void GL_Graphics3D_ExecuteCommandList(IGraphics3D gfx, ICommandList CmdList, IGP
 void GL_Graphics3D_ExecuteCommandLists(IGraphics3D gfx, uint32_t CmdListCount, ICommandList *pCmdLists, IGPUFence WaitFence, uint32_t WaitSemaphoreCount, IGPUSemaphore *pWaitSemaphores, uint32_t SignalSemaphoreCount, IGPUSemaphore *pSignalSemaphores)
 {
     PROFILE_FUNCTION();
-    for (int i = 0; i < CmdListCount; i++)
+    for (uint32_t i = 0; i < CmdListCount; i++)
     {
         GL_Graphics3D_ExecuteCommandList(gfx, pCmdLists[i], WaitFence, 0, nullptr, 0, nullptr);
     }

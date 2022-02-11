@@ -180,6 +180,12 @@
     <ClInclude Include="external\glad\include\KHR\khrplatform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\memory\vulkan_memory_allocator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\memory\Buffer2.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp">
@@ -209,7 +215,7 @@
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\backend\VulkanLoader.cpp">
+    <ClCompile Include="src\core\backend\VulkanLoader.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\memory\Buffers.cpp">
@@ -330,6 +336,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="external\glad\glad.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\memory\Buffer2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

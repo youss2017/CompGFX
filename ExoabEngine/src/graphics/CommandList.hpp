@@ -9,8 +9,6 @@
 
 struct Graphics3D;
 typedef Graphics3D *IGraphics3D;
-class GPUFence;
-class GPUSemaphore;
 
 // TODO: Optimize the size of GLCommandData and heap allocations
 struct GLCommandData

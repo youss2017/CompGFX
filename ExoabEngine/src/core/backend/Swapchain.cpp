@@ -648,8 +648,6 @@ namespace vk
         uint32_t ImageIndex;
         VkResult result;
         result = vkAcquireNextImageKHR(m_Device, m_Swapchain, 5000'000'000, m_FrameSemaphores->m_semaphoreptr[FrameIndex], nullptr/*m_FrameFences[FrameIndex]*/, &ImageIndex);
-        //vkWaitForFences(m_Device, 1, &m_FrameFences[FrameIndex], true, 5000'000'000);
-        //vkResetFences(m_Device, 1, &m_FrameFences[FrameIndex]);
         if (result != VK_SUCCESS)
         {
             logwarning("vkAcquireNextImageKHR(...) failed, it either timed out or there was an error or the swapchain was resized! (Max Time for next frame to be ready is 5 seconds)");
@@ -674,9 +672,6 @@ namespace vk
             vkResetCommandBuffer(m_CommandBuffers[FrameIndex], 0);
             vkBeginCommandBuffer(m_CommandBuffers[FrameIndex], &CmdBeginInfo);
 
-            // VkClearValue clear{};
-            // clear.color = {.5, .5, .5, 1.0};
-
             VkRenderPassBeginInfo PassBeginInfo;
             PassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             PassBeginInfo.pNext = NULL;
@@ -685,7 +680,7 @@ namespace vk
             PassBeginInfo.renderArea.offset = {0, 0};
             PassBeginInfo.renderArea.extent = {m_FramebufferWidth, m_FramebufferHeight};
             PassBeginInfo.clearValueCount = 0;
-            PassBeginInfo.pClearValues = NULL; //&clear;
+            PassBeginInfo.pClearValues = NULL;
 
             // Set Image to DescriptorSet
             VkDescriptorImageInfo ImageWriteInfo;
@@ -756,7 +751,6 @@ namespace vk
                     vkDestroyImageView(m_Device, m_Views[i], m_allocation_callback);
                     vkDestroyFramebuffer(m_Device, m_Framebuffers[i], m_allocation_callback);
                 }
-                //vkDestroySwapchainKHR(m_Device, m_Swapchain, m_allocation_callback);
                 CreateSwapchain(m_allocation_callback);
                 // Recreate Pipeline since viewport/scissor have changed
                 vkDestroyPipeline(m_Device, m_PresentPipeline, m_allocation_callback);

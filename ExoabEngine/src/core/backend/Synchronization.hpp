@@ -39,9 +39,11 @@ struct GPUSemaphore
 typedef GPUSemaphore* IGPUSemaphore;
 
 typedef IGPUSemaphore PFN_GPUSemaphore_Create(GraphicsContext context, bool TimelineSemaphore);
+typedef void PFN_GPUSemaphore_WaitOnSemaphore(IGPUSemaphore semaphore);
 typedef void PFN_GPUSemaphore_Destroy(IGPUSemaphore);
 
 extern PFN_GPUSemaphore_Create* GPUSemaphore_Create;
+extern PFN_GPUSemaphore_WaitOnSemaphore* GPUSemaphore_WaitOnSemaphore;
 extern PFN_GPUSemaphore_Destroy* GPUSemaphore_Destroy;
 
 // Helper macro to get current frame semaphore for vulkan.

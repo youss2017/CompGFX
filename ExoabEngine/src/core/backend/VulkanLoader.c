@@ -5,7 +5,7 @@
 #else
 #include <dlfcn.h>
 #endif
-#include <cassert>
+#include <assert.h>
 
 #if defined(_WIN32)
 typedef void* (WINAPI *PFN_LoaderType)(void* Param, const char* func_name);

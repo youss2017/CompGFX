@@ -57,7 +57,7 @@ extern "C"
     the allocator tries to create a buffer with preferred memory properties and without the invalid memory properties,
     if it can't then it tries to allocate with the required memory properties and if that fails too, then the memory allocation fails.
     returns 1 for success and 0 for fail
-*/
+    */
     int vulkan_memory_allocate_buffer(VulkanMemoryContext mem_context, VkBufferCreateInfo *pCreateInfo,
                                       VkMemoryPropertyFlags preferred_memory_properties, VkMemoryPropertyFlags invalid_memory_properties, VkMemoryPropertyFlags required_memory_properties,
                                       VkBuffer *pOutBuffer, VkDeviceMemory *pOutMemory, VkDeviceSize *pOutMemoryOffset, uint32_t *pOutAllocationIndex);

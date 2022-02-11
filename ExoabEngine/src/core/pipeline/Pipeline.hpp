@@ -19,6 +19,7 @@ struct PipelineVertexInputDescription
         bool m_IsFloatingPoint;
         bool m_IsUnsigned;
         bool m_per_instance;
+        VkFormat m_vk_format;
     };
 
     // bindingID is used for instancing
@@ -36,7 +37,7 @@ struct PipelineVertexInputDescription
         element.m_IsUnsigned = isunsigned;
         element.m_per_instance = per_instance;
 
-        if(binding_id == 0 && per_instance)
+        if (binding_id == 0 && per_instance)
         {
             logerror_break("Binding 0 MUST be per vertex!!!!");
         }
@@ -50,17 +51,19 @@ struct PipelineVertexInputDescription
                 element.m_offset += e.m_vector_size * 4;
 
         uint32_t cstride = element.m_size;
-        for (auto& e : m_input_elements)
+        for (auto &e : m_input_elements)
             if (e.m_binding_id == binding_id)
                 cstride += e.m_size;
-        for (auto& e : m_input_elements)
+        for (auto &e : m_input_elements)
             if (e.m_binding_id == binding_id)
                 e.m_stride = cstride;
         element.m_stride = cstride;
 
         // make sure there are no duplicates and all divisors are the same
-        for (auto& e : m_input_elements) {
-            if (e.m_binding_id == binding_id) {
+        for (auto &e : m_input_elements)
+        {
+            if (e.m_binding_id == binding_id)
+            {
                 if (e.m_location == location)
                 {
                     assert(0 && "AddInputElement element already exists!");
@@ -72,14 +75,55 @@ struct PipelineVertexInputDescription
             }
         }
 
+        if (element.m_IsFloatingPoint)
+        {
+            switch (element.m_vector_size)
+            {
+            case 1:
+                element.m_vk_format = VK_FORMAT_R32_SFLOAT;
+                break;
+            case 2:
+                element.m_vk_format = VK_FORMAT_R32G32_SFLOAT;
+                break;
+            case 3:
+                element.m_vk_format = VK_FORMAT_R32G32B32_SFLOAT;
+                break;
+            case 4:
+                element.m_vk_format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                break;
+            default:
+                assert(0);
+            }
+        }
+        else
+        {
+            switch (element.m_vector_size)
+            {
+            case 1:
+                element.m_vk_format = element.m_IsUnsigned ? VK_FORMAT_R32_UINT : VK_FORMAT_R32_SINT;
+                break;
+            case 2:
+                element.m_vk_format = element.m_IsUnsigned ? VK_FORMAT_R32G32_UINT : VK_FORMAT_R32G32_SINT;
+                break;
+            case 3:
+                element.m_vk_format = element.m_IsUnsigned ? VK_FORMAT_R32G32B32_UINT : VK_FORMAT_R32G32B32_SINT;
+                break;
+            case 4:
+                element.m_vk_format = element.m_IsUnsigned ? VK_FORMAT_R32G32B32A32_UINT : VK_FORMAT_R32G32B32A32_SINT;
+                break;
+            default:
+                assert(0);
+            }
+        }
+
         m_input_elements.push_back(element);
 
         // sort by bindingID
         auto sortingFunction = [](PipelineVertexInputElement const &lhs, PipelineVertexInputElement const &rhs) throw()->bool
         {
-            if(lhs.m_binding_id > rhs.m_binding_id)
+            if (lhs.m_binding_id > rhs.m_binding_id)
                 return false;
-            if(lhs.m_location > rhs.m_location)
+            if (lhs.m_location > rhs.m_location)
                 return false;
             return true;
         };
@@ -88,7 +132,7 @@ struct PipelineVertexInputDescription
 
     uint32_t GetDivisorRate(uint32_t bindingID)
     {
-        for (auto& e : m_input_elements)
+        for (auto &e : m_input_elements)
             if (e.m_binding_id == bindingID)
                 return e.m_divisor_rate;
         return UINT32_MAX;

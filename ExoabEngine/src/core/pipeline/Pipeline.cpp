@@ -257,6 +257,60 @@ void PipelineLayout_LinkFunctions(GraphicsContext context)
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ PIPELINE STATE ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+struct VulkanPipelineVertexInput
+{
+    VkPipelineVertexInputStateCreateInfo createInfo;
+    std::vector<VkVertexInputBindingDescription> binding_descriptions;
+    std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
+    std::vector<VkVertexInputBindingDivisorDescriptionEXT> divisor_description;
+    VkPipelineVertexInputDivisorStateCreateInfoEXT divisorCreateInfo;
+};
+
+static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexInput(IPipelineLayout layout)
+{
+    VulkanPipelineVertexInput input_state;
+
+    PipelineVertexInputDescription &input_description = layout->m_vertex_input_description;
+    if(input_description.m_input_elements.size() > 0)
+    {
+        int lastBinding = -1;
+        for(const auto& element : input_description.m_input_elements)
+        {
+            VkVertexInputAttributeDescription attribute;
+            attribute.binding = element.m_binding_id;
+            attribute.format = element.m_vk_format;
+            attribute.location = element.m_location;
+            attribute.offset = element.m_offset;
+            input_state.attribute_descriptions.push_back(attribute);
+            if(lastBinding != element.m_binding_id)
+            {
+                lastBinding = element.m_binding_id;
+                VkVertexInputBindingDescription binding_description;
+                binding_description.binding = element.m_binding_id;
+                binding_description.inputRate = element.m_per_instance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+                binding_description.stride = element.m_stride;
+                if(element.m_per_instance)
+                {
+                    VkVertexInputBindingDivisorDescriptionEXT divisor_description;
+                    divisor_description.binding = element.m_binding_id;
+                    divisor_description.divisor = element.m_divisor_rate;
+                    input_state.divisor_description.push_back(divisor_description);
+                }
+                input_state.binding_descriptions.push_back(binding_description);
+            }
+        }
+    }
+
+    input_state.createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    input_state.createInfo.pNext = nullptr;// input_state.divisor_description.size() > 0 ? &input_state.divisorCreateInfo : nullptr;
+    input_state.createInfo.flags = 0;
+    input_state.createInfo.vertexBindingDescriptionCount = input_state.binding_descriptions.size();
+    input_state.createInfo.pVertexBindingDescriptions = input_state.binding_descriptions.data();
+    input_state.createInfo.vertexAttributeDescriptionCount = input_state.attribute_descriptions.size();
+    input_state.createInfo.pVertexAttributeDescriptions = input_state.attribute_descriptions.data();
+    return input_state;
+}
+
 IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, IPipelineLayout layout, Shader *vertex, Shader *fragment)
 {
     vk::VkContext context = ToVKContext(_context);
@@ -273,139 +327,8 @@ IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const Pipel
     Stages[1].module = (VkShaderModule)fragment->GetShader();
     Stages[1].pName = fragment->GetEntryPoint().c_str();
 
-    auto vertex_reflection = layout->m_vertex_reflection;
-    VkPipelineVertexInputStateCreateInfo VertexInputState;
+    VulkanPipelineVertexInput VertexInputState = Vulkan_Internal_PipelineState_InitalizeVertexInput(layout);
 
-    std::vector< VkVertexInputBindingDescription> VertexInputBindings;
-    std::vector<VkVertexInputAttributeDescription> AttributeDescriptions;
-    std::vector<VkVertexInputBindingDivisorDescriptionEXT> BindingDivisorDescripitions;
-    VkPipelineVertexInputDivisorStateCreateInfoEXT divisorInfo;
-    divisorInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_DIVISOR_STATE_CREATE_INFO_EXT;
-    divisorInfo.pNext = nullptr;
-
-    PipelineVertexInputDescription &input_description = layout->m_vertex_input_description;
-    if (input_description.m_input_elements.size() > 0)
-    {
-        struct VertexBindingDesc {
-            uint32_t bindingID;
-            uint32_t stide;
-            VkVertexInputRate inputRate;
-            std::vector<PipelineVertexInputDescription::PipelineVertexInputElement> m_elements_per_binding;
-        };
-
-        std::vector<VertexBindingDesc> bindingsDesc;
-
-        for (auto& element : input_description.m_input_elements)
-        {
-            auto GetBinding = [&bindingsDesc](int bindingID) throw() -> int {
-                int i = 0;
-                for (auto& bd : bindingsDesc)
-                    if (bd.bindingID == bindingID)
-                        return i;
-                return -1;
-            };
-            int index = GetBinding(element.m_binding_id);
-            if (index == -1)
-            {
-                VertexBindingDesc bindingDesc;
-                bindingDesc.bindingID = element.m_binding_id;
-                bindingDesc.stide = element.m_stride;
-                bindingDesc.inputRate = element.m_per_instance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
-                bindingDesc.m_elements_per_binding.push_back(element);
-                bindingsDesc.push_back(bindingDesc);
-            }
-            else {
-                bindingsDesc[index].m_elements_per_binding.push_back(element);
-            }
-        }
-
-        for (auto& bindingDesc : bindingsDesc)
-        {
-            VkVertexInputBindingDescription VertexInputBinding;
-            VertexInputBinding.binding = bindingDesc.bindingID;
-            VertexInputBinding.stride = bindingDesc.stide;
-            VertexInputBinding.inputRate = bindingDesc.inputRate;
-
-            if (VertexInputBinding.inputRate == VK_VERTEX_INPUT_RATE_INSTANCE)
-            {
-                VkVertexInputBindingDivisorDescriptionEXT divisorDesc;
-                divisorDesc.binding = bindingDesc.bindingID;
-                divisorDesc.divisor = layout->m_vertex_input_description.GetDivisorRate(bindingDesc.bindingID);
-                BindingDivisorDescripitions.push_back(divisorDesc);
-            }
-
-            for (auto& element : bindingDesc.m_elements_per_binding)
-            {
-                VkVertexInputAttributeDescription attribute;
-                attribute.location = element.m_location;
-                attribute.binding = element.m_binding_id;
-                if (element.m_IsFloatingPoint)
-                {
-                    switch (element.m_vector_size)
-                    {
-                    case 1:
-                        attribute.format = VK_FORMAT_R32_SFLOAT;
-                        break;
-                    case 2:
-                        attribute.format = VK_FORMAT_R32G32_SFLOAT;
-                        break;
-                    case 3:
-                        attribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-                        break;
-                    case 4:
-                        attribute.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-                        break;
-                    default:
-                        assert(0);
-                    }
-                }
-                else
-                {
-                    switch (element.m_vector_size)
-                    {
-                    case 1:
-                        attribute.format = element.m_IsUnsigned ? VK_FORMAT_R32_UINT : VK_FORMAT_R32_SINT;
-                        break;
-                    case 2:
-                        attribute.format = element.m_IsUnsigned ? VK_FORMAT_R32G32_UINT : VK_FORMAT_R32G32_SINT;
-                        break;
-                    case 3:
-                        attribute.format = element.m_IsUnsigned ? VK_FORMAT_R32G32B32_UINT : VK_FORMAT_R32G32B32_SINT;
-                        break;
-                    case 4:
-                        attribute.format = element.m_IsUnsigned ? VK_FORMAT_R32G32B32A32_UINT : VK_FORMAT_R32G32B32A32_SINT;
-                        break;
-                    default:
-                        assert(0);
-                    }
-                }
-                attribute.offset = element.m_offset;
-                AttributeDescriptions.push_back(attribute);
-            }
-            VertexInputBindings.push_back(VertexInputBinding);
-        }
-
-        divisorInfo.vertexBindingDivisorCount = BindingDivisorDescripitions.size();
-        divisorInfo.pVertexBindingDivisors = BindingDivisorDescripitions.data();
-
-        VertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        VertexInputState.pNext = (BindingDivisorDescripitions.size() > 0) ? &divisorInfo : nullptr;
-        VertexInputState.flags = 0;
-        VertexInputState.vertexBindingDescriptionCount = VertexInputBindings.size();
-        VertexInputState.pVertexBindingDescriptions = VertexInputBindings.data();
-        VertexInputState.vertexAttributeDescriptionCount = AttributeDescriptions.size();
-        VertexInputState.pVertexAttributeDescriptions = AttributeDescriptions.data();
-    }
-    else
-    {
-        VertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        VertexInputState.pNext = nullptr;
-        VertexInputState.flags = 0;
-        VertexInputState.vertexBindingDescriptionCount = 0;
-        VertexInputState.pVertexBindingDescriptions = nullptr;
-        VertexInputState.vertexAttributeDescriptionCount = 0;
-        VertexInputState.pVertexAttributeDescriptions = nullptr;
-    }
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyState;
     InputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     InputAssemblyState.pNext = nullptr;
@@ -567,7 +490,7 @@ IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const Pipel
     createInfo.flags = (s_DebugMode) ? (VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT | VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR) : (0);
     createInfo.stageCount = 2;
     createInfo.pStages = Stages.data();
-    createInfo.pVertexInputState = &VertexInputState;
+    createInfo.pVertexInputState = &VertexInputState.createInfo;
     createInfo.pInputAssemblyState = &InputAssemblyState;
     createInfo.pTessellationState = &TessellationState;
     createInfo.pViewportState = &ViewportState;

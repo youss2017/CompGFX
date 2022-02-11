@@ -211,6 +211,7 @@ namespace vk
 		context->m_allocation_callback = NULL;
 
 		context->m_memory_context = vulkan_memory_initalize_context(context->defaultDevice, context->card.handle, context->m_allocation_callback);
+		context->m_future_memory_context = VkAlloc::CreateContext(context->defaultDevice, context->card.handle, /* 64 mb*/ 64 * (1024 * 1024));
 
 		return context;
 	}
@@ -219,6 +220,7 @@ namespace vk
 	{
 		vkDeviceWaitIdle(context->defaultDevice);
 		vulkan_memory_destroy_context((VulkanMemoryContext)context->m_memory_context);
+		VkAlloc::DestroyContext(context->m_future_memory_context);
 		vkDestroyDevice(context->defaultDevice, context->m_allocation_callback);
 		if (context->debugEnabled)
 			DestroyDebugUtilsMessengerEXT(context->instance, context->debugMessenger, nullptr);
@@ -510,7 +512,7 @@ namespace vk
 	{
 		VkRenderPassBeginInfo BeginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
 		BeginInfo.renderPass = RenderPass;
-		BeginInfo.renderArea.extent = {(u32)FboWidth, (u32)FboHeight};
+		BeginInfo.renderArea.extent = {(uint32_t)FboWidth, (uint32_t)FboHeight};
 		BeginInfo.framebuffer = fbo;
 		BeginInfo.clearValueCount = ClearValuesCount;
 		BeginInfo.pClearValues = pClearValues;

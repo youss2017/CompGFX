@@ -46,7 +46,7 @@ void vulkan_memory_destroy_context(VulkanMemoryContext mem_context)
     free(mem_context);
 }
 
-uint32_t vulkan_memory_find_heap_index(uint32_t typeFilter, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags properties, uint32_t *pOutHeapIndex)
+static uint32_t vulkan_memory_find_heap_index(uint32_t typeFilter, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags properties, uint32_t *pOutHeapIndex)
 {
     assert(pOutHeapIndex);
     VkPhysicalDeviceMemoryProperties memProperties;

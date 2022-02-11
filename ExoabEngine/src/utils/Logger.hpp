@@ -26,7 +26,7 @@ void log_fatal	  (int exit_code, const char* msg, const char* file, int line);
 
 #define logerror(msg) log_error(msg, __FILE__, __LINE__)
 #define logerrors(msg) logerror(msg.c_str())
-#define logerror_break(msg) if(log_error(msg, __FILE__, __LINE__)) Utils::Break();
+#define logerror_break(msg) if(!log_error(msg, __FILE__, __LINE__)) Utils::Break();
 #define logerrors_break(msg) logerror_break(msg.c_str());
 
 #define logfatal(msg, exit_code)  log_fatal(exit_code, msg, __FILE__, __LINE__);

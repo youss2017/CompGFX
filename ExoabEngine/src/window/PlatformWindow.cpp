@@ -121,7 +121,7 @@ bool PlatformWindow::ShouldClose()
     return glfwWindowShouldClose(m_window);
 }
 
-bool PlatformWindow::IsKeyDown(unsigned char key)
+bool PlatformWindow::IsKeyDown(uint16_t key)
 {
     key = toupper(key);
     if (m_keys[key] == GLFW_PRESS)
@@ -129,7 +129,7 @@ bool PlatformWindow::IsKeyDown(unsigned char key)
     return false;
 }
 
-bool PlatformWindow::IsKeyUp(unsigned char key)
+bool PlatformWindow::IsKeyUp(uint16_t key)
 {
     key = toupper(key);
     bool status = m_keys[key] == GLFW_RELEASE;

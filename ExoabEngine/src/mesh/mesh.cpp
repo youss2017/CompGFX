@@ -23,7 +23,7 @@ OmegaBasicMesh Omega_LoadBasicMesh(const char* mesh_path)
         for(uint32_t j = 0; j < ai_submesh->mNumVertices; j++) {
             OmegaBasicVertex vertex;
             vertex.m_position = *((glm::fvec3*)&ai_submesh->mVertices[j]);
-            vertex.m_normal   = *((glm::fvec3*)&ai_submesh->mNormals[j]);
+            vertex.m_normal = *((glm::fvec3*)&ai_submesh->mNormals[j]);
             if(ai_submesh->mTextureCoords[0])
                 vertex.m_uv   = *((glm::fvec2*)&ai_submesh->mTextureCoords[0][j]);
             else

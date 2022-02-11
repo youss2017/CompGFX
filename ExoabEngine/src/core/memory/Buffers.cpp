@@ -97,7 +97,7 @@ void Vulkan_GPUBuffer_UploadData(GPUBuffer *buffer, void *data, size_t offset, s
 	{
 		// 1) map 2) memcpy 3) unmap
 		void *map_ptr = GPUBuffer_MapBuffer(buffer, false, true);
-		memcpy((u8 *)map_ptr + offset, data, size);
+		memcpy((uint8_t*)map_ptr + offset, data, size);
 		GPUBuffer_UnmapBuffer(buffer);
 		return;
 	}
