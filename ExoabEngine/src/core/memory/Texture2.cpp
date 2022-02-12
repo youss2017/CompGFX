@@ -76,10 +76,10 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 		texture->m_vk_views.resize(frame_count);
 		texture->m_vk_images.resize(frame_count);
 		IMAGE_DESCRIPITION* pDescs = new IMAGE_DESCRIPITION[frame_count];
-		for (int i = 0; i < frame_count; i++) pDescs[i] = desc;
+		for (uint32_t i = 0; i < frame_count; i++) pDescs[i] = desc;
 		VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, frame_count, pDescs, texture->m_vk_images.data());
 		delete[] pDescs;
-		for (int i = 0; i < frame_count; i++)
+		for (uint32_t i = 0; i < frame_count; i++)
 		{
 			VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -287,4 +287,6 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 
 void Texture2_Destroy(ITexture2 texture)
 {
+	VkAlloc::DestroyImages(ToVKContext(texture)->m_future_memory_context, 1, &texture->m_vk_image);
+	delete texture;
 }

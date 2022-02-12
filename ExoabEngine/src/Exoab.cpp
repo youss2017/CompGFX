@@ -19,7 +19,7 @@ static CommandPool s_Pool;
 static ICommandList s_Cmd;
 static IGPUSemaphore s_Semaphore;
 static DefaultEntity* s_Cube;
-static IGPUBuffer s_InstanceBuffer;
+static IBuffer2 s_InstanceBuffer;
 static IShaderProgramData s_ProgramData0;
 static IGPUTexture2D s_Tex0;
 static IGPUTextureSampler s_Sampler0;
@@ -115,9 +115,8 @@ bool Exoab_Initalize(ConfigurationSettings config)
     InstanceData[1] = glm::vec2(4, 2);
     InstanceData[2] = glm::vec2(6, 4);
 
-    GPUBufferSpecification InstanceSpecification = GPUBufferSpecification::SInitalize(BufferType::VertexBuffer, sizeof(InstanceData), BufferMemoryType::STREAM);
-    s_InstanceBuffer = GPUBuffer_Create(s_Context, &InstanceSpecification);
-    GPUBuffer_UploadData(s_InstanceBuffer, InstanceData, 0, sizeof(InstanceData));
+    s_InstanceBuffer = Buffer2_Create(s_Context, BufferType::VertexBuffer, sizeof(InstanceData), BufferMemoryType::STREAM);
+    Buffer2_UploadData(s_InstanceBuffer, (char8_t*)InstanceData, 0, sizeof(InstanceData));
 
     s_Cube->SetInstanceCount(sizeof(InstanceData) / sizeof(glm::vec2));
     s_Cube->AddVertexInstanceBuffer(s_InstanceBuffer);
@@ -312,7 +311,7 @@ void Exoab_CleanUp()
     GPUSemaphore_Destroy(s_Semaphore);
     GPUTexture2D_Destroy(s_Tex0);
     GPUTextureSampler_Destroy(s_Sampler0);
-    GPUBuffer_Destroy(s_InstanceBuffer);
+    Buffer2_Destroy(s_InstanceBuffer);
     Terrain_Destroy(s_T0);
     s_Material0.DestoryEverything();
     delete s_Cube;

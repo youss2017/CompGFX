@@ -81,7 +81,7 @@ typedef void PFN_CommandList_StopRecording(ICommandList list);
 typedef void PFN_CommandList_Reset(ICommandList list, bool ReleaseCommandBufferResources);
 typedef void PFN_CommandList_SetFramebuffer(ICommandList list, IFramebufferStateManagement state_managment, IFramebuffer framebuffer);
 typedef void PFN_CommandList_BindPipeline(ICommandList list, IPipelineState pipeline_state);
-typedef void PFN_CommandList_UpdateGPUBuffer(ICommandList list, IGPUBuffer buffer, void *pData, uint32_t offset, uint32_t size);
+typedef void PFN_CommandList_UpdateGPUBuffer(ICommandList list, IBuffer2 buffer, void *pData, uint32_t offset, uint32_t size);
 typedef void PFN_CommandList_SetViewport(ICommandList list, int x, int y, int width, int height);
 typedef void PFN_CommandList_SetScissor(ICommandList list, int x, int y, int width, int height);
 typedef void PFN_CommandList_SetRenderState(ICommandList list, RenderState *render_state, void* entity_for_instance_buffers);

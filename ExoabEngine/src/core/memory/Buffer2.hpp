@@ -21,5 +21,4 @@ void Buffer2_Flush(IBuffer2 buffer);
 void Buffer2_Invalidate(IBuffer2 buffer);
 void Buffer2_Unmap(IBuffer2 buffer, bool AutoFlush = false);
 void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size);
-void Buffer2_Resize(IBuffer2 buffer, size_t new_size);
 void Buffer2_Destroy(IBuffer2 buffer);

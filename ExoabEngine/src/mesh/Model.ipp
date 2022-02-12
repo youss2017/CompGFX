@@ -14,14 +14,10 @@ OmegaModel<VertexType>::OmegaModel(GraphicsContext context, const char *mesh_pat
 			auto &submesh = m_basic.m_submesh[i];
 			auto &vertices = submesh.m_vertices;
 			auto &indices = submesh.m_indices;
-			GPUBufferSpecification vertex_specification;
-			vertex_specification.Initalize(BufferType::VertexBuffer, vertices.size() * sizeof(OmegaBasicVertex), BufferMemoryType::STATIC);
-			GPUBufferSpecification index_specification;
-			index_specification.Initalize(BufferType::IndexBuffer, indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
-			IGPUBuffer vertex_buffer = GPUBuffer_Create(context, &vertex_specification);
-			IGPUBuffer index_buffer = GPUBuffer_Create(context, &index_specification);
-			GPUBuffer_UploadData(vertex_buffer, vertices.data(), 0, vertices.size() * sizeof(OmegaBasicVertex));
-			GPUBuffer_UploadData(index_buffer, indices.data(), 0, indices.size() * sizeof(uint32_t));
+			IBuffer2 vertex_buffer = Buffer2_Create(context, BufferType::VertexBuffer, vertices.size() * sizeof(OmegaBasicVertex), BufferMemoryType::STATIC);
+			IBuffer2 index_buffer = Buffer2_Create(context, BufferType::IndexBuffer, indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
+			Buffer2_UploadData(vertex_buffer, (char8_t*)vertices.data(), 0, vertices.size() * sizeof(OmegaBasicVertex));
+			Buffer2_UploadData(index_buffer, (char8_t*)indices.data(), 0, indices.size() * sizeof(uint32_t));
 			m_buffers.push_back(vertex_buffer);
 			m_buffers.push_back(index_buffer);
 			RenderState state = RenderState::Create(vertex_buffer, index_buffer, vertices.size(), indices.size());
@@ -47,14 +43,10 @@ OmegaModel<VertexType>::OmegaModel(GraphicsContext context, const char *mesh_pat
 			auto &submesh = m_typical.m_submesh[i];
 			auto &vertices = submesh.m_vertices;
 			auto &indices = submesh.m_vertices;
-			GPUBufferSpecification vertex_specification;
-			vertex_specification.Initalize(BufferType::VertexBuffer, vertices.size() * sizeof(OmegaVertex), BufferMemoryType::STATIC);
-			GPUBufferSpecification index_specification;
-			index_specification.Initalize(BufferType::IndexBuffer, indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
-			IGPUBuffer vertex_buffer = GPUBuffer_Create(context, &vertex_specification);
-			IGPUBuffer index_buffer = GPUBuffer_Create(context, &index_specification);
-			GPUBuffer_UploadData(vertex_buffer, vertices.data(), 0, vertices.size() * sizeof(OmegaBasicVertex));
-			GPUBuffer_UploadData(index_buffer, indices.data(), 0, indices.size() * sizeof(uint32_t));
+			IBuffer2 vertex_buffer = Buffer2_Create(context, BufferType::VertexBuffer, vertices.size() * sizeof(OmegaVertex), BufferMemoryType::STATIC);
+			IBuffer2 index_buffer = Buffer2_Create(context, BufferType::IndexBuffer, indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
+			Buffer2_UploadData(vertex_buffer, (char8_t*)vertices.data(), 0, vertices.size() * sizeof(OmegaBasicVertex));
+			Buffer2_UploadData(index_buffer, (char8_t*)indices.data(), 0, indices.size() * sizeof(uint32_t));
 			m_buffers.push_back(vertex_buffer);
 			m_buffers.push_back(index_buffer);
 			RenderState state = RenderState::Create(vertex_buffer, index_buffer, vertices.size(), indices.size());
@@ -84,14 +76,10 @@ OmegaModel<VertexType>::OmegaModel(GraphicsContext context, const char *mesh_pat
 			auto &submesh = m_animated.m_submesh[i];
 			auto &vertices = submesh.m_vertices;
 			auto &indices = submesh.m_vertices;
-			GPUBufferSpecification vertex_specification;
-			vertex_specification.Initalize(BufferType::VertexBuffer, vertices.size() * sizeof(OmegaAnimatedVertex), BufferMemoryType::STATIC);
-			GPUBufferSpecification index_specification;
-			index_specification.Initalize(BufferType::IndexBuffer, indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
-			IGPUBuffer vertex_buffer = GPUBuffer_Create(context, &vertex_specification);
-			IGPUBuffer index_buffer = GPUBuffer_Create(context, &index_specification);
-			GPUBuffer_UploadData(vertex_buffer, vertices.data(), 0, vertices.size() * sizeof(OmegaBasicVertex));
-			GPUBuffer_UploadData(index_buffer, indices.data(), 0, indices.size() * sizeof(uint32_t));
+			IBuffer2 vertex_buffer = Buffer2_Create(context, BufferType::VertexBuffer, vertices.size() * sizeof(OmegaAnimatedVertex), BufferMemoryType::STATIC);
+			IBuffer2 index_buffer = Buffer2_Create(context, BufferType::IndexBuffer, indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
+			Buffer2_UploadData(vertex_buffer, (char8_t*)vertices.data(), 0, vertices.size() * sizeof(OmegaBasicVertex));
+			Buffer2_UploadData(index_buffer, (char8_t*)indices.data(), 0, indices.size() * sizeof(uint32_t));
 			m_buffers.push_back(vertex_buffer);
 			m_buffers.push_back(index_buffer);
 			RenderState state = RenderState::Create(vertex_buffer, index_buffer, vertices.size(), indices.size());
@@ -130,7 +118,7 @@ OmegaModel<VertexType>::~OmegaModel()
 	for (size_t i = 0; i < m_state.size(); i++)
 		m_state[i].Destroy();
 	for (size_t i = 0; i < m_buffers.size(); i++)
-		GPUBuffer_Destroy(m_buffers[i]);
+		Buffer2_Destroy(m_buffers[i]);
 }
 
 template <class VertexType>

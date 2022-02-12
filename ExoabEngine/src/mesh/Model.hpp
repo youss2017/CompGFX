@@ -25,7 +25,7 @@ private:
 	OmegaMesh m_typical;
 	OmegaAnimatedMesh m_animated;
 	
-	std::vector<IGPUBuffer> m_buffers;
+	std::vector<IBuffer2> m_buffers;
 	std::vector<RenderState> m_state;
 };
 

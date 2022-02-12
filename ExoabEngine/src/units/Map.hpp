@@ -22,8 +22,8 @@ struct Terrain
     std::vector<uint32_t> m_indices;
     IGPUTexture2D m_base_texture;
     IShaderProgramData m_program_data;
-    IGPUBuffer m_vertices_buffer;
-    IGPUBuffer m_indices_buffer;
+    IBuffer2 m_vertices_buffer;
+    IBuffer2 m_indices_buffer;
     RenderState m_render_state;
     EntityBindingData m_binding_data = EntityBindingData(0, 0);
     PipelineVertexInputDescription m_input_description;

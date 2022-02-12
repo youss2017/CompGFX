@@ -152,12 +152,12 @@ void Vulkan_CommandList_BindPipeline(ICommandList list, IPipelineState pipeline_
     vkCmdBindPipeline(VULKAN_COMMAND_LIST, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pipeline_state->m_pipeline);
 }
 
-void Vulkan_CommandList_UpdateGPUBuffer(ICommandList list, IGPUBuffer buffer, void *pData, uint32_t offset, uint32_t size)
+void Vulkan_CommandList_UpdateGPUBuffer(ICommandList list, IBuffer2 buffer, void *pData, uint32_t offset, uint32_t size)
 {
     PROFILE_FUNCTION();
     LIST_GUARD();
     assert(size < pow(2, 16) && !list->m_FramebufferBound && "Cannot not UpdateGPUBuffer inside program and the size of the update cannot be bigger than 2^16 bytes.");
-    vkCmdUpdateBuffer(VULKAN_COMMAND_LIST, buffer->m_NativeVulkanHandle, offset, size, pData);
+    vkCmdUpdateBuffer(VULKAN_COMMAND_LIST, buffer->m_vk_buffer->m_buffer, offset, size, pData);
 }
 
 void Vulkan_CommandList_SetViewport(ICommandList list, int x, int y, int width, int height)
@@ -184,9 +184,9 @@ void Vulkan_CommandList_SetRenderState(ICommandList list, RenderState *render_st
     PROFILE_FUNCTION();
     PROGRAM_GUARD();
     if (render_state->m_UsingIndexBuffer)
-        vkCmdBindIndexBuffer(VULKAN_COMMAND_LIST, (VkBuffer)render_state->m_IndexBuffer->m_NativeVulkanHandle, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(VULKAN_COMMAND_LIST, (VkBuffer)render_state->m_IndexBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
     VkDeviceSize pOffset[1] = {0};
-    vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 0, 1, &render_state->m_VertexBuffer->m_NativeVulkanHandle, pOffset);
+    vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 0, 1, &render_state->m_VertexBuffer->m_vk_buffer->m_buffer, pOffset);
     if (entity_for_instance_buffers)
     {
         DefaultEntity* entity = (DefaultEntity*)entity_for_instance_buffers;

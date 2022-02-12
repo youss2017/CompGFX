@@ -1,5 +1,5 @@
 #include "Textures.hpp"
-#include "Buffers.hpp"
+#include "Buffer2.hpp"
 #include "../backend/VkGraphicsCard.hpp"
 #include "../backend/GLGraphicsCard.hpp"
 #include "../../utils/StringUtils.hpp"
@@ -168,12 +168,11 @@ void Vulkan_GPUTexture2D_UploadPixels(IGPUTexture2D texture, void *pixels, size_
 {
 	vk::VkContext context = (vk::VkContext)texture->m_Context;
 	// create staging buffer
-	GPUBufferSpecification staging_specification = GPUBufferSpecification::SInitalize(BufferType::INTE_TRANSFER_SRC, pixel_size, BufferMemoryType::DYNAMIC);
-	IGPUBuffer staging_buffer = GPUBuffer_Create(texture->m_Context, &staging_specification);
+	IBuffer2 staging_buffer = Buffer2_Create(texture->m_Context, BufferType::INTE_TRANSFER_SRC, pixel_size, BufferMemoryType::DYNAMIC);
 	// load data to buffer
-	void *staging_buffer_ptr = GPUBuffer_MapBuffer(staging_buffer, false, true);
+	void *staging_buffer_ptr = Buffer2_Map(staging_buffer, false, true);
 	memcpy(staging_buffer_ptr, pixels, pixel_size);
-	GPUBuffer_UnmapBuffer(staging_buffer);
+	Buffer2_Unmap(staging_buffer, true);
 	// Create cmd_buffer and pool
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(context, true, false);
 	VkCommandBuffer cmd_buffer = vk::Gfx_AllocCommandBuffer(context, pool, true);
@@ -210,7 +209,7 @@ void Vulkan_GPUTexture2D_UploadPixels(IGPUTexture2D texture, void *pixels, size_
 	buffer_copy_region.imageExtent.width = texture->m_specification.m_Width;
 	buffer_copy_region.imageExtent.height = texture->m_specification.m_Height;
 	buffer_copy_region.imageExtent.depth = 1;
-	vkCmdCopyBufferToImage(cmd_buffer, (VkBuffer)staging_buffer->m_NativeVulkanHandle, (VkImage)texture->m_NativeHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_copy_region);
+	vkCmdCopyBufferToImage(cmd_buffer, staging_buffer->m_vk_buffer->m_buffer, (VkImage)texture->m_NativeHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_copy_region);
 
 	// transfer image back to readable format
 	VkImageMemoryBarrier barrier_readable = barrier;
@@ -230,7 +229,7 @@ void Vulkan_GPUTexture2D_UploadPixels(IGPUTexture2D texture, void *pixels, size_
 	// cleanup
 	vkDestroyCommandPool(context->defaultDevice, pool, context->m_allocation_callback);
 	vkDestroyFence(context->defaultDevice, fence, context->m_allocation_callback);
-	GPUBuffer_Destroy(staging_buffer);
+	Buffer2_Destroy(staging_buffer);
 
 	if (texture->m_specification.m_GenerateMipMapLevels)
 		GPUTexture2D_GenerateMips(texture);

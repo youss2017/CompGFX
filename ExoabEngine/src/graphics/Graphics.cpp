@@ -445,7 +445,7 @@ void Graphics3D_LinkFunctions(IGraphics3D gfx)
     {
         Utils::Break();
     }
-    GPUBuffer_LinkFunctions(gfx->m_context);
+    //GPUBuffer_LinkFunctions(gfx->m_context);
     GPUTexture2D_LinkFunctions(gfx->m_context);
     GPUTextureSampler_LinkFunctions(gfx->m_context);
     FramebufferStateManagment_LinkFunctions(gfx->m_context);

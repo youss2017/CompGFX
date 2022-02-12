@@ -84,13 +84,11 @@ ITerrain Terrain_Create(IPipelineLayout layout, int width, int xresolution, int 
 		//cout << endl;
 	}
 
-	GPUBufferSpecification specification = GPUBufferSpecification::SInitalize(BufferType::VertexBuffer, terrain->m_vertices.size() * sizeof(TerrainVertex), BufferMemoryType::STATIC);
-	terrain->m_vertices_buffer = GPUBuffer_Create(terrain->m_context, &specification);
-	specification.Initalize(BufferType::IndexBuffer, terrain->m_indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
-	terrain->m_indices_buffer = GPUBuffer_Create(terrain->m_context, &specification);
+	terrain->m_vertices_buffer = Buffer2_Create(terrain->m_context, BufferType::VertexBuffer, terrain->m_vertices.size() * sizeof(TerrainVertex), BufferMemoryType::STATIC);
+	terrain->m_indices_buffer = Buffer2_Create(terrain->m_context, BufferType::IndexBuffer, terrain->m_indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
 
-	GPUBuffer_UploadData(terrain->m_vertices_buffer, terrain->m_vertices.data(), 0, terrain->m_vertices.size() * sizeof(TerrainVertex));
-	GPUBuffer_UploadData(terrain->m_indices_buffer, terrain->m_indices.data(), 0, terrain->m_indices.size() * sizeof(uint32_t));
+	Buffer2_UploadData(terrain->m_vertices_buffer, (char8_t*)terrain->m_vertices.data(), 0, terrain->m_vertices.size() * sizeof(TerrainVertex));
+	Buffer2_UploadData(terrain->m_indices_buffer, (char8_t*)terrain->m_indices.data(), 0, terrain->m_indices.size() * sizeof(uint32_t));
 	
 	terrain->m_program_data = ShaderProgramData_Create(layout);
 	ShaderProgramData_SetConstantTextureArray(terrain->m_program_data, setID, bindingID, sampler, { basetexture });
@@ -115,7 +113,7 @@ void Terrain_Destroy(ITerrain terrain)
 {
 	terrain->m_render_state.Destroy();
 	ShaderProgramData_Destroy(terrain->m_program_data);
-	GPUBuffer_Destroy(terrain->m_vertices_buffer);
-	GPUBuffer_Destroy(terrain->m_indices_buffer);
+	Buffer2_Destroy(terrain->m_vertices_buffer);
+	Buffer2_Destroy(terrain->m_indices_buffer);
 	delete terrain;
 }

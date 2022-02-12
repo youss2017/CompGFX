@@ -286,7 +286,7 @@ void GL_Graphics3D_ExecuteCommandList(IGraphics3D gfx, ICommandList CmdList, IGP
                         }
                         if(CurrentBinding != element.m_binding_id)
                         {
-                            glBindBuffer(GL_ARRAY_BUFFER, entity.VertexInstanceBuffers[bufferID]->m_NativeOpenGLHandle);
+                            glBindBuffer(GL_ARRAY_BUFFER, entity.VertexInstanceBuffers[bufferID]->m_gl_buffer);
                             bufferID++;
                         }
                         CurrentBinding = element.m_binding_id;

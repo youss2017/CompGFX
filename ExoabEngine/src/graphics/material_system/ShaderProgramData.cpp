@@ -53,7 +53,7 @@ void ShaderProgramData_UpdateBindingData(IShaderProgramData program_data, IPipel
 			continue;
 		auto &setInfo = dynamicInfo->setInformations[data.setID];
 		auto &uniformInfo = setInfo.uniformInformation[data.bindingID];
-		char *ptr = (char *)GPUBuffer_MapBuffer(setInfo.buffer, false, true);
+		char *ptr = (char *)Buffer2_Map(setInfo.buffer, false, true);
 		if (uniformInfo.FrameChanged)
 			uniformInfo.usedCopies = 0;
 		uniformInfo.startUsedCopies = uniformInfo.usedCopies;
@@ -102,7 +102,7 @@ void ShaderProgramData_UpdateEntityBindingData(IShaderProgramData program_data, 
                     continue;
                 auto &setInfo = dynamicInfo->setInformations[data.setID];
                 auto &uniformInfo = setInfo.uniformInformation[data.bindingID];
-                char *ptr = (char *)GPUBuffer_MapBuffer(setInfo.buffer, false, true);
+                char *ptr = (char *)Buffer2_Map(setInfo.buffer, false, true);
                 if (uniformInfo.FrameChanged)
                     uniformInfo.usedCopies = 0;
                 uniformInfo.startUsedCopies = uniformInfo.usedCopies;
@@ -133,7 +133,7 @@ void ShaderProgramData_FlushShaderProgramData(uint32_t count, IShaderProgramData
         for (const auto& setInfo : reserved->setInformations)
         {
             if (!setInfo.isTexture)
-                GPUBuffer_Flush(setInfo.buffer);
+                Buffer2_Flush(setInfo.buffer);
         }
     }
 }
@@ -192,8 +192,7 @@ static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, 
                 totalSize += uniformDescription.m_Size;
                 setInformation.uniformInformation.insert(std::make_pair(uniformDescription.m_Binding, uniformInfo));
             }
-            GPUBufferSpecification specification = specification.SInitalize(BufferType::UniformBuffer, totalSize, BufferMemoryType::STREAM);
-            IGPUBuffer buffer = GPUBuffer_Create(context, &specification);
+            IBuffer2 buffer = Buffer2_Create(context, BufferType::UniformBuffer, totalSize, BufferMemoryType::STREAM);
             setInformation.buffer = buffer;
             reserved->setInformations.push_back(setInformation);
             VkWriteDescriptorSet writeInfo;
@@ -211,7 +210,7 @@ static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, 
                 auto& uniformDescription = setDescription.m_UniformBuffers[b];
 
                 VkDescriptorBufferInfo bufferInfo;
-                bufferInfo.buffer = buffer->m_NativeVulkanHandle;
+                bufferInfo.buffer = buffer->m_vk_buffer->m_buffer;
                 bufferInfo.offset = bufferOffsets[uniformDescription.m_Binding];
                 bufferInfo.range = uniformDescription.m_Size; // VK_WHOLE_SIZE;// uniformDescription.m_Size;
 
@@ -284,14 +283,12 @@ static void Vulkan_Internal_ExpandDescriptorSetBuffer(vk::VkContext context, Sha
 
     // reserved->pDescriptorSets[setInformation.setHandleIndex] = setInformation.setHandle;
 
-    IGPUBuffer oldBuffer = setInformation.buffer;
+    IBuffer2 oldBuffer = setInformation.buffer;
     DynamicUniformInformation& uniformInfo = setInformation.uniformInformation[bindingID];
     uniformInfo.copyCount += AdditionalUseCount;
-    GPUBufferSpecification spec = oldBuffer->m_Spec;
     int BlockSize = AdditionalUseCount * uniformInfo.bufferSize;
-    spec.m_Size += BlockSize;
-    setInformation.buffer = GPUBuffer_Create(context, &spec);
-    GPUBuffer_Destroy(oldBuffer);
+    setInformation.buffer = Buffer2_Create(context, oldBuffer->type, oldBuffer->size + BlockSize, oldBuffer->memoryType);
+    Buffer2_Destroy(oldBuffer);
 
     // Change the buffer to every descriptor set binding
 
@@ -302,7 +299,7 @@ static void Vulkan_Internal_ExpandDescriptorSetBuffer(vk::VkContext context, Sha
     for (auto& _ui : setInformation.uniformInformation)
     {
         DynamicUniformInformation& ui = _ui.second;
-        pBufferInfos[index].buffer = setInformation.buffer->m_NativeVulkanHandle;
+        pBufferInfos[index].buffer = setInformation.buffer->m_vk_buffer->m_buffer;
         pBufferInfos[index].offset = offset;
         pBufferInfos[index].range = ui.bufferSize;
         ui.offset = offset;
@@ -341,7 +338,7 @@ static void Vulkan_Private_DestroyShaderProgramData(void* programData_reserved)
 	for (auto& setInfo : reserved->setInformations)
 	{
 		if (!setInfo.isTexture)
-			GPUBuffer_Destroy(setInfo.buffer);
+			Buffer2_Destroy(setInfo.buffer);
 	}
 
 	delete reserved;
