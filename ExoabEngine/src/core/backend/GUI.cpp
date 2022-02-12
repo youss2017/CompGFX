@@ -54,6 +54,9 @@ void Gui_VKInitalizeImGui(VkInstance Instance, VkAllocationCallbacks *allocation
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
+    ImGuiIO& io = ImGui::GetIO();
+    //ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiBackendFlags_PlatformHasViewports + ImGuiBackendFlags_RendererHasViewports set by the respective backends)
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
 
     VkQueue queue;
     vkGetDeviceQueue(device, QueueFamilyIndex, 0, &queue);
@@ -116,6 +119,8 @@ void Gui_VKBeginGUIFrame()
 void Gui_VKEndGUIFrame(VkCommandBuffer cmd)
 {
     ImGui::Render();
+    ImGui::UpdatePlatformWindows();
+    ImGui::RenderPlatformWindowsDefault();
     auto draw_data = ImGui::GetDrawData();
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 }
@@ -133,6 +138,7 @@ void Gui_GLInitalizeImGui(PlatformWindow *window)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window->GetWindow(), true);
     ImGui_ImplOpenGL3_Init();

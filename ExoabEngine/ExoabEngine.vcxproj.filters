@@ -69,7 +69,7 @@
     <ClInclude Include="src\core\EngineBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\GUI.h">
+    <ClInclude Include="src\core\backend\GUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\MaxEnergyMath.h">
@@ -186,6 +186,9 @@
     <ClInclude Include="src\core\memory\Buffer2.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\memory\Texture2.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp">
@@ -239,7 +242,7 @@
     <ClCompile Include="src\core\shaders\ShaderReflection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\GUI.cpp">
+    <ClCompile Include="src\core\backend\GUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\MaxEnergyMath.cpp">
@@ -342,6 +345,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\memory\Buffer2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\memory\Texture2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_demo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

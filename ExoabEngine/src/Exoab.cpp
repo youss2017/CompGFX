@@ -24,6 +24,7 @@ static IShaderProgramData s_ProgramData0;
 static IGPUTexture2D s_Tex0;
 static IGPUTextureSampler s_Sampler0;
 static Material s_Material0;
+static ImFont* s_Font;
 
 static IMaterialPipelineLayout s_T0Layout;
 static IPipelineState s_T0State;
@@ -63,7 +64,7 @@ bool Exoab_Initalize(ConfigurationSettings config)
         s_Config = config;
         s_Config.FutureFrameCount = 12;
         s_Config.VSync = false;
-        s_Gfx = Graphics3D_Create(&s_Config, "Omega Engine", ss_DebugMode, true);
+        s_Gfx = Graphics3D_Create(&s_Config, s_Config.WindowTitle.c_str(), ss_DebugMode, true);
         s_Window = s_Gfx->m_window;
         s_Context = s_Gfx->m_context;
     }
@@ -149,6 +150,14 @@ bool Exoab_Initalize(ConfigurationSettings config)
 
     IBuffer2 new_buffer = Buffer2_Create(s_Context, BufferType::VertexBuffer, sizeof(v), BufferMemoryType::STATIC);
     Buffer2_UploadData(new_buffer, (char8_t*)& v, 0, sizeof(v));
+    Buffer2_Destroy(new_buffer);
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImFontConfig fconfig;
+    fconfig.MergeMode = true;
+    fconfig.GlyphMinAdvanceX = 12.0f; // Use if you want to make the icon monospaced
+    //s_Font = io.Fonts->AddFontFromFileTTF("assets/fonts/CascadiaCodePL-SemiBold.ttf", 12.0f, &fconfig);
+    //io.Fonts->Build();
 
     return true;
 }
@@ -169,7 +178,7 @@ void Exoab_Render(double dTimeStart, double dElapsedTime)
 
     Graphics3D_ExecuteCommandList(s_Gfx, s_Cmd, nullptr, 1, &SwapchainReady, 1, &s_Semaphore);
     Exoab_GUI();
-    Graphics3D_Present(s_Gfx, s_Material0.m_framebuffer->m_framebuffer, s_ShowDepthBuffer ? 1 : 0, 1, &s_Semaphore);
+    Graphics3D_Present(s_Gfx, s_Material0.m_framebuffer->m_framebuffer, s_ShowDepthBuffer ? 1 : 0, 1, &s_Semaphore, s_ShowDepthBuffer);
     Graphics3D_WaitGPUIdle(s_Gfx);
 }
 
@@ -221,6 +230,7 @@ void BuildCommandBuffers(double dTimeStart)
 void Exoab_GUI()
 {
     PROFILE_FUNCTION();
+    //ImGui::PushFont(s_Font);
     ImGui::Begin("ImGui");
     ImGui::Text("Im Graphics!");
     ImGui::Button("Accept Graphics");
@@ -251,6 +261,7 @@ void Exoab_GUI()
             s_ShowDepthBuffer = true;
         }
     }
+    //ImGui::PopFont();
     ImGui::End();
 }
 
@@ -259,9 +270,8 @@ Tristate Exoab_Update(double dTimeStart, double dElapsedTime)
     PROFILE_FUNCTION();
     if (!s_Window->IsWindowFocus())
     {
-        Utils::CPUSleep(15);
         Graphics3D_PollEvents(s_Gfx);
-        return Tristate::Disconnected();
+        return Tristate::Enabled();
     }
     /* Camera Controls */
     double RotateRate = 45.0;

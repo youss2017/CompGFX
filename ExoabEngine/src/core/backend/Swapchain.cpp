@@ -4,7 +4,7 @@
 #include "../backend/VulkanLoader.h"
 #include "../../utils/common.hpp"
 #include "../shaders/Shader.hpp"
-#include "../GUI.h"
+#include "GUI.h"
 #include <vector>
 #include <climits>
 #include <cassert>
@@ -169,7 +169,7 @@ static const char *s_FragmentShaderSource =
     "void main()\n"
     "{\n"
     "    vec4 Color = texture(ColorPassTexture, TexCoord);\n"
-    "    FragColor = Color.rrrr;\n"
+    "    FragColor = Color;\n"
     "}\n";
 
 constexpr bool ss_Compile_SourceCode = false;
@@ -182,6 +182,11 @@ static uint32_t s_VertexShaderBytecode[] =
 static uint32_t s_FragmentShaderBytecode[] =
 {
 119734787, 66816, 851978, 22, 0, 131089, 1, 393227, 1, 1280527431, 1685353262, 808793134, 0, 196622, 0, 1, 524303, 4, 4, 1852399981, 0, 13, 17, 21, 196624, 4, 7, 262215, 13, 34, 0, 262215, 13, 33, 0, 262215, 17, 30, 0, 262215, 21, 30, 0, 131091, 2, 196641, 3, 2, 196630, 6, 32, 262167, 7, 6, 4, 589849, 10, 6, 1, 0, 0, 0, 1, 0, 196635, 11, 10, 262176, 12, 0, 11, 262203, 12, 13, 0, 262167, 15, 6, 2, 262176, 16, 1, 15, 262203, 16, 17, 1, 262176, 20, 3, 7, 262203, 20, 21, 3, 327734, 2, 4, 0, 3, 131320, 5, 262205, 11, 14, 13, 262205, 15, 18, 17, 327767, 7, 19, 14, 18, 196670, 21, 19, 65789, 65592
+};
+
+static uint32_t s_Depth_FragmentShaderBytecode[] =
+{
+    119734787, 66816, 851978, 24, 0, 131089, 1, 393227, 1, 1280527431, 1685353262, 808793134, 0, 196622, 0, 1, 524303, 4, 4, 1852399981, 0, 13, 17, 21, 196624, 4, 7, 262215, 13, 34, 0, 262215, 13, 33, 0, 262215, 17, 30, 0, 262215, 21, 30, 0, 131091, 2, 196641, 3, 2, 196630, 6, 32, 262167, 7, 6, 4, 589849, 10, 6, 1, 0, 0, 0, 1, 0, 196635, 11, 10, 262176, 12, 0, 11, 262203, 12, 13, 0, 262167, 15, 6, 2, 262176, 16, 1, 15, 262203, 16, 17, 1, 262176, 20, 3, 7, 262203, 20, 21, 3, 327734, 2, 4, 0, 3, 131320, 5, 262205, 11, 14, 13, 262205, 15, 18, 17, 327767, 7, 19, 14, 18, 589903, 7, 23, 19, 19, 0, 0, 0, 0, 196670, 21, 23, 65789, 65592
 };
 
 namespace vk
@@ -554,6 +559,49 @@ namespace vk
             m_Framebuffers[i] = framebuffer;
         }
 
+        // Transistion Swapchain images into VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to stop validation errors
+        VkCommandPoolCreateInfo poolCreateInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+        VkCommandPool pool;
+        vkCreateCommandPool(m_Device, &poolCreateInfo, nullptr, &pool);
+        VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        allocInfo.commandPool = pool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        VkCommandBuffer cmd;
+        vkAllocateCommandBuffers(m_Device, &allocInfo, &cmd);
+
+        VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(cmd, &beginInfo);
+        
+        for (uint32_t i = 0; i < m_BackBufferCount; i++)
+        {
+            VkImageMemoryBarrier barrier;
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.pNext = nullptr;
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            barrier.srcQueueFamilyIndex = 0;
+            barrier.dstQueueFamilyIndex = 0;
+            barrier.image = m_SwapchainImages[i];
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount = 1;
+            barrier.subresourceRange.baseMipLevel = 0;
+            barrier.subresourceRange.levelCount = 1;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        }
+        vkEndCommandBuffer(cmd);
+
+        VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmd;
+        vkQueueSubmit(m_Queue, 1, &submitInfo, nullptr);
+        vkQueueWaitIdle(m_Queue);
+        vkDestroyCommandPool(m_Device, pool, nullptr);
+
         // initalize ImGui
         if (m_UsingImGui && !m_GuiInitalized)
         {
@@ -637,7 +685,28 @@ namespace vk
         pipelineCreateInfo.layout = m_Layout;
         pipelineCreateInfo.renderPass = m_PresentPass;
 
+        VkGraphicsPipelineCreateInfo pipelineDepthCreateInfo = pipelineCreateInfo;
+
+        VkShaderModuleCreateInfo depthModuleCreateInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+        depthModuleCreateInfo.codeSize = sizeof(s_Depth_FragmentShaderBytecode);
+        depthModuleCreateInfo.pCode = s_Depth_FragmentShaderBytecode;
+        VkShaderModule FragmentDepthModule;
+        vkCreateShaderModule(m_Device, &depthModuleCreateInfo, nullptr, &FragmentDepthModule);
+
+        VkPipelineShaderStageCreateInfo ShaderDepthStages[2]{};
+        ShaderDepthStages[0].sType = ShaderDepthStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderDepthStages[0].pName = "main";
+        ShaderDepthStages[0].module = m_VertexModule;
+        ShaderDepthStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+        ShaderDepthStages[1].pName = "main";
+        ShaderDepthStages[1].module = FragmentDepthModule;
+        ShaderDepthStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        pipelineDepthCreateInfo.pStages = ShaderDepthStages;
+        
         vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, allocation_callback, &m_PresentPipeline);
+        vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineDepthCreateInfo, allocation_callback, &m_PresentDepthPipeline);
+        vkDestroyShaderModule(m_Device, FragmentDepthModule, nullptr);
+
     }
 
     void GraphicsSwapchain::PrepareNextFrame(uint32_t *pNextImageIndex, IGPUSemaphore *pSwapchainReadySemaphore)
@@ -659,7 +728,7 @@ namespace vk
         *pSwapchainReadySemaphore = m_FrameSemaphores;
     }
 
-    void GraphicsSwapchain::Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores)
+    void GraphicsSwapchain::Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline)
     {
         PROFILE_FUNCTION();
         uint32_t FrameIndex = m_FrameCount % m_BackBufferCount;
@@ -699,7 +768,7 @@ namespace vk
             }
 
             vkCmdBeginRenderPass(m_CommandBuffers[FrameIndex], &PassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(m_CommandBuffers[FrameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_PresentPipeline);
+            vkCmdBindPipeline(m_CommandBuffers[FrameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, DepthPipeline ? m_PresentDepthPipeline : m_PresentPipeline);
             vkCmdBindDescriptorSets(m_CommandBuffers[FrameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_Layout, 0, 1, &m_DescriptorSets[FrameIndex], 0, NULL);
             vkCmdDraw(m_CommandBuffers[FrameIndex], 6, 1, 0, 0);
         }
@@ -738,12 +807,14 @@ namespace vk
         
         {
             PROFILE_SCOPE("[Vulkan] Swapchain vkQueuePresentKHR");
-            if (vkQueuePresentKHR(m_Queue, &PresentInfo) != VK_SUCCESS)
+            VkResult present_status = vkQueuePresentKHR(m_Queue, &PresentInfo);
+            if (present_status != VK_SUCCESS)
             {
+                // Did the window minimize?
+                if (m_Window->IsWindowMinimized())
+                    goto NoResize;
                 // Wait until swapchain is not used in-flight
                 vkQueueWaitIdle(m_Queue); // TODO: Fix validation layer errors when resizing
-                if (m_Window->GetWidth() == 0 || m_Window->GetHeight() == 0)
-                    return; // window is minimized cannot create a swapchain size 0,0
                 // the swapchain is to old, must be recreated.
                 // Before creating a new swapchain destroy views and framebuffers
                 for (uint32_t i = 0; i < m_BackBufferCount; i++)
@@ -758,6 +829,7 @@ namespace vk
             }
         }
         
+        NoResize:
         m_FrameCount++;
     }
 

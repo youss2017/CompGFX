@@ -121,6 +121,13 @@ bool PlatformWindow::ShouldClose()
     return glfwWindowShouldClose(m_window);
 }
 
+bool PlatformWindow::IsWindowMinimized()
+{
+    int w, h;
+    glfwGetWindowSize(m_window, &w, &h);
+    return !(w && h);
+}
+
 bool PlatformWindow::IsKeyDown(uint16_t key)
 {
     key = toupper(key);

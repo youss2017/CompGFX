@@ -7,7 +7,7 @@
 #include <stb_image.h>
 #include "graphics/Graphics.hpp"
 #include "core/pipeline/Framebuffer.hpp"
-#include "core/GUI.h"
+#include "core/backend/GUI.h"
 #include "graphics/material_system/MaterialConfiguration.hpp"
 #include "graphics/material_system/FramebufferReserve.hpp"
 #include "graphics/material_system/Material.hpp"

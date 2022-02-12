@@ -18,9 +18,9 @@ PFN_GPUTexture2D_Destroy *GPUTexture2D_Destroy = nullptr;
 /* ********************************************* ENGINE TEXTURE 2D ********************************************* */
 static void GetOpenGLTextureFormatType(TextureFormat format, GLenum &OutInternalFormat, GLenum &OutFormat, GLenum &OutDataType);
 
-IGPUTexture2D Vulkan_GPUTexture2D_Create(GraphicsContext _context, GPUTexture2DSpecification *_specification)
+IGPUTexture2D Vulkan_GPUTexture2D_Create(GraphicsContext _context, Texture2DSpecification *_specification)
 {
-	GPUTexture2DSpecification specification = *_specification;
+	Texture2DSpecification specification = *_specification;
 	GPUTexture2D *result = new GPUTexture2D();
 	result->m_Context = _context;
 	result->m_specification = specification;
@@ -387,9 +387,9 @@ void Vulkan_GPUTexture2D_Destroy(IGPUTexture2D texture)
 
 // =================================== OPENGL ===================================
 
-IGPUTexture2D GL_GPUTexture2D_Create(GraphicsContext context, GPUTexture2DSpecification *_specification)
+IGPUTexture2D GL_GPUTexture2D_Create(GraphicsContext context, Texture2DSpecification *_specification)
 {
-	GPUTexture2DSpecification specification = *_specification;
+	Texture2DSpecification specification = *_specification;
 	GPUTexture2D *result = new GPUTexture2D();
 	result->m_Context = context;
 	result->m_specification = specification;
@@ -626,7 +626,7 @@ IGPUTexture2D GPUTexture2D_CreateFromFile(GraphicsContext context, const char* p
 		logerrors(ss.str());
 		return nullptr;
 	}
-	GPUTexture2DSpecification specification;
+	Texture2DSpecification specification;
 	specification.m_Width = w;
 	specification.m_Height = h;
 	specification.m_TextureUsage = TextureUsage::DEFAULT;

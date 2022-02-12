@@ -8,7 +8,9 @@
 #include <imgui/imgui.h>
 #include <GLFW/glfw3.h>
 
-static constexpr VkFormat cs_SwapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
+// [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
+// [NOTE]: there will be a mismatch of format between pipeline state objects and render pass
+static constexpr VkFormat cs_SwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
 // =============================================== Graphics3D ===============================================
 constexpr int OpenGL_MajorVersion = 3;
@@ -212,7 +214,7 @@ void Vulkan_Graphics3D_PrepareNextFrame(IGraphics3D gfx, IGPUSemaphore *pSwapcha
     gfx->m_vswapchain.PrepareNextFrame(&gfx->m_FrameInfo->m_FrameIndex, pSwapchainSemaphoreReady);
 }
 
-void Vulkan_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32_t AttachmentIndex, uint32_t WaitSemaphoreCount, IGPUSemaphore* pWaitSemahpores)
+void Vulkan_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32_t AttachmentIndex, uint32_t WaitSemaphoreCount, IGPUSemaphore* pWaitSemahpores, bool DepthPipeline)
 {
 #if PROFILE_ENABLED == 2
     if (gfx->m_EnableImGui)
@@ -223,7 +225,8 @@ void Vulkan_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32
     VkSemaphore wait_semaphores[50];
     for (uint32_t i = 0; i < WaitSemaphoreCount; i++)
         wait_semaphores[i] = VkGPUSemaphore_GetSemaphore(pWaitSemahpores[i]);
-    gfx->m_vswapchain.Present((VkImage)Framebuffer_GetImage(framebuffer, AttachmentIndex), (VkImageView)Framebuffer_GetView(framebuffer, AttachmentIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, WaitSemaphoreCount, wait_semaphores);
+    if (gfx->m_window->m_width && gfx->m_window->m_height)
+        gfx->m_vswapchain.Present((VkImage)Framebuffer_GetImage(framebuffer, AttachmentIndex), (VkImageView)Framebuffer_GetView(framebuffer, AttachmentIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, WaitSemaphoreCount, wait_semaphores, DepthPipeline);
 }
 
 void Vulkan_Graphics3D_Destroy(IGraphics3D gfx)
@@ -396,7 +399,7 @@ void GL_Graphics3D_PrepareNextFrame(IGraphics3D gfx, IGPUSemaphore *pSwapchainSe
     gfx->m_gswapchain.PrepareNextFrame();
 }
 
-void GL_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32_t AttachmentIndex, uint32_t WaitSemaphoreCount, IGPUSemaphore* pWaitSemahpores)
+void GL_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32_t AttachmentIndex, uint32_t WaitSemaphoreCount, IGPUSemaphore* pWaitSemahpores, bool DepthPipeline)
 {
     PROFILE_FUNCTION();
 #if PROFILE_ENABLED == 2

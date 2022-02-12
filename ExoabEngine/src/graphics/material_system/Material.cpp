@@ -96,7 +96,7 @@ IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, Materia
 		if (att.m_reserve_id == UINT32_MAX)
 		{
 			// no reserve id, create new texture attachment
-			GPUTexture2DSpecification specification;
+			Texture2DSpecification specification;
 			specification.m_Width = width;
 			specification.m_Height = height;
 			specification.m_TextureUsage = (att.format == TextureFormat::D32F) ? TextureUsage::DEPTH_ATTACHMENT : TextureUsage::COLOR_ATTACHMENT;

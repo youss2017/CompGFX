@@ -4,23 +4,10 @@
 
 /******************************************************** ENGINE TEXTURE 2D ********************************************************/
 
-struct GPUTexture2DSpecification
-{
-	uint32_t m_Width;
-	uint32_t m_Height;
-	TextureUsage m_TextureUsage = TextureUsage::DEFAULT;
-	TextureSamples m_Samples = TextureSamples::MSAA_1;
-	TextureFormat m_Format;
-	bool m_GenerateMipMapLevels;
-	bool m_CreatePerFrame = false;
-	bool m_LazilyAllocate = false;
-	TextureSamplerSpecification m_Sampler = TextureSamplerSpecification();
-};
-
 struct GPUTexture2D {
 	bool m_Vk_AllocatedMipMaps, m_CreatePerFrame;
 
-	GPUTexture2DSpecification m_specification;
+	Texture2DSpecification m_specification;
 
 	int m_ApiType;
 	void *m_NativeHandle;
@@ -40,7 +27,7 @@ struct GPUTexture2D {
 
 typedef GPUTexture2D *IGPUTexture2D;
 
-typedef IGPUTexture2D PFN_GPUTexture2D_Create(GraphicsContext context, GPUTexture2DSpecification *specification);
+typedef IGPUTexture2D PFN_GPUTexture2D_Create(GraphicsContext context, Texture2DSpecification *specification);
 typedef void PFN_GPUTexture2D_UploadPixels(IGPUTexture2D texture, void *pixels, size_t pixel_size);
 typedef void PFN_GPUTexture2D_GenerateMips(IGPUTexture2D texture);
 typedef APIHandle PFN_GPUTexture2D_GetImage(IGPUTexture2D texture);

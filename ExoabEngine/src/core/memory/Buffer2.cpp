@@ -90,13 +90,15 @@ void Buffer2_Invalidate(IBuffer2 buffer)
 	VkAlloc::InvalidateBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
 }
 
-void Buffer2_Unmap(IBuffer2 buffer)
+void Buffer2_Unmap(IBuffer2 buffer, bool AutoFlush)
 {
 	assert(buffer->memoryType != BufferMemoryType::STATIC && "Cannot be static.");
 	char8_t** mapped_pointer = &buffer->m_vk_buffer->m_suballocation.m_mapped_pointer;
 	if (!*mapped_pointer)
 		return;
 	VkAlloc::UnmapBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
+	if (AutoFlush)
+		Buffer2_Flush(buffer);
 }
 
 void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size)

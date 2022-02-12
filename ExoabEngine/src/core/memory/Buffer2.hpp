@@ -9,7 +9,7 @@ struct GPUBuffer2
 	size_t size;
 	BufferMemoryType memoryType;
 	VkAlloc::BUFFER m_vk_buffer;
-	unsigned int im_gl_buffer;
+	unsigned int m_gl_buffer;
 } typedef* IBuffer2;
 
 IBuffer2 Buffer2_Create(GraphicsContext context, BufferType type, size_t size, BufferMemoryType memoryType);
@@ -19,7 +19,7 @@ char8_t* Buffer2_Map(IBuffer2 buffer, bool ReadAccess, bool WriteAccess);
 void Buffer2_Flush(IBuffer2 buffer);
 // Makes device writes (GPU) visible to host (CPU)
 void Buffer2_Invalidate(IBuffer2 buffer);
-void Buffer2_Unmap(IBuffer2 buffer);
+void Buffer2_Unmap(IBuffer2 buffer, bool AutoFlush = false);
 void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size);
 void Buffer2_Resize(IBuffer2 buffer, size_t new_size);
 void Buffer2_Destroy(IBuffer2 buffer);

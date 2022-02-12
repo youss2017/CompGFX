@@ -150,11 +150,12 @@ public:
 	inline int GetWidth() { return m_width; }
 	inline int GetHeight() { return m_height; }
 	inline bool IsWindowFocus() { return m_focus; }
+	bool IsWindowMinimized();
 
 	// TODO: Handle Mouse Input
 
-private:
 	int m_width, m_height;
+private:
 	int m_keys[512];
 	GLFWwindow* m_window;
 	bool m_focus = true;

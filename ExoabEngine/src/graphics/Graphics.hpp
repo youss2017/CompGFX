@@ -16,6 +16,7 @@
 
 struct ConfigurationSettings
 {
+    std::string WindowTitle = "UNDEFINED";
     EngineAPIType ApiType = EngineAPIType::OpenGL;
     uint32_t ResolutionWidth = 800;
     uint32_t ResolutionHeight = 600;
@@ -48,7 +49,7 @@ typedef void PFN_Graphics3D_ExecuteCommandList(IGraphics3D gfx, ICommandList Cmd
 typedef void PFN_Graphics3D_ExecuteCommandLists(IGraphics3D gfx, uint32_t CmdListCount, ICommandList *pCmdLists, IGPUFence WaitFence, uint32_t WaitSemaphoreCount, IGPUSemaphore *pWaitSemaphores, uint32_t SignalSemaphoreCount, IGPUSemaphore *pSignalSemaphores);
 typedef void PFN_Graphics3D_SetSyncInterval(IGraphics3D gfx, int SyncInterval);
 typedef void PFN_Graphics3D_PrepareNextFrame(IGraphics3D gfx, IGPUSemaphore *pSwapchainSemaphoreReady);
-typedef void PFN_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32_t AttachmentIndex, uint32_t WaitSemaphoreCount, IGPUSemaphore* pWaitSemahpores);
+typedef void PFN_Graphics3D_Present(IGraphics3D gfx, IFramebuffer framebuffer, uint32_t AttachmentIndex, uint32_t WaitSemaphoreCount, IGPUSemaphore* pWaitSemahpores, bool DepthPipeline);
 typedef void PFN_Graphics3D_Destroy(IGraphics3D gfx);
 
 extern PFN_Graphics3D_WaitGPUIdle* Graphics3D_WaitGPUIdle;

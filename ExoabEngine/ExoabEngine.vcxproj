@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -118,11 +119,12 @@
     <ClInclude Include="src\core\backend\VkGraphicsCard.hpp" />
     <ClInclude Include="src\core\backend\VulkanLoader.h" />
     <ClInclude Include="src\core\EngineBase.h" />
-    <ClInclude Include="src\core\GUI.h" />
+    <ClInclude Include="src\core\backend\GUI.h" />
     <ClInclude Include="src\core\MaxEnergyMath.h" />
     <ClInclude Include="src\core\memory\Buffer2.hpp" />
     <ClInclude Include="src\core\memory\Buffers.hpp" />
     <ClInclude Include="src\core\memory\cvector.h" />
+    <ClInclude Include="src\core\memory\Texture2.hpp" />
     <ClInclude Include="src\core\memory\Textures.hpp" />
     <ClInclude Include="src\core\memory\vulkan_memory.h" />
     <ClInclude Include="src\core\memory\vulkan_memory_allocator.hpp" />
@@ -162,6 +164,7 @@
     <ClCompile Include="external\imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="external\imgui\backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="external\imgui\imgui.cpp" />
+    <ClCompile Include="external\imgui\imgui_demo.cpp" />
     <ClCompile Include="external\imgui\imgui_draw.cpp" />
     <ClCompile Include="external\imgui\imgui_tables.cpp" />
     <ClCompile Include="external\imgui\imgui_widgets.cpp" />
@@ -173,10 +176,11 @@
     <ClCompile Include="src\core\backend\Synchronization.cpp" />
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\VulkanLoader.c" />
-    <ClCompile Include="src\core\GUI.cpp" />
+    <ClCompile Include="src\core\backend\GUI.cpp" />
     <ClCompile Include="src\core\MaxEnergyMath.cpp" />
     <ClCompile Include="src\core\memory\Buffer2.cpp" />
     <ClCompile Include="src\core\memory\Buffers.cpp" />
+    <ClCompile Include="src\core\memory\Texture2.cpp" />
     <ClCompile Include="src\core\memory\Textures.cpp" />
     <ClCompile Include="src\core\memory\vulkan_memory.c" />
     <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />
@@ -216,5 +220,13 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210806.1\build\native\Microsoft.Windows.CppWinRT.targets'))" />
+  </Target>
 </Project>

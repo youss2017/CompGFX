@@ -88,7 +88,7 @@ FramebufferReserve::FramebufferReserve(GraphicsContext context, ConfigurationSet
 
 	// 5) Create Attachments
 	for (int i = 0; i < attachments.size(); i++) {
-		GPUTexture2DSpecification spec;
+		Texture2DSpecification spec;
 		spec.m_Width = attachments[i].width == (uint32_t)-1 ? cfg.ResolutionWidth : attachments[i].width;
 		spec.m_Height = attachments[i].height == (uint32_t)-1 ? cfg.ResolutionHeight : attachments[i].height;
 		spec.m_TextureUsage = attachments[i].format == TextureFormat::D32F ? TextureUsage::DEPTH_ATTACHMENT : TextureUsage::COLOR_ATTACHMENT;

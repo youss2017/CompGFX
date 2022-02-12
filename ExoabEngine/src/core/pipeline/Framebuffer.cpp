@@ -212,7 +212,7 @@ IFramebuffer Vulkan_Framebuffer_Create(GraphicsContext context, uint32_t width, 
     for (auto &attac : attachment_descriptions)
     {
         bool IsColor = IsAttachmentColor(attac);
-        GPUTexture2DSpecification attachment_desc;
+        Texture2DSpecification attachment_desc;
         attachment_desc.m_Width = width;
         attachment_desc.m_Height = height;
         attachment_desc.m_TextureUsage = IsColor ? TextureUsage::COLOR_ATTACHMENT : TextureUsage::DEPTH_ATTACHMENT;
@@ -312,7 +312,7 @@ IFramebuffer GL_Framebuffer_Create(GraphicsContext context, uint32_t width, uint
     for (auto &attac : attachment_descriptions)
     {
         bool IsColor = IsAttachmentColor(attac);
-        GPUTexture2DSpecification attachment_desc;
+        Texture2DSpecification attachment_desc;
         attachment_desc.m_Width = width;
         attachment_desc.m_Height = height;
         attachment_desc.m_TextureUsage = IsColor ? TextureUsage::COLOR_ATTACHMENT : TextureUsage::DEPTH_ATTACHMENT;

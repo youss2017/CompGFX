@@ -15,7 +15,7 @@ namespace vk {
             // pNextImageIndex will be between 0 and BackBufferCount, When submitting commands to command queue, make sure to wait for pSwapchainReadySemaphore
             void PrepareNextFrame(uint32_t* pNextImageIndex, IGPUSemaphore* pSwapchainReadySemaphore);
             // Image Layout should be VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, pRenderCompleteSemaphores is a list of semaphores to wait so that gpu finishes rendering the frame before showing the image
-            void Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores);
+            void Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline);
             void Destroy();
 
             inline uint32_t GetLastFrameIndex() { return m_LastFrameIndex; }
@@ -24,7 +24,7 @@ namespace vk {
 
         private:
             VkShaderModule m_VertexModule, m_FragmentModule;
-            VkPipeline m_PresentPipeline;
+            VkPipeline m_PresentPipeline, m_PresentDepthPipeline;
             VkRenderPass m_PresentPass;
             VkDescriptorSetLayout m_SetLayout;
             VkDescriptorPool m_DescriptorPool;

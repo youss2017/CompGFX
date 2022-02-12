@@ -185,6 +185,19 @@ enum class TextureSamples
 	MSAA_64 = VK_SAMPLE_COUNT_64_BIT
 };
 
+struct Texture2DSpecification
+{
+	uint32_t m_Width;
+	uint32_t m_Height;
+	TextureUsage m_TextureUsage = TextureUsage::DEFAULT;
+	TextureSamples m_Samples = TextureSamples::MSAA_1;
+	TextureFormat m_Format;
+	bool m_GenerateMipMapLevels;
+	bool m_CreatePerFrame = false;
+	bool m_LazilyAllocate = false;
+	TextureSamplerSpecification m_Sampler = TextureSamplerSpecification();
+};
+
 namespace vk
 {
 	uint32_t FindMemoryType(uint32_t typeFilter, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags properties);

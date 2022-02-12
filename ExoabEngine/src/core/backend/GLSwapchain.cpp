@@ -1,5 +1,5 @@
 #include "GLSwapchain.hpp"
-#include "../GUI.h"
+#include "GUI.h"
 #include "../pipeline/Framebuffer.hpp"
 #include "../../utils/Logger.hpp"
 #include <glad/glad.h>
