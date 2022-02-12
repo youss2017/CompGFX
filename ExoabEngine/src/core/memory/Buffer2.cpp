@@ -106,11 +106,6 @@ void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size)
 	VkAlloc::ReAllocBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, new_size);
 }
 
-void Buffer2_Resize(IBuffer2 buffer, size_t new_size)
-{
-	VkAlloc::ResizeBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, new_size);
-}
-
 void Buffer2_Destroy(IBuffer2 buffer)
 {
 	VkAlloc::DestroyBuffers(ToVKContext(buffer->m_context)->m_future_memory_context, 1, &buffer->m_vk_buffer);

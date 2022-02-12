@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <map>
 #include "../../core/backend/VkGraphicsCard.hpp"
-#include "../../core/memory/Buffers.hpp"
+#include "../../core/memory/Buffer2.hpp"
 #include "../../units/Entity.hpp"
 
 struct DynamicUniformInformation
@@ -23,7 +23,7 @@ struct DynamicSetInformation
     uint32_t setID;
     // bindingID
     std::map<uint32_t, DynamicUniformInformation> uniformInformation;
-    IGPUBuffer buffer;
+    IBuffer2 buffer;
     bool isTexture = false;
 };
 

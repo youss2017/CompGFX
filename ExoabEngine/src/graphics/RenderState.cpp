@@ -103,10 +103,10 @@ static int GenerateGLStrideOffsetAndBindings(GLenum target, int StartVertexAttri
 }
 #endif
 
-RenderState RenderState::Create(IGPUBuffer VertexBuffer, uint32_t vertices_count)
+RenderState RenderState::Create(IBuffer2 VertexBuffer, uint32_t vertices_count)
 {
     RenderState state;
-    void *context = VertexBuffer->m_Context;
+    void *context = VertexBuffer->m_context;
     if (*(char *)context == 0)
     {
         // vk
@@ -119,7 +119,7 @@ RenderState RenderState::Create(IGPUBuffer VertexBuffer, uint32_t vertices_count
         glGenVertexArrays(1, &state.m_VaoID);
         glBindVertexArray(state.m_VaoID);
         //auto spec = VertexBuffer.GetBufferSpecification();
-        glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer->m_NativeOpenGLHandle);
+        glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer->m_gl_buffer);
         //GenerateGLStrideOffsetAndBindings(GL_ARRAY_BUFFER, 0, spec);
         assert(0 && "Fix stride stuff!");
         glBindVertexArray(0);
@@ -130,10 +130,10 @@ RenderState RenderState::Create(IGPUBuffer VertexBuffer, uint32_t vertices_count
     return state;
 }
 
-RenderState RenderState::Create(IGPUBuffer VertexBuffer, IGPUBuffer IndexBuffer, uint32_t vertices_count, uint32_t indices_count)
+RenderState RenderState::Create(IBuffer2 VertexBuffer, IBuffer2 IndexBuffer, uint32_t vertices_count, uint32_t indices_count)
 {
     RenderState state;
-    void* context = VertexBuffer->m_Context;
+    void* context = VertexBuffer->m_context;
     if (*(char *)context == 0)
     {
         state.m_ApiType = EngineAPIType::Vulkan;
@@ -147,9 +147,9 @@ RenderState RenderState::Create(IGPUBuffer VertexBuffer, IGPUBuffer IndexBuffer,
         glGenVertexArrays(1, &state.m_VaoID);
         glBindVertexArray(state.m_VaoID);
         //auto spec = VertexBuffer.GetBufferSpecification();
-        glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer->m_NativeOpenGLHandle);
+        glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer->m_gl_buffer);
         //GenerateGLStrideOffsetAndBindings(GL_ARRAY_BUFFER, 0, spec);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBuffer->m_NativeOpenGLHandle);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBuffer->m_gl_buffer);
         glBindVertexArray(0);
     }
     state.m_VerticesCount = vertices_count;

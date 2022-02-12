@@ -361,5 +361,6 @@
     <None Include="src\utils\common.inl">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="imgui.ini" />
   </ItemGroup>
 </Project>

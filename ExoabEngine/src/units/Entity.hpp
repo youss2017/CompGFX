@@ -7,9 +7,6 @@
 #include <glm/glm.hpp>
 #include <cassert>
 
-struct GPUTexture2D;
-typedef GPUTexture2D *IGPUTexture2D;
-
 enum EntityDataType
 {
 	ENTITY_DATA_TYPE_MAT4,
@@ -74,7 +71,7 @@ class DefaultEntity
 public:
 	std::shared_ptr<OmegaModel<OmegaBasicVertex>> m_model;
 	std::vector<VkDeviceSize> VertexInstanceBufferOffset;
-	std::vector<IGPUBuffer> VertexInstanceBuffers;
+	std::vector<IBuffer2> VertexInstanceBuffers;
 	std::vector<VkBuffer> VkVertexInstanceBuffers;
 	uint32_t DrawInstanceCount = 1;
 	// This flag is used to update bound buffer for OpenGL
@@ -103,10 +100,10 @@ public:
 	}
 
 	// Add In Order from lowest to highest bindingID
-	void AddVertexInstanceBuffer(IGPUBuffer buffer, VkDeviceSize Offset = 0)
+	void AddVertexInstanceBuffer(IBuffer2 buffer, VkDeviceSize Offset = 0)
 	{
 		VertexInstanceBuffers.push_back(buffer);
-		VkVertexInstanceBuffers.push_back(buffer->m_NativeVulkanHandle);
+		VkVertexInstanceBuffers.push_back(buffer->m_vk_buffer->m_buffer);
 		VertexInstanceBufferOffset.push_back(Offset);
 	}
 

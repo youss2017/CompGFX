@@ -204,17 +204,19 @@ namespace VkAlloc
 			for (int block_index = 0; block_index < heap->m_free_blocks.size(); block_index++)
 			{
 				DEVICE_HEAP_FREE_BLOCK& block = heap->m_free_blocks[block_index];
-				if (block.m_size >= buffer->m_suballocation.m_size)
+				uint32_t block_size = block.m_size - (AlignMemory(block.m_offset, buffer->m_memrequirements.alignment) - block.m_offset);
+				if (block_size >= buffer->m_suballocation.m_size)
 				{
-					buffer->m_suballocation.m_offset = block.m_offset;
+					buffer->m_suballocation.m_offset = AlignMemory(block.m_offset, buffer->m_memrequirements.alignment);
 					buffer->m_suballocation.m_coherent = heap->m_coherent;
 					buffer->m_suballocation.m_host_visible = heap->m_host_visible;
 					buffer->m_suballocation.m_memory = heap->m_memory;
 					buffer->m_suballocation.m_heap_index = heap->m_heap_index;
 					buffer->m_suballocation.m_suballocation_index = heap->m_suballocations.size();
-					vkBindBufferMemory(context->m_device, buffer->m_buffer, heap->m_memory, block.m_offset);
+					buffer->m_suballocation.m_buffer = buffer;
+					vkBindBufferMemory(context->m_device, buffer->m_buffer, heap->m_memory, AlignMemory(block.m_offset, buffer->m_memrequirements.alignment));
 					block.m_offset += buffer->m_suballocation.m_size;
-					heap->m_suballocations.push_back(buffer->m_suballocation);
+					heap->m_suballocations.insert(std::make_pair(buffer->m_suballocation.m_suballocation_index, buffer->m_suballocation));
 					next_buffer_index++;
 					goto suballocate;
 				}
@@ -239,17 +241,19 @@ namespace VkAlloc
 			for (int block_index = 0; block_index < heap->m_free_blocks.size(); block_index++)
 			{
 				DEVICE_HEAP_FREE_BLOCK& block = heap->m_free_blocks[block_index];
-				if (block.m_size >= buffer->m_suballocation.m_size)
+				uint32_t block_size = block.m_size - (AlignMemory(block.m_offset, buffer->m_memrequirements.alignment) - block.m_offset);
+				if (block_size >= buffer->m_suballocation.m_size)
 				{
-					buffer->m_suballocation.m_offset = block.m_offset;
+					buffer->m_suballocation.m_offset = AlignMemory(block.m_offset, buffer->m_memrequirements.alignment);
 					buffer->m_suballocation.m_coherent = heap->m_coherent;
 					buffer->m_suballocation.m_host_visible = heap->m_host_visible;
 					buffer->m_suballocation.m_memory = heap->m_memory;
 					buffer->m_suballocation.m_heap_index = heap->m_heap_index;
 					buffer->m_suballocation.m_suballocation_index = heap->m_suballocations.size();
-					vkBindBufferMemory(context->m_device, buffer->m_buffer, heap->m_memory, block.m_offset);
+					buffer->m_suballocation.m_buffer = buffer;
+					vkBindBufferMemory(context->m_device, buffer->m_buffer, heap->m_memory, AlignMemory(block.m_offset, buffer->m_memrequirements.alignment));
 					block.m_offset += buffer->m_suballocation.m_size;
-					heap->m_suballocations.push_back(buffer->m_suballocation);
+					heap->m_suballocations.insert(std::make_pair(buffer->m_suballocation.m_suballocation_index, buffer->m_suballocation));
 					next_buffer_index++;
 					goto suballocate2;
 				}
@@ -366,9 +370,10 @@ namespace VkAlloc
 					image->m_suballocation.m_memory = heap->m_memory;
 					image->m_suballocation.m_heap_index = heap->m_heap_index;
 					image->m_suballocation.m_suballocation_index = heap->m_suballocations.size();
+					image->m_suballocation.m_image = image;
 					vkBindImageMemory(context->m_device, image->m_image, heap->m_memory, block.m_offset);
 					block.m_offset += image->m_suballocation.m_size;
-					heap->m_suballocations.push_back(image->m_suballocation);
+					heap->m_suballocations.insert(std::make_pair(image->m_suballocation.m_suballocation_index, image->m_suballocation));
 					next_image_index++;
 					goto suballocate;
 				}
@@ -401,9 +406,10 @@ namespace VkAlloc
 					image->m_suballocation.m_memory = heap->m_memory;
 					image->m_suballocation.m_heap_index = heap->m_heap_index;
 					image->m_suballocation.m_suballocation_index = heap->m_suballocations.size();
+					image->m_suballocation.m_image = image;
 					vkBindImageMemory(context->m_device, image->m_image, heap->m_memory, block.m_offset);
 					block.m_offset += image->m_suballocation.m_size;
-					heap->m_suballocations.push_back(image->m_suballocation);
+					heap->m_suballocations.insert(std::make_pair(image->m_suballocation.m_suballocation_index, image->m_suballocation));
 					next_image_index++;
 					goto suballocate2;
 				}
@@ -462,23 +468,22 @@ namespace VkAlloc
 		}
 		//if()
 	}
-	void ResizeBuffer(CONTEXT context, BUFFER buffer, size_t new_size)
-	{
-	}
 	void MapBuffer(CONTEXT context, BUFFER buffer)
 	{
 		assert(!buffer->m_suballocation.m_destroyed && "Buffer must not have been destroyed!");
 		assert(buffer->m_suballocation.m_host_visible && "Buffer must be host visible, CPU_ONLY OR CPU_TO_GPU!");
 		if (buffer->m_suballocation.m_mapped_pointer)
 			return;
-		VkResult result = vkMapMemory(context->m_device, buffer->m_suballocation.m_memory, buffer->m_suballocation.m_offset, buffer->m_suballocation.m_size, 0, (void**)&buffer->m_suballocation.m_mapped_pointer);
-		context->m_device_heap[buffer->m_suballocation.m_heap_index]->m_map_count++;
+		DEVICE_HEAP& heap = context->m_device_heap[buffer->m_suballocation.m_heap_index];
+		if (!heap->m_mapped_pointer)
+			vkMapMemory(context->m_device, buffer->m_suballocation.m_memory, 0, VK_WHOLE_SIZE, 0, (void**)&heap->m_mapped_pointer);
+		heap->m_map_count++;
+		buffer->m_suballocation.m_mapped_pointer = heap->m_mapped_pointer + buffer->m_suballocation.m_offset;
 	}
 	void FlushBuffer(CONTEXT context, BUFFER buffer)
 	{
 		assert(!buffer->m_suballocation.m_destroyed && "Buffer must not have been destroyed!");
 		assert(buffer->m_suballocation.m_host_visible && "Buffer must be host visible, CPU_ONLY OR CPU_TO_GPU!");
-		assert(buffer->m_suballocation.m_mapped_pointer && "Buffer must be mapped to be flushed.");
 		if (buffer->m_suballocation.m_coherent)
 			return;
 		VkMappedMemoryRange range;
@@ -510,10 +515,12 @@ namespace VkAlloc
 		if (buffer->m_suballocation.m_mapped_pointer == nullptr)
 			return;
 		buffer->m_suballocation.m_mapped_pointer = nullptr;
-		if (--context->m_device_heap[buffer->m_suballocation.m_heap_index]->m_map_count == 0)
+		DEVICE_HEAP& heap = context->m_device_heap[buffer->m_suballocation.m_heap_index];
+		if (--heap->m_map_count == 0)
 		{
 			// We only can unmap once all suballocations have unmapped.
 			vkUnmapMemory(context->m_device, context->m_device_heap[buffer->m_suballocation.m_heap_index]->m_memory);
+			heap->m_mapped_pointer = nullptr;
 		}
 	}
 	void DestroyBuffers(CONTEXT context, uint32_t count, BUFFER* pBuffers)
@@ -552,12 +559,9 @@ namespace VkAlloc
 				// this helps determine whether the heap needs to be defragmented.
 				heap->m_fragmentation_score++;
 			}
-
 			if (buffer->m_suballocation.m_host_visible)
 				UnmapBuffer(context, buffer);
-			// TODO: Replace std::vector with linked list
-			std::vector<DEVICE_HEAP_SUBALLOCATION>::iterator suballoc_iter = heap->m_suballocations.begin() + buffer->m_suballocation.m_suballocation_index;
-			heap->m_suballocations.erase(suballoc_iter, suballoc_iter + 1);
+			heap->m_suballocations.erase(buffer->m_suballocation.m_suballocation_index);
 			vkDestroyBuffer(context->m_device, buffer->m_buffer, nullptr);
 			delete buffer;
 		}

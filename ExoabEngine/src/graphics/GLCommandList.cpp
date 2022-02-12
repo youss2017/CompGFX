@@ -66,11 +66,11 @@ void GL_CommandList_EndMaterial(ICommandList list)
     list->m_GLCmd.push_back(command);
 }
 
-void GL_CommandList_UpdateGPUBuffer(ICommandList list, IGPUBuffer buffer, void *pData, uint32_t offset, uint32_t size)
+void GL_CommandList_UpdateGPUBuffer(ICommandList list, IBuffer2 buffer, void *pData, uint32_t offset, uint32_t size)
 {
     LIST_GUARD();
     assert(size < pow(2, 16) && !list->m_FramebufferBound && "Cannot not UpdateGPUBuffer inside program and the size of the update cannot be bigger than 2^16 bytes.");
-    GPUBuffer_UploadData(buffer, pData, offset, size);
+    Buffer2_UploadData(buffer, (char8_t*)pData, offset, size);
 }
 void GL_CommandList_SetViewport(ICommandList list, int x, int y, int width, int height)
 {

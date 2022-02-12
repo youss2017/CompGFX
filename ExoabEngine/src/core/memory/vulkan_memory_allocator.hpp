@@ -1,6 +1,7 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
 #include <vector>
+#include <map>
 
 #define VK_ALLOC_KB(x) (x * 1024)
 #define VK_ALLOC_MB(x) (x * 1024 * 1024)
@@ -51,6 +52,7 @@ namespace VkAlloc
 		uint32_t m_map_count;
 		uint32_t m_heap_index;
 		uint32_t m_fragmentation_score = 0;
+		char8_t* m_mapped_pointer = nullptr;
 		bool m_coherent = false;
 		bool m_host_visible = false;
 		// To keep track of memory blocks that are freed
@@ -58,7 +60,7 @@ namespace VkAlloc
 		// when this is created there is only 1 block
 		// with the range [0, m_size]
 		std::vector<DEVICE_HEAP_FREE_BLOCK> m_free_blocks;
-		std::vector<DEVICE_HEAP_SUBALLOCATION> m_suballocations;
+		std::map<uint32_t, DEVICE_HEAP_SUBALLOCATION> m_suballocations;
 	} typedef *DEVICE_HEAP;
 
 	struct BUFFER_DESCRIPTION {
@@ -122,8 +124,6 @@ namespace VkAlloc
 
 	// Reallocates buffer and keeps context (like realloc)
 	void ReAllocBuffer(CONTEXT context, BUFFER buffer, size_t new_size);
-	// Only changes the size of the buffer
-	void ResizeBuffer(CONTEXT context, BUFFER buffer, size_t new_size);
 
 	void MapBuffer(CONTEXT context, BUFFER buffer);
 	// Writes by CPU become visible to GPU (for non-coherent)
