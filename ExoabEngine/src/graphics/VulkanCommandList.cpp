@@ -186,7 +186,7 @@ void Vulkan_CommandList_SetRenderState(ICommandList list, RenderState *render_st
     if (render_state->m_UsingIndexBuffer)
         vkCmdBindIndexBuffer(VULKAN_COMMAND_LIST, (VkBuffer)render_state->m_IndexBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
     VkDeviceSize pOffset[1] = {0};
-    vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 0, 1, &render_state->m_VertexBuffer->m_vk_buffer->m_buffer, pOffset);
+    //vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 0, 1, &render_state->m_VertexBuffer->m_vk_buffer->m_buffer, pOffset);
     if (entity_for_instance_buffers)
     {
         DefaultEntity* entity = (DefaultEntity*)entity_for_instance_buffers;
@@ -227,17 +227,19 @@ void Vulkan_CommandList_DrawArrays(ICommandList list, IPipelineLayout layout, IS
         for (uint32_t i = 0; i < reserved->descriptorSetCount; i++)
         {
             auto& setInfo = reserved->setInformations[i];
-            if (setInfo.isTexture)
+            if (setInfo.isBuffer)
+            {
+                pDescriptorSets[i] = reserved->pDescriptorSets[i];
+                uint32_t dynamicOffsetCount = setInfo.uniformInformation.size();
+                for (uint32_t q = 0; q < dynamicOffsetCount; q++)
+                {
+                    auto& uniformInfo = setInfo.uniformInformation[q];
+                    dynamicOffsets.push_back(uniformInfo.bufferSize * (update_index + uniformInfo.startUsedCopies + BugOffset));
+                }
+            }
+            else
             {
                 pDescriptorSets[i] = setInfo.setHandle;
-                continue;
-            }
-            pDescriptorSets[i] = reserved->pDescriptorSets[i];
-            uint32_t dynamicOffsetCount = setInfo.uniformInformation.size();
-            for (uint32_t q = 0; q < dynamicOffsetCount; q++)
-            {
-                auto& uniformInfo = setInfo.uniformInformation[q];
-                dynamicOffsets.push_back(uniformInfo.bufferSize * (update_index + uniformInfo.startUsedCopies + BugOffset));
             }
         }
     }
@@ -264,7 +266,7 @@ void Vulkan_CommandList_DrawIndexed(ICommandList list, IPipelineLayout layout, I
         for (uint32_t i = 0; i < reserved->descriptorSetCount; i++)
         {
             auto& setInfo = reserved->setInformations[i];
-            if (setInfo.isTexture)
+            if (!setInfo.isBuffer)
             {
                 pDescriptorSets[i] = setInfo.setHandle;
                 continue;

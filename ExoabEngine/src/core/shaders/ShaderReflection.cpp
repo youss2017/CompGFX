@@ -8,7 +8,7 @@
 #include <spirv_cross/spirv_glsl.hpp>
 
 /* Reflection Info: https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide */
-constexpr bool PrintReflectionInfo = false;
+constexpr bool PrintReflectionInfo = true;
 
 ShaderReflection::ShaderReflection(Shader *shader)
 {
@@ -149,7 +149,63 @@ ShaderReflection::ShaderReflection(Shader *shader)
         assert(type.array.size() <= 1);
         bufdesc.m_ArraySize = type.array.size() == 1 ? type.array[0] : 1;
         pSetDesc->m_UniformBuffers.push_back(bufdesc);
-        // pSetDesc->m_BindingsTypeList.push_back(DescriptorSetBindingType::UNIFORM_BUFFER);
+    }
+
+    for (uint32_t i = 0; i < resources.storage_buffers.size(); i++)
+    {
+        auto& ssbo = resources.storage_buffers[i];
+        auto type = compiler->get_type(ssbo.type_id);
+        uint32_t size = compiler->get_declared_struct_size(type);
+        uint32_t member_count = type.member_types.size();
+        uint32_t set = setID_compiler.get_decoration(ssbo.id, spv::DecorationDescriptorSet);
+        uint32_t binding = setID_compiler.get_decoration(ssbo.id, spv::DecorationBinding);
+        if (PrintReflectionInfo)
+        {
+            char buffer[150];
+            sprintf(buffer, "[SSBO] %s [%d bytes]; member count %d; set: %d, binding: %d; \n", ssbo.name.c_str(), size, member_count, set, binding);
+            lograw(buffer);
+        }
+        std::string name0 = compiler->get_name(ssbo.id);
+        std::string name1 = compiler->get_fallback_name(ssbo.id);
+        DescriptorSetDescription* pSetDesc = GetSetPointer(set);
+        ShaderStorageBufferDescription ssbodesc;
+        ssbodesc.m_Binding = binding;
+        if (name0.size() > 0)
+        {
+            ssbodesc.m_Name = name0;
+        }
+        else
+        {
+            ssbodesc.m_Name = name1;
+        }
+        ssbodesc.m_shaderStage = shader->GetShaderKind();
+        for (uint32_t j = 0; j < member_count; j++)
+        {
+            auto& member_type = compiler->get_type(type.member_types[j]);
+            uint32_t member_size = compiler->get_declared_struct_member_size(type, j);
+            uint32_t member_offset = compiler->type_struct_member_offset(type, j);
+            const std::string& member_name = compiler->get_member_name(type.self, j);
+            if (PrintReflectionInfo)
+            {
+                char buffer[150];
+                sprintf(buffer, "\t%s [%d bytes], offset: [%d bytes]; vecsize: %d\n", member_name.c_str(), member_size, member_offset, member_type.vecsize);
+                lograw(buffer);
+            }
+            UniformBufferElement element;
+            element.m_Name = member_name;
+            element.m_Offset = member_offset;
+            element.m_Size = member_size;
+            element.m_Width = member_type.width;
+            element.m_Vecsize = member_type.vecsize;
+            element.m_Columns = member_type.columns;
+            element.m_basetype = member_type.basetype;
+            element.m_Type = member_type;
+            pSetDesc->m_BindingCount++;
+        }
+        // This should always be true
+        assert(type.array.size() <= 1);
+        //ssbodesc.m_ArraySize = type.array.size() == 1 ? type.array[0] : 1;
+        pSetDesc->m_SSBOs.push_back(ssbodesc);
     }
 
     // Push Constant
@@ -226,7 +282,7 @@ ShaderReflection::ShaderReflection(Shader *shader)
 
     /* These are not supported (for now) so if a shader uses any of the following resources I will be reminded to supported it. */
     // assert(resources.uniform_buffers.size() == 0);
-    assert(resources.storage_buffers.size() == 0);
+    // assert(resources.storage_buffers.size() == 0);
     // assert(resources.stage_inputs.size() == 0);
     // assert(resources.stage_outputs.size() == 0);
     assert(resources.subpass_inputs.size() == 0);
@@ -362,15 +418,29 @@ ShaderReflection ShaderReflection::CombineReflections(ShaderReflection *a, Shade
         return false;
     };
 
-    auto UniformBufferAlreadyExists = [](std::vector<UniformBufferDescription> & group, const UniformBufferDescription &buffer) throw()->bool
+    auto UniformBufferAlreadyExists = [](std::vector<UniformBufferDescription>& group, const UniformBufferDescription& buffer) throw()->bool
     {
-        for (auto &group_element : group)
+        for (auto& group_element : group)
         {
             if (group_element.m_Binding == buffer.m_Binding)
             {
                 assert(Utils::EqualNotCaseSensitive(group_element.m_Name, buffer.m_Name));
                 assert(group_element.m_Size == buffer.m_Size);
-                group_element.m_shaderStage = (shaderc_shader_kind)(group_element.m_shaderStage | buffer.m_shaderStage);
+                group_element.m_shaderStage = (shaderc_shader_kind)(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+                return true;
+            }
+        }
+        return false;
+    };
+
+    auto SSBOAlreadyExists = [](std::vector<ShaderStorageBufferDescription>& group, const ShaderStorageBufferDescription& buffer) throw()->bool
+    {
+        for (auto& group_element : group)
+        {
+            if (group_element.m_Binding == buffer.m_Binding)
+            {
+                assert(Utils::EqualNotCaseSensitive(group_element.m_Name, buffer.m_Name));
+                group_element.m_shaderStage = (shaderc_shader_kind)(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
                 return true;
             }
         }
@@ -385,7 +455,7 @@ ShaderReflection ShaderReflection::CombineReflections(ShaderReflection *a, Shade
             {
                 assert(Utils::EqualNotCaseSensitive(group_element.m_Name, image.m_Name));
                 assert(group_element.m_Dimensions == image.m_Dimensions);
-                group_element.m_shaderStage = (shaderc_shader_kind)(group_element.m_shaderStage | image.m_shaderStage);
+                group_element.m_shaderStage = (shaderc_shader_kind)(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
                 return true;
             }
         }
@@ -403,7 +473,7 @@ ShaderReflection ShaderReflection::CombineReflections(ShaderReflection *a, Shade
         // Do we have the same bindings?
         auto &otherSet = b->m_ShaderSetDescriptions[index];
         // 1) Combine Buffer Descriptions
-        for (auto &buffer : set.m_UniformBuffers)
+        for (auto& buffer : set.m_UniformBuffers)
         {
             if (!UniformBufferAlreadyExists(otherSet.m_UniformBuffers, buffer))
             {
@@ -411,7 +481,16 @@ ShaderReflection ShaderReflection::CombineReflections(ShaderReflection *a, Shade
                 continue;
             }
         }
-        // 2) Combine Sampled Texture Descriptions
+        // 2) Combine SSBO
+        for (auto& ssbo : set.m_SSBOs)
+        {
+            if (!SSBOAlreadyExists(otherSet.m_SSBOs, ssbo))
+            {
+                otherSet.m_SSBOs.push_back(ssbo);
+                continue;
+            }
+        }
+        // 3) Combine Sampled Texture Descriptions
         for (auto &image : set.m_SampledImage)
         {
             if (!SampledImageAlreadyExists(otherSet.m_SampledImage, image))
@@ -513,16 +592,16 @@ std::vector<VkPushConstantRange> ShaderReflection_CombinePushconstantRanges(Shad
 
 VkShaderStageFlags ShaderReflection_GetVulkanShaderStage(shaderc_shader_kind shader_kind)
 {
+    VkShaderStageFlags stageFlags = 0;
     if (shader_kind == shaderc_vertex_shader)
-        return VK_SHADER_STAGE_VERTEX_BIT;
+        stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
     if (shader_kind == shaderc_fragment_shader)
-        return VK_SHADER_STAGE_FRAGMENT_BIT;
+        stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     if (shader_kind == shaderc_compute_shader)
-        return VK_SHADER_STAGE_COMPUTE_BIT;
+        stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
     if (shader_kind == shaderc_geometry_shader)
-        return VK_SHADER_STAGE_GEOMETRY_BIT;
-    assert(0);
-    return VK_SHADER_STAGE_ALL_GRAPHICS;
+        stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+    return (stageFlags) ? stageFlags : VK_SHADER_STAGE_ALL_GRAPHICS;
 }
 
 VkFormat ShaderReflection_GetVulkanFormat(spirv_cross::SPIRType::BaseType basetype, uint32_t vecsize)

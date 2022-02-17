@@ -14,7 +14,7 @@ OmegaModel<VertexType>::OmegaModel(GraphicsContext context, const char *mesh_pat
 			auto &submesh = m_basic.m_submesh[i];
 			auto &vertices = submesh.m_vertices;
 			auto &indices = submesh.m_indices;
-			IBuffer2 vertex_buffer = Buffer2_Create(context, BufferType::VertexBuffer, vertices.size() * sizeof(OmegaBasicVertex), BufferMemoryType::STATIC);
+			IBuffer2 vertex_buffer = Buffer2_Create(context, BufferType::StorageBuffer, vertices.size() * sizeof(OmegaBasicVertex), BufferMemoryType::STATIC);
 			IBuffer2 index_buffer = Buffer2_Create(context, BufferType::IndexBuffer, indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
 			Buffer2_UploadData(vertex_buffer, (char8_t*)vertices.data(), 0, vertices.size() * sizeof(OmegaBasicVertex));
 			Buffer2_UploadData(index_buffer, (char8_t*)indices.data(), 0, indices.size() * sizeof(uint32_t));

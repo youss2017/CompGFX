@@ -11,7 +11,6 @@ public:
 
 	void Destroy();
 
-public:
 	friend class RendererAPI;
 	EngineAPIType m_ApiType;
 	IBuffer2 m_VertexBuffer;

@@ -40,13 +40,13 @@ static ConfigurationSettings LoadConfiguration();
 
 int main(int argc, char** argv)
 {
-    //PhysicsMain pm;
     PROFILE_BEGIN_SESSION("Startup", "Profiling-Startup.json");
 #ifdef _WIN32
     PrepareWin32(argc, argv);
 #else
     PreparePOSIX(argc, argv);
 #endif
+    //PhysicsMain pm;
     std::cout << "sizeof(GLCommandData) = " << sizeof(GLCommandData) << "\n";
     log_configure(true, true);
     /* Load Game Settings from settings.cfg */

@@ -59,7 +59,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;BUILD_X64;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -82,7 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;BUILD_X64;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -109,6 +109,7 @@
     <ClInclude Include="external\imgui\imstb_rectpack.h" />
     <ClInclude Include="external\imgui\imstb_textedit.h" />
     <ClInclude Include="external\imgui\imstb_truetype.h" />
+    <ClInclude Include="external\meshoptimizer\src\meshoptimizer.h" />
     <ClInclude Include="src\Camera.hpp" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\GLGraphicsCard.hpp" />
@@ -144,6 +145,7 @@
     <ClInclude Include="src\mesh\Model.hpp" />
     <ClInclude Include="src\mesh\Model.ipp" />
     <ClInclude Include="src\physics\PhysicsMain.hpp" />
+    <ClInclude Include="src\ShaderUtil.h" />
     <ClInclude Include="src\units\Entity.hpp" />
     <ClInclude Include="src\units\Map.hpp" />
     <ClInclude Include="src\units\unit_common.hpp" />
@@ -167,6 +169,21 @@
     <ClCompile Include="external\imgui\imgui_draw.cpp" />
     <ClCompile Include="external\imgui\imgui_tables.cpp" />
     <ClCompile Include="external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\allocator.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\clusterizer.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\indexcodec.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\indexgenerator.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\overdrawanalyzer.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\overdrawoptimizer.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\simplifier.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\spatialorder.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\stripifier.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\vcacheanalyzer.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\vcacheoptimizer.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\vertexcodec.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\vertexfilter.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\vfetchanalyzer.cpp" />
+    <ClCompile Include="external\meshoptimizer\src\vfetchoptimizer.cpp" />
     <ClCompile Include="external\stb.cpp" />
     <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="src\core\backend\GLGraphicsCard.cpp" />

@@ -24,7 +24,7 @@ struct DynamicSetInformation
     // bindingID
     std::map<uint32_t, DynamicUniformInformation> uniformInformation;
     IBuffer2 buffer;
-    bool isTexture = false;
+    bool isBuffer = false;
 };
 
 struct ShaderProgramDataReserved

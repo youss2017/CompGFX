@@ -35,6 +35,13 @@ struct UniformBufferDescription
     shaderc_shader_kind m_shaderStage;
 };
 
+struct ShaderStorageBufferDescription
+{
+    std::string m_Name;
+    uint32_t m_Binding;
+    shaderc_shader_kind m_shaderStage;
+};
+
 struct SampledImageDescription
 {
     std::string m_Name;
@@ -45,8 +52,9 @@ struct SampledImageDescription
 
 struct DescriptorSetDescription
 {
-    uint32_t m_SetID, m_BindingCount;
+    uint32_t m_SetID, m_BindingCount = 0;
     std::vector<UniformBufferDescription> m_UniformBuffers;
+    std::vector<ShaderStorageBufferDescription> m_SSBOs;
     std::vector<SampledImageDescription> m_SampledImage;
     // TODO:
     // ssbos

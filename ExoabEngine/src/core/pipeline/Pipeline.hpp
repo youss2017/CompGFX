@@ -198,7 +198,6 @@ struct PipelineLayout
     std::vector<VkDescriptorSetLayout> m_real_setlayouts;
     std::vector<DescriptorSetDescription> m_set_descs;
     APIHandle m_pipelinelayout;
-    std::vector<VkDescriptorSetLayout> m_setlayouts;
     ShaderReflection m_vertex_reflection;
     ShaderReflection m_fragment_reflection;
     friend class MaterialConfiguration;

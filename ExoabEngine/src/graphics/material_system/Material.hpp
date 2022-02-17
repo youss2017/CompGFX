@@ -28,8 +28,6 @@ struct MaterialPipelineLayout
 	IPipelineLayout m_layout;
 	PipelineVertexInputDescription input_description;
 	PipelineShaders* m_pipeline_shaders;
-	std::vector<VkDescriptorSet> m_descriptor_sets;
-	VkDescriptorPool m_pool;
 };
 
 typedef PipelineShaders* IPipelineShaders;

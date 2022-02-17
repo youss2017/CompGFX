@@ -1,29 +1,29 @@
-#version 450 core
+#version 450
 
-layout (location = 0) in vec3 inPosition;
-layout (location = 1) in vec3 inNormal;
-layout (location = 2) in vec2 inTexCoord;
-
-// Instancing Data
-layout (location = 3) in vec2 XYOffset;
-
-layout (binding = 0) uniform View_Projection {
-	mat4 u_View;
-	mat4 u_Projection;
+struct Vertex
+{
+	vec3 inPosition;
+	vec3 inNormal;
+	vec2 inTexCoord;	
 };
 
-layout (binding = 1) uniform Model {
-	mat4 u_Model;
-	mat4 u_NormalModel; // transpose(inverse(u_Model))
+layout (set = 0, binding = 0) readonly buffer VerticesSSBO
+{
+	Vertex vertices[];
 };
+
+//layout (push_constant) uniform RenderingState
+//{
+//	uint vertices_offset;
+//};
 
 layout (location = 0) out vec3 Normal;
 layout (location = 1) out vec2 TexCoord;
 
-void main() {
-	Normal = mat3(u_NormalModel) * inNormal;
-	TexCoord = inTexCoord;
-	vec4 InstancePosition = vec4(inPosition.xy + XYOffset, inPosition.z, 1.0);
-	gl_Position = u_Projection * u_View * u_Model * InstancePosition;
-	//gl_Position = u_Projection * u_View * u_Model * vec4(inPosition, 1.0);
+void main()
+{
+	Vertex v = vertices[gl_VertexIndex];
+	Normal = v.inNormal;
+	TexCoord = v.inTexCoord;
+	gl_Position = vec4(v.inPosition, 1.0);//vec4(v.x, v.y, v.z, 1.0);
 }

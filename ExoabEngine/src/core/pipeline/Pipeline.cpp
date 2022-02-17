@@ -96,7 +96,6 @@ IPipelineLayout Vulkan_PipelineLayout_Create(GraphicsContext context, const Pipe
     auto &set_descs = combined.GetShaderSetDescriptions();
     std::vector<VkPushConstantRange> pushconstants = ShaderReflection_CombinePushconstantRanges(vertex_reflection, fragment_reflection);
     auto vcont = ToVKContext(context);
-    std::vector<VkDescriptorSetLayout> setlayouts;
     std::vector<VkDescriptorSetLayout> real_setlayouts;
 
     if (!PipelineLayout_Internal_VertexInputSafetyCheck(vertex_reflection, input_description))
@@ -105,35 +104,26 @@ IPipelineLayout Vulkan_PipelineLayout_Create(GraphicsContext context, const Pipe
         return nullptr;
     }
 
-    auto CreateEmptySetLayout = [](VkDevice device, VkAllocationCallbacks * pCallbacks) throw()->VkDescriptorSetLayout
-    {
-        VkDescriptorSetLayoutCreateInfo createInfo;
-        createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        createInfo.pNext = nullptr;
-        createInfo.flags = 0;
-        createInfo.bindingCount = 0;
-        createInfo.pBindings = nullptr;
-        VkDescriptorSetLayout set_layout;
-        vkcheck(vkCreateDescriptorSetLayout(device, &createInfo, pCallbacks, &set_layout));
-        return set_layout;
-    };
-
-    if (set_descs.size() > 0)
-        for (uint32_t w = 0; w < set_descs[0].m_SetID; w++)
-        {
-            setlayouts.push_back(CreateEmptySetLayout(vcont->defaultDevice, vcont->m_allocation_callback));
-        }
-
     uint32_t ii = 0;
     for (auto &set_desc : set_descs)
     {
         VkDescriptorSetLayoutBinding pBindings[250];
         int binding_index = 0;
-        for (auto &binding_desc : set_desc.m_UniformBuffers)
+        for (auto& binding_desc : set_desc.m_UniformBuffers)
         {
             pBindings[binding_index].binding = binding_desc.m_Binding;
             pBindings[binding_index].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
             pBindings[binding_index].descriptorCount = binding_desc.m_ArraySize;
+            pBindings[binding_index].stageFlags = ShaderReflection_GetVulkanShaderStage(binding_desc.m_shaderStage);
+            pBindings[binding_index].pImmutableSamplers = nullptr;
+            binding_index++;
+        }
+
+        for (auto& binding_desc : set_desc.m_SSBOs)
+        {
+            pBindings[binding_index].binding = binding_desc.m_Binding;
+            pBindings[binding_index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            pBindings[binding_index].descriptorCount = 1;
             pBindings[binding_index].stageFlags = ShaderReflection_GetVulkanShaderStage(binding_desc.m_shaderStage);
             pBindings[binding_index].pImmutableSamplers = nullptr;
             binding_index++;
@@ -153,11 +143,10 @@ IPipelineLayout Vulkan_PipelineLayout_Create(GraphicsContext context, const Pipe
         createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         createInfo.pNext = nullptr;
         createInfo.flags = 0;
-        createInfo.bindingCount = set_desc.m_BindingCount;
+        createInfo.bindingCount = binding_index;
         createInfo.pBindings = pBindings;
         VkDescriptorSetLayout SetLayout;
         vkcheck(vkCreateDescriptorSetLayout(vcont->defaultDevice, &createInfo, vcont->m_allocation_callback, &SetLayout));
-        setlayouts.push_back(SetLayout);
         real_setlayouts.push_back(SetLayout);
         ii++;
     }
@@ -166,8 +155,8 @@ IPipelineLayout Vulkan_PipelineLayout_Create(GraphicsContext context, const Pipe
     createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     createInfo.pNext = nullptr;
     createInfo.flags = 0;
-    createInfo.setLayoutCount = setlayouts.size();
-    createInfo.pSetLayouts = setlayouts.data();
+    createInfo.setLayoutCount = real_setlayouts.size();
+    createInfo.pSetLayouts = real_setlayouts.data();
     createInfo.pushConstantRangeCount = pushconstants.size();
     createInfo.pPushConstantRanges = pushconstants.data();
     VkPipelineLayout layout;
@@ -178,7 +167,6 @@ IPipelineLayout Vulkan_PipelineLayout_Create(GraphicsContext context, const Pipe
     pipeline_layout->m_context = context;
     pipeline_layout->m_vertex_input_description = input_description;
     pipeline_layout->m_pipelinelayout = (APIHandle)layout;
-    pipeline_layout->m_setlayouts = setlayouts;
     pipeline_layout->m_real_setlayouts = real_setlayouts;
     pipeline_layout->m_vertex_reflection = *vertex_reflection;
     pipeline_layout->m_fragment_reflection = *fragment_reflection;
@@ -190,7 +178,7 @@ void Vulkan_PipelineLayout_Destroy(IPipelineLayout layout)
 {
     auto vcont = ToVKContext(layout->m_context);
     vkDestroyPipelineLayout(vcont->defaultDevice, (VkPipelineLayout)layout->m_pipelinelayout, vcont->m_allocation_callback);
-    for (const auto &setlayout : layout->m_setlayouts)
+    for (const auto &setlayout : layout->m_real_setlayouts)
         vkDestroyDescriptorSetLayout(vcont->defaultDevice, setlayout, vcont->m_allocation_callback);
     delete layout;
 }

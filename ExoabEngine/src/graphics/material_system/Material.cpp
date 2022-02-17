@@ -175,32 +175,6 @@ IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, P
 		std::sort(uniform_textures.begin(), uniform_textures.end(), [](SampledImageDescription &a, SampledImageDescription &b)
 				  { return a.m_Binding < b.m_Binding; });
 	}
-	// 4) Create Descriptor Sets (Per Frame)
-	// std::vector<VkDescriptorSet> descriptor_sets;
-	if (pipeline_layout->m_layout->m_real_setlayouts.size())
-	{
-		pipeline_layout->m_pool = vk::Gfx_CreateDescriptorPool(vcont, vcont->FrameInfo->m_FrameCount * pipeline_layout->m_layout->m_real_setlayouts.size(),
-															   {
-																   {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 100},
-																   {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 100},
-															   });
-		{
-			for (uint32_t i = 0; i < vcont->FrameInfo->m_FrameCount; i++)
-			{
-				VkDescriptorSetAllocateInfo allocInfo;
-				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-				allocInfo.pNext = nullptr;
-				allocInfo.descriptorPool = pipeline_layout->m_pool;
-				allocInfo.descriptorSetCount = pipeline_layout->m_layout->m_real_setlayouts.size();
-				allocInfo.pSetLayouts = pipeline_layout->m_layout->m_real_setlayouts.data();
-				VkDescriptorSet *pSets = (VkDescriptorSet *)stack_allocate(sizeof(VkDescriptorSet) * pipeline_layout->m_layout->m_real_setlayouts.size());
-				vkcheck(vkAllocateDescriptorSets(vcont->defaultDevice, &allocInfo, pSets));
-				for (uint32_t j = 0; j < allocInfo.descriptorSetCount; j++)
-					pipeline_layout->m_descriptor_sets.push_back(pSets[j]);
-				stack_free(pSets);
-			}
-		}
-	}
 	return pipeline_layout;
 }
 
@@ -232,10 +206,6 @@ void Material_DestroyPipelineShaders(IPipelineShaders pipeline_shaders)
 void Material_DestroyPipelineLayout(IMaterialPipelineLayout pipeline_layout)
 {
 	vk::VkContext context = ToVKContext(pipeline_layout->m_context);
-	if (pipeline_layout->m_pool)
-	{
-		vkDestroyDescriptorPool(context->defaultDevice, pipeline_layout->m_pool, context->m_allocation_callback);
-	}
 	PipelineLayout_Destroy(pipeline_layout->m_layout);
 }
 

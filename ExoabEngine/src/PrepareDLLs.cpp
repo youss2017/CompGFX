@@ -44,8 +44,8 @@
 void PrepareDLLs()
 {
 #if defined(_DEBUG)
-	SetDllDirectoryA("D:\\GFX Apis\\OmegaEngine\\external\\bin\\debug");
+	SetDllDirectoryA("external\\bin\\debug");
 #else
-	SetDllDirectoryA("D:\\GFX Apis\\OmegaEngine\\external\\bin\\release");
+	SetDllDirectoryA("external\\bin\\release");
 #endif
 }

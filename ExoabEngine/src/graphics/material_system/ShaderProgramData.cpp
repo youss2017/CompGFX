@@ -29,6 +29,13 @@ void ShaderProgramData_SetConstantTextureArray(IShaderProgramData programData, i
 	programData->m_texture_bindingID = bindingID;
 }
 
+void ShaderProgramData_SetConstantSSBO(IShaderProgramData programData, int setID, int bindingID, IBuffer2 ssbo_buffer)
+{
+    SSBOInformation i;
+    i.m_setID = setID, i.m_bindingID = bindingID, i.m_ssbobuffer = ssbo_buffer;
+    programData->m_ssbos.push_back(i);
+}
+
 void ShaderProgramData_UpdateBindingData(IShaderProgramData program_data, IPipelineLayout layout, uint32_t count, EntityBindingData *bindingData)
 {
 	PROFILE_FUNCTION();
@@ -132,17 +139,17 @@ void ShaderProgramData_FlushShaderProgramData(uint32_t count, IShaderProgramData
         ShaderProgramDataReserved* reserved = (ShaderProgramDataReserved*)shader_data->m_reserved;
         for (const auto& setInfo : reserved->setInformations)
         {
-            if (!setInfo.isTexture)
+            if (setInfo.isBuffer)
                 Buffer2_Flush(setInfo.buffer);
         }
     }
 }
 
-static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, IShaderProgramData shaderDataLayout, IPipelineLayout layout)
+static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, IShaderProgramData programData, IPipelineLayout layout)
 {
     PROFILE_FUNCTION();
     ShaderProgramDataReserved* reserved = new ShaderProgramDataReserved();
-    shaderDataLayout->m_reserved = reserved;
+    programData->m_reserved = reserved;
 
     reserved->context = ToVKContext(context);
     reserved->lastFrameIndex = vk::GetCurrentFrameIndex(context);
@@ -153,7 +160,8 @@ static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, 
     vk::VkContext c = ToVKContext(context);
     reserved->descriptorPool = vk::Gfx_CreateDescriptorPool(c, reserved->descriptorSetCount,
         { {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 100},
-         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100} });
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100} });
 
     // TODO: This may not work if there is gaps between sets, eg layout(set = 0) --- layout(set = 3) idk
 
@@ -166,7 +174,7 @@ static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, 
     vkcheck_break(vkAllocateDescriptorSets(c->defaultDevice, &allocateInfo, reserved->pDescriptorSets));
 
     // Create IGPUBuffer per descripter set
-    const std::vector<DescriptorSetDescription>& setDescriptions = shaderDataLayout->m_combined_reflection.GetShaderSetDescriptions();
+    const std::vector<DescriptorSetDescription>& setDescriptions = programData->m_combined_reflection.GetShaderSetDescriptions();
     int index = 0;
     for (auto& setDescription : setDescriptions)
     {
@@ -221,16 +229,46 @@ static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, 
                 // and started executing the CommandList its like we have never started the vkUpdateDescriptorSets
                 vkUpdateDescriptorSets(c->defaultDevice, 1, &writeInfo, 0, nullptr);
             }
-            index++;
+            setInformation.isBuffer = true;
         }
-        else
+        if (setDescription.m_SSBOs.size() > 0)
+        {
+            assert(programData->m_ssbos.size() > 0 && "You must set constant ssbos");
+            DynamicSetInformation setInformation;
+            setInformation.setHandleIndex = index;
+            setInformation.setHandle = reserved->pDescriptorSets[index];
+            setInformation.setID = setDescription.m_SetID;
+            VkWriteDescriptorSet writeInfo;
+            writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writeInfo.pNext = nullptr;
+            writeInfo.dstSet = reserved->pDescriptorSets[index];
+            writeInfo.dstArrayElement = 0;
+            writeInfo.descriptorCount = 1;
+            writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            writeInfo.pImageInfo = nullptr;
+            writeInfo.pBufferInfo = nullptr;
+            writeInfo.pTexelBufferView = nullptr;
+            for (int b = 0; b < setDescription.m_SSBOs.size(); b++)
+            {
+                VkDescriptorBufferInfo ssboInfo;
+                ssboInfo.buffer = programData->m_ssbos[b].m_ssbobuffer->m_vk_buffer->m_buffer;
+                ssboInfo.offset = 0;
+                ssboInfo.range = VK_WHOLE_SIZE;
+
+                writeInfo.dstBinding = programData->m_ssbos[b].m_bindingID;
+                writeInfo.pBufferInfo = &ssboInfo;
+                vkUpdateDescriptorSets(c->defaultDevice, 1, &writeInfo, 0, nullptr);
+            }
+            reserved->setInformations.push_back(setInformation);
+        }
+        if(setDescription.m_SampledImage.size() > 0)
         {
             DynamicSetInformation setInformation;
             setInformation.setHandleIndex = index;
             setInformation.setHandle = reserved->pDescriptorSets[index];
             setInformation.setID = setDescription.m_SetID;
             int viewIndex = 0;
-            assert(shaderDataLayout->m_textures.size() > 0 && "You must provide your textures to IShaderProgramData");
+            assert(programData->m_textures.size() > 0 && "You must provide your textures to IShaderProgramData");
             for (auto& sampledDescription : setDescription.m_SampledImage)
             {
                 VkWriteDescriptorSet writeInfo;
@@ -245,17 +283,17 @@ static void Vulkan_Internal_InitalizeShaderProgramData(GraphicsContext context, 
                 writeInfo.dstBinding = sampledDescription.m_Binding;
 
                 VkDescriptorImageInfo imageInfo;
-                imageInfo.sampler = (VkSampler)shaderDataLayout->m_sampler->m_NativeHandle;
-                imageInfo.imageView = shaderDataLayout->m_textures[viewIndex]->view;
+                imageInfo.sampler = (VkSampler)programData->m_sampler->m_NativeHandle;
+                imageInfo.imageView = programData->m_textures[viewIndex]->view;
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
                 writeInfo.pImageInfo = &imageInfo;
                 vkUpdateDescriptorSets(c->defaultDevice, 1, &writeInfo, 0, nullptr);
                 viewIndex++;
             }
-            setInformation.isTexture = true;
             reserved->setInformations.push_back(setInformation);
         }
+        index++;
     }
 }
 
@@ -337,7 +375,7 @@ static void Vulkan_Private_DestroyShaderProgramData(void* programData_reserved)
 
 	for (auto& setInfo : reserved->setInformations)
 	{
-		if (!setInfo.isTexture)
+		if (setInfo.isBuffer)
 			Buffer2_Destroy(setInfo.buffer);
 	}
 
