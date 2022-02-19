@@ -30,17 +30,15 @@ enum class EngineAPIType
 #endif
 };
 
-enum class BufferType
-{
-	VertexBuffer = 0x0,
-	IndexBuffer = 0x1,
-	UniformBuffer = 0x2,
-	StorageBuffer = 0x3,
-	IndirectBuffer = 0x4,
-	// Exclusively for Vulkan/DX12/Metal
-	INTE_TRANSFER_SRC = 0xCC09,
-	INTE_TRANSFER_DST = 0xCC0A
-};
+typedef enum BufferType {
+	VertexBuffer      = 0x0000001,
+	IndexBuffer       = 0x0000010,
+	UniformBuffer     = 0x0000100,
+	StorageBuffer     = 0x0001000,
+	IndirectBuffer    = 0x0010000,
+	INTE_TRANSFER_SRC = 0x0100000,
+	INTE_TRANSFER_DST = 0x1000000
+} BufferType;
 
 enum class TextureFilter
 {

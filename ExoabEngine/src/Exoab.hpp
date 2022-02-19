@@ -43,8 +43,6 @@ struct Tristate {
 };
 
 bool Exoab_Initalize(ConfigurationSettings config);
-void Exoab_Render(double dTimeFromStart, double dElapsedTime);
+void Exoab_Render(double dTimeFromStart, double dElapsedTime, double FrameRate);
 Tristate Exoab_Update(double dTimeFromStart, double dElapsedTime);
 void Exoab_CleanUp();
-
-void Exoab_GUI();

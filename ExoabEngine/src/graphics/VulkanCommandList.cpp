@@ -184,7 +184,7 @@ void Vulkan_CommandList_SetRenderState(ICommandList list, RenderState *render_st
     PROFILE_FUNCTION();
     PROGRAM_GUARD();
     if (render_state->m_UsingIndexBuffer)
-        vkCmdBindIndexBuffer(VULKAN_COMMAND_LIST, (VkBuffer)render_state->m_IndexBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+        ;// vkCmdBindIndexBuffer(VULKAN_COMMAND_LIST, (VkBuffer)render_state->m_IndexBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
     VkDeviceSize pOffset[1] = {0};
     //vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 0, 1, &render_state->m_VertexBuffer->m_vk_buffer->m_buffer, pOffset);
     if (entity_for_instance_buffers)
@@ -197,14 +197,14 @@ void Vulkan_CommandList_SetRenderState(ICommandList list, RenderState *render_st
             return;
         }
 #endif
-        vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 1, entity->VkVertexInstanceBuffers.size(), entity->VkVertexInstanceBuffers.data(), entity->VertexInstanceBufferOffset.data());
+        //vkCmdBindVertexBuffers(VULKAN_COMMAND_LIST, 1, entity->VkVertexInstanceBuffers.size(), entity->VkVertexInstanceBuffers.data(), entity->VertexInstanceBufferOffset.data());
     }
 }
 
-void Vulkan_CommandList_SetPushconstants(ICommandList list, IPipelineState pipeline, const char *name, int offset, int size, void *pData)
+void Vulkan_CommandList_SetPushconstants(ICommandList list, IPipelineState pipeline, VkShaderStageFlags shaderStages, const char *name, int offset, int size, void *pData)
 {
     PROGRAM_GUARD();
-    vkCmdPushConstants(VULKAN_COMMAND_LIST, (VkPipelineLayout)pipeline->m_layout->m_pipelinelayout, VK_SHADER_STAGE_FRAGMENT_BIT, offset, size, pData);
+    vkCmdPushConstants(VULKAN_COMMAND_LIST, (VkPipelineLayout)pipeline->m_layout->m_pipelinelayout, shaderStages, offset, size, pData);
 }
 
 #include "material_system/ShaderProgramData_Internal.inl"
@@ -282,7 +282,7 @@ void Vulkan_CommandList_DrawIndexed(ICommandList list, IPipelineLayout layout, I
     }
     VkPipelineLayout pipelineLayout = (VkPipelineLayout)layout->m_pipelinelayout;
     vkCmdBindDescriptorSets(VULKAN_COMMAND_LIST, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, descriptorCount, pDescriptorSets, dynamicOffsets.size(), dynamicOffsets.data());
-    vkCmdDrawIndexed(VULKAN_COMMAND_LIST, indices_count, instance_count, 0, vertices_offset, 0);
+    //vkCmdDrawIndexed(VULKAN_COMMAND_LIST, indices_count, instance_count, 0, vertices_offset, 0);
 }
 
 /* Commands */

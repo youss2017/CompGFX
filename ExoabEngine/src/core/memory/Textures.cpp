@@ -172,7 +172,8 @@ void Vulkan_GPUTexture2D_UploadPixels(IGPUTexture2D texture, void *pixels, size_
 	// load data to buffer
 	void *staging_buffer_ptr = Buffer2_Map(staging_buffer, false, true);
 	memcpy(staging_buffer_ptr, pixels, pixel_size);
-	Buffer2_Unmap(staging_buffer, true);
+	Buffer2_Flush(staging_buffer, 0, pixel_size);
+	Buffer2_Unmap(staging_buffer);
 	// Create cmd_buffer and pool
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(context, true, false);
 	VkCommandBuffer cmd_buffer = vk::Gfx_AllocCommandBuffer(context, pool, true);

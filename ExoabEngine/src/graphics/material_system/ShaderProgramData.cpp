@@ -140,7 +140,7 @@ void ShaderProgramData_FlushShaderProgramData(uint32_t count, IShaderProgramData
         for (const auto& setInfo : reserved->setInformations)
         {
             if (setInfo.isBuffer)
-                Buffer2_Flush(setInfo.buffer);
+                Buffer2_Flush(setInfo.buffer, 0, setInfo.buffer->size);
         }
     }
 }

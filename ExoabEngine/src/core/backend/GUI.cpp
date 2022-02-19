@@ -163,3 +163,42 @@ void Gui_GLEndGUIFrame()
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
+
+ImFont* Gui_VkLoadFont(VkDevice device, VkQueue queue, const char* path, float size)
+{
+    auto io = ImGui::GetIO();
+    ImFont *fftt = io.Fonts->AddFontFromFileTTF(path, size);
+    // Upload Fonts
+    {
+        // Use any command queue
+        VkCommandPoolCreateInfo createInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+        VkCommandPool command_pool;
+        vkCreateCommandPool(device, &createInfo, nullptr, &command_pool);
+        VkCommandBuffer command_buffer;
+        VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        allocInfo.commandPool = command_pool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        vkcheck(vkAllocateCommandBuffers(device, &allocInfo, &command_buffer));
+
+        vkResetCommandPool(device, command_pool, 0);
+        VkCommandBufferBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(command_buffer, &begin_info);
+
+        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+        VkSubmitInfo end_info = {};
+        end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        end_info.commandBufferCount = 1;
+        end_info.pCommandBuffers = &command_buffer;
+        vkEndCommandBuffer(command_buffer);
+        vkQueueSubmit(queue, 1, &end_info, NULL);
+
+        vkQueueWaitIdle(queue);
+        ImGui_ImplVulkan_DestroyFontUploadObjects();
+        vkDestroyCommandPool(device, command_pool, nullptr);
+    }
+    return fftt;
+}

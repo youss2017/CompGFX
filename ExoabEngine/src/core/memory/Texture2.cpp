@@ -125,7 +125,8 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	// load data to buffer
 	char8_t* staging_buffer_ptr = Buffer2_Map(staging_buffer, false, true);
 	memcpy(staging_buffer_ptr, pixels, size);
-	Buffer2_Unmap(staging_buffer, true);
+	Buffer2_Flush(staging_buffer, 0, size);
+	Buffer2_Unmap(staging_buffer);
 	// Create cmd_buffer and pool
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(context, true, false);
 	VkCommandBuffer cmd_buffer = vk::Gfx_AllocCommandBuffer(context, pool, true);

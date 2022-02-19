@@ -90,7 +90,7 @@ typedef void PFN_CommandList_DrawIndexed(ICommandList list, IPipelineLayout layo
 typedef void PFN_CommandList_UpdateProgramData(ICommandList list, IShaderProgramData layout, int setID, int bindingID, const char* UniformName, void* pData, uint32_t size);
 
 // TODO: Combine pushconstants with shader program data.
-typedef void PFN_CommandList_SetPushconstants(ICommandList list, IPipelineState pipeline, const char* name, int offset, int size, void* pData);
+typedef void PFN_CommandList_SetPushconstants(ICommandList list, IPipelineState pipeline, VkShaderStageFlags shaderStages, const char* name, int offset, int size, void* pData);
 
 /* Commands */
 

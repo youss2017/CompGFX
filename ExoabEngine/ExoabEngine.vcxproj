@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -141,11 +141,14 @@
     <ClInclude Include="src\graphics\material_system\MaterialConfiguration.hpp" />
     <ClInclude Include="src\graphics\material_system\ShaderProgramData.hpp" />
     <ClInclude Include="src\graphics\RenderState.hpp" />
+    <ClInclude Include="src\mesh\Float16.hpp" />
+    <ClInclude Include="src\mesh\geometry.hpp" />
     <ClInclude Include="src\mesh\mesh.hpp" />
     <ClInclude Include="src\mesh\Model.hpp" />
     <ClInclude Include="src\mesh\Model.ipp" />
     <ClInclude Include="src\physics\PhysicsMain.hpp" />
-    <ClInclude Include="src\ShaderUtil.h" />
+    <ClInclude Include="src\ShaderTypes.hpp" />
+    <ClInclude Include="src\UI.hpp" />
     <ClInclude Include="src\units\Entity.hpp" />
     <ClInclude Include="src\units\Map.hpp" />
     <ClInclude Include="src\units\unit_common.hpp" />
@@ -217,9 +220,12 @@
     <ClCompile Include="src\graphics\RenderState.cpp" />
     <ClCompile Include="src\graphics\VulkanCommandList.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\mesh\Float16.cpp" />
+    <ClCompile Include="src\mesh\geometry.cpp" />
     <ClCompile Include="src\mesh\mesh.cpp" />
     <ClCompile Include="src\physics\PhysicsMain.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />
+    <ClCompile Include="src\UI.cpp" />
     <ClCompile Include="src\units\Entity.cpp" />
     <ClCompile Include="src\units\Map.cpp" />
     <ClCompile Include="src\utils\common.cpp" />

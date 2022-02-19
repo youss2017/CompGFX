@@ -52,9 +52,13 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     if (config->ApiType == EngineAPIType::Vulkan)
     {
         gfx->m_ApiType = 0;
+        VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
+        DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+        DrawParameters.pNext = nullptr;
+        DrawParameters.shaderDrawParameters = VK_TRUE;
         VkPhysicalDeviceTimelineSemaphoreFeatures TimelineSemaphoreFeature;
         TimelineSemaphoreFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
-        TimelineSemaphoreFeature.pNext = nullptr;
+        TimelineSemaphoreFeature.pNext = &DrawParameters;
         TimelineSemaphoreFeature.timelineSemaphore = VK_TRUE;
         VkPhysicalDeviceSynchronization2FeaturesKHR Synchronization2Feature;
         Synchronization2Feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
@@ -71,6 +75,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
         features.features.fillModeNonSolid = VK_TRUE;
         features.features.samplerAnisotropy = VK_TRUE;
         features.features.sampleRateShading = VK_TRUE;
+        features.features.multiDrawIndirect = VK_TRUE;
         std::vector<const char *> layer_extensions;
         layer_extensions.push_back("VK_KHR_get_physical_device_properties2");
         uint32_t extensions_count;

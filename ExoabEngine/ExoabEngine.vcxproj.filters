@@ -189,10 +189,13 @@
     <ClInclude Include="src\core\memory\Texture2.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\ShaderUtil.h">
+    <ClInclude Include="external\meshoptimizer\src\meshoptimizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="external\meshoptimizer\src\meshoptimizer.h">
+    <ClInclude Include="src\ShaderTypes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UI.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -402,6 +405,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="external\meshoptimizer\src\vfetchoptimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

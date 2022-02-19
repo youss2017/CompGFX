@@ -3,13 +3,13 @@
 #include <vector>
 #include <map>
 
-#define VK_ALLOC_KB(x) (x * 1024)
-#define VK_ALLOC_MB(x) (x * 1024 * 1024)
-#define VK_ALLOC_GB(x) (x * 1024 * 1024 * 1024)
+#define VK_ALLOC_KB(x) ((unsigned long long)(x * 1024.))
+#define VK_ALLOC_MB(x) ((unsigned long long)(x * 1024. * 1024.))
+#define VK_ALLOC_GB(x) ((unsigned long long)(x * 1024. * 1024. * 1024.))
 
-#define VK_ALLOC_B_TO_KB(x) (x / (1024))
-#define VK_ALLOC_B_TO_MB(x) (x / (1024 * 1024))
-#define VK_ALLOC_B_TO_GB(x) (x / (1024 * 1024 * 1024))
+#define VK_ALLOC_B_TO_KB(x) ((unsigned long long)(x / (1024.)))
+#define VK_ALLOC_B_TO_MB(x) ((unsigned long long)(x / (1024. * 1024.0)))
+#define VK_ALLOC_B_TO_GB(x) ((unsigned long long)(x / (1024. * 1024. * 1024.)))
 
 namespace VkAlloc
 {
@@ -74,7 +74,10 @@ namespace VkAlloc
 		VkBuffer m_buffer;
 		DEVICE_MEMORY_PROPERTY m_properties;
 		DEVICE_HEAP_SUBALLOCATION m_suballocation;
+		// This the block of memory occuiped by this buffer (includes alignments)
+		DEVICE_HEAP_FREE_BLOCK m_heap_free_block;
 		VkMemoryRequirements m_memrequirements;
+		BUFFER_DESCRIPTION m_description;
 	} typedef *BUFFER;
 
 	struct IMAGE_DESCRIPITION
@@ -100,6 +103,7 @@ namespace VkAlloc
 		DEVICE_MEMORY_PROPERTY m_properties;
 		DEVICE_HEAP_SUBALLOCATION m_suballocation;
 		VkMemoryRequirements m_memrequirements;
+		IMAGE_DESCRIPITION m_description;
 	} typedef *IMAGE;
 
 	struct _CONTEXT
@@ -122,9 +126,6 @@ namespace VkAlloc
 	VkBool32 CreateBuffers(CONTEXT context, uint32_t count, BUFFER_DESCRIPTION* pDescs, BUFFER* pOutBuffers);
 	VkBool32 CreateImages(CONTEXT context, uint32_t count, IMAGE_DESCRIPITION* pDescs, IMAGE* pOutImages);
 
-	// Reallocates buffer and keeps context (like realloc)
-	void ReAllocBuffer(CONTEXT context, BUFFER buffer, size_t new_size);
-
 	void MapBuffer(CONTEXT context, BUFFER buffer);
 	// Writes by CPU become visible to GPU (for non-coherent)
 	void FlushBuffer(CONTEXT context, BUFFER buffer);
@@ -135,7 +136,6 @@ namespace VkAlloc
 	void DestroyBuffers(CONTEXT context, uint32_t count, BUFFER* pBuffers);
 	void DestroyImages(CONTEXT context, uint32_t count, IMAGE* pImages);
 
-	// Calls vkDeviceWaitIdle
-	void DefragmentMemory(CONTEXT context);
+	void Defragment(CONTEXT context);
 
 }

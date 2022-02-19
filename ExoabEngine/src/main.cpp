@@ -60,18 +60,23 @@ int main(int argc, char** argv)
     double dElapsedTime = 0;
     double dTimeFromStart = 0.0;
     auto start = std::chrono::high_resolution_clock::now();
+    double FrameRate = 0.0;
+    double Checkpoint = 0;
     Tristate state = Tristate::Enabled();
     while (!state.disabled())
     {
         state = Exoab_Update(dTimeFromStart, dElapsedTime);
         if (state.enabled())
-            Exoab_Render(dTimeFromStart, dElapsedTime);
+            Exoab_Render(dTimeFromStart, dElapsedTime, FrameRate);
         auto end = std::chrono::high_resolution_clock::now();
         dElapsedTime = (end - start).count();
         start = end;
         dElapsedTime /= 1000'000'000;
         dTimeFromStart += dElapsedTime;
-        //std::cout << "FPS: " << 1.0 / dElapsedTime << "\n";
+        if (dTimeFromStart - Checkpoint >= 5.4e-1) {
+            Checkpoint = dTimeFromStart;
+            FrameRate = 1.0 / dElapsedTime;
+        }
     }
     PROFILE_END_SESSION();
     PROFILE_BEGIN_SESSION("Cleanup", "Profiling-Cleanup.json");

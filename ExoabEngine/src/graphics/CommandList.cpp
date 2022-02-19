@@ -38,7 +38,7 @@ void Vulkan_CommandList_SetScissor(ICommandList list, int x, int y, int width, i
 void Vulkan_CommandList_SetRenderState(ICommandList list, RenderState *render_state, void* entity_for_instance_buffers);
 void Vulkan_CommandList_DrawArrays(ICommandList list, IPipelineLayout layout, IShaderProgramData program_data, uint32_t update_index, uint32_t vertices_offset, uint32_t vertices_count, uint32_t instance_count);
 void Vulkan_CommandList_DrawIndexed(ICommandList list, IPipelineLayout layout, IShaderProgramData program_data, uint32_t update_index, uint32_t vertices_offset, uint32_t indices_count, uint32_t instance_count);
-void Vulkan_CommandList_SetPushconstants(ICommandList list, IPipelineState pipeline, const char* name, int offset, int size, void* pData);
+void Vulkan_CommandList_SetPushconstants(ICommandList list, IPipelineState pipeline, VkShaderStageFlags shaderStages, const char* name, int offset, int size, void* pData);
 /* Commands */
 // ============================================ OPENGL ============================================
 ICommandList GL_CommandList_Create(GraphicsContext context, CommandPool *pool);
@@ -82,20 +82,20 @@ void CommandList_LinkFunctions(GraphicsContext context)
     }
     else if (ApiType == 1)
     {
-        CommandList_Create = GL_CommandList_Create;
-        CommandList_Destroy = GL_CommandList_Destroy;
-        CommandList_StartRecording = GL_CommandList_StartRecording;
-        CommandList_StopRecording = GL_CommandList_StopRecording;
-        CommandList_Reset = GL_CommandList_Reset;
-        //CommandList_SetFramebuffer = GL_CommandList_SetFramebuffer;
-        //CommandList_BindPipeline = GL_CommandList_BindPipeline;
-        CommandList_UpdateGPUBuffer = GL_CommandList_UpdateGPUBuffer;
-        CommandList_SetViewport = GL_CommandList_SetViewport;
-        CommandList_SetScissor = GL_CommandList_SetScissor;
-        CommandList_SetRenderState = GL_CommandList_SetRenderState;
-        CommandList_DrawArrays = GL_CommandList_DrawArrays;
-        CommandList_DrawIndexed = GL_CommandList_DrawIndexed;
-        CommandList_SetPushconstants = GL_CommandList_SetPushconstants;
+        //CommandList_Create = GL_CommandList_Create;
+        //CommandList_Destroy = GL_CommandList_Destroy;
+        //CommandList_StartRecording = GL_CommandList_StartRecording;
+        //CommandList_StopRecording = GL_CommandList_StopRecording;
+        //CommandList_Reset = GL_CommandList_Reset;
+        ////CommandList_SetFramebuffer = GL_CommandList_SetFramebuffer;
+        ////CommandList_BindPipeline = GL_CommandList_BindPipeline;
+        //CommandList_UpdateGPUBuffer = GL_CommandList_UpdateGPUBuffer;
+        //CommandList_SetViewport = GL_CommandList_SetViewport;
+        //CommandList_SetScissor = GL_CommandList_SetScissor;
+        //CommandList_SetRenderState = GL_CommandList_SetRenderState;
+        //CommandList_DrawArrays = GL_CommandList_DrawArrays;
+        //CommandList_DrawIndexed = GL_CommandList_DrawIndexed;
+        //CommandList_SetPushconstants = GL_CommandList_SetPushconstants;
     }
     else
     {

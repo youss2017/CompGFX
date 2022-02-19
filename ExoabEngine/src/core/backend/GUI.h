@@ -12,6 +12,8 @@ void Gui_VKEndGUIFrame(VkCommandBuffer cmd);
 void Gui_GLInitalizeImGui(PlatformWindow* window);
 void Gui_GLEndGUIFrame();
 
+ImFont* Gui_VkLoadFont(VkDevice device, VkQueue queue, const char* path, float size);
+
 void Gui_VKDestroyImGui(VkAllocationCallbacks* allocation_callback);
 
 void Gui_GLBeginGUIFrame();
