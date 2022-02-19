@@ -51,10 +51,9 @@ void _Internal_WindowFocusCallback(GLFWwindow *window, int focused)
     w->m_focus = focused;
 }
 
-PlatformWindow::PlatformWindow(std::string title, int width, int height, bool VulkanAPI)
+PlatformWindow::PlatformWindow(std::string title, int width, int height)
     : m_width(width), m_height(height)
 {
-    static bool LoadedGL = false;
     memset(m_keys, 3, 512 * 4);
     if (s_Internal_WindowCount == 0)
     {
@@ -64,31 +63,12 @@ PlatformWindow::PlatformWindow(std::string title, int width, int height, bool Vu
             exit(1);
         }
     }
-    if (VulkanAPI)
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    else
-    {
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        if (DebugEnabled)
-            glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
-        else
-            glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_FALSE);
-    }
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
     glfwSetWindowSizeCallback(m_window, _Internal_WindowResizeCallback);
     glfwSetWindowFocusCallback(m_window, _Internal_WindowFocusCallback);
     glfwSetKeyCallback(m_window, _Internal_WindowKeyCallback);
-    if (!VulkanAPI)
-        if (!LoadedGL)
-        {
-            glfwMakeContextCurrent(m_window);
-            gladLoadGL();
-            LoadedGL = true;
-        }
     s_Internal_Windows.push_back(this);
     s_Internal_WindowCount++;
 }

@@ -376,11 +376,7 @@ namespace vk
         gfxswap.m_FrameCount = 0;
         // The is size of the following is equal to m_BackBufferCount
         gfxswap.m_FrameFences = new VkFence[BackBufferCount];
-        gfxswap.m_FrameSemaphores = new GPUSemaphore(); //new VkSemaphore[BackBufferCount];
-        gfxswap.m_FrameSemaphores->m_ApiType = 0;
-        gfxswap.m_FrameSemaphores->m_context = nullptr;
-        gfxswap.m_FrameSemaphores->m_FrameInfo = gfxswap.m_FrameInfo;
-        gfxswap.m_FrameSemaphores->m_semaphoreptr = new VkSemaphore[BackBufferCount];
+        gfxswap.m_FrameSemaphores = new VkSemaphore[BackBufferCount];
         gfxswap.m_FrameSwapchainCompleteSemaphores = new VkSemaphore[BackBufferCount];
 
         for (int i = 0; i < BackBufferCount; i++)
@@ -388,7 +384,7 @@ namespace vk
             VkFenceCreateInfo fenceCreateInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
             vkcheck(vkCreateFence(Device, &fenceCreateInfo, allocation_callback, &gfxswap.m_FrameFences[i]));
             VkSemaphoreCreateInfo semaphoreCreateInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-            vkcheck(vkCreateSemaphore(Device, &semaphoreCreateInfo, allocation_callback, &gfxswap.m_FrameSemaphores->m_semaphoreptr[i]));
+            vkcheck(vkCreateSemaphore(Device, &semaphoreCreateInfo, allocation_callback, &gfxswap.m_FrameSemaphores[i]));
             vkcheck(vkCreateSemaphore(Device, &semaphoreCreateInfo, allocation_callback, &gfxswap.m_FrameSwapchainCompleteSemaphores[i]));
         }
 
@@ -709,14 +705,14 @@ namespace vk
 
     }
 
-    void GraphicsSwapchain::PrepareNextFrame(uint32_t *pNextImageIndex, IGPUSemaphore *pSwapchainReadySemaphore)
+    void GraphicsSwapchain::PrepareNextFrame(uint32_t *pNextImageIndex, VkSemaphore *pSwapchainReadySemaphore)
     {
         PROFILE_FUNCTION();
         assert(pNextImageIndex && pSwapchainReadySemaphore);
         uint32_t FrameIndex = m_FrameCount % m_BackBufferCount;
         uint32_t ImageIndex;
         VkResult result;
-        result = vkAcquireNextImageKHR(m_Device, m_Swapchain, 5000'000'000, m_FrameSemaphores->m_semaphoreptr[FrameIndex], nullptr/*m_FrameFences[FrameIndex]*/, &ImageIndex);
+        result = vkAcquireNextImageKHR(m_Device, m_Swapchain, 5000'000'000, m_FrameSemaphores[FrameIndex], nullptr/*m_FrameFences[FrameIndex]*/, &ImageIndex);
         if (result != VK_SUCCESS)
         {
             logwarning("vkAcquireNextImageKHR(...) failed, it either timed out or there was an error or the swapchain was resized! (Max Time for next frame to be ready is 5 seconds)");
@@ -725,7 +721,7 @@ namespace vk
             Gui_VKBeginGUIFrame();
         m_SwapchainImageIndex = ImageIndex;
         *pNextImageIndex = FrameIndex;
-        *pSwapchainReadySemaphore = m_FrameSemaphores;
+        *pSwapchainReadySemaphore = m_FrameSemaphores[ImageIndex];
     }
 
     void GraphicsSwapchain::Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline)
@@ -851,10 +847,10 @@ namespace vk
             vkDestroyImageView(m_Device, m_Views[i], m_allocation_callback);
             vkDestroyFramebuffer(m_Device, m_Framebuffers[i], m_allocation_callback);
             vkDestroyFence(m_Device, m_FrameFences[i], m_allocation_callback);
-            vkDestroySemaphore(m_Device, m_FrameSemaphores->m_semaphoreptr[i], m_allocation_callback);
+            vkDestroySemaphore(m_Device, m_FrameSemaphores[i], m_allocation_callback);
             vkDestroySemaphore(m_Device, m_FrameSwapchainCompleteSemaphores[i], m_allocation_callback);
         }
-        delete m_FrameSemaphores->m_semaphoreptr;
+        delete m_FrameSemaphores;
         delete m_FrameSemaphores;
         delete m_FrameFences;
         delete m_FrameSwapchainCompleteSemaphores;

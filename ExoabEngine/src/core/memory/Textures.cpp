@@ -168,9 +168,9 @@ void Vulkan_GPUTexture2D_UploadPixels(IGPUTexture2D texture, void *pixels, size_
 {
 	vk::VkContext context = (vk::VkContext)texture->m_Context;
 	// create staging buffer
-	IBuffer2 staging_buffer = Buffer2_Create(texture->m_Context, BufferType::INTE_TRANSFER_SRC, pixel_size, BufferMemoryType::DYNAMIC);
+	IBuffer2 staging_buffer = Buffer2_Create(texture->m_Context, BufferType::INTE_TRANSFER_SRC, pixel_size, BufferMemoryType::CPU_ONLY);
 	// load data to buffer
-	void *staging_buffer_ptr = Buffer2_Map(staging_buffer, false, true);
+	void *staging_buffer_ptr = Buffer2_Map(staging_buffer);
 	memcpy(staging_buffer_ptr, pixels, pixel_size);
 	Buffer2_Flush(staging_buffer, 0, pixel_size);
 	Buffer2_Unmap(staging_buffer);

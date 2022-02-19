@@ -11,7 +11,6 @@
 #include "graphics/material_system/MaterialConfiguration.hpp"
 #include "graphics/material_system/FramebufferReserve.hpp"
 #include "graphics/material_system/Material.hpp"
-#include "mesh/Model.hpp"
 
 struct Tristate {
 	uint8_t state = 0xff; // 0 == off, 1 == enabled, 255 == disconnected

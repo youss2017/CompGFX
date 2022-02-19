@@ -21,20 +21,20 @@ GPUBuffer *Vulkan_GPUBuffer_Create(GraphicsContext _context, const GPUBufferSpec
 	VkMemoryPropertyFlags required_properties = 0;
 	VkMemoryPropertyFlags invalid_properties = 0;
 	VkBufferUsageFlags usage{};
-	if (result->m_Spec.m_MemoryType == BufferMemoryType::STATIC)
+	if (result->m_Spec.m_MemoryType == BufferMemoryType::GPU_ONLY)
 	{
 		properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		required_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		invalid_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 		usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	}
-	else if (result->m_Spec.m_MemoryType == BufferMemoryType::STREAM)
+	else if (result->m_Spec.m_MemoryType == BufferMemoryType::CPU_TO_CPU)
 	{
 		properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 		required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 		invalid_properties = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 	}
-	else if (result->m_Spec.m_MemoryType == BufferMemoryType::DYNAMIC)
+	else if (result->m_Spec.m_MemoryType == BufferMemoryType::CPU_ONLY)
 	{
 		properties = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 		required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -93,7 +93,7 @@ void Vulkan_GPUBuffer_UploadData(GPUBuffer *buffer, void *data, size_t offset, s
 	auto context = ((vk::VkContext)buffer->m_Context);
 	auto device = context->defaultDevice;
 	auto queue = context->defaultQueue;
-	if (buffer->m_Spec.m_MemoryType == BufferMemoryType::DYNAMIC || buffer->m_Spec.m_MemoryType == BufferMemoryType::STREAM)
+	if (buffer->m_Spec.m_MemoryType == BufferMemoryType::CPU_ONLY || buffer->m_Spec.m_MemoryType == BufferMemoryType::CPU_TO_CPU)
 	{
 		// 1) map 2) memcpy 3) unmap
 		void *map_ptr = GPUBuffer_MapBuffer(buffer, false, true);
@@ -107,7 +107,7 @@ void Vulkan_GPUBuffer_UploadData(GPUBuffer *buffer, void *data, size_t offset, s
 
 	// Create intermediate buffer
 	auto dynamic_spec = buffer->m_Spec;
-	dynamic_spec.m_MemoryType = BufferMemoryType::DYNAMIC;
+	dynamic_spec.m_MemoryType = BufferMemoryType::CPU_ONLY;
 	dynamic_spec.m_BufferType = BufferType::INTE_TRANSFER_SRC;
 	GPUBuffer *intermediate_buffer = GPUBuffer_Create(context, &dynamic_spec);
 
@@ -130,7 +130,7 @@ void Vulkan_GPUBuffer_UploadData(GPUBuffer *buffer, void *data, size_t offset, s
 
 	vkDestroyFence(device, fence, context->m_allocation_callback);
 	vkDestroyCommandPool(device, pool, context->m_allocation_callback);
-	if (buffer->m_Spec.m_MemoryType == BufferMemoryType::STREAM)
+	if (buffer->m_Spec.m_MemoryType == BufferMemoryType::CPU_TO_CPU)
 		GPUBuffer_Flush(buffer);
 }
 
@@ -204,11 +204,11 @@ GPUBuffer *GL_GPUBuffer_Create(GraphicsContext context, const GPUBufferSpecifica
 	else
 		assert(0 && "Error in EngineMemory.cpp Engine_Internal_CreateOpenGLBuffer(...)");
 	glBindBuffer(target, bufferID);
-	if (result->m_Spec.m_MemoryType == BufferMemoryType::STATIC)
+	if (result->m_Spec.m_MemoryType == BufferMemoryType::GPU_ONLY)
 		glBufferData(target, result->m_Spec.m_Size, NULL, GL_STATIC_DRAW);
-	else if (result->m_Spec.m_MemoryType == BufferMemoryType::STREAM)
+	else if (result->m_Spec.m_MemoryType == BufferMemoryType::CPU_TO_CPU)
 		glBufferData(target, result->m_Spec.m_Size, NULL, GL_STREAM_DRAW);
-	else if (result->m_Spec.m_MemoryType == BufferMemoryType::STREAM)
+	else if (result->m_Spec.m_MemoryType == BufferMemoryType::CPU_TO_CPU)
 		glBufferData(target, result->m_Spec.m_Size, NULL, GL_DYNAMIC_DRAW);
 	return result;
 }

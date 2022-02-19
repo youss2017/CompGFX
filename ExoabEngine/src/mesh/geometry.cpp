@@ -8,6 +8,8 @@ namespace Mesh
 
 	bool LoadVerticesIndicesSSBOs(void* context, std::vector<std::string> geometry_path_list, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer)
 	{
+		if (!pVerticesSSBO || !pIndicesBuffer)
+			return false;
 		Assimp::Importer imp;
 		std::vector<GeometryVertex> vertices;
 		std::vector<uint16> indices;
@@ -18,6 +20,7 @@ namespace Mesh
 			if (!scene) {
 				std::string errmsg = "Error parsing '" + std::string(path) + "', because: " + std::string(imp.GetErrorString());
 				logerror(errmsg.c_str());
+				return false;
 			}
 			Geometry geomtry;
 			geomtry.firstVertex = vertices.size();
@@ -61,7 +64,14 @@ namespace Mesh
 		}
 		vertices.shrink_to_fit();
 		indices.shrink_to_fit();
-
+		std::stringstream memory_info;
+		memory_info << "Using about " << (vertices.size() * sizeof(GeometryVertex) / 1024.0) << " kb for vertices and " << (indices.size() * sizeof(int16) / 1024) << " kb for indices.";
+		loginfos(memory_info.str());
+		IBuffer2 vertices_ssbo = Buffer2_Create(context, BufferType::StorageBuffer, vertices.size() * sizeof(GeometryVertex), BufferMemoryType::GPU_ONLY);
+		IBuffer2 indices_buffer = Buffer2_Create(context, BufferType::IndexBuffer, indices.size() * sizeof(int16), BufferMemoryType::GPU_ONLY);
+		*pVerticesSSBO = vertices_ssbo;
+		*pIndicesBuffer = indices_buffer;
+		return true;
 	}
 
 }

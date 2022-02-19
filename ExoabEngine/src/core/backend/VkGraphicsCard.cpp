@@ -213,6 +213,8 @@ namespace vk
 		context->m_memory_context = vulkan_memory_initalize_context(context->defaultDevice, context->card.handle, context->m_allocation_callback);
 		context->m_future_memory_context = VkAlloc::CreateContext(context->defaultDevice, context->card.handle, /* 64 mb*/ 64 * (1024 * 1024));
 
+		context->pFrameIndex = &context->FrameInfo->m_FrameIndex;
+
 		return context;
 	}
 

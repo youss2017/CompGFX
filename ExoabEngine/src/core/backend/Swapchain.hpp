@@ -1,6 +1,6 @@
 #pragma once
 #include "../memory/vulkan_memory.h"
-#include "Synchronization.hpp"
+#include "backend_base.h"
 #include <vulkan/vulkan.h>
 #include <vector>
 
@@ -13,7 +13,7 @@ namespace vk {
             // Do not use SRGB VkFormat since the fragment shader already applies gamma correction at level 2.2
             static GraphicsSwapchain Create(VkInstance Instance, VkAllocationCallbacks* allocation_callback, VkPhysicalDevice PhysicalDevice, VkDevice Device, VkQueue Queue, uint32_t QueueFamilyIndex, VkFormat Format, PlatformWindow *Window, int BackBufferCount, int SyncInterval, _FrameInformation** pOutFrameInfo, bool UsingImGui);
             // pNextImageIndex will be between 0 and BackBufferCount, When submitting commands to command queue, make sure to wait for pSwapchainReadySemaphore
-            void PrepareNextFrame(uint32_t* pNextImageIndex, IGPUSemaphore* pSwapchainReadySemaphore);
+            void PrepareNextFrame(uint32_t* pNextImageIndex, VkSemaphore* pSwapchainReadySemaphore);
             // Image Layout should be VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, pRenderCompleteSemaphores is a list of semaphores to wait so that gpu finishes rendering the frame before showing the image
             void Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline);
             void Destroy();
@@ -46,7 +46,7 @@ namespace vk {
             // The is size of the following is equal to m_BackBufferCount
             VkFence *m_FrameFences  = NULL;
             //VkSemaphore *m_FrameSemaphores  = NULL;
-            IGPUSemaphore m_FrameSemaphores = nullptr;
+            VkSemaphore *m_FrameSemaphores = nullptr;
             VkSemaphore *m_FrameSwapchainCompleteSemaphores  = NULL;
 
             VkSampler m_ColorTextureSampler; // Sampler used to render the color texture

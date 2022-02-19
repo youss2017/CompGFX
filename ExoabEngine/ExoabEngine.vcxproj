@@ -115,7 +115,6 @@
     <ClInclude Include="src\core\backend\GLGraphicsCard.hpp" />
     <ClInclude Include="src\core\backend\GLSwapchain.hpp" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />
-    <ClInclude Include="src\core\backend\Synchronization.hpp" />
     <ClInclude Include="src\core\backend\VkGraphicsCard.hpp" />
     <ClInclude Include="src\core\backend\VulkanLoader.h" />
     <ClInclude Include="src\core\EngineBase.h" />
@@ -131,25 +130,19 @@
     <ClInclude Include="src\core\pipeline\Framebuffer.hpp" />
     <ClInclude Include="src\core\pipeline\Pipeline.hpp" />
     <ClInclude Include="src\core\shaders\Shader.hpp" />
+    <ClInclude Include="src\core\shaders\ShaderBinding.hpp" />
     <ClInclude Include="src\core\shaders\ShaderReflection.hpp" />
     <ClInclude Include="src\graphics\CommandDefines.hpp" />
-    <ClInclude Include="src\graphics\CommandList.hpp" />
     <ClInclude Include="src\graphics\Font.hpp" />
     <ClInclude Include="src\graphics\Graphics.hpp" />
     <ClInclude Include="src\graphics\material_system\FramebufferReserve.hpp" />
     <ClInclude Include="src\graphics\material_system\Material.hpp" />
     <ClInclude Include="src\graphics\material_system\MaterialConfiguration.hpp" />
-    <ClInclude Include="src\graphics\material_system\ShaderProgramData.hpp" />
-    <ClInclude Include="src\graphics\RenderState.hpp" />
     <ClInclude Include="src\mesh\Float16.hpp" />
     <ClInclude Include="src\mesh\geometry.hpp" />
-    <ClInclude Include="src\mesh\mesh.hpp" />
-    <ClInclude Include="src\mesh\Model.hpp" />
-    <ClInclude Include="src\mesh\Model.ipp" />
     <ClInclude Include="src\physics\PhysicsMain.hpp" />
     <ClInclude Include="src\ShaderTypes.hpp" />
     <ClInclude Include="src\UI.hpp" />
-    <ClInclude Include="src\units\Entity.hpp" />
     <ClInclude Include="src\units\Map.hpp" />
     <ClInclude Include="src\units\unit_common.hpp" />
     <ClInclude Include="src\utils\common.hpp" />
@@ -192,7 +185,6 @@
     <ClCompile Include="src\core\backend\GLGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\GLSwapchain.cpp" />
     <ClCompile Include="src\core\backend\Swapchain.cpp" />
-    <ClCompile Include="src\core\backend\Synchronization.cpp" />
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\VulkanLoader.c" />
     <ClCompile Include="src\core\backend\GUI.cpp" />
@@ -207,26 +199,18 @@
     <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
     <ClCompile Include="src\core\shaders\Shader.cpp" />
     <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
-    <ClCompile Include="src\graphics\CommandList.cpp" />
-    <ClCompile Include="src\graphics\CommandPool.cpp" />
     <ClCompile Include="src\graphics\Font.cpp" />
-    <ClCompile Include="src\graphics\GLCommandList.cpp" />
-    <ClCompile Include="src\graphics\GLGraphics3D.cpp" />
     <ClCompile Include="src\graphics\Graphics.cpp" />
     <ClCompile Include="src\graphics\material_system\FramebufferReserve.cpp" />
     <ClCompile Include="src\graphics\material_system\Material.cpp" />
     <ClCompile Include="src\graphics\material_system\MaterialConfiguration.cpp" />
-    <ClCompile Include="src\graphics\material_system\ShaderProgramData.cpp" />
-    <ClCompile Include="src\graphics\RenderState.cpp" />
     <ClCompile Include="src\graphics\VulkanCommandList.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh\Float16.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
-    <ClCompile Include="src\mesh\mesh.cpp" />
     <ClCompile Include="src\physics\PhysicsMain.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />
     <ClCompile Include="src\UI.cpp" />
-    <ClCompile Include="src\units\Entity.cpp" />
     <ClCompile Include="src\units\Map.cpp" />
     <ClCompile Include="src\utils\common.cpp" />
     <ClCompile Include="src\utils\Logger.cpp" />
@@ -238,7 +222,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
-    <None Include="src\graphics\material_system\ShaderProgramData_Internal.inl" />
     <None Include="src\utils\common.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

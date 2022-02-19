@@ -71,6 +71,7 @@ namespace vk {
 		VkQueue defaultQueue;
 		uint32_t defaultQueueFamilyIndex;
 		TextureSamples m_MaxMSAASamples;
+		uint32_t* pFrameIndex = nullptr;
 		bool debugEnabled;
 		void* m_memory_context;
 		VkAlloc::CONTEXT m_future_memory_context;

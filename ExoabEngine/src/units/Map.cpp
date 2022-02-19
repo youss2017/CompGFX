@@ -1,3 +1,4 @@
+#if 0
 #include "Map.hpp"
 #include <iostream>
 
@@ -84,8 +85,8 @@ ITerrain Terrain_Create(IPipelineLayout layout, int width, int xresolution, int 
 		//cout << endl;
 	}
 
-	terrain->m_vertices_buffer = Buffer2_Create(terrain->m_context, BufferType::VertexBuffer, terrain->m_vertices.size() * sizeof(TerrainVertex), BufferMemoryType::STATIC);
-	terrain->m_indices_buffer = Buffer2_Create(terrain->m_context, BufferType::IndexBuffer, terrain->m_indices.size() * sizeof(uint32_t), BufferMemoryType::STATIC);
+	terrain->m_vertices_buffer = Buffer2_Create(terrain->m_context, BufferType::VertexBuffer, terrain->m_vertices.size() * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY);
+	terrain->m_indices_buffer = Buffer2_Create(terrain->m_context, BufferType::IndexBuffer, terrain->m_indices.size() * sizeof(uint32_t), BufferMemoryType::GPU_ONLY);
 
 	Buffer2_UploadData(terrain->m_vertices_buffer, (char8_t*)terrain->m_vertices.data(), 0, terrain->m_vertices.size() * sizeof(TerrainVertex));
 	Buffer2_UploadData(terrain->m_indices_buffer, (char8_t*)terrain->m_indices.data(), 0, terrain->m_indices.size() * sizeof(uint32_t));
@@ -117,3 +118,4 @@ void Terrain_Destroy(ITerrain terrain)
 	Buffer2_Destroy(terrain->m_indices_buffer);
 	delete terrain;
 }
+#endif

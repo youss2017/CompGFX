@@ -1,8 +1,6 @@
 #pragma once
-#include "Entity.hpp"
-#include "../graphics/RenderState.hpp"
-#include "../graphics/material_system/ShaderProgramData.hpp"
 #include "../core/pipeline/Pipeline.hpp"
+#include <memory/Buffer2.hpp>
 #include <vector>
 
 struct TerrainVertex
@@ -21,11 +19,8 @@ struct Terrain
     std::vector<TerrainVertex> m_vertices;
     std::vector<uint32_t> m_indices;
     IGPUTexture2D m_base_texture;
-    IShaderProgramData m_program_data;
     IBuffer2 m_vertices_buffer;
     IBuffer2 m_indices_buffer;
-    RenderState m_render_state;
-    EntityBindingData m_binding_data = EntityBindingData(0, 0);
     PipelineVertexInputDescription m_input_description;
     // TODO: Put Texture Map, Normal Map, Specular Map here
 };

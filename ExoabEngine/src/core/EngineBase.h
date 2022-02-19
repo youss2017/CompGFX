@@ -10,11 +10,11 @@
 enum class BufferMemoryType
 {
 	// GPU_ONLY
-	STATIC = 0x0, // written once, read a lot
+	GPU_ONLY = 0x0, // written once, read a lot
 	// CPU_TO_GPU
-	STREAM = 0x1, // written a somtimes, read a lot
+	CPU_TO_CPU = 0x1, // written a somtimes, read a lot
 	// CPU_ONLY
-	DYNAMIC = 0x2 // written every frame
+	CPU_ONLY = 0x2 // written every frame
 };
 
 enum class EngineAPIType

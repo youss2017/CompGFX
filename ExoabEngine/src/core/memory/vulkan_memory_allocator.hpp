@@ -104,6 +104,7 @@ namespace VkAlloc
 		DEVICE_HEAP_SUBALLOCATION m_suballocation;
 		VkMemoryRequirements m_memrequirements;
 		IMAGE_DESCRIPITION m_description;
+		DEVICE_HEAP_FREE_BLOCK m_heap_free_block;
 	} typedef *IMAGE;
 
 	struct _CONTEXT

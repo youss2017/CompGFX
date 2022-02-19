@@ -137,7 +137,7 @@ struct GLFWwindow;
 class PlatformWindow {
 
 public:
-	PlatformWindow(std::string title, int width, int height, bool VulkanAPI);
+	PlatformWindow(std::string title, int width, int height);
 	~PlatformWindow();
 
 	static void Poll();

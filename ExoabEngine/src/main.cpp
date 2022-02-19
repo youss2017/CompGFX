@@ -47,7 +47,6 @@ int main(int argc, char** argv)
     PreparePOSIX(argc, argv);
 #endif
     //PhysicsMain pm;
-    std::cout << "sizeof(GLCommandData) = " << sizeof(GLCommandData) << "\n";
     log_configure(true, true);
     /* Load Game Settings from settings.cfg */
     ConfigurationSettings config = LoadConfiguration();

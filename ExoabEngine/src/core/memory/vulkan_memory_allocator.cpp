@@ -245,6 +245,10 @@ namespace VkAlloc
 			}
 		}
 
+		/*
+			Note: Returning true means there is more space in the current heap; keep allocating.
+		*/
+
 		auto BufferSuballocationProcess = [context](DEVICE_HEAP& heap, BUFFER buffer, int& next_buffer_image_index) throw() -> bool {
 			for (int block_index = 0; block_index < heap->m_free_blocks.size(); block_index++)
 			{
@@ -281,6 +285,8 @@ namespace VkAlloc
 				DEVICE_HEAP_FREE_BLOCK& block = heap->m_free_blocks[block_index];
 				if (block.m_size >= image->m_suballocation.m_size)
 				{
+					image->m_heap_free_block.m_offset = block.m_offset;
+					image->m_heap_free_block.m_size = image->m_memrequirements.size;
 					image->m_suballocation.m_offset = block.m_offset;
 					image->m_suballocation.m_coherent = heap->m_coherent;
 					image->m_suballocation.m_host_visible = heap->m_host_visible;
@@ -324,8 +330,6 @@ namespace VkAlloc
 				if (ImageSuballocationProcess(heap, image, next_buffer_image_index))
 					goto suballocate;
 			}
-
-
 			i++;
 		}
 
@@ -349,7 +353,7 @@ namespace VkAlloc
 			else {
 				IMAGE image = images[next_buffer_image_index];
 				if (ImageSuballocationProcess(heap, image, next_buffer_image_index))
-					goto suballocate;
+					goto suballocate2;
 			}
 		}
 
@@ -429,9 +433,9 @@ namespace VkAlloc
 				if (image->m_properties == pDescs[j].m_properties)
 					if (image->m_width == pDescs[j].m_extent.width)
 						if (image->m_height == pDescs[j].m_extent.height)
-							if(image->m_suballocation.m_image)
-							if (image->m_sampleCount == pDescs[j].m_samples)
-								break;
+							if(image->m_description.m_extent.depth == pDescs[j].m_extent.depth)
+								if (image->m_sampleCount == pDescs[j].m_samples)
+									break;
 			}
 			pOutImages[i] = images[j];
 		}
@@ -500,32 +504,11 @@ namespace VkAlloc
 			BUFFER buffer = pBuffers[i];
 			std::vector<DEVICE_HEAP>& heaps = context->m_device_heap;
 			DEVICE_HEAP& heap = heaps[buffer->m_suballocation.m_heap_index];
-
-			// Join DEVICE_HEAP_FREE_BLOCK
-			// Why join blocks, example:
-			// Block 0: offset(0), size(1000)
-			// Block 1: offset(1000), sizeo(63000)
-			// After joining
-			// Block 0: offset(0), sizeof(64000)
-			// This allows a more efficient use of memory and reduces memory fragmentation.
-			bool joined_blocks = false;
-			for (auto& block : heap->m_free_blocks)
-			{
-				if (buffer->m_heap_free_block.m_offset + buffer->m_heap_free_block.m_size == block.m_offset)
-				{
-					block.m_offset = buffer->m_heap_free_block.m_offset;
-					block.m_size += buffer->m_heap_free_block.m_size;
-					joined_blocks = true;
-					break;
-				}
-			}
-			if (!joined_blocks) {
-				heap->m_free_blocks.push_back(buffer->m_heap_free_block);
-				// If a new block is added that means there is a discontunity in memory
-				// therefore there is gabs between free memory blocks
-				// this helps determine whether the heap needs to be defragmented.
-				heap->m_fragmentation_score++;
-			}
+			heap->m_free_blocks.push_back(buffer->m_heap_free_block);
+			// If a new block is added that means there is a discontunity in memory
+			// therefore there is gabs between free memory blocks
+			// this helps determine whether the heap needs to be defragmented.
+			heap->m_fragmentation_score++;
 			if (buffer->m_suballocation.m_host_visible)
 				UnmapBuffer(context, buffer);
 			heap->m_suballocations.erase(buffer->m_suballocation.m_suballocation_index);
@@ -535,6 +518,18 @@ namespace VkAlloc
 	}
 	void DestroyImages(CONTEXT context, uint32_t count, IMAGE* pImages)
 	{
+		if (!count)
+			return;
+		for (int i = 0; i < count; i++)
+		{
+			IMAGE image = pImages[i];
+			vkDestroyImage(context->m_device, image->m_image, nullptr);
+			DEVICE_HEAP& heap = context->m_device_heap[image->m_suballocation.m_heap_index];
+			heap->m_free_blocks.push_back(image->m_heap_free_block);
+			heap->m_fragmentation_score++;
+			heap->m_suballocations.erase(image->m_suballocation.m_suballocation_index);
+			delete image;
+		}
 	}
 	void Defragment(CONTEXT context)
 	{

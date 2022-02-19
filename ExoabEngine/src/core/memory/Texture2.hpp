@@ -15,7 +15,6 @@ struct GPUTexture2D_2
 	VkImageAspectFlags m_vk_aspectmask;
 	VkImageLayout m_vk_current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout m_vk_current_layout_mipmap = VK_IMAGE_LAYOUT_UNDEFINED;
-	unsigned int m_gl_image;
 };
 
 typedef GPUTexture2D_2* ITexture2;

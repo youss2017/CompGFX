@@ -37,7 +37,7 @@ void Buffer2_UploadData(IBuffer2 buffer, char8_t *pData, size_t offset, size_t s
 {
 	if (buffer->memoryType != BufferMemoryType::GPU_ONLY)
 	{
-		char8_t *ptr = Buffer2_Map(buffer, false, true);
+		char8_t *ptr = Buffer2_Map(buffer);
 		memcpy(ptr, pData, size);
 		Buffer2_Unmap(buffer);
 		return;
@@ -96,7 +96,7 @@ void Buffer2_Unmap(IBuffer2 buffer)
 
 void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size)
 {
-	VkAlloc::ReAllocBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, new_size);
+	assert(0);// VkAlloc::ReAllocBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, new_size);
 }
 
 void Buffer2_Destroy(IBuffer2 buffer)

@@ -5,6 +5,7 @@
 ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification& specification)
 {
 	using namespace VkAlloc;
+	assert(!specification.m_CreatePerFrame);
 	IMAGE_DESCRIPITION desc;
 	desc.m_properties = DEVICE_MEMORY_PROPERTY::GPU_ONLY;
 	desc.m_flags = 0;
@@ -36,84 +37,39 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	texture->m_vk_description = desc;
 	texture->m_context = context;
 	texture->m_specification = specification;
-	if (!specification.m_CreatePerFrame) {
-		VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, 1, &desc, &texture->m_vk_image);
-		VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		viewInfo.format = (VkFormat)specification.m_Format;
-		auto GetVkSwizzle = [](TextureSwizzle swizz) throw()->VkComponentSwizzle
-		{
-			if (swizz == TextureSwizzle::SwizzleRED)
-				return VK_COMPONENT_SWIZZLE_R;
-			if (swizz == TextureSwizzle::SwizzleGREEN)
-				return VK_COMPONENT_SWIZZLE_G;
-			if (swizz == TextureSwizzle::SwizzleBLUE)
-				return VK_COMPONENT_SWIZZLE_B;
-			if (swizz == TextureSwizzle::SwizzleALPHA)
-				return VK_COMPONENT_SWIZZLE_A;
-			if (swizz == TextureSwizzle::SwizzleONE)
-				return VK_COMPONENT_SWIZZLE_ONE;
-			if (swizz == TextureSwizzle::SwizzleZERO)
-				return VK_COMPONENT_SWIZZLE_ZERO;
-			return VK_COMPONENT_SWIZZLE_IDENTITY;
-		};
-		viewInfo.image = texture->m_vk_image->m_image;
-		viewInfo.components.r = GetVkSwizzle(specification.m_Sampler.SwizzleRed);
-		viewInfo.components.g = GetVkSwizzle(specification.m_Sampler.SwizzleGreen);
-		viewInfo.components.b = GetVkSwizzle(specification.m_Sampler.SwizzleBlue);
-		viewInfo.components.a = GetVkSwizzle(specification.m_Sampler.SwizzleAlpha);
-		viewInfo.subresourceRange.aspectMask = specification.m_TextureUsage == TextureUsage::DEPTH_ATTACHMENT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = desc.m_mipLevels;
-		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount = 1;
-		texture->m_vk_aspectmask = viewInfo.subresourceRange.aspectMask;
-		vkcheck(vkCreateImageView(ToVKContext(context)->defaultDevice, &viewInfo, nullptr, &texture->m_vk_view));
-	}
-	else
+	VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, 1, &desc, &texture->m_vk_image);
+	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = (VkFormat)specification.m_Format;
+	auto GetVkSwizzle = [](TextureSwizzle swizz) throw()->VkComponentSwizzle
 	{
-		uint32_t frame_count = ToVKContext(context)->FrameInfo->m_FrameCount;
-		texture->m_vk_views.resize(frame_count);
-		texture->m_vk_images.resize(frame_count);
-		IMAGE_DESCRIPITION* pDescs = new IMAGE_DESCRIPITION[frame_count];
-		for (uint32_t i = 0; i < frame_count; i++) pDescs[i] = desc;
-		VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, frame_count, pDescs, texture->m_vk_images.data());
-		delete[] pDescs;
-		for (uint32_t i = 0; i < frame_count; i++)
-		{
-			VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			viewInfo.format = (VkFormat)specification.m_Format;
-			auto GetVkSwizzle = [](TextureSwizzle swizz) throw()->VkComponentSwizzle
-			{
-				if (swizz == TextureSwizzle::SwizzleRED)
-					return VK_COMPONENT_SWIZZLE_R;
-				if (swizz == TextureSwizzle::SwizzleGREEN)
-					return VK_COMPONENT_SWIZZLE_G;
-				if (swizz == TextureSwizzle::SwizzleBLUE)
-					return VK_COMPONENT_SWIZZLE_B;
-				if (swizz == TextureSwizzle::SwizzleALPHA)
-					return VK_COMPONENT_SWIZZLE_A;
-				if (swizz == TextureSwizzle::SwizzleONE)
-					return VK_COMPONENT_SWIZZLE_ONE;
-				if (swizz == TextureSwizzle::SwizzleZERO)
-					return VK_COMPONENT_SWIZZLE_ZERO;
-				return VK_COMPONENT_SWIZZLE_IDENTITY;
-			};
-			viewInfo.image = texture->m_vk_images[i]->m_image;
-			viewInfo.components.r = GetVkSwizzle(specification.m_Sampler.SwizzleRed);
-			viewInfo.components.g = GetVkSwizzle(specification.m_Sampler.SwizzleGreen);
-			viewInfo.components.b = GetVkSwizzle(specification.m_Sampler.SwizzleBlue);
-			viewInfo.components.a = GetVkSwizzle(specification.m_Sampler.SwizzleAlpha);
-			viewInfo.subresourceRange.aspectMask = specification.m_TextureUsage == TextureUsage::DEPTH_ATTACHMENT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-			viewInfo.subresourceRange.baseMipLevel = 0;
-			viewInfo.subresourceRange.levelCount = desc.m_mipLevels;
-			viewInfo.subresourceRange.baseArrayLayer = 0;
-			viewInfo.subresourceRange.layerCount = 1;
-			texture->m_vk_aspectmask = viewInfo.subresourceRange.aspectMask;
-			vkcheck(vkCreateImageView(ToVKContext(context)->defaultDevice, &viewInfo, nullptr, &texture->m_vk_views[i]));
-		}
-	}
+		if (swizz == TextureSwizzle::SwizzleRED)
+			return VK_COMPONENT_SWIZZLE_R;
+		if (swizz == TextureSwizzle::SwizzleGREEN)
+			return VK_COMPONENT_SWIZZLE_G;
+		if (swizz == TextureSwizzle::SwizzleBLUE)
+			return VK_COMPONENT_SWIZZLE_B;
+		if (swizz == TextureSwizzle::SwizzleALPHA)
+			return VK_COMPONENT_SWIZZLE_A;
+		if (swizz == TextureSwizzle::SwizzleONE)
+			return VK_COMPONENT_SWIZZLE_ONE;
+		if (swizz == TextureSwizzle::SwizzleZERO)
+			return VK_COMPONENT_SWIZZLE_ZERO;
+		return VK_COMPONENT_SWIZZLE_IDENTITY;
+	};
+	viewInfo.image = texture->m_vk_image->m_image;
+	viewInfo.components.r = GetVkSwizzle(specification.m_Sampler.SwizzleRed);
+	viewInfo.components.g = GetVkSwizzle(specification.m_Sampler.SwizzleGreen);
+	viewInfo.components.b = GetVkSwizzle(specification.m_Sampler.SwizzleBlue);
+	viewInfo.components.a = GetVkSwizzle(specification.m_Sampler.SwizzleAlpha);
+	viewInfo.subresourceRange.aspectMask = specification.m_TextureUsage == TextureUsage::DEPTH_ATTACHMENT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = desc.m_mipLevels;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+	texture->m_vk_aspectmask = viewInfo.subresourceRange.aspectMask;
+	vkcheck(vkCreateImageView(ToVKContext(context)->defaultDevice, &viewInfo, nullptr, &texture->m_vk_view));
+
 	return texture;
 }
 
@@ -121,9 +77,9 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 {
 	vk::VkContext context = (vk::VkContext)texture->m_context;
 	// create staging buffer
-	IBuffer2 staging_buffer = Buffer2_Create(texture->m_context, BufferType::INTE_TRANSFER_SRC, size, BufferMemoryType::DYNAMIC);
+	IBuffer2 staging_buffer = Buffer2_Create(texture->m_context, BufferType::INTE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY);
 	// load data to buffer
-	char8_t* staging_buffer_ptr = Buffer2_Map(staging_buffer, false, true);
+	char8_t* staging_buffer_ptr = Buffer2_Map(staging_buffer);
 	memcpy(staging_buffer_ptr, pixels, size);
 	Buffer2_Flush(staging_buffer, 0, size);
 	Buffer2_Unmap(staging_buffer);
@@ -198,7 +154,7 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 	VkCommandBuffer cmd = Gfx_AllocCommandBuffer(context, pool, true);
 	VkFence fence = Gfx_CreateFence(context);
 
-	Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 	VkImageMemoryBarrier MIP0Barrier0{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	MIP0Barrier0.srcAccessMask = 0;
@@ -279,7 +235,7 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 2, Barriers2);
 
 	vkEndCommandBuffer(cmd);
-	Gfx_SubmitCmdBuffers(context->defaultQueue, { cmd }, {}, {}, {}, fence);
+	vk::Gfx_SubmitCmdBuffers(context->defaultQueue, { cmd }, {}, {}, {}, fence);
 	vkWaitForFences(context->defaultDevice, 1, &fence, true, 5000'0000'000);
 
 	vkDestroyFence(context->defaultDevice, fence, context->m_allocation_callback);
