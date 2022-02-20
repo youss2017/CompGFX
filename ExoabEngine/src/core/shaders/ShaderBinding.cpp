@@ -9,10 +9,9 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
     std::vector<IBuffer2> buffers;
     for (auto& bind : shader_bindings)
     {
-        assert(bind.m_array_size == 1);
         VkDescriptorSetLayoutBinding binding;
         binding.binding = bind.m_bindingID;
-        binding.descriptorCount = bind.m_array_size;
+        binding.descriptorCount = (bind.m_type == SHADER_BINDING_TEXTURE) ? bind.m_textures.size() : 1;
         binding.stageFlags = bind.m_shaderStages;
         binding.pImmutableSamplers = nullptr;
         switch (bind.m_type)
@@ -22,7 +21,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (uint32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 break;
@@ -31,7 +30,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (uint32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                 break;
@@ -40,7 +39,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (uint32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 break;
@@ -49,13 +48,13 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (uint32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
                 break;
             case SHADER_BINDING_TEXTURE:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                assert(0);
+                bind.m_vk_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 break;
             default:
                 assert(0);
@@ -92,15 +91,33 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
         write.descriptorCount = 1;
         write.pImageInfo = nullptr;
         write.pTexelBufferView = nullptr;
+        write.pBufferInfo = nullptr;
         for (auto& bind : set->m_bindings) {
             write.dstBinding = bind.m_bindingID;
             write.descriptorType = bind.m_vk_type;
-            VkDescriptorBufferInfo bufferInfo;
-            bufferInfo.buffer = (bind.m_useclientbuffer) ? bind.m_client_buffer->m_vk_buffer->m_buffer : bind.m_buffer[i]->m_vk_buffer->m_buffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = VK_WHOLE_SIZE;
-            write.pBufferInfo = &bufferInfo;
-            vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+            if (bind.m_type != SHADER_BINDING_TEXTURE) {
+                VkDescriptorBufferInfo bufferInfo;
+                bufferInfo.buffer = (bind.m_useclientbuffer) ? bind.m_client_buffer->m_vk_buffer->m_buffer : bind.m_buffer[i]->m_vk_buffer->m_buffer;
+                bufferInfo.offset = 0;
+                bufferInfo.range = VK_WHOLE_SIZE;
+                write.pBufferInfo = &bufferInfo;
+                vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+            }
+            else {
+                write.dstArrayElement = 0;
+                write.descriptorCount = bind.m_textures.size();
+                std::vector<VkDescriptorImageInfo> imageInfos(bind.m_textures.size());
+                assert(bind.m_textures.size() == bind.m_textures_layouts.size());
+                for (int w = 0; w < bind.m_textures.size(); w++)
+                {
+                    assert(bind.m_textures[w]->m_vk_views.size() == 0);
+                    imageInfos[w].sampler = bind.m_sampler;
+                    imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
+                    imageInfos[w].imageLayout = bind.m_textures_layouts[w];
+                }
+                write.pImageInfo = imageInfos.data();
+                vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+            }
         }
     }
     set->m_setlayout = setlayout;
@@ -122,4 +139,30 @@ VkPipelineLayout ShaderBinding_CreatePipelineLayout(vk::VkContext context, std::
     VkPipelineLayout layout;
     vkcheck(vkCreatePipelineLayout(context->defaultDevice, &createInfo, nullptr, &layout));
     return layout;
+}
+
+void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescriptorPoolSize>& poolSizes, std::vector<ShaderBinding>& bindings)
+{
+    for (auto& bind : bindings) {
+        switch (bind.m_type)
+        {
+        case SHADER_BINDING_BUFFER:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, framecount });
+            break;
+        case SHADER_BINDING_BUFFER_DYNAMIC:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, framecount });
+            break;
+        case SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, framecount });
+            break;
+        case SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, framecount });
+            break;
+        case SHADER_BINDING_TEXTURE:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, framecount });
+            break;
+        default:
+            assert(0);
+        }
+    }
 }

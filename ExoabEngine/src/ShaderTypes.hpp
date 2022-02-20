@@ -8,18 +8,22 @@ namespace ShaderTypes {
 	using namespace glm;
 	extern "C" {
 
+		struct SceneData
+		{
+			SHADER_STD140_ALIGN mat4 m_View;
+			SHADER_STD140_ALIGN mat4 m_Projection;
+		};
+
 		struct ObjectData
 		{
 			SHADER_STD140_ALIGN mat4 m_Model;
 			SHADER_STD140_ALIGN mat4 m_NormalModel;
-			// TODO: Move these to UBOs
-			SHADER_STD140_ALIGN mat4 m_View;
-			SHADER_STD140_ALIGN mat4 m_Projection;
 		};
 
 		struct DrawData
 		{
 			VkDrawIndexedIndirectCommand command;
+			uint SceneDataIndex;
 			SHADER_STD140_ALIGN uint ObjectDataIndex;
 		};
 

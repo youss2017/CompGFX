@@ -39,15 +39,15 @@ namespace Mesh
 					v.x = scene->mMeshes[i]->mVertices[j].x;
 					v.y = scene->mMeshes[i]->mVertices[j].y;
 					v.z = scene->mMeshes[i]->mVertices[j].z;
-					int8 nx = int8(scene->mMeshes[i]->mNormals[j].x * 127.0);
-					int8 ny = int8(scene->mMeshes[i]->mNormals[j].y * 127.0);
-					int8 nz = int8(scene->mMeshes[i]->mNormals[j].z * 127.0);
-					v.x_y_upperz = (nx << 24) | (ny << 16) | (nz << 8);
+					v.nx = scene->mMeshes[i]->mNormals[j].x ;
+					v.ny = scene->mMeshes[i]->mNormals[j].y ;
+					v.nz = scene->mMeshes[i]->mNormals[j].z ;
 					if (scene->mMeshes[i]->mTextureCoords[0]) {
-						v.tu_tv = (int(scene->mMeshes[i]->mTextureCoords[0][j].x * float(0xffff)) << 16) | int(scene->mMeshes[i]->mTextureCoords[0][j].y * float(0xffff));
+						v.tu = scene->mMeshes[i]->mTextureCoords[0][j].x;
+						v.tv = scene->mMeshes[i]->mTextureCoords[0][j].y;
 					}
 					else
-						v.tu_tv = 0;
+						;// v.tu_tv = 0;
 					vertices.push_back(v);
 				}
 				for (uint j = 0; j < scene->mMeshes[i]->mNumFaces; j++)

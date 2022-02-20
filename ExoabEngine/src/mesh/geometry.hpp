@@ -14,8 +14,8 @@ namespace Mesh {
 	struct GeometryVertex
 	{
 		float x, y, z;
-		int nx_ny_nz_padding;
-		uint tu_tv;
+		float nx, ny, nz;
+		float tu, tv;
 	};
 	struct Geometry
 	{

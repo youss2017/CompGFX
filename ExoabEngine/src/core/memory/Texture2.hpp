@@ -23,3 +23,5 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size);
 void Texture2_UpdateMipmaps(ITexture2 texture);
 void Texture2_Destroy(ITexture2 texture);
+
+ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, bool mipmaps);

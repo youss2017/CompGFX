@@ -1,6 +1,7 @@
 #include "Texture2.hpp"
 #include <backend/VkGraphicsCard.hpp>
 #include "Buffer2.hpp"
+#include <stb/stb_image.h>
 
 ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification& specification)
 {
@@ -246,4 +247,23 @@ void Texture2_Destroy(ITexture2 texture)
 {
 	VkAlloc::DestroyImages(ToVKContext(texture)->m_future_memory_context, 1, &texture->m_vk_image);
 	delete texture;
+}
+
+ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, bool mipmaps)
+{
+	int w, h, c;
+	void* pixels = stbi_load(path, &w, &h, &c, 4);
+	if (!pixels) {
+		logerror("Could not load texture from file!");
+		return nullptr;
+	}
+	Texture2DSpecification specification;
+	specification.m_Width = w;
+	specification.m_Height = h;
+	specification.m_Format = TextureFormat::RGBA8;
+	specification.m_GenerateMipMapLevels = mipmaps;
+	ITexture2 texture = Texture2_Create(context, specification);
+	Texture2_UploadPixels(texture, pixels, w * h * sizeof(uint32_t));
+	stbi_image_free(pixels);
+	return texture;
 }

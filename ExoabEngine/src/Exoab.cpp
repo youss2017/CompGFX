@@ -20,11 +20,13 @@ static ConfigurationSettings s_Config;
 static IGraphics3D s_Gfx;
 static PlatformWindow *s_Window;
 static vk::VkContext s_Context;
-static IGPUTexture2D s_Tex0;
+//static IGPUTexture2D s_Tex0;
+static ITexture2 s_Tex0;
 static IGPUTextureSampler s_Sampler0;
 static Material s_Material0;
 static ImFont* s_Font;
 static ShaderTypes::ObjectData* s_ObjectDataPtr[3];
+static ShaderTypes::SceneData* s_SceneData[3];
 static ShaderTypes::DrawData* s_DrawDataPtr[3];
 constexpr uint32_t ss_MaxObjects = 10000;
 static VkCommandPool s_Pool0;
@@ -35,6 +37,7 @@ static std::vector<Mesh::Geometry> s_Geomtry;
 static VkSemaphore s_Semaphores[3];
 static vk::GraphicsSwapchain s_Swapchain;
 static ShaderSet s_Set0;
+static ShaderSet s_Set1;
 
 FramebufferReserve* g_FramebufferReserve = nullptr;
 
@@ -79,30 +82,53 @@ bool Exoab_Initalize(ConfigurationSettings config)
 
     assert(Mesh::LoadVerticesIndicesSSBOs(s_Context, { "assets/mesh/cube.obj" }, s_Geomtry, &s_VerticesSSBO, &s_IndicesBuffer));
 
-    VkDescriptorPool pool = vk::Gfx_CreateDescriptorPool(s_Context, 3 * s_Context->FrameInfo->m_FrameCount, {
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 9}
-    });
-
-    std::vector<ShaderBinding> bindings(3);
+    std::vector<ShaderBinding> bindings(4);
     bindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
     bindings[0].m_bindingID = 0;
     bindings[0].m_hostvisible = true;
     bindings[0].m_useclientbuffer = true;
     bindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-    bindings[0].m_array_size = 1;
     bindings[0].m_size = 0;
     bindings[0].m_client_buffer = s_VerticesSSBO;
+
     bindings[1] = bindings[0];
-    bindings[1].m_bindingID = 1;
     bindings[1].m_useclientbuffer = false;
-    bindings[1].m_size = ss_MaxObjects * sizeof(ShaderTypes::ObjectData);
+    bindings[1].m_type = SHADER_BINDING_BUFFER;
+    bindings[1].m_bindingID = 1;
+    bindings[1].m_size = sizeof(ShaderTypes::SceneData);
+
     bindings[2] = bindings[1];
+    bindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
     bindings[2].m_bindingID = 2;
-    bindings[2].m_additional_flags = BufferType::IndirectBuffer;
-    bindings[2].m_size = ss_MaxObjects * sizeof(ShaderTypes::DrawData);
+    bindings[2].m_size = ss_MaxObjects * sizeof(ShaderTypes::ObjectData);
+
+    bindings[3] = bindings[2];
+    bindings[3].m_bindingID = 3;
+    bindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
+    bindings[3].m_size = ss_MaxObjects * sizeof(ShaderTypes::DrawData);
+
+    s_Tex0 = Texture2_CreateFromFile(s_Context, "assets/textures/statue.jpg", true);
+    s_Sampler0 = GPUTextureSampler_CreateDefaultSampler(s_Context);
+
+    std::vector<ShaderBinding> set1Bindings(1);
+    set1Bindings[0].m_type = SHADER_BINDING_TEXTURE;
+    set1Bindings[0].m_bindingID = 0;
+    set1Bindings[0].m_hostvisible = false;
+    set1Bindings[0].m_useclientbuffer = false;
+    set1Bindings[0].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+    set1Bindings[0].m_size = 0;
+    set1Bindings[0].m_sampler = (VkSampler)s_Sampler0->m_NativeHandle;
+    set1Bindings[0].m_textures.push_back(s_Tex0);
+    set1Bindings[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    std::vector<VkDescriptorPoolSize> poolSizes;
+    ShaderBinding_CalculatePoolSizes(s_Context->FrameInfo->m_FrameCount, poolSizes, bindings);
+    ShaderBinding_CalculatePoolSizes(s_Context->FrameInfo->m_FrameCount, poolSizes, set1Bindings);
+    VkDescriptorPool pool = vk::Gfx_CreateDescriptorPool(s_Context, 2 * s_Context->FrameInfo->m_FrameCount, poolSizes);
 
     s_Set0 = ShaderBinding_Create(s_Context, pool, 0, bindings);
-    VkPipelineLayout vlayout = ShaderBinding_CreatePipelineLayout(s_Context, { s_Set0 }, {});
+    s_Set1 = ShaderBinding_Create(s_Context, pool, 1, set1Bindings);
+    VkPipelineLayout vlayout = ShaderBinding_CreatePipelineLayout(s_Context, { s_Set0, s_Set1 }, {});
 
     MaterialConfiguration uniform_material_mc = MaterialConfiguration("assets/materials/uniforms.mc");
 
@@ -116,17 +142,15 @@ bool Exoab_Initalize(ConfigurationSettings config)
     s_Material0.Initalize(shaders, layout, state_managment, framebuffer, pipeline);
     for (unsigned int j = 0; j < s_Context->FrameInfo->m_FrameCount; j++)
     {
-        s_ObjectDataPtr[j] = (ShaderTypes::ObjectData*)Buffer2_Map(bindings[1].m_ssbo[j]);
-        s_DrawDataPtr[j] = (ShaderTypes::DrawData*)Buffer2_Map(bindings[2].m_ssbo[j]);
+        s_SceneData[j] = (ShaderTypes::SceneData*)Buffer2_Map(bindings[1].m_ssbo[j]);
+        s_ObjectDataPtr[j] = (ShaderTypes::ObjectData*)Buffer2_Map(bindings[2].m_ssbo[j]);
+        s_DrawDataPtr[j] = (ShaderTypes::DrawData*)Buffer2_Map(bindings[3].m_ssbo[j]);
     }
 
     s_Pool0 = vk::Gfx_CreateCommandPool(s_Context, true, true, false);
     s_Cmd[0] = vk::Gfx_AllocCommandBuffer(s_Context, s_Pool0, true);
     s_Cmd[1] = vk::Gfx_AllocCommandBuffer(s_Context, s_Pool0, true);
     s_Cmd[2] = vk::Gfx_AllocCommandBuffer(s_Context, s_Pool0, true);
-
-    s_Tex0 = GPUTexture2D_CreateFromFile(s_Context, "assets/textures/statue.jpg", true);
-    s_Sampler0 = GPUTextureSampler_CreateDefaultSampler(s_Context);
 
     for(unsigned int j = 0; j < s_Context->FrameInfo->m_FrameCount; j++)
     for (int i = 0; i < s_Geomtry.size(); i++) {
@@ -135,6 +159,7 @@ bool Exoab_Initalize(ConfigurationSettings config)
         s_DrawDataPtr[j][i].command.firstIndex = s_Geomtry[i].firstIndex;
         s_DrawDataPtr[j][i].command.vertexOffset = s_Geomtry[i].firstVertex;
         s_DrawDataPtr[j][i].command.firstInstance = 0;
+        s_DrawDataPtr[j][i].SceneDataIndex = 0;
         s_DrawDataPtr[j][i].ObjectDataIndex = 0;
     }
   
@@ -162,8 +187,8 @@ void Exoab_Render(double dTimeStart, double dElapsedTime, double FrameRate)
     glm::mat4 model = glm::translate(glm::mat4(1), glm::vec3(0.0, 0.0, -5.0)) * glm::rotate(glm::mat4(1.0), (float)dTimeStart, glm::vec3(0., 1.0f, 0.));
     s_ObjectDataPtr[FrameIndex][0].m_Model = model;
     s_ObjectDataPtr[FrameIndex][0].m_NormalModel = glm::transpose(glm::inverse(model));
-    s_ObjectDataPtr[FrameIndex][0].m_View = s_Camera.GetViewMatrix();
-    s_ObjectDataPtr[FrameIndex][0].m_Projection = (glm::perspective(glm::radians(90.0f), (float)s_Window->m_width / (float)s_Window->m_height, 0.1f, 2000.f));
+    s_SceneData[FrameIndex][0].m_View = s_Camera.GetViewMatrix();
+    s_SceneData[FrameIndex][0].m_Projection = (glm::perspective(glm::radians(90.0f), (float)s_Window->m_width / (float)s_Window->m_height, 0.1f, 2000.f));
 
     BuildCommandBuffers(0);
 
@@ -185,7 +210,7 @@ void Exoab_Render(double dTimeStart, double dElapsedTime, double FrameRate)
     UI::RenderUI();
     //Graphics3D_Present(s_Gfx, s_Material0.m_framebuffer->m_framebuffer, UI::ShowDepthBuffer ? 1 : 0, 1, &s_Semaphore, UI::ShowDepthBuffer);
     auto i = *s_Context->pFrameIndex;
-    s_Swapchain.Present(s_Material0.m_framebuffer->m_textures[0]->m_images[i], s_Material0.m_framebuffer->m_textures[0]->m_views[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &s_Semaphores[i], false);
+    s_Swapchain.Present(s_Material0.m_framebuffer->m_textures[UI::ShowDepthBuffer]->m_images[i], s_Material0.m_framebuffer->m_textures[UI::ShowDepthBuffer]->m_views[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &s_Semaphores[i], false);
     Graphics3D_WaitGPUIdle(s_Gfx);
 }
 
@@ -253,12 +278,13 @@ void BuildCommandBuffers(double dTimeStart)
     //CommandList_BindPipeline(s_Cmd, s_Material0.m_pipeline_state);
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)s_Material0.m_pipeline_state->m_pipeline);
 
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, s_Material0.m_pipeline_layout->m_layout, 0, 1, &s_Set0->m_set[*s_Context->pFrameIndex], 0, nullptr);
+    VkDescriptorSet sets[2] = { s_Set0->m_set[*s_Context->pFrameIndex], s_Set1->m_set[*s_Context->pFrameIndex] };
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, s_Material0.m_pipeline_layout->m_layout, 0, 2, sets, 0, nullptr);
 
     // bind descriptor set here
     vkCmdBindIndexBuffer(cmd, s_IndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT16);
     // todo: switch to count.
-    vkCmdDrawIndexedIndirect(cmd, s_Set0->m_bindings[2].m_ssbo[*s_Context->pFrameIndex]->m_vk_buffer->m_buffer, 0, 1, sizeof(ShaderTypes::DrawData));
+    vkCmdDrawIndexedIndirect(cmd, s_Set0->m_bindings[3].m_ssbo[*s_Context->pFrameIndex]->m_vk_buffer->m_buffer, 0, 1, sizeof(ShaderTypes::DrawData));
 
     glm::vec3 LightDirection = glm::vec3(0, 1, 0);
     vkCmdEndRenderPass(cmd);
@@ -317,7 +343,6 @@ void Exoab_CleanUp()
     PROFILE_FUNCTION();
     loginfo("Goodbye!");
     Graphics3D_WaitGPUIdle(s_Gfx);
-    GPUTexture2D_Destroy(s_Tex0);
     GPUTextureSampler_Destroy(s_Sampler0);
     s_Material0.DestoryEverything();
     delete g_FramebufferReserve;

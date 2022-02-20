@@ -173,11 +173,11 @@ namespace VkAlloc
 
 	bool SearchHeapsAndSuballocate(CONTEXT context, std::vector<DEVICE_HEAP>& heaps, std::vector<BUFFER_DESCRIPTION> descs, std::vector<IMAGE_DESCRIPITION> idescs, std::vector<BUFFER>& buffers, std::vector<IMAGE>& images, bool IsBuffers)
 	{
-		if (descs.size() == 0)
+		if (descs.size() == 0 && idescs.size() == 0)
 			return true;
 
 		// They all have the same property because they were seperated.
-		DEVICE_MEMORY_PROPERTY properties = descs[0].m_properties;
+		DEVICE_MEMORY_PROPERTY properties = (descs.size() > 0) ? descs[0].m_properties : idescs[0].m_properties;
 
 		// Get the size needed for each buffer and its memory type (used for next heap allocation)
 		VkDeviceSize requiredSize = 0;
@@ -269,7 +269,7 @@ namespace VkAlloc
 					buffer->m_suballocation.m_heap_index = heap->m_heap_index;
 					buffer->m_suballocation.m_suballocation_index = heap->m_suballocations.size();
 					buffer->m_suballocation.m_buffer = buffer;
-					vkBindBufferMemory(context->m_device, buffer->m_buffer, heap->m_memory, AlignMemory(block.m_offset, buffer->m_memrequirements.alignment));
+					vkBindBufferMemory(context->m_device, buffer->m_buffer, heap->m_memory, buffer->m_heap_free_block.m_offset);
 					block.m_offset += buffer->m_suballocation.m_size;
 					heap->m_suballocations.insert(std::make_pair(buffer->m_suballocation.m_suballocation_index, buffer->m_suballocation));
 					next_buffer_image_index++;
@@ -282,19 +282,28 @@ namespace VkAlloc
 		auto ImageSuballocationProcess = [context](DEVICE_HEAP& heap, IMAGE image, int& next_buffer_image_index) throw() -> bool {
 			for (int block_index = 0; block_index < heap->m_free_blocks.size(); block_index++)
 			{
-				DEVICE_HEAP_FREE_BLOCK& block = heap->m_free_blocks[block_index];
-				if (block.m_size >= image->m_suballocation.m_size)
+				DEVICE_HEAP_FREE_BLOCK& block0 = heap->m_free_blocks[block_index];
+				if (block0.m_size >= image->m_suballocation.m_size)
 				{
-					image->m_heap_free_block.m_offset = block.m_offset;
+					if (AlignMemory(block0.m_offset, image->m_memrequirements.alignment) - block0.m_offset > 0)
+					{
+						DEVICE_HEAP_FREE_BLOCK minor_block;
+						minor_block.m_offset = block0.m_offset;
+						minor_block.m_size = AlignMemory(block0.m_offset, image->m_memrequirements.alignment) - block0.m_offset;
+						heap->m_free_blocks.resize(heap->m_free_blocks.size() + 1);
+						heap->m_free_blocks[heap->m_free_blocks.size() - 1] = minor_block;
+					}
+					DEVICE_HEAP_FREE_BLOCK& block = heap->m_free_blocks[block_index];
+					image->m_heap_free_block.m_offset = AlignMemory(block.m_offset, image->m_memrequirements.alignment);
 					image->m_heap_free_block.m_size = image->m_memrequirements.size;
-					image->m_suballocation.m_offset = block.m_offset;
+					image->m_suballocation.m_offset = AlignMemory(block.m_offset, image->m_memrequirements.alignment);
 					image->m_suballocation.m_coherent = heap->m_coherent;
 					image->m_suballocation.m_host_visible = heap->m_host_visible;
 					image->m_suballocation.m_memory = heap->m_memory;
 					image->m_suballocation.m_heap_index = heap->m_heap_index;
 					image->m_suballocation.m_suballocation_index = heap->m_suballocations.size();
 					image->m_suballocation.m_image = image;
-					vkBindImageMemory(context->m_device, image->m_image, heap->m_memory, block.m_offset);
+					vkBindImageMemory(context->m_device, image->m_image, heap->m_memory, image->m_heap_free_block.m_offset);
 					block.m_offset += image->m_suballocation.m_size;
 					block.m_size -= image->m_suballocation.m_size;
 					heap->m_suballocations.insert(std::make_pair(image->m_suballocation.m_suballocation_index, image->m_suballocation));
@@ -315,7 +324,7 @@ namespace VkAlloc
 			if (properties != heap->m_properties)
 				continue;
 			suballocate:
-			if (next_buffer_image_index >= buffers.size())
+			if (next_buffer_image_index >= buffers.size() && next_buffer_image_index >= images.size())
 				break;
 			BUFFER buffer = nullptr;
 			IMAGE image = nullptr;
@@ -343,7 +352,7 @@ namespace VkAlloc
 			}
 			heaps.push_back(heap);
 			suballocate2:
-			if (next_buffer_image_index >= buffers.size())
+			if (next_buffer_image_index >= buffers.size() && next_buffer_image_index >= images.size())
 				return true;
 			if (IsBuffers) {
 				BUFFER buffer = buffers[next_buffer_image_index];
@@ -420,9 +429,9 @@ namespace VkAlloc
 		std::vector<DEVICE_HEAP>& heaps = context->m_device_heap;
 		std::vector<IMAGE> images;
 		std::vector<BUFFER> empty;
-		bool result1 = SearchHeapsAndSuballocate(context, heaps, {}, CpuOnly, empty, images, true);
-		bool result2 = SearchHeapsAndSuballocate(context, heaps, {}, CpuToGpu, empty, images, true);
-		bool result3 = SearchHeapsAndSuballocate(context, heaps, {}, GpuOnly, empty, images, true);
+		bool result1 = SearchHeapsAndSuballocate(context, heaps, {}, CpuOnly, empty, images, false);
+		bool result2 = SearchHeapsAndSuballocate(context, heaps, {}, CpuToGpu, empty, images, false);
+		bool result3 = SearchHeapsAndSuballocate(context, heaps, {}, GpuOnly, empty, images, false);
 		// 3) Write IMAGEs in order (as the user expects)
 		for (uint32_t i = 0; i < count; i++)
 		{
@@ -520,7 +529,7 @@ namespace VkAlloc
 	{
 		if (!count)
 			return;
-		for (int i = 0; i < count; i++)
+		for (uint32_t i = 0; i < count; i++)
 		{
 			IMAGE image = pImages[i];
 			vkDestroyImage(context->m_device, image->m_image, nullptr);
