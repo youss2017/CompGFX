@@ -9,7 +9,6 @@ struct GPUBuffer2
 	size_t size;
 	BufferMemoryType memoryType;
 	VkAlloc::BUFFER m_vk_buffer;
-	unsigned int m_gl_buffer;
 	bool m_coherent = false;
 } typedef* IBuffer2;
 

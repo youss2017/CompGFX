@@ -1,14 +1,13 @@
 #version 450
 
-#extension GL_EXT_shader_16bit_storage : require
-#extension GL_EXT_shader_8bit_storage: require
 #extension GL_ARB_shader_draw_parameters : require
 
 struct Vertex
 {
 	float x, y, z;
-	int8_t nx, ny, nz;
-	float16_t tu, tv;	
+	int nx_ny_nz_padding;
+	// [16bits=tu][16bits=tv]
+	uint tu_tv;
 };
 
 struct ObjectData
@@ -55,13 +54,14 @@ layout (location = 1) out vec2 TexCoord;
 // therefore the following is the next best thing
 #define vertex u_Vertices[gl_VertexIndex]
 
-#define decompress_normal(x, y, z) (vec3(int(x), int(y), int(z)) * 127.0)
+#define decompress_normal(compression) (vec3(int(compression >> 24), int(compression >> 16) & 0xff, int(compression >> 8) & 0xff) * 127.0)
+#define decompress_texcoord(compression) (vec2(float(compression >> 16), float(compression & 0xffff)) / 65535.0)
 
 void main()
 {
 	DrawData draw = u_Draws[gl_DrawIDARB];
 	ObjectData od = u_ModelData[draw.ObjectDataIndex];
-	Normal = mat3(od.m_NormalModel) * decompress_normal(vertex.nx, vertex.ny, vertex.nz);
-	TexCoord = vec2(vertex.tu, vertex.tv);
+	Normal = mat3(od.m_NormalModel) * decompress_normal(vertex.nx_ny_nz_padding);
+	TexCoord = decompress_texcoord(vertex.tu_tv);
 	gl_Position = od.m_Projection * od.m_View * od.m_Model * vec4(vertex.x, vertex.y, vertex.z, 1.0);
 }

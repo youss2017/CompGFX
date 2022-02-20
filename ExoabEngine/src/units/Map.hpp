@@ -29,5 +29,7 @@ typedef Terrain* ITerrain;
 
 // integers will round up to the nearest even number
 // resolution refers to the amount of points between each vertices
+#if 0
 ITerrain Terrain_Create(IPipelineLayout layout, int width, int xresolution, int height, int yresolution, IGPUTextureSampler sampler, IGPUTexture2D basetexture, int setID, int bindingID);
 void Terrain_Destroy(ITerrain terrain);
+#endif

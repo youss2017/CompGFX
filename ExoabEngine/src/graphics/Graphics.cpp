@@ -42,30 +42,18 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
         Utils::Message("API Alert", "Vulkan is not supported by current graphics card, therefore the Engine switched to OpenGL API.", Utils::WARNING);
     }
     gfx->m_ApiType = 0;
-    VkPhysicalDevice8BitStorageFeatures Storage8BitFeature;
-    Storage8BitFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES;
-    Storage8BitFeature.pNext = nullptr;
-    Storage8BitFeature.storageBuffer8BitAccess = VK_TRUE;
-    Storage8BitFeature.uniformAndStorageBuffer8BitAccess = VK_TRUE;
-    Storage8BitFeature.storagePushConstant8 = VK_TRUE;
-    VkPhysicalDevice16BitStorageFeatures Storage16BitFeature;
-    Storage16BitFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
-    Storage16BitFeature.pNext = &Storage8BitFeature;
-    Storage16BitFeature.storageBuffer16BitAccess = VK_TRUE;
-    Storage16BitFeature.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-    Storage16BitFeature.storagePushConstant16 = VK_TRUE;
-    Storage16BitFeature.storageInputOutput16 = VK_FALSE;
+
+    VkPhysicalDeviceVulkan12Features vulkan12features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    vulkan12features.pNext = nullptr;;
+    vulkan12features.drawIndirectCount = VK_TRUE;
+    
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
-    DrawParameters.pNext = &Storage16BitFeature;
+    DrawParameters.pNext = &vulkan12features;
     DrawParameters.shaderDrawParameters = VK_TRUE;
-    VkPhysicalDeviceTimelineSemaphoreFeatures TimelineSemaphoreFeature;
-    TimelineSemaphoreFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
-    TimelineSemaphoreFeature.pNext = &DrawParameters;
-    TimelineSemaphoreFeature.timelineSemaphore = VK_TRUE;
     VkPhysicalDeviceSynchronization2FeaturesKHR Synchronization2Feature;
     Synchronization2Feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
-    Synchronization2Feature.pNext = &TimelineSemaphoreFeature;
+    Synchronization2Feature.pNext = &DrawParameters;
     Synchronization2Feature.synchronization2 = VK_FALSE;
     VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT DivisorFeature;
     DivisorFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT;
@@ -107,6 +95,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, config->FutureFrameCount, config->VSync, &vcont->FrameInfo, EnableImGui);
     config->FutureFrameCount = vcont->FrameInfo->m_FrameCount;
     gfx->m_FrameInfo = vcont->FrameInfo;
+    vcont->pFrameIndex = &vcont->FrameInfo->m_FrameIndex;
   
     return gfx;
 }
@@ -169,7 +158,7 @@ void Graphics3D_LinkFunctions(IGraphics3D gfx)
     GPUTextureSampler_LinkFunctions(gfx->m_context);
     FramebufferStateManagment_LinkFunctions(gfx->m_context);
     Framebuffer_LinkFunctions(gfx->m_context);
-    PipelineLayout_LinkFunctions(gfx->m_context);
+    //PipelineLayout_LinkFunctions(gfx->m_context);
     PipelineState_LinkFunctions(gfx->m_context);
 }
 

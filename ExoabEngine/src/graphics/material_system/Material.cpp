@@ -158,23 +158,13 @@ IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, Materia
 	return framebuffer;
 }
 
-IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, PipelineVertexInputDescription &input_description, IPipelineShaders pipeline_shaders)
+IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, VkPipelineLayout layout, PipelineVertexInputDescription &input_description, IPipelineShaders pipeline_shaders)
 {
 	IMaterialPipelineLayout pipeline_layout = new MaterialPipelineLayout();
 	auto vcont = ToVKContext(context);
 	pipeline_layout->m_context = vcont;
 	pipeline_layout->m_pipeline_shaders = pipeline_shaders;
-
-	pipeline_layout->m_layout = PipelineLayout_Create(context, input_description, pipeline_shaders->m_vertex_reflection, pipeline_shaders->m_fragment_reflection);
-	for (auto &set : pipeline_layout->m_layout->m_set_descs)
-	{
-		auto &uniform_buffers = set.m_UniformBuffers;
-		auto &uniform_textures = set.m_SampledImage;
-		std::sort(uniform_buffers.begin(), uniform_buffers.end(), [](UniformBufferDescription &a, UniformBufferDescription &b)
-				  { return a.m_Binding < b.m_Binding; });
-		std::sort(uniform_textures.begin(), uniform_textures.end(), [](SampledImageDescription &a, SampledImageDescription &b)
-				  { return a.m_Binding < b.m_Binding; });
-	}
+	pipeline_layout->m_layout = layout;
 	return pipeline_layout;
 }
 
@@ -191,7 +181,7 @@ IPipelineState Material_CreatePipelineState(GraphicsContext context, MaterialCon
 	specification.m_Topology = PolygonTopology::TRIANGLE_LIST; // TODO: make this more flexable
 	specification.m_SampleRateShadingEnabled = configuration->SampleShading;
 	specification.m_MinSampleShading = Utils::ClampValues(configuration->minSampleShading, 0.0f, 1.0f);
-	return PipelineState_Create(context, specification, state_managment, pipeline_layout->m_layout, pipeline_layout->m_pipeline_shaders->m_vertex_shader, pipeline_layout->m_pipeline_shaders->m_fragment_shader);
+	return PipelineState_Create(context, specification, state_managment, pipeline_layout->input_description, pipeline_layout->m_layout, pipeline_layout->m_pipeline_shaders->m_vertex_shader, pipeline_layout->m_pipeline_shaders->m_fragment_shader);
 }
 
 void Material_DestroyPipelineShaders(IPipelineShaders pipeline_shaders)
@@ -205,8 +195,7 @@ void Material_DestroyPipelineShaders(IPipelineShaders pipeline_shaders)
 
 void Material_DestroyPipelineLayout(IMaterialPipelineLayout pipeline_layout)
 {
-	vk::VkContext context = ToVKContext(pipeline_layout->m_context);
-	PipelineLayout_Destroy(pipeline_layout->m_layout);
+	delete pipeline_layout;
 }
 
 void Material_DestroyFramebuffer(IMaterialFramebuffer framebuffer)

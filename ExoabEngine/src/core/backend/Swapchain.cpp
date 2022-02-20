@@ -721,7 +721,7 @@ namespace vk
             Gui_VKBeginGUIFrame();
         m_SwapchainImageIndex = ImageIndex;
         *pNextImageIndex = FrameIndex;
-        *pSwapchainReadySemaphore = m_FrameSemaphores[ImageIndex];
+        *pSwapchainReadySemaphore = m_FrameSemaphores[FrameIndex];
     }
 
     void GraphicsSwapchain::Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline)

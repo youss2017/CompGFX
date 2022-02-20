@@ -84,165 +84,6 @@ static bool PipelineLayout_Internal_VertexInputSafetyCheck(ShaderReflection *ver
     return true;
 }
 
-//////////////////////////////////////// PIPELINE LAYOUT
-
-PFN_PipelineLayout_Create *PipelineLayout_Create = nullptr;
-PFN_PipelineLayout_Destroy *PipelineLayout_Destroy = nullptr;
-
-IPipelineLayout Vulkan_PipelineLayout_Create(GraphicsContext context, const PipelineVertexInputDescription &input_description, ShaderReflection *vertex_reflection, ShaderReflection *fragment_reflection)
-{
-    assert(context && vertex_reflection && fragment_reflection);
-    ShaderReflection combined = ShaderReflection::CombineReflections(vertex_reflection, fragment_reflection);
-    auto &set_descs = combined.GetShaderSetDescriptions();
-    std::vector<VkPushConstantRange> pushconstants = ShaderReflection_CombinePushconstantRanges(vertex_reflection, fragment_reflection);
-    auto vcont = ToVKContext(context);
-    std::vector<VkDescriptorSetLayout> real_setlayouts;
-
-    if (!PipelineLayout_Internal_VertexInputSafetyCheck(vertex_reflection, input_description))
-    {
-        logerror_break("PipelineVertexInputDescription does not match actual shader vertex input layout");
-        return nullptr;
-    }
-
-    uint32_t ii = 0;
-    for (auto &set_desc : set_descs)
-    {
-        VkDescriptorSetLayoutBinding pBindings[250];
-        int binding_index = 0;
-        for (auto& binding_desc : set_desc.m_UniformBuffers)
-        {
-            pBindings[binding_index].binding = binding_desc.m_Binding;
-            pBindings[binding_index].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-            pBindings[binding_index].descriptorCount = binding_desc.m_ArraySize;
-            pBindings[binding_index].stageFlags = ShaderReflection_GetVulkanShaderStage(binding_desc.m_shaderStage);
-            pBindings[binding_index].pImmutableSamplers = nullptr;
-            binding_index++;
-        }
-
-        for (auto& binding_desc : set_desc.m_SSBOs)
-        {
-            pBindings[binding_index].binding = binding_desc.m_Binding;
-            pBindings[binding_index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            pBindings[binding_index].descriptorCount = 1;
-            pBindings[binding_index].stageFlags = ShaderReflection_GetVulkanShaderStage(binding_desc.m_shaderStage);
-            pBindings[binding_index].pImmutableSamplers = nullptr;
-            binding_index++;
-        }
-
-        for (auto &binding_desc : set_desc.m_SampledImage)
-        {
-            pBindings[binding_index].binding = binding_desc.m_Binding;
-            pBindings[binding_index].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            pBindings[binding_index].descriptorCount = binding_desc.m_ArraySize;
-            pBindings[binding_index].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            pBindings[binding_index].pImmutableSamplers = nullptr;
-            binding_index++;
-        }
-
-        VkDescriptorSetLayoutCreateInfo createInfo;
-        createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        createInfo.pNext = nullptr;
-        createInfo.flags = 0;
-        createInfo.bindingCount = binding_index;
-        createInfo.pBindings = pBindings;
-        VkDescriptorSetLayout SetLayout;
-        vkcheck(vkCreateDescriptorSetLayout(vcont->defaultDevice, &createInfo, vcont->m_allocation_callback, &SetLayout));
-        real_setlayouts.push_back(SetLayout);
-        ii++;
-    }
-
-    VkPipelineLayoutCreateInfo createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    createInfo.pNext = nullptr;
-    createInfo.flags = 0;
-    createInfo.setLayoutCount = real_setlayouts.size();
-    createInfo.pSetLayouts = real_setlayouts.data();
-    createInfo.pushConstantRangeCount = pushconstants.size();
-    createInfo.pPushConstantRanges = pushconstants.data();
-    VkPipelineLayout layout;
-    vkCreatePipelineLayout(vcont->defaultDevice, &createInfo, vcont->m_allocation_callback, &layout);
-
-    IPipelineLayout pipeline_layout = new PipelineLayout();
-    pipeline_layout->m_ApiType = 0;
-    pipeline_layout->m_context = context;
-    pipeline_layout->m_vertex_input_description = input_description;
-    pipeline_layout->m_pipelinelayout = (APIHandle)layout;
-    pipeline_layout->m_real_setlayouts = real_setlayouts;
-    pipeline_layout->m_vertex_reflection = *vertex_reflection;
-    pipeline_layout->m_fragment_reflection = *fragment_reflection;
-    pipeline_layout->m_set_descs = set_descs;
-    return pipeline_layout;
-}
-
-void Vulkan_PipelineLayout_Destroy(IPipelineLayout layout)
-{
-    auto vcont = ToVKContext(layout->m_context);
-    vkDestroyPipelineLayout(vcont->defaultDevice, (VkPipelineLayout)layout->m_pipelinelayout, vcont->m_allocation_callback);
-    for (const auto &setlayout : layout->m_real_setlayouts)
-        vkDestroyDescriptorSetLayout(vcont->defaultDevice, setlayout, vcont->m_allocation_callback);
-    delete layout;
-}
-
-IPipelineLayout GL_PipelineLayout_Create(GraphicsContext context, const PipelineVertexInputDescription &input_description, ShaderReflection *vertex_reflection, ShaderReflection *fragment_reflection)
-{
-    assert(context && vertex_reflection && fragment_reflection);
-    ShaderReflection combined = ShaderReflection::CombineReflections(vertex_reflection, fragment_reflection);
-    auto &set_descs = combined.GetShaderSetDescriptions();
-    std::vector<VkPushConstantRange> pushconstants = ShaderReflection_CombinePushconstantRanges(vertex_reflection, fragment_reflection);
-    auto vcont = ToVKContext(context);
-    std::vector<VkDescriptorSetLayout> setlayouts;
-    std::vector<VkDescriptorSetLayout> real_setlayouts;
-
-    if (!PipelineLayout_Internal_VertexInputSafetyCheck(vertex_reflection, input_description))
-    {
-        log_error("PipelineVertexInputDescription does not match actual shader vertex input layout", __FILE__, __LINE__);
-        return nullptr;
-    }
-
-    // TODO: Figure out opengl shader system
-    // Use uniform block objects if GL_ARB_uniform_buffer_object is supported otherwise use plain uniforms.
-#if 0
-        for(const auto& set_desc : set_descs) {
-            for(auto& buf : set_desc.m_UniformBuffers) {
-                uint32_t bufferID;
-                glGenBuffers(1, &bufferID);
-                glBindBuffer(GL_UNIFORM_BUFFER, bufferID);
-                glBufferData(GL_UNIFORM_BUFFER, buf.m_Size * buf.m_ArraySize, nullptr, GL_DYNAMIC_DRAW);
-            }
-        }
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-#endif
-    IPipelineLayout pipeline_layout = new PipelineLayout();
-    pipeline_layout->m_ApiType = 1;
-    pipeline_layout->m_context = context;
-    pipeline_layout->m_vertex_input_description = input_description;
-    return pipeline_layout;
-}
-
-void GL_PipelineLayout_Destroy(IPipelineLayout layout)
-{
-    delete layout;
-}
-
-void PipelineLayout_LinkFunctions(GraphicsContext context)
-{
-    char ApiType = *(char *)context;
-    if (ApiType == 0)
-    {
-        PipelineLayout_Create = Vulkan_PipelineLayout_Create;
-        PipelineLayout_Destroy = Vulkan_PipelineLayout_Destroy;
-    }
-    else if (ApiType == 1)
-    {
-        PipelineLayout_Create = GL_PipelineLayout_Create;
-        PipelineLayout_Destroy = GL_PipelineLayout_Destroy;
-    }
-    else
-    {
-        Utils::Break();
-    }
-}
-
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ PIPELINE STATE ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 struct VulkanPipelineVertexInput
@@ -254,11 +95,10 @@ struct VulkanPipelineVertexInput
     VkPipelineVertexInputDivisorStateCreateInfoEXT divisorCreateInfo;
 };
 
-static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexInput(IPipelineLayout layout)
+static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexInput(PipelineVertexInputDescription& input_description)
 {
     VulkanPipelineVertexInput input_state;
 
-    PipelineVertexInputDescription &input_description = layout->m_vertex_input_description;
     if(input_description.m_input_elements.size() > 0)
     {
         int lastBinding = -1;
@@ -299,7 +139,7 @@ static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexIn
     return input_state;
 }
 
-IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, IPipelineLayout layout, Shader *vertex, Shader *fragment)
+IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
 {
     vk::VkContext context = ToVKContext(_context);
     std::array<VkPipelineShaderStageCreateInfo, 2> Stages;
@@ -315,7 +155,7 @@ IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const Pipel
     Stages[1].module = (VkShaderModule)fragment->GetShader();
     Stages[1].pName = fragment->GetEntryPoint().c_str();
 
-    VulkanPipelineVertexInput VertexInputState = Vulkan_Internal_PipelineState_InitalizeVertexInput(layout);
+    VulkanPipelineVertexInput VertexInputState = Vulkan_Internal_PipelineState_InitalizeVertexInput(input_description);
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyState;
     InputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -487,7 +327,7 @@ IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const Pipel
     createInfo.pDepthStencilState = &DepthStencilState;
     createInfo.pColorBlendState = &ColorBlendState;
     createInfo.pDynamicState = &DynamicState;
-    createInfo.layout = (VkPipelineLayout)layout->m_pipelinelayout;
+    createInfo.layout = layout;
     createInfo.renderPass = (VkRenderPass)StateManagment->m_renderpass;
     createInfo.subpass = 0; // No subpass support
     createInfo.basePipelineHandle = 0;
@@ -515,40 +355,6 @@ void Vulkan_PipelineState_Destroy(IPipelineState state)
     delete state;
 }
 
-// ===================================== OPENGL =====================================
-
-IPipelineState GL_PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, IPipelineLayout layout, Shader *vertex, Shader *fragment)
-{
-    GLuint programID = glCreateProgram();
-    glAttachShader(programID, PVOIDToUInt32(vertex->GetShader()));
-    glAttachShader(programID, PVOIDToUInt32(fragment->GetShader()));
-    glLinkProgram(programID);
-    int link_status;
-    glGetProgramiv(programID, GL_LINK_STATUS, &link_status);
-    if (link_status != GL_TRUE)
-    {
-        char log[512];
-        glGetProgramInfoLog(programID, 512, nullptr, log);
-        std::string err_msg = "Could not link (GL) program! Error Message:\n" + std::string(log);
-        log_error(err_msg.c_str());
-        return nullptr;
-    }
-    PipelineState *state = new PipelineState();
-    state->m_ApiType = 1;
-    state->m_context = context;
-    state->m_pipeline = UInt32ToPVOID(programID);
-    state->m_spec = spec;
-    state->m_StateManagment = StateManagment;
-    state->m_layout = layout;
-
-    return state;
-}
-
-void GL_PipelineState_Destroy(IPipelineState state)
-{
-    glDeleteProgram(PVOIDToUInt32(state->m_pipeline));
-    delete state;
-}
 
 PFN_PipelineState_Create *PipelineState_Create = nullptr;
 PFN_PipelineState_Destroy *PipelineState_Destroy = nullptr;
@@ -563,8 +369,6 @@ void PipelineState_LinkFunctions(GraphicsContext context)
     }
     else if (ApiType == 1)
     {
-        PipelineState_Create = GL_PipelineState_Create;
-        PipelineState_Destroy = GL_PipelineState_Destroy;
     }
     else
     {

@@ -198,6 +198,7 @@
     <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
     <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
     <ClCompile Include="src\core\shaders\Shader.cpp" />
+    <ClCompile Include="src\core\shaders\ShaderBinding.cpp" />
     <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
     <ClCompile Include="src\graphics\Font.cpp" />
     <ClCompile Include="src\graphics\Graphics.cpp" />

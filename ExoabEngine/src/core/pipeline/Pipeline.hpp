@@ -190,42 +190,19 @@ struct PipelineSpecification
     float m_FarField = 1.0f;
 };
 
-struct PipelineLayout
-{
-    int m_ApiType;
-    GraphicsContext m_context;
-    PipelineVertexInputDescription m_vertex_input_description;
-    std::vector<VkDescriptorSetLayout> m_real_setlayouts;
-    std::vector<DescriptorSetDescription> m_set_descs;
-    APIHandle m_pipelinelayout;
-    ShaderReflection m_vertex_reflection;
-    ShaderReflection m_fragment_reflection;
-    friend class MaterialConfiguration;
-};
-
-typedef PipelineLayout *IPipelineLayout;
-
-typedef IPipelineLayout PFN_PipelineLayout_Create(GraphicsContext context, const PipelineVertexInputDescription &input_description, ShaderReflection *vertex_reflection, ShaderReflection *fragment_reflection);
-typedef void PFN_PipelineLayout_Destroy(IPipelineLayout layout);
-
-extern PFN_PipelineLayout_Create *PipelineLayout_Create;
-extern PFN_PipelineLayout_Destroy *PipelineLayout_Destroy;
-
-void PipelineLayout_LinkFunctions(GraphicsContext context);
-
 struct PipelineState
 {
     int m_ApiType;
     GraphicsContext m_context;
     APIHandle m_pipeline;
     PipelineSpecification m_spec;
-    IPipelineLayout m_layout;
+    VkPipelineLayout m_layout;
     IFramebufferStateManagement m_StateManagment;
 };
 
 typedef PipelineState *IPipelineState;
 
-typedef IPipelineState PFN_PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, IPipelineLayout layout, Shader *vertex, Shader *fragment);
+typedef IPipelineState PFN_PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment);
 typedef void PFN_PipelineState_Destroy(IPipelineState state);
 
 extern PFN_PipelineState_Create *PipelineState_Create;
