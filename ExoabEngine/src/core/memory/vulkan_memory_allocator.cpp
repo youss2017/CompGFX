@@ -43,11 +43,12 @@ namespace VkAlloc
 	void DestroyContext(CONTEXT context)
 	{
 		std::vector<DEVICE_HEAP>& heaps = context->m_device_heap;
+		log_warning("You should be freeing all buffers and images before destroying VkAlloc::CONTEXT", true);
 		for (auto& heap : heaps)
 		{
 			for (auto& _suballoc : heap->m_suballocations)
 			{
-				logwarning("You should be freeing all buffers and images before destroying VkAlloc::CONTEXT");
+				log_warning("You should be freeing all buffers and images before destroying VkAlloc::CONTEXT", false);
 				DEVICE_HEAP_SUBALLOCATION& suballoc = _suballoc.second;
 				if (suballoc.m_buffer) {
 					vkDestroyBuffer(context->m_device, ((BUFFER)suballoc.m_buffer)->m_buffer, nullptr);
@@ -56,7 +57,6 @@ namespace VkAlloc
 					vkDestroyImage(context->m_device, ((IMAGE)suballoc.m_image)->m_image, nullptr);
 				}
 			}
-			delete heap;
 			vkFreeMemory(context->m_device, heap->m_memory, nullptr);
 			delete heap;
 		}

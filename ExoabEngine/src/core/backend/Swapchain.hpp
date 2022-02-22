@@ -13,7 +13,7 @@ namespace vk {
             // Do not use SRGB VkFormat since the fragment shader already applies gamma correction at level 2.2
             static GraphicsSwapchain Create(VkInstance Instance, VkAllocationCallbacks* allocation_callback, VkPhysicalDevice PhysicalDevice, VkDevice Device, VkQueue Queue, uint32_t QueueFamilyIndex, VkFormat Format, PlatformWindow *Window, int BackBufferCount, int SyncInterval, _FrameInformation** pOutFrameInfo, bool UsingImGui);
             // pNextImageIndex will be between 0 and BackBufferCount, When submitting commands to command queue, make sure to wait for pSwapchainReadySemaphore
-            void PrepareNextFrame(uint32_t* pNextImageIndex, VkSemaphore* pSwapchainReadySemaphore);
+            bool PrepareNextFrame(uint32_t* pNextImageIndex, VkSemaphore* pSwapchainReadySemaphore);
             // Image Layout should be VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, pRenderCompleteSemaphores is a list of semaphores to wait so that gpu finishes rendering the frame before showing the image
             void Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline);
             void Destroy();

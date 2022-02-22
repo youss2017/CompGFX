@@ -21,7 +21,7 @@
 #include "utils/StringUtils.hpp"
 #include "utils/Profiling.hpp"
 #include "Exoab.hpp"
-#include "physics/PhysicsMain.hpp"
+#include "physics/Physics.hpp"
 #include <csignal>
 
 #ifdef _WIN32
@@ -46,10 +46,11 @@ int main(int argc, char** argv)
 #else
     PreparePOSIX(argc, argv);
 #endif
-    //PhysicsMain pm;
     log_configure(true, true);
     /* Load Game Settings from settings.cfg */
     ConfigurationSettings config = LoadConfiguration();
+    if (!Physx_Initalize())
+        log_fatal(0x5, "Could not initalize physx!", __FILE__, __LINE__);
     if(Exoab_Initalize(config) == false) {
         log_error("Could not initalize Game");
     }
@@ -80,6 +81,7 @@ int main(int argc, char** argv)
     PROFILE_END_SESSION();
     PROFILE_BEGIN_SESSION("Cleanup", "Profiling-Cleanup.json");
     Exoab_CleanUp();
+    Physx_Destroy();
     PROFILE_END_SESSION();
     return 0;
 }

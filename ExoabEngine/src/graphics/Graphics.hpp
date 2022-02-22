@@ -16,7 +16,7 @@
 struct ConfigurationSettings
 {
     std::string WindowTitle = "UNDEFINED";
-    EngineAPIType ApiType = EngineAPIType::OpenGL;
+    EngineAPIType ApiType = EngineAPIType::Vulkan;
     uint32_t ResolutionWidth = 800;
     uint32_t ResolutionHeight = 600;
     bool Fullscreen = false;

@@ -20,14 +20,7 @@ enum class BufferMemoryType
 enum class EngineAPIType
 {
 	Vulkan = 0x0,
-	OpenGL = 0x1,
-#if 0 // Other Possible APIs
-	DIRECTX11 = 0x2,
-	DIRECTX11_1 = 0x3, // DX11 with Command Lists / Deferred Contexts
-	DIRECTX12 = 0x4,
-	DIRECTX12_2 = 0x5, // Using Mesh Shaders
-	VULKAN_M = 0x6 // Vulkan with Mesh Shaders
-#endif
+	OpenGL = 0x1
 };
 
 typedef enum BufferType {

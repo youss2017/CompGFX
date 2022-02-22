@@ -5,11 +5,13 @@
 
 enum ShaderBindingFlags : int
 {
-	SHADER_BINDING_BUFFER                               = 0x0000001,
-	SHADER_BINDING_BUFFER_DYNAMIC                       = 0x0000010,
+	SHADER_BINDING_UNIFORM_BUFFER                       = 0x0000001,
+	SHADER_BINDING_UNIFORM_BUFFER_DYNAMIC               = 0x0000010,
 	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT         = 0x0000100,
 	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC = 0x0001000,
-	SHADER_BINDING_TEXTURE                              = 0x0010000,
+	SHADER_BINDING_COMBINED_TEXTURE_SAMPLER             = 0x0010000,
+	SHADER_BINDING_TEXTURE                              = 0x0100000,
+	SHADER_BINDING_SAMPLER                              = 0x1000000,
 };
 
 struct ShaderBinding
@@ -21,10 +23,11 @@ struct ShaderBinding
 	bool m_useclientbuffer;
 	BufferType m_additional_buffer_flags = (BufferType)0;
 	VkShaderStageFlags m_shaderStages;
+	// only for ubos
 	uint32_t m_size;
-	// Only for textures
-	VkSampler m_sampler = VK_NULL_HANDLE;
+	// Only for textures and sperate samplers
 	// Array size is the size of m_textures list
+	std::vector<VkSampler> m_sampler;
 	std::vector<ITexture2> m_textures;
 	std::vector<VkImageLayout> m_textures_layouts;
 	// Do not touch anything beyond this point
@@ -53,3 +56,4 @@ typedef _ShaderSet* ShaderSet;
 void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescriptorPoolSize>& poolSizes, std::vector<ShaderBinding>& bindings);
 ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uint32_t setID, std::vector<ShaderBinding>& bindings);
 VkPipelineLayout ShaderBinding_CreatePipelineLayout(vk::VkContext context, std::vector<ShaderSet> sets, std::vector<VkPushConstantRange> ranges);
+void ShaderBinding_DestroySets(vk::VkContext context, std::vector<ShaderSet> sets);

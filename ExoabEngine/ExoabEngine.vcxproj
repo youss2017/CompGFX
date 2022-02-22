@@ -71,7 +71,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.198.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>PhysXCooking_64.dll;glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -94,7 +94,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)$(ProjectName)\external\bin\release;C:\VulkanSDK\1.2.198.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>PhysXCooking_64.dll;glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -133,14 +133,15 @@
     <ClInclude Include="src\core\shaders\ShaderBinding.hpp" />
     <ClInclude Include="src\core\shaders\ShaderReflection.hpp" />
     <ClInclude Include="src\graphics\CommandDefines.hpp" />
+    <ClInclude Include="src\graphics\DebugRenderer.hpp" />
     <ClInclude Include="src\graphics\Font.hpp" />
     <ClInclude Include="src\graphics\Graphics.hpp" />
     <ClInclude Include="src\graphics\material_system\FramebufferReserve.hpp" />
     <ClInclude Include="src\graphics\material_system\Material.hpp" />
     <ClInclude Include="src\graphics\material_system\MaterialConfiguration.hpp" />
-    <ClInclude Include="src\mesh\Float16.hpp" />
+    <ClInclude Include="src\mesh\entity.hpp" />
     <ClInclude Include="src\mesh\geometry.hpp" />
-    <ClInclude Include="src\physics\PhysicsMain.hpp" />
+    <ClInclude Include="src\physics\Physics.hpp" />
     <ClInclude Include="src\ShaderTypes.hpp" />
     <ClInclude Include="src\UI.hpp" />
     <ClInclude Include="src\units\Map.hpp" />
@@ -200,6 +201,7 @@
     <ClCompile Include="src\core\shaders\Shader.cpp" />
     <ClCompile Include="src\core\shaders\ShaderBinding.cpp" />
     <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
+    <ClCompile Include="src\graphics\DebugRenderer.cpp" />
     <ClCompile Include="src\graphics\Font.cpp" />
     <ClCompile Include="src\graphics\Graphics.cpp" />
     <ClCompile Include="src\graphics\material_system\FramebufferReserve.cpp" />
@@ -207,9 +209,8 @@
     <ClCompile Include="src\graphics\material_system\MaterialConfiguration.cpp" />
     <ClCompile Include="src\graphics\VulkanCommandList.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\mesh\Float16.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
-    <ClCompile Include="src\physics\PhysicsMain.cpp" />
+    <ClCompile Include="src\physics\Physics.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />
     <ClCompile Include="src\UI.cpp" />
     <ClCompile Include="src\units\Map.cpp" />

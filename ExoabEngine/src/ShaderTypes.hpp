@@ -16,15 +16,14 @@ namespace ShaderTypes {
 
 		struct ObjectData
 		{
-			SHADER_STD140_ALIGN mat4 m_Model;
-			SHADER_STD140_ALIGN mat4 m_NormalModel;
+			mat4 m_Model;
+			mat4 m_NormalModel;
 		};
 
 		struct DrawData
 		{
 			VkDrawIndexedIndirectCommand command;
-			uint SceneDataIndex;
-			SHADER_STD140_ALIGN uint ObjectDataIndex;
+			uint16_t ObjectDataIndex;
 		};
 
 	};

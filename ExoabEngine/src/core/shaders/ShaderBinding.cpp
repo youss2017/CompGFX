@@ -16,7 +16,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
         binding.pImmutableSamplers = nullptr;
         switch (bind.m_type)
         {
-            case SHADER_BINDING_BUFFER:
+            case SHADER_BINDING_UNIFORM_BUFFER:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
@@ -25,7 +25,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 break;
-            case SHADER_BINDING_BUFFER_DYNAMIC:
+            case SHADER_BINDING_UNIFORM_BUFFER_DYNAMIC:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
@@ -52,10 +52,18 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
                 break;
-            case SHADER_BINDING_TEXTURE:
+            case SHADER_BINDING_COMBINED_TEXTURE_SAMPLER:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 break;
+             case SHADER_BINDING_TEXTURE:
+                 binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+                 break;
+             case SHADER_BINDING_SAMPLER:
+                 binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_SAMPLER;
+                 break;
             default:
                 assert(0);
         }
@@ -95,7 +103,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
         for (auto& bind : set->m_bindings) {
             write.dstBinding = bind.m_bindingID;
             write.descriptorType = bind.m_vk_type;
-            if (bind.m_type != SHADER_BINDING_TEXTURE) {
+            if (bind.m_type != SHADER_BINDING_COMBINED_TEXTURE_SAMPLER && bind.m_type != SHADER_BINDING_TEXTURE && bind.m_type != SHADER_BINDING_SAMPLER) {
                 VkDescriptorBufferInfo bufferInfo;
                 bufferInfo.buffer = (bind.m_useclientbuffer) ? bind.m_client_buffer->m_vk_buffer->m_buffer : bind.m_buffer[i]->m_vk_buffer->m_buffer;
                 bufferInfo.offset = 0;
@@ -104,24 +112,72 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
             }
             else {
-                write.dstArrayElement = 0;
-                write.descriptorCount = bind.m_textures.size();
-                std::vector<VkDescriptorImageInfo> imageInfos(bind.m_textures.size());
-                assert(bind.m_textures.size() == bind.m_textures_layouts.size());
-                for (int w = 0; w < bind.m_textures.size(); w++)
-                {
-                    assert(bind.m_textures[w]->m_vk_views.size() == 0);
-                    imageInfos[w].sampler = bind.m_sampler;
-                    imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
-                    imageInfos[w].imageLayout = bind.m_textures_layouts[w];
+                if (bind.m_type == SHADER_BINDING_COMBINED_TEXTURE_SAMPLER) {
+                    assert(bind.m_sampler.size() == 1 && "Combined samplers can only have 1 sampler!");
+                    write.dstArrayElement = 0;
+                    write.descriptorCount = bind.m_textures.size();
+                    std::vector<VkDescriptorImageInfo> imageInfos(bind.m_textures.size());
+                    assert(bind.m_textures.size() == bind.m_textures_layouts.size());
+                    for (int w = 0; w < bind.m_textures.size(); w++)
+                    {
+                        assert(bind.m_textures[w]->m_vk_views.size() == 0);
+                        imageInfos[w].sampler = bind.m_sampler[0];
+                        imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
+                        imageInfos[w].imageLayout = bind.m_textures_layouts[w];
+                    }
+                    write.pImageInfo = imageInfos.data();
+                    vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
                 }
-                write.pImageInfo = imageInfos.data();
-                vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+                else if (bind.m_type == SHADER_BINDING_SAMPLER) {
+                    write.dstArrayElement = 0;
+                    write.descriptorCount = bind.m_sampler.size();
+                    std::vector<VkDescriptorImageInfo> imageInfos(bind.m_sampler.size());
+                    for (int w = 0; w < bind.m_sampler.size(); w++)
+                    {
+                        imageInfos[w].sampler = bind.m_sampler[w];
+                        imageInfos[w].imageView = nullptr;
+                        imageInfos[w].imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                    }
+                    write.pImageInfo = imageInfos.data();
+                    vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+                }
+                else if (bind.m_type == SHADER_BINDING_TEXTURE) {
+                    assert(bind.m_sampler.size() == 0 && "Combined samplers cannot have samplers!");
+                    write.dstArrayElement = 0;
+                    write.descriptorCount = bind.m_sampler.size();
+                    std::vector<VkDescriptorImageInfo> imageInfos(bind.m_sampler.size());
+                    assert(bind.m_textures.size() == bind.m_textures_layouts.size());
+                    for (int w = 0; w < bind.m_sampler.size(); w++)
+                    {
+                        assert(bind.m_textures[w]->m_vk_views.size() == 0);
+                        imageInfos[w].sampler = nullptr;
+                        imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
+                        imageInfos[w].imageLayout = bind.m_textures_layouts[w];
+                    }
+                    write.pImageInfo = imageInfos.data();
+                    vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+                }
             }
         }
     }
     set->m_setlayout = setlayout;
     return set;
+}
+
+void ShaderBinding_DestroySets(vk::VkContext context, std::vector<ShaderSet> sets)
+{
+    for (auto& set : sets)
+    {
+        for (auto& binding : set->m_bindings)
+        {
+            if (binding.m_textures.size() > 0 || binding.m_useclientbuffer)
+                continue;
+            for(unsigned int q = 0; q < context->FrameInfo->m_FrameCount; q++)
+                Buffer2_Destroy(binding.m_buffer[q]);
+        }
+        vkDestroyDescriptorSetLayout(context->defaultDevice, set->m_setlayout, nullptr);
+        delete set;
+    }
 }
 
 VkPipelineLayout ShaderBinding_CreatePipelineLayout(vk::VkContext context, std::vector<ShaderSet> sets, std::vector<VkPushConstantRange> ranges)
@@ -146,10 +202,10 @@ void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescrip
     for (auto& bind : bindings) {
         switch (bind.m_type)
         {
-        case SHADER_BINDING_BUFFER:
+        case SHADER_BINDING_UNIFORM_BUFFER:
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, framecount });
             break;
-        case SHADER_BINDING_BUFFER_DYNAMIC:
+        case SHADER_BINDING_UNIFORM_BUFFER_DYNAMIC:
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, framecount });
             break;
         case SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT:
@@ -158,8 +214,14 @@ void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescrip
         case SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC:
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, framecount });
             break;
-        case SHADER_BINDING_TEXTURE:
+        case SHADER_BINDING_COMBINED_TEXTURE_SAMPLER:
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, framecount });
+            break;
+        case SHADER_BINDING_TEXTURE:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, framecount });
+            break;
+        case SHADER_BINDING_SAMPLER:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, framecount });
             break;
         default:
             assert(0);

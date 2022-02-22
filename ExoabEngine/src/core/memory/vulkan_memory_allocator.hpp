@@ -31,10 +31,8 @@ namespace VkAlloc
 		uint32_t m_heap_index;
 		uint32_t m_suballocation_index;
 		VkDeviceMemory m_memory;
-		union {
-			void* m_buffer;
-			void* m_image;
-		};
+		void* m_buffer = nullptr;
+		void* m_image = nullptr;
 		char8_t* m_mapped_pointer = nullptr;
 	};
 

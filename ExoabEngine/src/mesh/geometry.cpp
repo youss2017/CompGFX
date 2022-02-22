@@ -2,6 +2,7 @@
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
+#include <meshoptimizer/src/meshoptimizer.h>
 
 namespace Mesh
 {
@@ -36,18 +37,32 @@ namespace Mesh
 				for (uint j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
 				{
 					GeometryVertex v;
-					v.x = scene->mMeshes[i]->mVertices[j].x;
-					v.y = scene->mMeshes[i]->mVertices[j].y;
-					v.z = scene->mMeshes[i]->mVertices[j].z;
-					v.nx = scene->mMeshes[i]->mNormals[j].x ;
-					v.ny = scene->mMeshes[i]->mNormals[j].y ;
-					v.nz = scene->mMeshes[i]->mNormals[j].z ;
+#if 1
+					v.x = meshopt_quantizeHalf(scene->mMeshes[i]->mVertices[j].x);
+					v.y = meshopt_quantizeHalf(scene->mMeshes[i]->mVertices[j].y);
+					v.z = meshopt_quantizeHalf(scene->mMeshes[i]->mVertices[j].z);
+					v.nx = uint8_t(scene->mMeshes[i]->mNormals[j].x * 127.0 + 127.0);
+					v.ny = uint8_t(scene->mMeshes[i]->mNormals[j].y * 127.0 + 127.0);
+					v.nz = uint8_t(scene->mMeshes[i]->mNormals[j].z * 127.0 + 127.0);
+#else
+					v.x = (scene->mMeshes[i]->mVertices[j].x);
+					v.y = (scene->mMeshes[i]->mVertices[j].y);
+					v.z = (scene->mMeshes[i]->mVertices[j].z);
+					v.nx = (scene->mMeshes[i]->mNormals[j].x);
+					v.ny = (scene->mMeshes[i]->mNormals[j].y);
+					v.nz = (scene->mMeshes[i]->mNormals[j].z);
+#endif
 					if (scene->mMeshes[i]->mTextureCoords[0]) {
-						v.tu = scene->mMeshes[i]->mTextureCoords[0][j].x;
-						v.tv = scene->mMeshes[i]->mTextureCoords[0][j].y;
+#if 1
+						v.tu = meshopt_quantizeHalf(scene->mMeshes[i]->mTextureCoords[0][j].x);
+						v.tv = meshopt_quantizeHalf(scene->mMeshes[i]->mTextureCoords[0][j].y);
+#else
+						v.tu = (scene->mMeshes[i]->mTextureCoords[0][j].x);
+						v.tv = (scene->mMeshes[i]->mTextureCoords[0][j].y);
+#endif
 					}
 					else
-						;// v.tu_tv = 0;
+						v.tu = v.tv = 0;
 					vertices.push_back(v);
 				}
 				for (uint j = 0; j < scene->mMeshes[i]->mNumFaces; j++)
@@ -58,12 +73,22 @@ namespace Mesh
 				}
 				geomtry.verticesCount += scene->mMeshes[i]->mNumVertices;
 				geomtry.indicesCount += scene->mMeshes[i]->mNumFaces * 3;
+				geomtry.m_vertices = std::move(vertices);
+				geomtry.m_indices = std::move(indices);
 			}
 			out_geometry_vertices_indices_positions.push_back(geomtry);
 			imp.FreeScene();
 		}
 		vertices.shrink_to_fit();
 		indices.shrink_to_fit();
+		// Optimize mesh
+		//size_t index_count = indices.size();
+		//std::vector<unsigned int> remap(index_count); // allocate temporary memory for the remap table
+		//size_t vertex_count = meshopt_generateVertexRemap(&remap[0], nullptr, index_count, vertices.data(), index_count, sizeof(GeometryVertex));
+		//
+		//meshopt_remapIndexBuffer(indices.data(), (uint16_t*)nullptr, index_count, &remap[0]);
+		//meshopt_remapVertexBuffer(vertices.data(), &unindexed_vertices[0], index_count, sizeof(Vertex), &remap[0]);
+
 		std::stringstream memory_info;
 		memory_info << "Using about " << (vertices.size() * sizeof(GeometryVertex) / 1024.0) << " kb for vertices and " << (indices.size() * sizeof(uint16) / 1024.0) << " kb for indices.";
 		loginfos(memory_info.str());

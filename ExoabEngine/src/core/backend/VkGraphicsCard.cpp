@@ -21,6 +21,8 @@ namespace vk
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 	{
+		if (Utils::StrStartsWith(std::string(pCallbackData->pMessage), "loader_scanned_icd_add: Driver"))
+			return VK_FALSE;
 		if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 		{
 			logwarning(pCallbackData->pMessage);
@@ -114,7 +116,7 @@ namespace vk
 		appinfo.applicationVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
 		appinfo.pEngineName = "ExoabEngine";
 		appinfo.engineVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
-		appinfo.apiVersion = VK_API_VERSION_1_2;
+		appinfo.apiVersion = VulkanAPIVersion;
 		VkInstanceCreateInfo createInfo{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
 		createInfo.pApplicationInfo = &appinfo;
 		createInfo.enabledLayerCount = Layers.size();
@@ -227,7 +229,6 @@ namespace vk
 		vkDestroyInstance(context->instance, nullptr);
 		if (context->m_allocation_callback)
 			delete context->m_allocation_callback;
-		delete context->FrameInfo;
 		free(context);
 	}
 

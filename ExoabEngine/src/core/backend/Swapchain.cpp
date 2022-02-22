@@ -705,7 +705,7 @@ namespace vk
 
     }
 
-    void GraphicsSwapchain::PrepareNextFrame(uint32_t *pNextImageIndex, VkSemaphore *pSwapchainReadySemaphore)
+    bool GraphicsSwapchain::PrepareNextFrame(uint32_t *pNextImageIndex, VkSemaphore *pSwapchainReadySemaphore)
     {
         PROFILE_FUNCTION();
         assert(pNextImageIndex && pSwapchainReadySemaphore);
@@ -715,13 +715,14 @@ namespace vk
         result = vkAcquireNextImageKHR(m_Device, m_Swapchain, 5000'000'000, m_FrameSemaphores[FrameIndex], nullptr/*m_FrameFences[FrameIndex]*/, &ImageIndex);
         if (result != VK_SUCCESS)
         {
-            logwarning("vkAcquireNextImageKHR(...) failed, it either timed out or there was an error or the swapchain was resized! (Max Time for next frame to be ready is 5 seconds)");
+            return false;
         }
         if (m_UsingImGui)
             Gui_VKBeginGUIFrame();
         m_SwapchainImageIndex = ImageIndex;
         *pNextImageIndex = FrameIndex;
-        *pSwapchainReadySemaphore = m_FrameSemaphores[FrameIndex];
+        *pSwapchainReadySemaphore = m_FrameSemaphores[ImageIndex];
+        return true;
     }
 
     void GraphicsSwapchain::Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline)
@@ -850,10 +851,9 @@ namespace vk
             vkDestroySemaphore(m_Device, m_FrameSemaphores[i], m_allocation_callback);
             vkDestroySemaphore(m_Device, m_FrameSwapchainCompleteSemaphores[i], m_allocation_callback);
         }
-        delete m_FrameSemaphores;
-        delete m_FrameSemaphores;
-        delete m_FrameFences;
-        delete m_FrameSwapchainCompleteSemaphores;
+        delete[] m_FrameSemaphores;
+        delete[] m_FrameFences;
+        delete[] m_FrameSwapchainCompleteSemaphores;
         vkDestroySwapchainKHR(m_Device, m_Swapchain, m_allocation_callback);
         vkDestroySurfaceKHR(m_Instance, m_WindowSurface, m_allocation_callback);
         vkDestroySampler(m_Device, m_ColorTextureSampler, m_allocation_callback);

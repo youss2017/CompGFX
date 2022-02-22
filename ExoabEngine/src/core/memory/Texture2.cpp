@@ -245,7 +245,12 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 
 void Texture2_Destroy(ITexture2 texture)
 {
-	VkAlloc::DestroyImages(ToVKContext(texture)->m_future_memory_context, 1, &texture->m_vk_image);
+	VkAlloc::DestroyImages(ToVKContext(texture->m_context)->m_future_memory_context, 1, &texture->m_vk_image);
+	VkDevice device = ToVKContext(texture->m_context)->defaultDevice;
+	for (int i = 0; i < texture->m_vk_views.size(); i++)
+		vkDestroyImageView(device, texture->m_vk_views[i], nullptr);
+	if(texture->m_vk_view)
+		vkDestroyImageView(device, texture->m_vk_view, nullptr);
 	delete texture;
 }
 

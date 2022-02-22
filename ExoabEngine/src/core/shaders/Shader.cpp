@@ -8,13 +8,7 @@
 #include <chrono>
 #include <random>
 
-#if defined(_DEBUG)
-// optimizing shaders takes much longer.
-constexpr bool OptimizeShaders = false;
-#else
 constexpr bool OptimizeShaders = true;
-#endif
-
 constexpr bool PrintGLSLShader = false;
 
 /* SPIR-V Catalog Format
@@ -123,7 +117,7 @@ Shader::Shader(GraphicsContext context, const char *__ShaderPath, const char *En
         options.SetOptimizationLevel(OptimizeShaders ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
         options.SetAutoBindUniforms(true);
         options.SetAutoSampledTextures(true);
-        options.SetTargetSpirv(shaderc_spirv_version_1_5);
+        options.SetTargetSpirv(shaderc_spirv_version_1_4);
 
         assert(compiler.IsValid());
         auto spv = compiler.CompileGlslToSpv(m_Source.c_str(), m_Source.length(), shader_type, m_ShaderFilename.c_str(), m_EntryPointFunction.c_str(), options);
@@ -437,10 +431,7 @@ void Shader::CompileVulkanSPIRVText(const char *source_code, const char *filenam
     shaderc::CompileOptions options;
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
     options.SetOptimizationLevel(shaderc_optimization_level_performance);
-    /*
-        A Vulkan 1.2 implementation must support the 1.0, 1.1, 1.2, 1.3, 1.4, and 1.5 versions of SPIR-V and the 1.0 version of the SPIR-V Extended Instructions for GLSL.
-    */
-    options.SetTargetSpirv(shaderc_spirv_version_1_5);
+    options.SetTargetSpirv(shaderc_spirv_version_1_4);
 
     assert(compiler.IsValid());
 

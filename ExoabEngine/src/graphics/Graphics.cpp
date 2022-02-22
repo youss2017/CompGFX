@@ -43,9 +43,23 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     }
     gfx->m_ApiType = 0;
 
+    /*
+        Storage16 and Storage8 allow uint8_t, uint16_t, float16_t (and their derivatives) to be read but no arithmetics
+        shaderInt8, shaderInt16, shaderFloat16 allow arithmetics but are not supported.
+    */
+
+    VkPhysicalDevice16BitStorageFeatures Storage16Bit{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
+    Storage16Bit.pNext = nullptr;
+    Storage16Bit.storageBuffer16BitAccess = VK_TRUE;
+    Storage16Bit.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+
     VkPhysicalDeviceVulkan12Features vulkan12features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    vulkan12features.pNext = nullptr;;
+    vulkan12features.pNext = &Storage16Bit;
     vulkan12features.drawIndirectCount = VK_TRUE;
+    vulkan12features.shaderInt8 = VK_FALSE;
+    vulkan12features.storageBuffer8BitAccess = VK_TRUE;
+    vulkan12features.uniformAndStorageBuffer8BitAccess = VK_TRUE;
+    vulkan12features.scalarBlockLayout = VK_TRUE;
     
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -62,13 +76,12 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     DivisorFeature.vertexAttributeInstanceRateZeroDivisor = VK_TRUE;
     VkPhysicalDeviceFeatures2 features{};
     features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features.pNext = &DivisorFeature;
+    features.pNext = &Synchronization2Feature;//&DivisorFeature;
     features.features.fillModeNonSolid = VK_TRUE;
     features.features.samplerAnisotropy = VK_TRUE;
     features.features.sampleRateShading = VK_TRUE;
     features.features.multiDrawIndirect = VK_TRUE;
     std::vector<const char *> layer_extensions;
-    layer_extensions.push_back("VK_KHR_get_physical_device_properties2");
     uint32_t extensions_count;
     const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
     for (uint32_t i = 0; i < extensions_count; i++) layer_extensions.push_back(extensions[i]);
@@ -85,10 +98,8 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
                                                 VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
                                                 VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
-                                                VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
-                                                VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
-                                                VK_KHR_16BIT_STORAGE_EXTENSION_NAME,
-                                                VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME},
+                                                VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
+                                                VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME},
                                                features, VK_API_VERSION_1_2);
     Graphics3D_LinkFunctions(gfx);
     auto vcont = ToVKContext(gfx->m_context);

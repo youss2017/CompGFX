@@ -1,6 +1,5 @@
 #pragma once
 #include "../ShaderTypes.hpp"
-#include "Float16.hpp"
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
@@ -10,12 +9,11 @@ namespace Mesh {
 
 	using namespace glm;
 
-	// Scalar types do not STD140 alignment
 	struct GeometryVertex
 	{
-		float x, y, z;
-		float nx, ny, nz;
-		float tu, tv;
+		uint16_t x, y, z;
+		uint8_t nx, ny, nz;
+		uint16_t tu, tv;
 	};
 	struct Geometry
 	{
@@ -23,6 +21,8 @@ namespace Mesh {
 		uint firstIndex;
 		uint verticesCount;
 		uint indicesCount;
+		std::vector<GeometryVertex> m_vertices;
+		std::vector<uint16_t> m_indices;
 	};
 	
 	// geometry_path_list - path to every mesh path (e.g. .obj, .fbx, etc)

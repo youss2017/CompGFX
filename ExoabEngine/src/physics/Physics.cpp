@@ -1,7 +1,5 @@
-#include "PhysicsMain.hpp"
-#include <vehicle/PxVehicleSDK.h>
-#include <foundation/PxAllocatorCallback.h>
-#include <foundation/PxErrorCallback.h>
+#include "Physics.hpp"
+
 #include "../utils/Logger.hpp"
 #include <string>
 #include <sstream>
@@ -9,6 +7,7 @@
 // To specifiy directory of dlls
 #include <Windows.h>
 #include <iostream>
+#include <meshoptimizer/src/meshoptimizer.h>
 
 using namespace physx;
 
@@ -102,21 +101,94 @@ public:
 static PhysicsErrorCallback gDefaultErrorCallback;
 static PhysicsHostMemoryAllocator gDefaultAllocatorCallback;
 
-PhysicsMain::PhysicsMain()
+physx::PxFoundation* gFoundation = nullptr;
+physx::PxPhysics* gPhysics = nullptr;
+physx::PxPvd* gPvd = nullptr;
+physx::PxCooking* gCooking = nullptr;
+physx::PxDefaultCpuDispatcher* gDispatcher = nullptr;
+
+void Physx_Test();
+
+bool Physx_Initalize()
 {
-	m_foundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
-	assert(m_foundation);
+	gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
+	if (!gFoundation)
+		return false;
 	bool recordMemoryAllocations = true;
-	m_visual_debugger = PxCreatePvd(*m_foundation);
+	gPvd = PxCreatePvd(*gFoundation);
 	PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 150);
-	m_visual_debugger->connect(*transport, PxPvdInstrumentationFlag::eALL);
+	gPvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
 
-	m_physics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_foundation, PxTolerancesScale(), recordMemoryAllocations, m_visual_debugger);
-	assert(m_physics);
+	gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(), recordMemoryAllocations, gPvd);
+	if (!gPhysics)
+		return false;
 
-	exit(0);
+	gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, PxCookingParams(PxTolerancesScale()));
+	if (!gCooking)
+		return false;
+	gDispatcher = PxDefaultCpuDispatcherCreate(1);
+	Physx_Test();
+	return true;
 }
 
-PhysicsMain::~PhysicsMain()
+PxMaterial* gMaterial;
+PxScene* gScene;
+
+PxRigidDynamic* createDynamic(const PxTransform& t, const PxGeometry& geometry, const PxVec3& velocity = PxVec3(0))
 {
+	PxRigidDynamic* dynamic = PxCreateDynamic(*gPhysics, t, geometry, *gMaterial, 10.0f);
+	dynamic->setAngularDamping(0.5f);
+	dynamic->setLinearVelocity(velocity);
+	gScene->addActor(*dynamic);
+	return dynamic;
 }
+
+void createStack(const PxTransform& t, PxU32 size, PxReal halfExtent)
+{
+	PxShape* shape = gPhysics->createShape(PxBoxGeometry(halfExtent, halfExtent, halfExtent), *gMaterial);
+	for (PxU32 i = 0; i < size; i++)
+	{
+		for (PxU32 j = 0; j < size - i; j++)
+		{
+			PxTransform localTm(PxVec3(PxReal(j * 2) - PxReal(size - i), PxReal(i * 2 + 1), 0) * halfExtent);
+			PxRigidDynamic* body = gPhysics->createRigidDynamic(t.transform(localTm));
+			body->attachShape(*shape);
+			PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
+			gScene->addActor(*body);
+		}
+	}
+	shape->release();
+}
+
+void Physx_Test()
+{
+	PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
+	sceneDesc.gravity = PxVec3(0.0, -4.1, -.4);
+	sceneDesc.cpuDispatcher = gDispatcher;
+	sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+	gScene = gPhysics->createScene(sceneDesc);
+
+	gMaterial = gPhysics->createMaterial(5.5f, 0.5f, 0.6f);
+	PxRigidStatic* groundPlane = PxCreatePlane(*gPhysics, PxPlane(0, 1, 0, 0), *gMaterial);
+	gScene->addActor(*groundPlane);
+	float stackZ = 69.0;
+	for (PxU32 i = 0; i < 5; i++)
+		createStack(PxTransform(PxVec3(0, 0, stackZ -= 10.0f)), 10, 2.0f);
+
+	createDynamic(PxTransform(PxVec3(0, 10, 100)), PxSphereGeometry(10), PxVec3(0, -5, -10));
+	
+	while (1)
+	{
+		Sleep(1);
+		gScene->simulate(1.0f / 30.0);
+		gScene->fetchResults(true);
+	}
+}
+
+void Physx_Destroy() {
+	gCooking->release();
+	gPhysics->release();
+	gPvd->release();
+	gFoundation->release();
+}
+
