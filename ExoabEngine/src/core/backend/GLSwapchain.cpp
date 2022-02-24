@@ -144,7 +144,7 @@ namespace gl
         glBindVertexArray(m_DummyVAO);
         glUniform1i(glGetUniformLocation(m_ProgramID, "ColorPassTexture"), 0);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, PVOIDToUInt32(Framebuffer_GetImage(_framebuffer, AttachmentIndex)));
+        glBindTexture(GL_TEXTURE_2D, PVOIDToUInt32(Framebuffer_GetImage(_framebuffer, AttachmentIndex, 0)));
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
         glUseProgram(0);

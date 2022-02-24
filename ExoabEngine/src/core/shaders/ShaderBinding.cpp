@@ -120,7 +120,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                     assert(bind.m_textures.size() == bind.m_textures_layouts.size());
                     for (int w = 0; w < bind.m_textures.size(); w++)
                     {
-                        assert(bind.m_textures[w]->m_vk_views.size() == 0);
+                        assert(bind.m_textures[w]->m_vk_views_per_frame.size() == 0);
                         imageInfos[w].sampler = bind.m_sampler[0];
                         imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
                         imageInfos[w].imageLayout = bind.m_textures_layouts[w];
@@ -144,12 +144,12 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 else if (bind.m_type == SHADER_BINDING_TEXTURE) {
                     assert(bind.m_sampler.size() == 0 && "Combined samplers cannot have samplers!");
                     write.dstArrayElement = 0;
-                    write.descriptorCount = bind.m_sampler.size();
-                    std::vector<VkDescriptorImageInfo> imageInfos(bind.m_sampler.size());
+                    write.descriptorCount = bind.m_textures.size();
+                    std::vector<VkDescriptorImageInfo> imageInfos(bind.m_textures.size());
                     assert(bind.m_textures.size() == bind.m_textures_layouts.size());
-                    for (int w = 0; w < bind.m_sampler.size(); w++)
+                    for (int w = 0; w < bind.m_textures.size(); w++)
                     {
-                        assert(bind.m_textures[w]->m_vk_views.size() == 0);
+                        assert(bind.m_textures[w]->m_vk_views_per_frame.size() == 0);
                         imageInfos[w].sampler = nullptr;
                         imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
                         imageInfos[w].imageLayout = bind.m_textures_layouts[w];

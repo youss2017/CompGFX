@@ -12,7 +12,7 @@ namespace Mesh {
 	struct GeometryVertex
 	{
 		uint16_t x, y, z;
-		uint8_t nx, ny, nz;
+		uint8_t nx, ny, nz, nw;
 		uint16_t tu, tv;
 	};
 	struct Geometry

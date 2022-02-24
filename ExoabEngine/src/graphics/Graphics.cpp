@@ -48,8 +48,13 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
         shaderInt8, shaderInt16, shaderFloat16 allow arithmetics but are not supported.
     */
 
+    VkPhysicalDeviceMemoryPriorityFeaturesEXT MemoryPriority;
+    MemoryPriority.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
+    MemoryPriority.pNext = nullptr;
+    MemoryPriority.memoryPriority = VK_TRUE;
+
     VkPhysicalDevice16BitStorageFeatures Storage16Bit{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
-    Storage16Bit.pNext = nullptr;
+    Storage16Bit.pNext = &MemoryPriority;
     Storage16Bit.storageBuffer16BitAccess = VK_TRUE;
     Storage16Bit.uniformAndStorageBuffer16BitAccess = VK_TRUE;
 
@@ -60,7 +65,11 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.storageBuffer8BitAccess = VK_TRUE;
     vulkan12features.uniformAndStorageBuffer8BitAccess = VK_TRUE;
     vulkan12features.scalarBlockLayout = VK_TRUE;
-    
+    vulkan12features.descriptorIndexing = VK_TRUE;
+    vulkan12features.runtimeDescriptorArray = VK_TRUE;
+    vulkan12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+    vulkan12features.bufferDeviceAddress = VK_TRUE;
+
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
     DrawParameters.pNext = &vulkan12features;
@@ -99,7 +108,12 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                 VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
                                                 VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                                                 VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
-                                                VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME},
+                                                VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
+                                                VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+                                                // TODO: Only enable this if supported.
+                                                VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
+                                                VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+                                                VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME},
                                                features, VK_API_VERSION_1_2);
     Graphics3D_LinkFunctions(gfx);
     auto vcont = ToVKContext(gfx->m_context);
@@ -164,12 +178,8 @@ void Graphics3D_LinkFunctions(IGraphics3D gfx)
     {
         Utils::Break();
     }
-    //GPUBuffer_LinkFunctions(gfx->m_context);
-    GPUTexture2D_LinkFunctions(gfx->m_context);
-    GPUTextureSampler_LinkFunctions(gfx->m_context);
     FramebufferStateManagment_LinkFunctions(gfx->m_context);
     Framebuffer_LinkFunctions(gfx->m_context);
-    //PipelineLayout_LinkFunctions(gfx->m_context);
     PipelineState_LinkFunctions(gfx->m_context);
 }
 

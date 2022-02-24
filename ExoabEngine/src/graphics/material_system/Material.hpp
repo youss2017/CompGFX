@@ -17,9 +17,8 @@ struct MaterialFramebuffer
 {
 	MaterialConfiguration m_configuration;
 	IFramebuffer m_framebuffer;
-	std::vector<IGPUTexture2D> m_textures;
+	std::vector<ITexture2> m_textures;
 	std::vector<VkFramebuffer> m_framebuffers;
-	uint32_t m_framebufferID; // for opengl
 };
 
 struct MaterialPipelineLayout
@@ -40,7 +39,7 @@ IPipelineShaders Material_CreatePipelineShaders(GraphicsContext context, Materia
 IPipelineShaders Material_CreatePipelineShaders(GraphicsContext context, const std::string& vertex_shader_path, const std::string& fragment_shader_path);
 IFramebufferStateManagement Material_CreateFramebufferStateManagment(GraphicsContext context, MaterialConfiguration* configuration, FramebufferReserve* reserve);
 IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, MaterialConfiguration* configuration, ConfigurationSettings settings, IFramebufferStateManagement state_managment, FramebufferReserve* reserve);
-IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, VkPipelineLayout layout, PipelineVertexInputDescription& input_description, IPipelineShaders pipeline_shaders);
+IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, VkPipelineLayout layout, PipelineVertexInputDescription input_description, IPipelineShaders pipeline_shaders);
 IPipelineState Material_CreatePipelineState(GraphicsContext context, MaterialConfiguration* configuration, IMaterialPipelineLayout pipeline_layout, IFramebufferStateManagement state_managment);
 
 void Material_DestroyPipelineShaders(IPipelineShaders pipeline_shaders);

@@ -1,6 +1,5 @@
 #pragma once
 #include "../core/backend/backend_base.h"
-#include "../core/memory/Textures.hpp"
 #include "../window/PlatformWindow.hpp"
 #include "../core/backend/GLGraphicsCard.hpp"
 #include "../core/backend/VkGraphicsCard.hpp"

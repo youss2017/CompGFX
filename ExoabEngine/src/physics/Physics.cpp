@@ -127,7 +127,7 @@ bool Physx_Initalize()
 	if (!gCooking)
 		return false;
 	gDispatcher = PxDefaultCpuDispatcherCreate(1);
-	Physx_Test();
+	//Physx_Test();
 	return true;
 }
 

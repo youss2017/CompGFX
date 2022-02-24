@@ -1,5 +1,5 @@
 #pragma once
-#include "../memory/Textures.hpp"
+#include "../memory/Texture2.hpp"
 #include <cstdint>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -97,7 +97,7 @@ struct Framebuffer
     int m_ApiType;
     GraphicsContext m_context;
     uint32_t m_width, m_height;
-    std::vector<IGPUTexture2D> m_attachments;
+    std::vector<ITexture2> m_attachments;
     std::vector<VkFramebuffer> m_framebuffers;
     uint32_t m_framebuffer;
 
@@ -137,14 +137,14 @@ extern PFN_Framebuffer_Create* Framebuffer_Create;
 extern PFN_Framebuffer_Get* Framebuffer_Get;
 extern PFN_Framebuffer_Destroy* Framebuffer_Destroy;
 
-inline APIHandle Framebuffer_GetImage(IFramebuffer framebuffer, uint32_t AttachmentIndex)
+inline VkImage Framebuffer_GetImage(IFramebuffer framebuffer, uint32_t AttachmentIndex, int FrameIndex)
 {
-    return GPUTexture2D_GetImage(framebuffer->m_attachments[AttachmentIndex]);
+    return framebuffer->m_attachments[AttachmentIndex]->m_vk_images_per_frame[FrameIndex];
 }
 
-inline VkImageView Framebuffer_GetView(IFramebuffer framebuffer, uint32_t AttachmentIndex)
+inline VkImageView Framebuffer_GetView(IFramebuffer framebuffer, uint32_t AttachmentIndex, int FrameIndex)
 {
-    return (VkImageView)GPUTexture2D_GetView(framebuffer->m_attachments[AttachmentIndex]);
+    return framebuffer->m_attachments[AttachmentIndex]->m_vk_views_per_frame[FrameIndex];
 }
 
 void Framebuffer_LinkFunctions(GraphicsContext context);

@@ -1,7 +1,6 @@
 #pragma once
 #include "../core/pipeline/Pipeline.hpp"
 #include <memory/Buffer2.hpp>
-#include <memory/Texture2.hpp>
 #include <shaders/ShaderBinding.hpp>
 #include <vector>
 #include <glm/glm.hpp>
@@ -26,9 +25,10 @@ struct Terrain
     ShaderSet m_Set0;
     ShaderSet m_Set1;
     VkDescriptorPool m_pool;
+    VkPipelineLayout m_layout;
 };
 
 typedef Terrain* ITerrain;
 
-ITerrain Terrain_Create(GraphicsContext context, VkPipelineLayout layout, VkSampler sampler, int width, int xresolution, int height, int yresolution, ITexture2 basetexture, std::vector<ITexture2> textures);
+ITerrain Terrain_Create(GraphicsContext context, VkSampler sampler, int width, int xresolution, int height, int yresolution, ITexture2 basetexture, std::vector<ITexture2> textures);
 void Terrain_Destroy(ITerrain terrain);

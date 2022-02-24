@@ -1,6 +1,6 @@
 #pragma once
 #include "../../window/PlatformWindow.hpp"
-#include "../memory/Textures.hpp"
+#include "backend_base.h"
 #include <vector>
 #include <string>
 #include "VulkanLoader.h"
@@ -70,10 +70,9 @@ namespace vk {
 		VkDevice defaultDevice;
 		VkQueue defaultQueue;
 		uint32_t defaultQueueFamilyIndex;
-		TextureSamples m_MaxMSAASamples;
+		uint32_t m_MaxMSAASamples;
 		uint32_t* pFrameIndex = nullptr;
 		bool debugEnabled;
-		void* m_memory_context;
 		VkAlloc::CONTEXT m_future_memory_context;
 		VkAllocationCallbacks* m_allocation_callback;
 	} typedef* VkContext;
@@ -135,10 +134,6 @@ namespace vk {
 
 	VkPipelineLayout Gfx_CreatePipelineLayout
 	(VkContext context, const std::vector<VkDescriptorSetLayout>& setLayouts, const std::vector<VkPushConstantRange>& pushconstants);
-
-	void Gfx_UpdateDescriptorSetBuffer(VkContext context, VkDescriptorSet set, VkBuffer buffer, int binding, VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, int descriptorCount = 1);
-	void Gfx_UpdateDescriptorSetImage(VkContext context, VkDescriptorSet set, void* ImageView, IGPUTextureSampler sampler, int binding, VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, int descriptorCount = 1);
-
 	void Gfx_SubmitCmdBuffers(VkQueue queue, std::vector<VkCommandBuffer> cmdBuffers, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitDstStageMask, std::vector<VkSemaphore> signalSemaphores, VkFence fence);
 
 	// https://harrylovescode.gitbooks.io/vulkan-api/content/chap07/chap07.html with some modifications

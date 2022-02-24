@@ -97,7 +97,7 @@ FramebufferReserve::FramebufferReserve(GraphicsContext context, ConfigurationSet
 		spec.m_GenerateMipMapLevels = false;
 		spec.m_CreatePerFrame = true;
 		spec.m_LazilyAllocate = false; // TODO: Support Lazily Allocate
-		m_attachments.push_back(GPUTexture2D_Create(context, &spec));
+		m_attachments.push_back(Texture2_Create(context, spec));
 	}
 
 }
@@ -105,5 +105,5 @@ FramebufferReserve::FramebufferReserve(GraphicsContext context, ConfigurationSet
 FramebufferReserve::~FramebufferReserve()
 {
 	for (auto& a : m_attachments)
-		GPUTexture2D_Destroy(a);
+		Texture2_Destroy(a);
 }

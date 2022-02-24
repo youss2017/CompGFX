@@ -73,6 +73,9 @@ void UI::RenderUI()
     ImGui::Separator();
     ImGui::Text("%.4f FPS", FrameRate);
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
+    std::stringstream ss;
+    ss << FrameRate << " FPS";
+    ImGui::Text(ss.str().c_str());
     ImGui::PopFont();
     ImGui::End();
 }

@@ -5,7 +5,6 @@
 #include <iostream>
 #include <vector>
 #include <cassert>
-#include "../memory/Textures.hpp"
 #include "../memory/vulkan_memory.h"
 #ifndef _WIN32
 #include <alloca.h>
@@ -169,37 +168,37 @@ namespace vk
 		if (counts & VK_SAMPLE_COUNT_64_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 64");
-			context->m_MaxMSAASamples = TextureSamples::MSAA_64;
+			context->m_MaxMSAASamples = 64;
 		}
 		else if (counts & VK_SAMPLE_COUNT_32_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 32");
-			context->m_MaxMSAASamples = TextureSamples::MSAA_32;
+			context->m_MaxMSAASamples = 32;
 		}
 		else if (counts & VK_SAMPLE_COUNT_16_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 16");
-			context->m_MaxMSAASamples = TextureSamples::MSAA_16;
+			context->m_MaxMSAASamples = 16;
 		}
 		else if (counts & VK_SAMPLE_COUNT_8_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 8");
-			context->m_MaxMSAASamples = TextureSamples::MSAA_8;
+			context->m_MaxMSAASamples = 8;
 		}
 		else if (counts & VK_SAMPLE_COUNT_4_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 4");
-			context->m_MaxMSAASamples = TextureSamples::MSAA_4;
+			context->m_MaxMSAASamples = 4;
 		}
 		else if (counts & VK_SAMPLE_COUNT_2_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 2");
-			context->m_MaxMSAASamples = TextureSamples::MSAA_2;
+			context->m_MaxMSAASamples = 2;
 		}
 		else
 		{
 			loginfo("MSAA is not supported on this graphics card.");
-			context->m_MaxMSAASamples = TextureSamples::MSAA_1;
+			context->m_MaxMSAASamples = 1;
 		}
 
 		/* Allocation Callbacks */
@@ -212,8 +211,7 @@ namespace vk
 		// allocation_callback->pfnInternalFree = NULL; // PFN_vkInternalFreeNotification
 		context->m_allocation_callback = NULL;
 
-		context->m_memory_context = vulkan_memory_initalize_context(context->defaultDevice, context->card.handle, context->m_allocation_callback);
-		context->m_future_memory_context = VkAlloc::CreateContext(context->defaultDevice, context->card.handle, /* 64 mb*/ 64 * (1024 * 1024));
+		context->m_future_memory_context = VkAlloc::CreateContext(context->instance, context->defaultDevice, context->card.handle, /* 64 mb*/ 64 * (1024 * 1024));
 
 		return context;
 	}
@@ -221,7 +219,6 @@ namespace vk
 	void Gfx_DestroyContext(VkContext context)
 	{
 		vkDeviceWaitIdle(context->defaultDevice);
-		vulkan_memory_destroy_context((VulkanMemoryContext)context->m_memory_context);
 		VkAlloc::DestroyContext(context->m_future_memory_context);
 		vkDestroyDevice(context->defaultDevice, context->m_allocation_callback);
 		if (context->debugEnabled)
@@ -543,52 +540,6 @@ namespace vk
 		return pool;
 	}
 
-	VkPipelineLayout Gfx_CreatePipelineLayout(VkContext context, const std::vector<VkDescriptorSetLayout> &setLayouts, const std::vector<VkPushConstantRange> &pushconstants)
-	{
-		VkPipelineLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-		createInfo.pushConstantRangeCount = pushconstants.size();
-		createInfo.pPushConstantRanges = pushconstants.data();
-		createInfo.setLayoutCount = setLayouts.size();
-		createInfo.pSetLayouts = setLayouts.data();
-		VkPipelineLayout layout;
-		vkcheck(vkCreatePipelineLayout(context->defaultDevice, &createInfo, context->m_allocation_callback, &layout));
-		return layout;
-	}
-
-	void Gfx_UpdateDescriptorSetBuffer(VkContext context, VkDescriptorSet set, VkBuffer buffer, int binding, VkDescriptorType descriptorType, int descriptorCount)
-	{
-		assert(buffer);
-		assert(set);
-		VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-		write.descriptorType = descriptorType;
-		write.descriptorCount = descriptorCount;
-		write.dstBinding = binding;
-		write.dstSet = set;
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = buffer;
-		bufferInfo.offset = 0;
-		bufferInfo.range = VK_WHOLE_SIZE;
-		write.pBufferInfo = &bufferInfo;
-		vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, NULL);
-	}
-
-	void Gfx_UpdateDescriptorSetImage(VkContext context, VkDescriptorSet set, void *ImageView, IGPUTextureSampler sampler, int binding, VkDescriptorType descriptorType, int descriptorCount)
-	{
-		assert(ImageView && sampler && set && context);
-		VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-		write.descriptorType = descriptorType;
-		write.descriptorCount = descriptorCount;
-		write.dstBinding = binding;
-		write.dstSet = set;
-
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = (VkImageView)ImageView;
-		imageInfo.sampler = (VkSampler)sampler->m_NativeHandle;
-
-		write.pImageInfo = &imageInfo;
-		vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, NULL);
-	}
 
 	void Gfx_SubmitCmdBuffers(VkQueue queue, std::vector<VkCommandBuffer> cmdBuffers, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitDstStageMask, std::vector<VkSemaphore> signalSemaphores, VkFence fence)
 	{

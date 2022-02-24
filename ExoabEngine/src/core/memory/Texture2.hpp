@@ -8,10 +8,10 @@ struct GPUTexture2D_2
 	GraphicsContext m_context;
 	Texture2DSpecification m_specification;
 	VkAlloc::IMAGE_DESCRIPITION m_vk_description;
-	VkImageView m_vk_view;
 	VkAlloc::IMAGE m_vk_image;
-	std::vector<VkImageView> m_vk_views;
-	std::vector<VkAlloc::IMAGE> m_vk_images;
+	VkImageView m_vk_view;
+	std::vector<VkImage> m_vk_images_per_frame;
+	std::vector<VkImageView> m_vk_views_per_frame;
 	VkImageAspectFlags m_vk_aspectmask;
 	VkImageLayout m_vk_current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout m_vk_current_layout_mipmap = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -25,3 +25,7 @@ void Texture2_UpdateMipmaps(ITexture2 texture);
 void Texture2_Destroy(ITexture2 texture);
 
 ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, bool mipmaps);
+
+// Converts "RGBA8" to TextureFormat::RGBA8
+TextureFormat Textures_StringToTextureFormat(std::string& input);
+

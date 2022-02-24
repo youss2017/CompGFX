@@ -1,7 +1,6 @@
 #include "GLGraphicsCard.hpp"
 #include "../../utils/common.hpp"
 #include "../../utils/Logger.hpp"
-#include "../memory/Buffers.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <cassert>

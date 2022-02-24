@@ -205,7 +205,7 @@ IFramebuffer Vulkan_Framebuffer_Create(GraphicsContext context, uint32_t width, 
     };
 
     auto samples = StateManagment->m_Samples;
-    std::vector<IGPUTexture2D> attachments;
+    std::vector<ITexture2> attachments;
     std::vector<VkImage> images;
     std::vector<VkImageView> views;
 
@@ -222,10 +222,10 @@ IFramebuffer Vulkan_Framebuffer_Create(GraphicsContext context, uint32_t width, 
         attachment_desc.m_CreatePerFrame = true;
         attachment_desc.m_LazilyAllocate = true;
 
-        IGPUTexture2D attachment = GPUTexture2D_Create(context, &attachment_desc);
+        ITexture2 attachment = Texture2_Create(context, attachment_desc);
         attachments.push_back(attachment);
-        auto ___images = attachment->m_images;
-        auto ___views = attachment->m_views;
+        auto ___images = attachment->m_vk_images_per_frame;
+        auto ___views = attachment->m_vk_views_per_frame;
         images = Utils::CombineVectors(images, ___images);
         views = Utils::CombineVectors(views, ___views);
     }
@@ -278,7 +278,7 @@ void Vulkan_Framebuffer_Destroy(IFramebuffer framebuffer)
     auto vcont = ToVKContext(framebuffer->m_context);
     // Destroy Attachments
     for (auto &attachment : framebuffer->m_attachments)
-        GPUTexture2D_Destroy(attachment);
+        Texture2_Destroy(attachment);
     // Destroy Framebuffers
     for (auto &framebuffer : framebuffer->m_framebuffers)
     {
@@ -287,96 +287,6 @@ void Vulkan_Framebuffer_Destroy(IFramebuffer framebuffer)
     delete framebuffer;
 }
 
-// ======================================== OPENGL ========================================
-
-IFramebuffer GL_Framebuffer_Create(GraphicsContext context, uint32_t width, uint32_t height, IFramebufferStateManagement StateManagment)
-{
-    GLuint framebufferID;
-    glGenFramebuffers(1, &framebufferID);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebufferID);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    glViewport(0, 0, width, height);
-
-    auto attachment_descriptions = StateManagment->m_attachments;
-
-    auto IsAttachmentColor = [](FramebufferAttachment & attachment) throw()->bool
-    {
-        if (attachment.m_format == TextureFormat::D32F)
-            return false;
-        return true;
-    };
-
-    auto samples = StateManagment->m_Samples;
-    std::vector<IGPUTexture2D> attachments;
-    int index = 0;
-    for (auto &attac : attachment_descriptions)
-    {
-        bool IsColor = IsAttachmentColor(attac);
-        Texture2DSpecification attachment_desc;
-        attachment_desc.m_Width = width;
-        attachment_desc.m_Height = height;
-        attachment_desc.m_TextureUsage = IsColor ? TextureUsage::COLOR_ATTACHMENT : TextureUsage::DEPTH_ATTACHMENT;
-        attachment_desc.m_Samples = samples;
-        attachment_desc.m_Format = attac.m_format;
-        attachment_desc.m_GenerateMipMapLevels = false;
-        attachment_desc.m_CreatePerFrame = true;
-        attachment_desc.m_LazilyAllocate = true;
-
-        IGPUTexture2D attachment = GPUTexture2D_Create(context, &attachment_desc);
-        attachments.push_back(attachment);
-
-        if (samples == TextureSamples::MSAA_1)
-        {
-            if (IsColor)
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, PVOIDToUInt32(attachment->m_NativeHandle), 0);
-            else
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, PVOIDToUInt32(attachment->m_NativeHandle), 0);
-        }
-        else
-        {
-            assert(0); // am i doing this right?
-            if (IsColor)
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D_MULTISAMPLE, PVOIDToUInt32(attachment->m_NativeHandle), 0);
-            else
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, PVOIDToUInt32(attachment->m_NativeHandle), 0);
-        }
-        index++;
-    }
-
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE)
-    {
-        logerror("OpenGL Framebuffer is not Complete!");
-    }
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-    Framebuffer *fbo = new Framebuffer();
-    fbo->m_ApiType = 1;
-    fbo->m_attachments = attachments;
-    fbo->m_context = context;
-    fbo->m_width = width;
-    fbo->m_height = height;
-    fbo->m_framebuffer = framebufferID;
-    fbo->m_viewport_x = fbo->m_scissor_x = 0;
-    fbo->m_viewport_y = fbo->m_scissor_y = 0;
-    fbo->m_viewport_width = fbo->m_scissor_width = width;
-    fbo->m_viewport_height = fbo->m_scissor_height = height;
-    return fbo;
-}
-
-APIHandle GL_Framebuffer_Get(IFramebuffer framebuffer)
-{
-    return UInt32ToPVOID(framebuffer->m_framebuffer);
-}
-
-void GL_Framebuffer_Destroy(IFramebuffer framebuffer)
-{
-    for (auto &attachment : framebuffer->m_attachments)
-        GPUTexture2D_Destroy(attachment);
-    glDeleteFramebuffers(1, &framebuffer->m_framebuffer);
-    delete framebuffer;
-}
 
 PFN_Framebuffer_Create *Framebuffer_Create = nullptr;
 PFN_Framebuffer_Get *Framebuffer_Get = nullptr;
@@ -393,9 +303,6 @@ void Framebuffer_LinkFunctions(GraphicsContext context)
     }
     else if (ApiType == 1)
     {
-        Framebuffer_Create = GL_Framebuffer_Create;
-        Framebuffer_Get = GL_Framebuffer_Get;
-        Framebuffer_Destroy = GL_Framebuffer_Destroy;
     }
     else
     {

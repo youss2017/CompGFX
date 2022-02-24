@@ -2,11 +2,11 @@
 #include <backend/VkGraphicsCard.hpp>
 #include "Buffer2.hpp"
 #include <stb/stb_image.h>
+#include <StringUtils.hpp>
 
 ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification& specification)
 {
 	using namespace VkAlloc;
-	assert(!specification.m_CreatePerFrame);
 	IMAGE_DESCRIPITION desc;
 	desc.m_properties = DEVICE_MEMORY_PROPERTY::GPU_ONLY;
 	desc.m_flags = 0;
@@ -17,7 +17,7 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	desc.m_extent.depth = 1;
 	desc.m_mipLevels = specification.m_GenerateMipMapLevels ? std::floor(std::log2(std::max(specification.m_Width, specification.m_Height))) + 1 : 1;
 	desc.m_arrayLayers = 1;
-	desc.m_samples = (VkSampleCountFlagBits)specification.m_Samples;;
+	desc.m_samples = (VkSampleCountFlagBits)specification.m_Samples;
 	desc.m_tiling = VK_IMAGE_TILING_OPTIMAL;
 	switch (specification.m_TextureUsage)
 	{
@@ -70,6 +70,39 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	viewInfo.subresourceRange.layerCount = 1;
 	texture->m_vk_aspectmask = viewInfo.subresourceRange.aspectMask;
 	vkcheck(vkCreateImageView(ToVKContext(context)->defaultDevice, &viewInfo, nullptr, &texture->m_vk_view));
+	vk::VkContext cont = ToVKContext(context);
+	if (specification.m_CreatePerFrame)
+	{
+		texture->m_vk_views_per_frame.push_back(texture->m_vk_view);
+		texture->m_vk_images_per_frame.push_back(texture->m_vk_image->m_image);
+		VkImageCreateInfo createInfo;
+		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		createInfo.pNext = nullptr;
+		createInfo.flags = 0;
+		createInfo.imageType = desc.m_imageType;
+		createInfo.format = desc.m_format;
+		createInfo.extent = desc.m_extent;
+		createInfo.mipLevels = desc.m_mipLevels;
+		createInfo.arrayLayers = desc.m_arrayLayers;
+		createInfo.samples = desc.m_samples;
+		createInfo.tiling = desc.m_tiling;
+		createInfo.usage = desc.m_usage;
+		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		createInfo.queueFamilyIndexCount = 0;
+		createInfo.pQueueFamilyIndices = nullptr;
+		createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImage image;
+		for (unsigned int i = 1; i < cont->FrameInfo->m_FrameCount; i++) {
+			vkCreateImage(cont->defaultDevice, &createInfo, nullptr, &image);
+			auto& suballoc = texture->m_vk_image->m_suballocation;
+			vkBindImageMemory(cont->defaultDevice, image, suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
+			texture->m_vk_images_per_frame.push_back(image);
+			viewInfo.image = image;
+			VkImageView view;
+			vkCreateImageView(cont->defaultDevice, &viewInfo, nullptr, &view);
+			texture->m_vk_views_per_frame.push_back(view);
+		}
+	}
 
 	return texture;
 }
@@ -247,9 +280,14 @@ void Texture2_Destroy(ITexture2 texture)
 {
 	VkAlloc::DestroyImages(ToVKContext(texture->m_context)->m_future_memory_context, 1, &texture->m_vk_image);
 	VkDevice device = ToVKContext(texture->m_context)->defaultDevice;
-	for (int i = 0; i < texture->m_vk_views.size(); i++)
-		vkDestroyImageView(device, texture->m_vk_views[i], nullptr);
-	if(texture->m_vk_view)
+	if (texture->m_specification.m_CreatePerFrame) {
+		vkDestroyImageView(device, texture->m_vk_views_per_frame[0], nullptr);
+		for (int i = 1; i < texture->m_vk_views_per_frame.size(); i++) {
+			vkDestroyImage(device, texture->m_vk_images_per_frame[i], nullptr);
+			vkDestroyImageView(device, texture->m_vk_views_per_frame[i], nullptr);
+		}
+	}
+	else	
 		vkDestroyImageView(device, texture->m_vk_view, nullptr);
 	delete texture;
 }
@@ -272,3 +310,119 @@ ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, boo
 	stbi_image_free(pixels);
 	return texture;
 }
+
+TextureFormat Textures_StringToTextureFormat(std::string& _input)
+{
+	std::string input = Utils::StrUpperCase(_input);
+	if (Utils::StrContains(input, "UNDEFINED"))
+		return TextureFormat::UNDEFINED;
+	if (Utils::StrContains(input, "R8"))
+		return TextureFormat::R8;
+	if (Utils::StrContains(input, "R8_SNORM"))
+		return TextureFormat::R8_SNORM;
+	if (Utils::StrContains(input, "R16"))
+		return TextureFormat::R16;
+	if (Utils::StrContains(input, "R16_SNORM"))
+		return TextureFormat::R16_SNORM;
+	if (Utils::StrContains(input, "RG8"))
+		return TextureFormat::RG8;
+	if (Utils::StrContains(input, "RG8_SNORM"))
+		return TextureFormat::RG8_SNORM;
+	if (Utils::StrContains(input, "RG16"))
+		return TextureFormat::RG16;
+	if (Utils::StrContains(input, "RG16_SNORM"))
+		return TextureFormat::RG16_SNORM;
+	if (Utils::StrContains(input, "RGB8"))
+		return TextureFormat::RGB8;
+	if (Utils::StrContains(input, "RGB8_SNORM"))
+		return TextureFormat::RGB8_SNORM;
+	if (Utils::StrContains(input, "RGB16_SNORM"))
+		return TextureFormat::RGB16_SNORM;
+	if (Utils::StrContains(input, "RGBA8"))
+		return TextureFormat::RGBA8;
+	if (Utils::StrContains(input, "RGBA8_SNORM"))
+		return TextureFormat::RGBA8_SNORM;
+	if (Utils::StrContains(input, "RGBA16"))
+		return TextureFormat::RGBA16;
+	if (Utils::StrContains(input, "SRGB8"))
+		return TextureFormat::SRGB8;
+	if (Utils::StrContains(input, "SRGB8_ALPHA8"))
+		return TextureFormat::SRGB8_ALPHA8;
+	if (Utils::StrContains(input, "R16F"))
+		return TextureFormat::R16F;
+	if (Utils::StrContains(input, "RG16F"))
+		return TextureFormat::RG16F;
+	if (Utils::StrContains(input, "RGB16F"))
+		return TextureFormat::RGB16F;
+	if (Utils::StrContains(input, "RGBA16F"))
+		return TextureFormat::RGBA16F;
+	if (Utils::StrContains(input, "R32F"))
+		return TextureFormat::R32F;
+	if (Utils::StrContains(input, "D32"))
+		return TextureFormat::D32F;
+	if (Utils::StrContains(input, "RG32F"))
+		return TextureFormat::RG32F;
+	if (Utils::StrContains(input, "RGB32F"))
+		return TextureFormat::RGB32F;
+	if (Utils::StrContains(input, "RGBA32F"))
+		return TextureFormat::RGBA32F;
+	if (Utils::StrContains(input, "R8I"))
+		return TextureFormat::R8I;
+	if (Utils::StrContains(input, "R8UI"))
+		return TextureFormat::R8UI;
+	if (Utils::StrContains(input, "R16I"))
+		return TextureFormat::R16I;
+	if (Utils::StrContains(input, "R16UI"))
+		return TextureFormat::R16UI;
+	if (Utils::StrContains(input, "R32I"))
+		return TextureFormat::R32I;
+	if (Utils::StrContains(input, "R32UI"))
+		return TextureFormat::R32UI;
+	if (Utils::StrContains(input, "RG8I"))
+		return TextureFormat::RG8I;
+	if (Utils::StrContains(input, "RG8UI"))
+		return TextureFormat::RG8UI;
+	if (Utils::StrContains(input, "RG16I"))
+		return TextureFormat::RG16I;
+	if (Utils::StrContains(input, "RG16UI"))
+		return TextureFormat::RG16UI;
+	if (Utils::StrContains(input, "RG32I"))
+		return TextureFormat::RG32I;
+	if (Utils::StrContains(input, "RG32UI"))
+		return TextureFormat::RG32UI;
+	if (Utils::StrContains(input, "RGB8I"))
+		return TextureFormat::RGB8I;
+	if (Utils::StrContains(input, "RGB8UI"))
+		return TextureFormat::RGB8UI;
+	if (Utils::StrContains(input, "RGB16I"))
+		return TextureFormat::RGB16I;
+	if (Utils::StrContains(input, "RGB16UI"))
+		return TextureFormat::RGB16UI;
+	if (Utils::StrContains(input, "RGB32I"))
+		return TextureFormat::RGB32I;
+	if (Utils::StrContains(input, "RGB32UI"))
+		return TextureFormat::RGB32UI;
+	if (Utils::StrContains(input, "RGBA8I"))
+		return TextureFormat::RGBA8I;
+	if (Utils::StrContains(input, "RGBA8UI"))
+		return TextureFormat::RGBA8UI;
+	if (Utils::StrContains(input, "RGBA16I"))
+		return TextureFormat::RGBA16I;
+	if (Utils::StrContains(input, "RGBA16UI"))
+		return TextureFormat::RGBA16UI;
+	if (Utils::StrContains(input, "RGBA32I"))
+		return TextureFormat::RGBA32I;
+	if (Utils::StrContains(input, "RGBA32UI"))
+		return TextureFormat::RGBA32UI;
+	if (Utils::StrContains(input, "BGRA8"))
+		return TextureFormat::BGRA8;
+	if (Utils::StrContains(input, "SBGR8_ALPHA8"))
+		return TextureFormat::SBGR8_ALPHA8;
+	if (Utils::StrContains(input, "R11G11B10F"))
+		return TextureFormat::R11G11B10F;
+	std::string error_message = "Could not parse string format '" + input + "'";
+	logerror(error_message.c_str());
+	assert(0);
+	return TextureFormat::UNDEFINED;
+}
+

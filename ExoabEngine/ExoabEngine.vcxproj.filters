@@ -39,13 +39,7 @@
     <ClInclude Include="src\core\backend\VulkanLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\memory\Buffers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\core\memory\cvector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\core\memory\Textures.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\memory\vulkan_memory.h">
@@ -93,10 +87,7 @@
     <ClInclude Include="src\physics\Physics.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\units\Map.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\units\unit_common.hpp">
+    <ClInclude Include="src\mesh\Map.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\common.hpp">
@@ -186,6 +177,15 @@
     <ClInclude Include="src\mesh\entity.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="external\VulkanMemoryAllocator\include\vk_mem_alloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="external\VulkanMemoryAllocator\src\Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="external\VulkanMemoryAllocator\src\VmaUsage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp">
@@ -213,12 +213,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\backend\VulkanLoader.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\core\memory\Buffers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\core\memory\Textures.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\memory\vulkan_memory.c">
@@ -257,13 +251,10 @@
     <ClCompile Include="src\graphics\Graphics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\graphics\VulkanCommandList.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\physics\Physics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\units\Map.cpp">
+    <ClCompile Include="src\mesh\Map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\common.cpp">
@@ -380,11 +371,21 @@
     <ClCompile Include="src\graphics\DebugRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="external\VulkanMemoryAllocator\src\Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external\VulkanMemoryAllocator\src\VmaUsage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\utils\common.inl">
       <Filter>Header Files</Filter>
     </None>
     <None Include="imgui.ini" />
+    <None Include="assets\materials\basic.mc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="external\VulkanMemoryAllocator\src\vk_mem_alloc.natvis" />
   </ItemGroup>
 </Project>

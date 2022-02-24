@@ -1,6 +1,5 @@
 #pragma once
 #include "Camera.hpp"
-#include "core/memory/Textures.hpp"
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
 #include <time.h>

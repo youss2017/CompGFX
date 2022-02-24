@@ -105,7 +105,7 @@ IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, Materia
 			specification.m_GenerateMipMapLevels = false;
 			specification.m_CreatePerFrame = true;
 			specification.m_LazilyAllocate = false;
-			framebuffer->m_textures.push_back(GPUTexture2D_Create(context, &specification));
+			framebuffer->m_textures.push_back(Texture2_Create(context, specification));
 		}
 		else
 		{
@@ -120,7 +120,7 @@ IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, Materia
 		VkImageView *pAttachments = (VkImageView *)stack_allocate(sizeof(VkImageView) * framebuffer->m_textures.size());
 		for (int j = 0; j < framebuffer->m_textures.size(); j++)
 		{
-			std::vector<VkImageView> &allviews = framebuffer->m_textures[j]->m_views;
+			std::vector<VkImageView> &allviews = framebuffer->m_textures[j]->m_vk_views_per_frame;
 			pAttachments[j] = allviews[i];
 		}
 		VkFramebufferCreateInfo createInfo;
@@ -158,7 +158,7 @@ IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, Materia
 	return framebuffer;
 }
 
-IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, VkPipelineLayout layout, PipelineVertexInputDescription &input_description, IPipelineShaders pipeline_shaders)
+IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, VkPipelineLayout layout, PipelineVertexInputDescription input_description, IPipelineShaders pipeline_shaders)
 {
 	IMaterialPipelineLayout pipeline_layout = new MaterialPipelineLayout();
 	auto vcont = ToVKContext(context);
@@ -204,7 +204,7 @@ void Material_DestroyFramebuffer(IMaterialFramebuffer framebuffer)
 
 	for (uint32_t i = 0; i < framebuffer->m_configuration.m_attachments.size(); i++)
 		if (framebuffer->m_configuration.m_attachments[i].m_reserve_id == UINT32_MAX)
-			GPUTexture2D_Destroy(framebuffer->m_textures[i]);
+			Texture2_Destroy(framebuffer->m_textures[i]);
 
 	for (uint32_t i = 0; i < framebuffer->m_framebuffers.size(); i++)
 		vkDestroyFramebuffer(context->defaultDevice, framebuffer->m_framebuffers[i], context->m_allocation_callback);

@@ -64,7 +64,7 @@ void Buffer2_UploadData(IBuffer2 buffer, char8_t *pData, size_t offset, size_t s
 char8_t *Buffer2_Map(IBuffer2 buffer)
 {
 	assert(buffer->memoryType != BufferMemoryType::GPU_ONLY && "Cannot be static.");
-	char8_t **mapped_pointer = &buffer->m_vk_buffer->m_suballocation.m_mapped_pointer;
+	char8_t **mapped_pointer = (char8_t**)&buffer->m_vk_buffer->m_suballocation.m_allocation_info.pMappedData;
 	if (*mapped_pointer)
 		return *mapped_pointer;
 	VkAlloc::MapBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
@@ -75,22 +75,19 @@ void Buffer2_Flush(IBuffer2 buffer, int offset, int size)
 {
 	if (buffer->m_coherent)
 		return;
-	VkAlloc::FlushBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
+	VkAlloc::FlushBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, offset, size);
 }
 
 void Buffer2_Invalidate(IBuffer2 buffer, int offset, int size)
 {
 	if (buffer->m_coherent)
 		return;
-	VkAlloc::InvalidateBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
+	VkAlloc::InvalidateBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, offset, size);
 }
 
 void Buffer2_Unmap(IBuffer2 buffer)
 {
 	assert(buffer->memoryType != BufferMemoryType::GPU_ONLY && "Cannot be static.");
-	char8_t **mapped_pointer = &buffer->m_vk_buffer->m_suballocation.m_mapped_pointer;
-	if (!*mapped_pointer)
-		return;
 	VkAlloc::UnmapBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
 }
 

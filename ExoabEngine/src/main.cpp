@@ -4,11 +4,6 @@
 #include <chrono>
 #include <iostream>
 
-//#ifndef BUILD_X64
-// to support 32 bit mode, compile assimp in 32 bit and link to it.
-//#error "Must be compiled with x64 bit and with compiler preprocess flag BUILD_X64, for 32 bit compilation read comment in main.cpp"
-//#endif
-
 #if defined(_WIN32)
 #include <windows.h>
 #include <timeapi.h>

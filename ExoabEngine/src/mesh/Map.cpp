@@ -1,7 +1,7 @@
 #include "Map.hpp"
 #include <iostream>
 
-ITerrain Terrain_Create(GraphicsContext context, VkPipelineLayout layout, VkSampler sampler, int width, int xresolution, int height, int yresolution, ITexture2 basetexture, std::vector<ITexture2> textures)
+ITerrain Terrain_Create(GraphicsContext context, VkSampler sampler, int width, int xresolution, int height, int yresolution, ITexture2 basetexture, std::vector<ITexture2> textures)
 {
 	ITerrain terrain = new Terrain();
 	width = (width % 2 == 0) ? width : width + 1;
@@ -84,10 +84,10 @@ ITerrain Terrain_Create(GraphicsContext context, VkPipelineLayout layout, VkSamp
 	}
 
 	terrain->m_vertices_ssbo = Buffer2_Create(terrain->m_context, BufferType::StorageBuffer, terrain->m_vertices.size() * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY);
-	terrain->m_indices_buffer = Buffer2_Create(terrain->m_context, BufferType::IndexBuffer, terrain->m_indices.size() * sizeof(uint32_t), BufferMemoryType::GPU_ONLY);
+	terrain->m_indices_buffer = Buffer2_Create(terrain->m_context, BufferType::IndexBuffer, terrain->m_indices.size() * sizeof(uint16_t), BufferMemoryType::GPU_ONLY);
 
 	Buffer2_UploadData(terrain->m_vertices_ssbo, (char8_t*)terrain->m_vertices.data(), 0, terrain->m_vertices.size() * sizeof(TerrainVertex));
-	Buffer2_UploadData(terrain->m_indices_buffer, (char8_t*)terrain->m_indices.data(), 0, terrain->m_indices.size() * sizeof(uint32_t));
+	Buffer2_UploadData(terrain->m_indices_buffer, (char8_t*)terrain->m_indices.data(), 0, terrain->m_indices.size() * sizeof(uint16_t));
 	
 	std::vector<ShaderBinding> vert_bindings(2);
 	vert_bindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
@@ -96,7 +96,7 @@ ITerrain Terrain_Create(GraphicsContext context, VkPipelineLayout layout, VkSamp
 	vert_bindings[0].m_useclientbuffer = true;
 	vert_bindings[0].m_additional_buffer_flags = (BufferType)0;
 	vert_bindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	vert_bindings[0].m_size = 0;
+	vert_bindings[0].m_size = sizeof(TerrainVertex) * terrain->m_vertices.size();
 	vert_bindings[0].m_client_buffer = terrain->m_vertices_ssbo;
 
 	vert_bindings[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
@@ -115,7 +115,7 @@ ITerrain Terrain_Create(GraphicsContext context, VkPipelineLayout layout, VkSamp
 	frag_bindings[0].m_sampler.push_back(sampler);
 
 	frag_bindings[1].m_type = SHADER_BINDING_TEXTURE;
-	frag_bindings[1].m_bindingID = 0;
+	frag_bindings[1].m_bindingID = 1;
 	frag_bindings[1].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
 	frag_bindings[1].m_size = 0;
 	frag_bindings[1].m_textures.push_back(basetexture);
@@ -134,6 +134,12 @@ ITerrain Terrain_Create(GraphicsContext context, VkPipelineLayout layout, VkSamp
 	terrain->m_pool = vk::Gfx_CreateDescriptorPool(ToVKContext(context), 2 * frameCount, poolSize);
 	terrain->m_Set0 = ShaderBinding_Create(ToVKContext(context), terrain->m_pool, 0, vert_bindings);
 	terrain->m_Set1 = ShaderBinding_Create(ToVKContext(context), terrain->m_pool, 1, frag_bindings);
+
+	std::vector<VkPushConstantRange> ranges(1);
+	ranges[0].offset = 0;
+	ranges[0].size = sizeof(glm::vec3);
+	ranges[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrain->m_layout = ShaderBinding_CreatePipelineLayout(ToVKContext(context), { terrain->m_Set0, terrain->m_Set1 }, ranges);
 
 	return terrain;
 }

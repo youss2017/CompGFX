@@ -73,8 +73,8 @@ namespace Mesh
 				}
 				geomtry.verticesCount += scene->mMeshes[i]->mNumVertices;
 				geomtry.indicesCount += scene->mMeshes[i]->mNumFaces * 3;
-				geomtry.m_vertices = std::move(vertices);
-				geomtry.m_indices = std::move(indices);
+				geomtry.m_vertices = vertices;
+				geomtry.m_indices = indices;
 			}
 			out_geometry_vertices_indices_positions.push_back(geomtry);
 			imp.FreeScene();

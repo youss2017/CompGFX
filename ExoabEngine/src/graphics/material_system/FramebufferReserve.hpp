@@ -1,5 +1,6 @@
 #pragma once
 #include "../Graphics.hpp"
+#include <memory/Texture2.hpp>
 #include <vector>
 
 class FramebufferReserve
@@ -9,6 +10,6 @@ public:
 	~FramebufferReserve();
 
 public:
-	std::vector<IGPUTexture2D> m_attachments;
+	std::vector<ITexture2> m_attachments;
 
 };
