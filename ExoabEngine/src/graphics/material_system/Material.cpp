@@ -113,8 +113,8 @@ IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, Materia
 			framebuffer->m_textures.push_back(reserve->m_attachments[att.m_reserve_id]);
 		}
 	}
-	// std::vector<VkFramebuffer> framebuffers;
-	for (uint32_t i = 0; i < vcont->FrameInfo->m_FrameCount; i++)
+
+	for (uint32_t i = 0; i < gFrameOverlapCount; i++)
 	{
 		// Get Attachments
 		VkImageView *pAttachments = (VkImageView *)stack_allocate(sizeof(VkImageView) * framebuffer->m_textures.size());
@@ -156,16 +156,6 @@ IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, Materia
 	framebuffer->m_framebuffer->m_scissor_height = height;
 
 	return framebuffer;
-}
-
-IMaterialPipelineLayout Material_CreatePipelineLayout(GraphicsContext context, VkPipelineLayout layout, PipelineVertexInputDescription input_description, IPipelineShaders pipeline_shaders)
-{
-	IMaterialPipelineLayout pipeline_layout = new MaterialPipelineLayout();
-	auto vcont = ToVKContext(context);
-	pipeline_layout->m_context = vcont;
-	pipeline_layout->m_pipeline_shaders = pipeline_shaders;
-	pipeline_layout->m_layout = layout;
-	return pipeline_layout;
 }
 
 IPipelineState Material_CreatePipelineState(GraphicsContext context, MaterialConfiguration *configuration, IMaterialPipelineLayout pipeline_layout, IFramebufferStateManagement state_managment)

@@ -287,7 +287,7 @@ ShaderReflection::ShaderReflection(Shader *shader)
     // assert(resources.stage_outputs.size() == 0);
     assert(resources.subpass_inputs.size() == 0);
     assert(resources.storage_images.size() == 0);
-    // assert(resources.sampled_images.size() == 0);
+    //assert(resources.sampled_images.size() == 0);
     assert(resources.atomic_counters.size() == 0);
     assert(resources.acceleration_structures.size() == 0);
     assert(resources.separate_images.size() == 0);

@@ -192,7 +192,7 @@ static uint32_t s_Depth_FragmentShaderBytecode[] =
 namespace vk
 {
 
-    GraphicsSwapchain GraphicsSwapchain::Create(VkInstance Instance, VkAllocationCallbacks *allocation_callback, VkPhysicalDevice PhysicalDevice, VkDevice Device, VkQueue Queue, uint32_t QueueFamilyIndex, VkFormat Format, PlatformWindow *Window, int BackBufferCount, int SyncInterval, _FrameInformation** pOutFrameInfo, bool UsingImGui)
+    GraphicsSwapchain GraphicsSwapchain::Create(VkInstance Instance, VkAllocationCallbacks *allocation_callback, VkPhysicalDevice PhysicalDevice, VkDevice Device, VkQueue Queue, uint32_t QueueFamilyIndex, VkFormat Format, PlatformWindow *Window, int BackBufferCount, int SyncInterval, bool UsingImGui)
     {
         GraphicsSwapchain gfxswap;
         gfxswap.m_Instance = Instance;
@@ -205,8 +205,7 @@ namespace vk
         gfxswap.m_Format = Format;
         gfxswap.m_SyncInterval = SyncInterval;
         gfxswap.m_Window = Window;
-        gfxswap.m_SwapchainImageIndex = 0;
-        gfxswap.m_LastFrameIndex = 0;
+        gfxswap.m_ImageIndex = 0;
         gfxswap.m_UsingImGui = UsingImGui;
         assert(Device && PhysicalDevice && Queue && Instance && BackBufferCount > 0 && SyncInterval >= 0 && SyncInterval <= 4 && Window);
         /* Create Window Surface */
@@ -355,37 +354,24 @@ namespace vk
         CommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         vkcheck(vkCreateCommandPool(Device, &CommandPoolCreateInfo, allocation_callback, &gfxswap.m_CommandPool));
 
-        gfxswap.m_CommandBuffers = new VkCommandBuffer[BackBufferCount];
         VkCommandBufferAllocateInfo AllocateInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
         AllocateInfo.commandPool = gfxswap.m_CommandPool;
         AllocateInfo.commandBufferCount = BackBufferCount;
         AllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vkcheck(vkAllocateCommandBuffers(Device, &AllocateInfo, gfxswap.m_CommandBuffers));
+        gfxswap.m_CommandBuffers.resize(BackBufferCount);
+        vkcheck(vkAllocateCommandBuffers(Device, &AllocateInfo, gfxswap.m_CommandBuffers.data()));
 
         gfxswap.CreatePipeline(allocation_callback);
 
-        gfxswap.m_FrameInfo = new _FrameInformation();
-        gfxswap.m_FrameInfo->m_FrameCount = BackBufferCount;
-        gfxswap.m_FrameInfo->m_LastFrameIndex = 0;
-        gfxswap.m_FrameInfo->m_FrameIndex = 0;
-        gfxswap.m_FrameInfo->m_Initalized = true;
-        if (pOutFrameInfo)
-            *pOutFrameInfo = gfxswap.m_FrameInfo;
-
-        // Frame Sync
-        gfxswap.m_FrameCount = 0;
-        // The is size of the following is equal to m_BackBufferCount
-        gfxswap.m_FrameFences = new VkFence[BackBufferCount];
-        gfxswap.m_FrameSemaphores = new VkSemaphore[BackBufferCount];
-        gfxswap.m_FrameSwapchainCompleteSemaphores = new VkSemaphore[BackBufferCount];
-
-        for (int i = 0; i < BackBufferCount; i++)
+        gfxswap.m_QueuePresentWaitSemphores.resize(gfxswap.m_BackBufferCount); 
+        gfxswap.m_CmdFences.resize(gfxswap.m_BackBufferCount);
+        for (unsigned int i = 0; i < gfxswap.m_BackBufferCount; i++)
         {
-            VkFenceCreateInfo fenceCreateInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-            vkcheck(vkCreateFence(Device, &fenceCreateInfo, allocation_callback, &gfxswap.m_FrameFences[i]));
             VkSemaphoreCreateInfo semaphoreCreateInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-            vkcheck(vkCreateSemaphore(Device, &semaphoreCreateInfo, allocation_callback, &gfxswap.m_FrameSemaphores[i]));
-            vkcheck(vkCreateSemaphore(Device, &semaphoreCreateInfo, allocation_callback, &gfxswap.m_FrameSwapchainCompleteSemaphores[i]));
+            vkCreateSemaphore(Device, &semaphoreCreateInfo, nullptr, &gfxswap.m_QueuePresentWaitSemphores[i]);
+            VkFenceCreateInfo fenceCreateInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            vkCreateFence(Device, &fenceCreateInfo, nullptr, &gfxswap.m_CmdFences[i]);
         }
 
         // cleanup/free memory
@@ -705,44 +691,37 @@ namespace vk
 
     }
 
-    bool GraphicsSwapchain::PrepareNextFrame(uint32_t *pNextImageIndex, VkSemaphore *pSwapchainReadySemaphore)
+    VkResult GraphicsSwapchain::PrepareNextFrame(uint64_t TimeOut, VkSemaphore NextFrameReadySemaphore, VkFence NextFrameReadyFence, uint32_t* pOutImageIndex)
     {
         PROFILE_FUNCTION();
-        assert(pNextImageIndex && pSwapchainReadySemaphore);
-        uint32_t FrameIndex = m_FrameCount % m_BackBufferCount;
-        uint32_t ImageIndex;
-        VkResult result;
-        result = vkAcquireNextImageKHR(m_Device, m_Swapchain, 5000'000'000, m_FrameSemaphores[FrameIndex], nullptr/*m_FrameFences[FrameIndex]*/, &ImageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, TimeOut, NextFrameReadySemaphore, NextFrameReadyFence, pOutImageIndex);
         if (result != VK_SUCCESS)
         {
-            return false;
+            return result;
         }
         if (m_UsingImGui)
             Gui_VKBeginGUIFrame();
-        m_SwapchainImageIndex = ImageIndex;
-        *pNextImageIndex = FrameIndex;
-        *pSwapchainReadySemaphore = m_FrameSemaphores[ImageIndex];
-        return true;
+        m_ImageIndex = *pOutImageIndex;
+        return result;
     }
 
     void GraphicsSwapchain::Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline)
     {
         PROFILE_FUNCTION();
-        uint32_t FrameIndex = m_FrameCount % m_BackBufferCount;
-        m_LastFrameIndex = FrameIndex;
-
         {
             PROFILE_SCOPE("[Vulkan] Swapchain Present Pass");
+            vkWaitForFences(m_Device, 1, &m_CmdFences[m_ImageIndex], true, 1e9);
+            vkResetFences(m_Device, 1, &m_CmdFences[m_ImageIndex]);
             VkCommandBufferBeginInfo CmdBeginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
             CmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            vkResetCommandBuffer(m_CommandBuffers[FrameIndex], 0);
-            vkBeginCommandBuffer(m_CommandBuffers[FrameIndex], &CmdBeginInfo);
+            vkResetCommandBuffer(m_CommandBuffers[m_ImageIndex], 0);
+            vkBeginCommandBuffer(m_CommandBuffers[m_ImageIndex], &CmdBeginInfo);
 
             VkRenderPassBeginInfo PassBeginInfo;
             PassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             PassBeginInfo.pNext = NULL;
             PassBeginInfo.renderPass = m_PresentPass;
-            PassBeginInfo.framebuffer = m_Framebuffers[FrameIndex];
+            PassBeginInfo.framebuffer = m_Framebuffers[m_ImageIndex];
             PassBeginInfo.renderArea.offset = {0, 0};
             PassBeginInfo.renderArea.extent = {m_FramebufferWidth, m_FramebufferHeight};
             PassBeginInfo.clearValueCount = 0;
@@ -754,7 +733,7 @@ namespace vk
             ImageWriteInfo.imageView = ColorTextureView;
             ImageWriteInfo.imageLayout = ImageLayout;
             VkWriteDescriptorSet DescriptorWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-            DescriptorWrite.dstSet = m_DescriptorSets[FrameIndex];
+            DescriptorWrite.dstSet = m_DescriptorSets[m_ImageIndex];
             DescriptorWrite.descriptorCount = 1;
             DescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             DescriptorWrite.pImageInfo = &ImageWriteInfo;
@@ -764,21 +743,21 @@ namespace vk
                 vkUpdateDescriptorSets(m_Device, 1, &DescriptorWrite, 0, NULL);
             }
 
-            vkCmdBeginRenderPass(m_CommandBuffers[FrameIndex], &PassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(m_CommandBuffers[FrameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, DepthPipeline ? m_PresentDepthPipeline : m_PresentPipeline);
-            vkCmdBindDescriptorSets(m_CommandBuffers[FrameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_Layout, 0, 1, &m_DescriptorSets[FrameIndex], 0, NULL);
-            vkCmdDraw(m_CommandBuffers[FrameIndex], 6, 1, 0, 0);
+            vkCmdBeginRenderPass(m_CommandBuffers[m_ImageIndex], &PassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBindPipeline(m_CommandBuffers[m_ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, DepthPipeline ? m_PresentDepthPipeline : m_PresentPipeline);
+            vkCmdBindDescriptorSets(m_CommandBuffers[m_ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_Layout, 0, 1, &m_DescriptorSets[m_ImageIndex], 0, NULL);
+            vkCmdDraw(m_CommandBuffers[m_ImageIndex], 6, 1, 0, 0);
         }
 
         {
             PROFILE_SCOPE("[Vulkan] Swapchain ImGui Recording.");
             if (m_UsingImGui)
-                Gui_VKEndGUIFrame(m_CommandBuffers[FrameIndex]);
+                Gui_VKEndGUIFrame(m_CommandBuffers[m_ImageIndex]);
         }
 
-        vkCmdEndRenderPass(m_CommandBuffers[FrameIndex]);
+        vkCmdEndRenderPass(m_CommandBuffers[m_ImageIndex]);
 
-        vkEndCommandBuffer(m_CommandBuffers[FrameIndex]);
+        vkEndCommandBuffer(m_CommandBuffers[m_ImageIndex]);
 
         VkPipelineStageFlags pWaitDstStageMask[60];
         for(uint32_t i = 0; i < WaitSemaphoreCount; i++)
@@ -788,19 +767,19 @@ namespace vk
         SubmitInfo.waitSemaphoreCount = WaitSemaphoreCount;
         SubmitInfo.pWaitSemaphores = pWaitSemaphores;
         SubmitInfo.commandBufferCount = 1;
-        SubmitInfo.pCommandBuffers = &m_CommandBuffers[FrameIndex];
+        SubmitInfo.pCommandBuffers = &m_CommandBuffers[m_ImageIndex];
         SubmitInfo.signalSemaphoreCount = 1;
-        SubmitInfo.pSignalSemaphores = &m_FrameSwapchainCompleteSemaphores[FrameIndex];
+        SubmitInfo.pSignalSemaphores = &m_QueuePresentWaitSemphores[m_ImageIndex];
         SubmitInfo.pWaitDstStageMask = pWaitDstStageMask;
 
-        vkQueueSubmit(m_Queue, 1, &SubmitInfo, 0);
+        vkQueueSubmit(m_Queue, 1, &SubmitInfo, m_CmdFences[m_ImageIndex]);
 
         VkPresentInfoKHR PresentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
         PresentInfo.waitSemaphoreCount = 1;
-        PresentInfo.pWaitSemaphores = &m_FrameSwapchainCompleteSemaphores[FrameIndex];
+        PresentInfo.pWaitSemaphores = &m_QueuePresentWaitSemphores[m_ImageIndex];
         PresentInfo.swapchainCount = 1;
         PresentInfo.pSwapchains = &m_Swapchain;
-        PresentInfo.pImageIndices = &m_SwapchainImageIndex;
+        PresentInfo.pImageIndices = &m_ImageIndex;
         
         {
             PROFILE_SCOPE("[Vulkan] Swapchain vkQueuePresentKHR");
@@ -827,7 +806,7 @@ namespace vk
         }
         
         NoResize:
-        m_FrameCount++;
+        return;
     }
 
     void GraphicsSwapchain::Destroy()
@@ -845,15 +824,11 @@ namespace vk
         delete[] m_SwapchainImages;
         for (uint32_t i = 0; i < m_BackBufferCount; i++)
         {
+            vkDestroySemaphore(m_Device, m_QueuePresentWaitSemphores[i], nullptr);
+            vkDestroyFence(m_Device, m_CmdFences[i], nullptr);
             vkDestroyImageView(m_Device, m_Views[i], m_allocation_callback);
             vkDestroyFramebuffer(m_Device, m_Framebuffers[i], m_allocation_callback);
-            vkDestroyFence(m_Device, m_FrameFences[i], m_allocation_callback);
-            vkDestroySemaphore(m_Device, m_FrameSemaphores[i], m_allocation_callback);
-            vkDestroySemaphore(m_Device, m_FrameSwapchainCompleteSemaphores[i], m_allocation_callback);
         }
-        delete[] m_FrameSemaphores;
-        delete[] m_FrameFences;
-        delete[] m_FrameSwapchainCompleteSemaphores;
         vkDestroySwapchainKHR(m_Device, m_Swapchain, m_allocation_callback);
         vkDestroySurfaceKHR(m_Instance, m_WindowSurface, m_allocation_callback);
         vkDestroySampler(m_Device, m_ColorTextureSampler, m_allocation_callback);
@@ -862,8 +837,6 @@ namespace vk
         delete[] m_Framebuffers;
         delete[] m_Views;
         vkDestroyCommandPool(m_Device, m_CommandPool, m_allocation_callback);
-        delete[] m_CommandBuffers;
-        delete m_FrameInfo;
     }
 
 }

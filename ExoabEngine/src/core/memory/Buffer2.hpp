@@ -9,7 +9,7 @@ struct GPUBuffer2
 	size_t size;
 	BufferMemoryType memoryType;
 	VkAlloc::BUFFER m_vk_buffer;
-	bool m_coherent = false;
+	bool m_mapped = false;
 } typedef* IBuffer2;
 
 IBuffer2 Buffer2_Create(GraphicsContext context, BufferType type, size_t size, BufferMemoryType memoryType);

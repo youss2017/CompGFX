@@ -92,7 +92,7 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 		createInfo.pQueueFamilyIndices = nullptr;
 		createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkImage image;
-		for (unsigned int i = 1; i < cont->FrameInfo->m_FrameCount; i++) {
+		for (unsigned int i = 1; i < gFrameOverlapCount; i++) {
 			vkCreateImage(cont->defaultDevice, &createInfo, nullptr, &image);
 			auto& suballoc = texture->m_vk_image->m_suballocation;
 			vkBindImageMemory(cont->defaultDevice, image, suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
@@ -120,7 +120,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	// Create cmd_buffer and pool
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(context, true, false);
 	VkCommandBuffer cmd_buffer = vk::Gfx_AllocCommandBuffer(context, pool, true);
-	VkFence fence = vk::Gfx_CreateFence(context);
+	VkFence fence = vk::Gfx_CreateFence(context, false);
 	// transition image into suitable layout
 	VkAccessFlags CurrentAccessFlag = 0;
 	VkPipelineStageFlags CurrentPipelineStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -186,7 +186,7 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 	VkContext context = (VkContext)texture->m_context;
 	VkCommandPool pool = Gfx_CreateCommandPool(context, true, false);
 	VkCommandBuffer cmd = Gfx_AllocCommandBuffer(context, pool, true);
-	VkFence fence = Gfx_CreateFence(context);
+	VkFence fence = Gfx_CreateFence(context, false);
 
 	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 

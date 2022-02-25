@@ -193,9 +193,7 @@ IFramebuffer Vulkan_Framebuffer_Create(GraphicsContext context, uint32_t width, 
 {
     auto vcont = ToVKContext(context);
     auto attachment_descriptions = StateManagment->m_attachments;
-    int FrameCount = vcont->FrameInfo->m_FrameCount;
-    // std::vector<VkImage> images;
-    // std::vector<VkImageView> views;
+    int FrameCount = gFrameOverlapCount;
 
     auto IsAttachmentColor = [](FramebufferAttachment & attachment) throw()->bool
     {
@@ -266,13 +264,6 @@ IFramebuffer Vulkan_Framebuffer_Create(GraphicsContext context, uint32_t width, 
     return fbo;
 }
 
-APIHandle Vulkan_Framebuffer_Get(IFramebuffer framebuffer)
-{
-    auto vcont = ToVKContext(framebuffer->m_context);
-    int frameindex = vcont->FrameInfo->m_FrameIndex;
-    return (APIHandle)framebuffer->m_framebuffers[frameindex];
-}
-
 void Vulkan_Framebuffer_Destroy(IFramebuffer framebuffer)
 {
     auto vcont = ToVKContext(framebuffer->m_context);
@@ -289,7 +280,6 @@ void Vulkan_Framebuffer_Destroy(IFramebuffer framebuffer)
 
 
 PFN_Framebuffer_Create *Framebuffer_Create = nullptr;
-PFN_Framebuffer_Get *Framebuffer_Get = nullptr;
 PFN_Framebuffer_Destroy *Framebuffer_Destroy = nullptr;
 
 void Framebuffer_LinkFunctions(GraphicsContext context)
@@ -298,7 +288,6 @@ void Framebuffer_LinkFunctions(GraphicsContext context)
     if (ApiType == 0)
     {
         Framebuffer_Create = Vulkan_Framebuffer_Create;
-        Framebuffer_Get = Vulkan_Framebuffer_Get;
         Framebuffer_Destroy = Vulkan_Framebuffer_Destroy;
     }
     else if (ApiType == 1)

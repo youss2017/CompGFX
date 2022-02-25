@@ -32,7 +32,7 @@ namespace VkAlloc
 		//					VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
 		createInfo.physicalDevice = physicalDevice;
 		createInfo.device = device;
-		createInfo.preferredLargeHeapBlockSize = context->m_HeapBlockAllocationSize;
+		createInfo.preferredLargeHeapBlockSize = 0;
 		createInfo.pAllocationCallbacks = nullptr;
 		createInfo.pDeviceMemoryCallbacks = nullptr;
 		createInfo.pHeapSizeLimit = nullptr;
@@ -85,13 +85,13 @@ namespace VkAlloc
 			// TODO: Look into VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT 
 			switch (desc.m_properties) {
 				case DEVICE_MEMORY_PROPERTY::CPU_ONLY:
-					vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+					vmaCreateInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 					buffer->m_suballocation.m_host_visible = true;
 					break;
 				case DEVICE_MEMORY_PROPERTY::CPU_TO_GPU:
-					vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+					vmaCreateInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 					buffer->m_suballocation.m_host_visible = true;

@@ -191,9 +191,5 @@ struct Texture2DSpecification
 
 namespace vk
 {
-	uint32_t FindMemoryType(uint32_t typeFilter, VkPhysicalDevice physicalDevice, VkMemoryPropertyFlags properties);
 	uint32_t AlignSizeToUniformAlignment(GraphicsContext context, uint32_t size);
-	uint32_t GetFrameCount(GraphicsContext context);
-	_FrameInformation* GetFrameInfo(GraphicsContext context);
-	uint32_t GetCurrentFrameIndex(GraphicsContext context);
 }

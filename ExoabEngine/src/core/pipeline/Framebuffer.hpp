@@ -130,11 +130,9 @@ struct Framebuffer
 typedef Framebuffer *IFramebuffer;
 
 typedef IFramebuffer PFN_Framebuffer_Create(GraphicsContext context, uint32_t width, uint32_t height, IFramebufferStateManagement StateManagment);
-typedef APIHandle PFN_Framebuffer_Get(IFramebuffer framebuffer);
 typedef void PFN_Framebuffer_Destroy(IFramebuffer framebuffer);
 
 extern PFN_Framebuffer_Create* Framebuffer_Create;
-extern PFN_Framebuffer_Get* Framebuffer_Get;
 extern PFN_Framebuffer_Destroy* Framebuffer_Destroy;
 
 inline VkImage Framebuffer_GetImage(IFramebuffer framebuffer, uint32_t AttachmentIndex, int FrameIndex)

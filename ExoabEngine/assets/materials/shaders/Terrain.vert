@@ -6,10 +6,10 @@
 
 struct Vertex
 {
-    f16vec3 inPosition;
-    u8vec3 inNormal;
-    u8vec3 inTextureIDs;
-    u8vec3 inTextureWeights;
+    f16vec4 inPosition;
+    u8vec4 inNormal;
+    u8vec4 inTextureIDs;
+    u8vec4 inTextureWeights;
     f16vec2 inTexCoords;
 };
 
@@ -40,5 +40,5 @@ void main()
     TextureIDs = uvec3(vertex.inTextureIDs.x, vertex.inTextureIDs.y, vertex.inTextureIDs.z);
     TextureWeights = vec3(uint(vertex.inTextureWeights.x), uint(vertex.inTextureWeights.y), uint(vertex.inTextureWeights.z)) / 255.0;
     TexCoord = vec2(float(vertex.inTexCoords.x), float(vertex.inTexCoords.y));
-    gl_Position = u_Projection * u_View * u_Model * vec4(vertex.inPosition, 1.0);
+    gl_Position = u_Projection * u_View * u_Model * vec4(vertex.inPosition);
 }

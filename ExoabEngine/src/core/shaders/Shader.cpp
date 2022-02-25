@@ -8,7 +8,7 @@
 #include <chrono>
 #include <random>
 
-constexpr bool OptimizeShaders = true;
+constexpr bool OptimizeShaders = false;
 constexpr bool PrintGLSLShader = false;
 
 /* SPIR-V Catalog Format

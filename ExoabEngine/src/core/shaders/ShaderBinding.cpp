@@ -3,7 +3,7 @@
 ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uint32_t setID, std::vector<ShaderBinding>& shader_bindings)
 {
     ShaderSet set = new _ShaderSet();
-    auto framecount = context->FrameInfo->m_FrameCount;
+    auto framecount = gFrameOverlapCount;
     // 1) Create setlayout
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     std::vector<IBuffer2> buffers;
@@ -20,7 +20,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
-                    for (uint32_t i = 0; i < framecount; i++)
+                    for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -29,7 +29,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
-                    for (uint32_t i = 0; i < framecount; i++)
+                    for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -38,7 +38,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
-                    for (uint32_t i = 0; i < framecount; i++)
+                    for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -47,7 +47,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
                 if (!bind.m_useclientbuffer) {
                     bind.m_buffer = new IBuffer2[framecount];
-                    for (uint32_t i = 0; i < framecount; i++)
+                    for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
@@ -86,10 +86,10 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
     allocateInfo.descriptorSetCount = 1;
     allocateInfo.pSetLayouts = &setlayout;
     set->m_set = new VkDescriptorSet[framecount];
-    for(uint32_t i = 0; i < framecount; i++)
+    for(int32_t i = 0; i < framecount; i++)
         vkcheck(vkAllocateDescriptorSets(context->defaultDevice, &allocateInfo, &set->m_set[i]));
     // 3) Write to sets
-    for (uint32_t i = 0; i < framecount; i++)
+    for (int32_t i = 0; i < framecount; i++)
     {
         VkWriteDescriptorSet write;
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -172,7 +172,7 @@ void ShaderBinding_DestroySets(vk::VkContext context, std::vector<ShaderSet> set
         {
             if (binding.m_textures.size() > 0 || binding.m_useclientbuffer)
                 continue;
-            for(unsigned int q = 0; q < context->FrameInfo->m_FrameCount; q++)
+            for(unsigned int q = 0; q < gFrameOverlapCount; q++)
                 Buffer2_Destroy(binding.m_buffer[q]);
         }
         vkDestroyDescriptorSetLayout(context->defaultDevice, set->m_setlayout, nullptr);

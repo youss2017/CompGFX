@@ -7,11 +7,11 @@
 
 struct TerrainVertex
 {
-    glm::lowp_fvec3 inPosition;
-    glm::u8vec3 inNormal;
-    glm::u8vec3 inTextureIDs;
-    glm::u8vec3 inTextureWeights;
-    glm::lowp_fvec2 inTexCoords;
+    uint16_t inPosition[4];
+    uint8_t inNormal[4];
+    uint8_t inTextureIDs[4];
+    uint8_t inTextureWeights[4];
+    uint16_t inTexCoords[2];
 };
 
 struct Terrain
@@ -19,7 +19,7 @@ struct Terrain
     GraphicsContext m_context;
     int m_width, m_height;
     std::vector<TerrainVertex> m_vertices;
-    std::vector<uint16_t> m_indices;
+    std::vector<uint32_t> m_indices;
     IBuffer2 m_vertices_ssbo;
     IBuffer2 m_indices_buffer;
     ShaderSet m_Set0;

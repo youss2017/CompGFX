@@ -29,7 +29,6 @@ IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, 
 	buffer->size = size;
 	buffer->type = type;
 	VkAlloc::CreateBuffers(context->m_future_memory_context, 1, &desc, &buffer->m_vk_buffer);
-	buffer->m_coherent = buffer->m_vk_buffer->m_suballocation.m_coherent;
 	return buffer;
 }
 
@@ -44,7 +43,7 @@ void Buffer2_UploadData(IBuffer2 buffer, char8_t *pData, size_t offset, size_t s
 	}
 	IBuffer2 intermediate = Buffer2_Create(buffer->m_context, BufferType::INTE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY);
 	Buffer2_UploadData(intermediate, pData, 0, size);
-	VkFence fence = vk::Gfx_CreateFence(ToVKContext(buffer->m_context));
+	VkFence fence = vk::Gfx_CreateFence(ToVKContext(buffer->m_context), false);
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(ToVKContext(buffer->m_context), true, false);
 	VkCommandBuffer cmd = vk::Gfx_AllocCommandBuffer(ToVKContext(buffer->m_context), pool, true);
 	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -68,26 +67,24 @@ char8_t *Buffer2_Map(IBuffer2 buffer)
 	if (*mapped_pointer)
 		return *mapped_pointer;
 	VkAlloc::MapBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
+	buffer->m_mapped = true;
 	return *mapped_pointer;
 }
 
 void Buffer2_Flush(IBuffer2 buffer, int offset, int size)
 {
-	if (buffer->m_coherent)
-		return;
 	VkAlloc::FlushBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, offset, size);
 }
 
 void Buffer2_Invalidate(IBuffer2 buffer, int offset, int size)
 {
-	if (buffer->m_coherent)
-		return;
 	VkAlloc::InvalidateBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, offset, size);
 }
 
 void Buffer2_Unmap(IBuffer2 buffer)
 {
 	assert(buffer->memoryType != BufferMemoryType::GPU_ONLY && "Cannot be static.");
+	buffer->m_mapped = false;
 	VkAlloc::UnmapBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
 }
 
@@ -98,5 +95,7 @@ void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size)
 
 void Buffer2_Destroy(IBuffer2 buffer)
 {
+	if (buffer->m_mapped)
+		Buffer2_Unmap(buffer);
 	VkAlloc::DestroyBuffers(ToVKContext(buffer->m_context)->m_future_memory_context, 1, &buffer->m_vk_buffer);
 }

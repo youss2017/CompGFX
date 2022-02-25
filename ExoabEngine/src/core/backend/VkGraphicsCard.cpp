@@ -95,7 +95,7 @@ namespace vk
 			logwarning("Enabling Validation Layers requires the VulkanSDK to be installed or validation .dlls/.so");
 			logwarning("If VulkanSDK is not installed, then validation layers will be prevent the application from running and cause a crash.");
 		}
-		VkContext context = (VkContext)malloc(sizeof(_tagVkContext));
+		VkContext context = (VkContext)malloc(sizeof(_VkContext));
 		assert(context);
 		context->m_ApiType = 0;
 		if (!context)
@@ -387,9 +387,10 @@ namespace vk
 		return renderPass;
 	}
 
-	VkFence Gfx_CreateFence(VkContext context)
+	VkFence Gfx_CreateFence(VkContext context, bool signaled)
 	{
 		VkFenceCreateInfo createInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+		createInfo.flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
 		VkFence fence;
 		vkcheck(vkCreateFence(context->defaultDevice, &createInfo, context->m_allocation_callback, &fence));
 		return fence;
@@ -747,21 +748,6 @@ namespace vk
 		}
 		else
 			return size;
-	}
-
-	uint32_t GetFrameCount(GraphicsContext context)
-	{
-		return (*(char *)context == 0) ? ToVKContext(context)->FrameInfo->m_FrameCount : 1;
-	}
-
-	_FrameInformation *GetFrameInfo(GraphicsContext context)
-	{
-		return (*(char *)context == 0) ? ToVKContext(context)->FrameInfo : nullptr;
-	}
-
-	uint32_t GetCurrentFrameIndex(GraphicsContext context)
-	{
-		return (*(char *)context == 0) ? ToVKContext(context)->FrameInfo->m_FrameIndex : 0;
 	}
 
 }

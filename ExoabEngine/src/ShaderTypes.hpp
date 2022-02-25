@@ -26,6 +26,14 @@ namespace ShaderTypes {
 			uint16_t ObjectDataIndex;
 		};
 
+		struct TerrainTransform
+		{
+			mat4 u_View;
+			mat4 u_Model;
+			mat4 u_NormalModel;
+			mat4 u_Projection;
+		};
+
 	};
 
 }

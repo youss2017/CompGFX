@@ -59,10 +59,9 @@ namespace vk {
 
 	class Swapchain;
 
-	struct _tagVkContext
+	struct _VkContext
 	{
 		char m_ApiType = 0; // 0 for vulkan, 1 for opengl
-		_FrameInformation* FrameInfo;
 		VkInstance instance;
 		PlatformWindow* window;
 		VkDebugUtilsMessengerEXT debugMessenger;
@@ -71,7 +70,6 @@ namespace vk {
 		VkQueue defaultQueue;
 		uint32_t defaultQueueFamilyIndex;
 		uint32_t m_MaxMSAASamples;
-		uint32_t* pFrameIndex = nullptr;
 		bool debugEnabled;
 		VkAlloc::CONTEXT m_future_memory_context;
 		VkAllocationCallbacks* m_allocation_callback;
@@ -106,7 +104,7 @@ namespace vk {
 		const uint32_t*                 pPreserveAttachments;
 	*/
 
-	VkFence Gfx_CreateFence(VkContext context);
+	VkFence Gfx_CreateFence(VkContext context, bool signaled);
 	VkSemaphore Gfx_CreateSemaphore(VkContext context, bool TimelineSemaphore);
 
 	VkCommandPool Gfx_CreateCommandPool(VkContext context, bool memoryShortLived, bool enableIndividualReset, bool makeProtected = false);

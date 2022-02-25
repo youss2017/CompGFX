@@ -13,12 +13,6 @@
 static constexpr VkFormat cs_SwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
 // =============================================== Graphics3D ===============================================
-constexpr int OpenGL_MajorVersion = 3;
-constexpr int OpenGL_MinorVersion = 3;
-
-PFN_Graphics3D_WaitGPUIdle *Graphics3D_WaitGPUIdle = nullptr;
-PFN_Graphics3D_SetSyncInterval *Graphics3D_SetSyncInterval = nullptr;
-PFN_Graphics3D_Destroy *Graphics3D_Destroy = nullptr;
 
 #if PROFILE_ENABLED == 2
 void Graphics3D_Internal_DisplayProfileResults();
@@ -30,7 +24,6 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     PlatformWindow *Window;
     Window = new PlatformWindow(Title, config->ResolutionWidth, config->ResolutionHeight);
     gfx->m_window = Window;
-    gfx->m_EnableImGui = EnableImGui;
     if (config->FutureFrameCount == 1)
     {
         logwarning("Future Frame Count must at least be 2");
@@ -68,7 +61,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.descriptorIndexing = VK_TRUE;
     vulkan12features.runtimeDescriptorArray = VK_TRUE;
     vulkan12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-    vulkan12features.bufferDeviceAddress = VK_TRUE;
+    //vulkan12features.bufferDeviceAddress = VK_TRUE;
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -78,14 +71,9 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     Synchronization2Feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
     Synchronization2Feature.pNext = &DrawParameters;
     Synchronization2Feature.synchronization2 = VK_FALSE;
-    VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT DivisorFeature;
-    DivisorFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT;
-    DivisorFeature.pNext = &Synchronization2Feature;
-    DivisorFeature.vertexAttributeInstanceRateDivisor = VK_TRUE;
-    DivisorFeature.vertexAttributeInstanceRateZeroDivisor = VK_TRUE;
     VkPhysicalDeviceFeatures2 features{};
     features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features.pNext = &Synchronization2Feature;//&DivisorFeature;
+    features.pNext = &Synchronization2Feature;
     features.features.fillModeNonSolid = VK_TRUE;
     features.features.samplerAnisotropy = VK_TRUE;
     features.features.sampleRateShading = VK_TRUE;
@@ -107,21 +95,28 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
                                                 VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
                                                 VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
-                                                VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
                                                 VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
                                                 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
                                                 // TODO: Only enable this if supported.
-                                                VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
-                                                VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-                                                VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME},
+                                                //VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
+                                                //VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+                                                //VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME
+                                                },
                                                features, VK_API_VERSION_1_2);
     Graphics3D_LinkFunctions(gfx);
     auto vcont = ToVKContext(gfx->m_context);
-    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, config->FutureFrameCount, config->VSync, &vcont->FrameInfo, EnableImGui);
-    config->FutureFrameCount = vcont->FrameInfo->m_FrameCount;
-    gfx->m_FrameInfo = vcont->FrameInfo;
-    vcont->pFrameIndex = &vcont->FrameInfo->m_FrameIndex;
-  
+    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);
+    
+    for (int i = 0; i < gFrameOverlapCount; i++)
+    {
+        gfx->m_FrameData[i].m_FrameIndex = i;
+        gfx->m_FrameData[i].m_PresentSemaphore = vk::Gfx_CreateSemaphore(vcont, false);
+        gfx->m_FrameData[i].m_RenderSemaphore = vk::Gfx_CreateSemaphore(vcont, false);
+        gfx->m_FrameData[i].m_RenderFence = vk::Gfx_CreateFence(vcont, true);
+        gfx->m_FrameData[i].m_pool = vk::Gfx_CreateCommandPool(vcont, false, true, false);
+        gfx->m_FrameData[i].m_cmd = vk::Gfx_AllocCommandBuffer(vcont, gfx->m_FrameData[i].m_pool, true);
+    }
+    
     return gfx;
 }
 
@@ -134,28 +129,40 @@ bool Graphics3D_PollEvents(IGraphics3D gfx)
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ VULKAN ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-void Vulkan_Graphics3D_WaitGPUIdle(IGraphics3D gfx)
+void Graphics3D_WaitGPUIdle(IGraphics3D gfx)
 {
     PROFILE_FUNCTION();
     vkDeviceWaitIdle(ToVKContext(gfx->m_context)->defaultDevice);
 }
 
-void Vulkan_Graphics3D_SetSyncInterval(IGraphics3D gfx, int SyncInterval)
+void Graphics3D_SetSyncInterval(IGraphics3D gfx, int SyncInterval)
 {
     // wait device idle and recreate swapchain with a different sync interval
     Graphics3D_WaitGPUIdle(gfx); // this is much easier than trying to synchronize and not wait idle.
     gfx->m_vswapchain.Destroy();
     auto vcont = ToVKContext(gfx->m_context);
-    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, gfx->m_window, gfx->m_FrameInfo->m_FrameCount, SyncInterval, &vcont->FrameInfo, gfx->m_EnableImGui);
+    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, gfx->m_window, gFrameOverlapCount, SyncInterval, true);
 }
 
-void Vulkan_Graphics3D_Destroy(IGraphics3D gfx)
+void Graphics3D_Destroy(IGraphics3D gfx)
 {
     Graphics3D_WaitGPUIdle(gfx);
     gfx->m_vswapchain.Destroy();
+    for (int i = 0; i < gFrameOverlapCount; i++)
+    {
+        vkDestroySemaphore(ToVKContext(gfx->m_context)->defaultDevice, gfx->m_FrameData[i].m_PresentSemaphore, nullptr);
+        vkDestroySemaphore(ToVKContext(gfx->m_context)->defaultDevice, gfx->m_FrameData[i].m_RenderSemaphore, nullptr);
+        vkDestroyFence(ToVKContext(gfx->m_context)->defaultDevice, gfx->m_FrameData[i].m_RenderFence, nullptr);
+        vkDestroyCommandPool(ToVKContext(gfx->m_context)->defaultDevice, gfx->m_FrameData[i].m_pool, nullptr);
+    }
     vk::Gfx_DestroyContext(ToVKContext(gfx->m_context));
     delete gfx->m_window;
     delete gfx;
+}
+
+FrameData& Graphics3D_GetFrame(IGraphics3D gfx)
+{
+    return gfx->m_FrameData[gfx->m_FrameCount % gFrameOverlapCount];
 }
 
 bool Graphics3D_CheckVulkanSupport()
@@ -165,19 +172,6 @@ bool Graphics3D_CheckVulkanSupport()
 
 void Graphics3D_LinkFunctions(IGraphics3D gfx)
 {
-    if (gfx->m_ApiType == 0)
-    {
-        Graphics3D_WaitGPUIdle = Vulkan_Graphics3D_WaitGPUIdle;
-        Graphics3D_SetSyncInterval = Vulkan_Graphics3D_SetSyncInterval;
-        Graphics3D_Destroy = Vulkan_Graphics3D_Destroy;
-    }
-    else if (gfx->m_ApiType == 1)
-    {
-    }
-    else
-    {
-        Utils::Break();
-    }
     FramebufferStateManagment_LinkFunctions(gfx->m_context);
     Framebuffer_LinkFunctions(gfx->m_context);
     PipelineState_LinkFunctions(gfx->m_context);

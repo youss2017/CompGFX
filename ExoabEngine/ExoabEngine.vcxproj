@@ -126,7 +126,6 @@
     <ClInclude Include="src\core\memory\Buffer2.hpp" />
     <ClInclude Include="src\core\memory\cvector.h" />
     <ClInclude Include="src\core\memory\Texture2.hpp" />
-    <ClInclude Include="src\core\memory\vulkan_memory.h" />
     <ClInclude Include="src\core\memory\vulkan_memory_allocator.hpp" />
     <ClInclude Include="src\core\pipeline\Framebuffer.hpp" />
     <ClInclude Include="src\core\pipeline\Pipeline.hpp" />
@@ -194,7 +193,6 @@
     <ClCompile Include="src\core\MaxEnergyMath.cpp" />
     <ClCompile Include="src\core\memory\Buffer2.cpp" />
     <ClCompile Include="src\core\memory\Texture2.cpp" />
-    <ClCompile Include="src\core\memory\vulkan_memory.c" />
     <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />
     <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
     <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
