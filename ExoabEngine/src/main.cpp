@@ -15,8 +15,8 @@
 
 #include "utils/StringUtils.hpp"
 #include "utils/Profiling.hpp"
-#include "Exoab.hpp"
-#include "physics/Physics.hpp"
+#include "graphics/Graphics.hpp"
+#include "application/Application.hpp"
 #include <csignal>
 
 #ifdef _WIN32
@@ -41,13 +41,21 @@ int main(int argc, char** argv)
 #else
     PreparePOSIX(argc, argv);
 #endif
-    log_configure(true, true);
     /* Load Game Settings from settings.cfg */
     ConfigurationSettings config = LoadConfiguration();
-    if (!Physx_Initalize())
-        log_fatal(0x5, "Could not initalize physx!", __FILE__, __LINE__);
-    if(Exoab_Initalize(config) == false) {
-        log_error("Could not initalize Game");
+    if(!Application::Initalize(&config)) {
+        log_error("Could not initalize Application");
+        return 0x1;
+    }
+    if (!Application::LoadAssets())
+    {
+        log_error("Could not load assets.");
+        return 0x2;
+    }
+    if (!Application::CreateResources())
+    {
+        log_error("Could not create resources.");
+        return 0x3;
     }
     PROFILE_END_SESSION();
 
@@ -57,12 +65,10 @@ int main(int argc, char** argv)
     auto start = std::chrono::high_resolution_clock::now();
     double FrameRate = 0.0;
     double Checkpoint = 0;
-    Tristate state = Tristate::Enabled();
-    while (!state.disabled())
+    while (!Application::Quit)
     {
-        state = Exoab_Update(dTimeFromStart, dElapsedTime);
-        if (state.enabled())
-            Exoab_Render(dTimeFromStart, dElapsedTime, FrameRate);
+        if(Application::Update(dElapsedTime, FrameRate))
+            Application::Render();
         auto end = std::chrono::high_resolution_clock::now();
         dElapsedTime = (end - start).count();
         start = end;
@@ -75,8 +81,7 @@ int main(int argc, char** argv)
     }
     PROFILE_END_SESSION();
     PROFILE_BEGIN_SESSION("Cleanup", "Profiling-Cleanup.json");
-    Exoab_CleanUp();
-    Physx_Destroy();
+    Application::Destroy();
     PROFILE_END_SESSION();
     return 0;
 }
@@ -149,9 +154,9 @@ static void PreparePOSIX(int argc, char** argv)
 void PrepareDLLs();
 static void PrepareWin32(int argc, char** argv)
 {
-    CoInitializeEx(NULL, COINIT_MULTITHREADED);
     PrepareDLLs();
 #if 0
+    CoInitializeEx(NULL, COINIT_MULTITHREADED);
     if(timeBeginPeriod(1) == TIMERR_NOERROR)
         log_info("Succesfully increased windows timer resolution to 1 ms");
     else {

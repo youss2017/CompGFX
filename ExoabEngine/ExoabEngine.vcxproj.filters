@@ -15,19 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Exoab.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Camera.hpp">
+    <ClInclude Include="src\application\Camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\backend\backend_base.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\core\backend\GLGraphicsCard.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\core\backend\GLSwapchain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\backend\Swapchain.hpp">
@@ -156,10 +147,10 @@
     <ClInclude Include="external\meshoptimizer\src\meshoptimizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\ShaderTypes.hpp">
+    <ClInclude Include="src\application\ShaderTypes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\UI.hpp">
+    <ClInclude Include="src\application\UI.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\mesh\geometry.hpp">
@@ -183,24 +174,18 @@
     <ClInclude Include="external\VulkanMemoryAllocator\src\VmaUsage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\application\Application.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Camera.cpp">
+    <ClCompile Include="src\application\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\PrepareDLLs.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Exoab.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\core\backend\GLGraphicsCard.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\core\backend\GLSwapchain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\backend\Swapchain.cpp">
@@ -353,7 +338,7 @@
     <ClCompile Include="external\meshoptimizer\src\vfetchoptimizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\UI.cpp">
+    <ClCompile Include="src\application\UI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\mesh\geometry.cpp">
@@ -369,6 +354,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="external\VulkanMemoryAllocator\src\VmaUsage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\application\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,6 +1,5 @@
 #include "Pipeline.hpp"
 #include "../backend/VkGraphicsCard.hpp"
-#include "../backend/GLGraphicsCard.hpp"
 #include "../../utils/Logger.hpp"
 #include <cassert>
 #include <string>

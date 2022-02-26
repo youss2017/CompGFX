@@ -1,9 +1,12 @@
 #version 450 core
 
-layout (set = 1, binding = 0) uniform sampler2D tex0[1];
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout (set = 1, binding = 0) uniform sampler2D textures[];
 
 layout (location = 0) in vec3 Normal;
 layout (location = 1) in vec2 TexCoord;
+layout (location = 2) in flat uint TexIndex;
 
 const vec3 LightDir = vec3(0.0, -0.5, 0.5);
 
@@ -17,6 +20,5 @@ float LinearizeDepth(float depth, float near, float far)
 
 void main() {
 	float dp = clamp(dot(LightDir, Normal), 0.08, 1.0);
-	FragColor = (texture(tex0[0], TexCoord) * dp);
-	//FragColor = vec4(cos(TexCoord.x), sin(TexCoord.y), 0.0, 0.0) * dp;
+	FragColor = texture(textures[TexIndex], TexCoord) * dp;
 }	

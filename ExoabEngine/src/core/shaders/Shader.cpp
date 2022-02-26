@@ -2,7 +2,6 @@
 #include "../../utils/Logger.hpp"
 #include "../../utils/common.hpp"
 #include "../backend/VkGraphicsCard.hpp"
-#include "../backend/GLGraphicsCard.hpp"
 #include "../../utils/StringUtils.hpp"
 #include <spirv_cross/spirv_glsl.hpp>
 #include <chrono>
@@ -202,35 +201,7 @@ Shader::Shader(GraphicsContext context, const char *__ShaderPath, const char *En
         }
     }
 
-    // TODO: Maybe in the future cache glsl cache
-    if (m_ApiType == 1)
-    {
-        gl::GLContext ct = (gl::GLContext)context;
-        spirv_cross::CompilerGLSL glslcompiler(m_Bytecode.data(), m_Bytecode.size());
-        spirv_cross::CompilerGLSL::Options glsl_options;
-        glsl_options.version = 330;
-        glsl_options.es = false;
-        // TODO: Support GL_Uniform_Buffer_Object
-        /* This extension will enable layout(binding...) identifiers, whether we want to use the old glUniform... (false) or uniform buffer objects. (true) */
-        glsl_options.enable_420pack_extension = ct->SupportShadingLanguage420Pack;
-        glsl_options.emit_push_constant_as_uniform_buffer = true;
-        glsl_options.emit_uniform_buffer_as_plain_uniforms = true; // TODO: Support Uniform Buffer Objects !ct->SupportUniformBufferObject;
-        glsl_options.vertex.flip_vert_y = false;
-        glslcompiler.set_common_options(glsl_options);
-        // Two Options, Compile opengl_glsl_source to OpenGL compatable SPIRV (glShaderBinary) or just use the OpenGL source code with (glShaderSource)
-        // OpenGL and SPIRV don't mix
-        m_Source = glslcompiler.compile();
-        if (PrintGLSLShader) {
-            std::stringstream ss;
-            ss << "=================== GLSL 330 Shader Code " << __ShaderPath << " ===================\n" << m_Source;
-            lograws(ss.str());
-        }
-    }
-
-    if (ApiType == 0)
-        InitalizeVulkan();
-    else
-        InitalizeOpenGL();
+    InitalizeVulkan();
 }
 
 std::string Shader::ProcessIncludeDirectives(std::string source_code, std::string root_directory)
@@ -287,38 +258,6 @@ void Shader::InitalizeVulkan()
     VkShaderModule m;
     vkcheck(vkCreateShaderModule(context->defaultDevice, &createInfo, context->m_allocation_callback, &m));
     m_ShaderHandle = (APIHandle)m;
-}
-
-void Shader::InitalizeOpenGL()
-{
-    GLenum type;
-    switch (m_ShaderKind)
-    {
-    case shaderc_vertex_shader:
-        type = GL_VERTEX_SHADER;
-        break;
-    case shaderc_fragment_shader:
-        type = GL_FRAGMENT_SHADER;
-        break;
-    default:
-        assert(0);
-        break;
-    }
-    GLuint shaderID = glCreateShader(type);
-    const char *source = m_Source.c_str();
-    glShaderSource(shaderID, 1, &source, nullptr);
-    glCompileShader(shaderID);
-    int status;
-    glGetShaderiv(shaderID, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE)
-    {
-        std::string error_message = "Error compiling shader! Shader: " + m_ShaderDirectory + "/" + m_ShaderFilename + "\n";
-        char log[512];
-        glGetShaderInfoLog(shaderID, 512, nullptr, log);
-        error_message += log;
-        log_error(error_message.c_str());
-    }
-    m_ShaderHandle = (void*)((uint64_t)shaderID);
 }
 
 void Shader::EvaluateCaching(std::filesystem::path shader_path, bool &UsingCache, bool &Cached, std::string &identifier)
@@ -402,15 +341,8 @@ void Shader::EvaluateCaching(std::filesystem::path shader_path, bool &UsingCache
 
 Shader::~Shader()
 {
-    if (*(char *)m_Context == 0)
-    {
-        auto context = ToVKContext(m_Context);
-        vkDestroyShaderModule(context->defaultDevice, (VkShaderModule)m_ShaderHandle, context->m_allocation_callback);
-    }
-    else
-    {
-        glDeleteShader((uint32_t)((uint64_t)m_ShaderHandle));
-    }
+    auto context = ToVKContext(m_Context);
+    vkDestroyShaderModule(context->defaultDevice, (VkShaderModule)m_ShaderHandle, context->m_allocation_callback);
 }
 
 const std::string &Shader::GetSource()

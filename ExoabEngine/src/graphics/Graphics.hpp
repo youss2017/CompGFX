@@ -1,10 +1,8 @@
 #pragma once
 #include "../core/backend/backend_base.h"
 #include "../window/PlatformWindow.hpp"
-#include "../core/backend/GLGraphicsCard.hpp"
 #include "../core/backend/VkGraphicsCard.hpp"
 #include "../core/backend/Swapchain.hpp"
-#include "../core/backend/GLSwapchain.hpp"
 #include "../core/pipeline/Framebuffer.hpp"
 #include "../utils/Profiling.hpp"
 #include "../core/pipeline/Pipeline.hpp"

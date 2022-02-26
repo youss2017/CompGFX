@@ -541,6 +541,43 @@ namespace vk
 		return pool;
 	}
 
+	VkSampler Gfx_CreateSampler(VkContext context, 
+		VkFilter magFilter, 
+		VkFilter minFilter, 
+		VkSamplerMipmapMode mipmapMode, 
+		VkSamplerAddressMode u, 
+		VkSamplerAddressMode v, 
+		VkSamplerAddressMode w, 
+		float mipLodBias,
+		VkBool32 anisotropyEnable,
+		float maxAnisotropy,
+		float minLod,
+		float maxLod)
+	{
+		VkSamplerCreateInfo createInfo;
+		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		createInfo.pNext = nullptr;
+		createInfo.flags = 0;
+		createInfo.magFilter = magFilter;
+		createInfo.minFilter = minFilter;
+		createInfo.mipmapMode = mipmapMode;
+		createInfo.addressModeU = u;
+		createInfo.addressModeV = v;
+		createInfo.addressModeW = w;
+		createInfo.mipLodBias = mipLodBias;
+		createInfo.anisotropyEnable = anisotropyEnable;
+		createInfo.maxAnisotropy = maxAnisotropy;
+		createInfo.compareEnable = VK_FALSE;
+		createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		createInfo.minLod = minLod;
+		createInfo.maxLod = maxLod;
+		createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		createInfo.unnormalizedCoordinates = VK_FALSE;
+		VkSampler sampler;
+		vkCreateSampler(context->defaultDevice, &createInfo, nullptr, &sampler);
+		return sampler;
+	}
+
 
 	void Gfx_SubmitCmdBuffers(VkQueue queue, std::vector<VkCommandBuffer> cmdBuffers, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitDstStageMask, std::vector<VkSemaphore> signalSemaphores, VkFence fence)
 	{

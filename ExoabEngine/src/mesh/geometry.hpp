@@ -1,5 +1,5 @@
 #pragma once
-#include "../ShaderTypes.hpp"
+#include "../application/ShaderTypes.hpp"
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>

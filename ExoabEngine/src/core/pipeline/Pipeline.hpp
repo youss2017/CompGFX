@@ -194,7 +194,7 @@ struct PipelineState
 {
     int m_ApiType;
     GraphicsContext m_context;
-    APIHandle m_pipeline;
+    VkPipeline m_pipeline;
     PipelineSpecification m_spec;
     VkPipelineLayout m_layout;
     IFramebufferStateManagement m_StateManagment;

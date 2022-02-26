@@ -5,7 +5,7 @@
 #include "../utils/StringUtils.hpp"
 #include "../utils/MBox.hpp"
 #include "material_system/Material.hpp"
-#include <imgui/imgui.h>
+#include <backend/GUI.h>
 #include <GLFW/glfw3.h>
 
 // [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
@@ -167,7 +167,7 @@ FrameData& Graphics3D_GetFrame(IGraphics3D gfx)
 
 bool Graphics3D_CheckVulkanSupport()
 {
-    return glfwVulkanSupported();
+    return glfwVulkanSupported() == GLFW_TRUE;
 }
 
 void Graphics3D_LinkFunctions(IGraphics3D gfx)

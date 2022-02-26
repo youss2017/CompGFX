@@ -20,10 +20,6 @@ typedef MaterialFramebuffer* IMaterialFramebuffer;
 // After their created you can destroy pipeline shaders
 IMaterialFramebuffer Material_CreateFramebuffer(GraphicsContext context, MaterialConfiguration* configuration, ConfigurationSettings settings, IFramebufferStateManagement state_managment, FramebufferReserve* reserve);
 void Material_DestroyFramebuffer(IMaterialFramebuffer framebuffer);
-IPipelineState Material_CreatePipelineState(GraphicsContext context, MaterialConfiguration* configuration, IMaterialPipelineLayout pipeline_layout, IFramebufferStateManagement state_managment);
-
-void Material_DestroyPipelineShaders(IPipelineShaders pipeline_shaders);
-void Material_DestroyPipelineLayout(IMaterialPipelineLayout pipeline_layout);
 
 struct Material
 {
@@ -41,7 +37,18 @@ struct Material
 	IPipelineState m_pipeline_state;
 };
 
+struct MaterialSetDescription
+{
+	uint32_t m_setID;
+	std::vector<ShaderBinding>* m_binding_ptr;
+};
+
 IFramebufferStateManagement Material_CreateFramebufferStateManagment(GraphicsContext context, MaterialConfiguration* configuration, FramebufferReserve* reserve);
-Material* Material_Create(GraphicsContext context, MaterialConfiguration* configuration, IFramebufferStateManagement framebufferStateManagment, std::vector<ShaderBinding> bindings, std::vector<VkPushConstantRange> pushblocks);
-Material* Material_Create(GraphicsContext context, MaterialConfiguration* configuration, IFramebufferStateManagement framebufferStateManagment, const std::string& absolute_vertex_path, const std::string& absolute_fragment_path, std::vector<ShaderBinding> bindings, std::vector<VkPushConstantRange> pushblocks);
+// setBindings must be from lower setID to higher setID
+Material* Material_Create(GraphicsContext context, MaterialConfiguration* configuration, IFramebufferStateManagement framebufferStateManagment,
+	PipelineVertexInputDescription* vertexInputDescription, const std::vector<MaterialSetDescription>& setBindings, std::vector<VkPushConstantRange> pushblocks);
+// setBindings must be from lower setID to higher setID
+Material* Material_Create(GraphicsContext context, MaterialConfiguration* configuration, IFramebufferStateManagement framebufferStateManagment,
+	PipelineVertexInputDescription* vertexInputDescription, const std::string& absolute_vertex_path, const std::string& absolute_fragment_path, 
+	const std::vector<MaterialSetDescription>& setBindings, std::vector<VkPushConstantRange> pushblocks);
 void Material_Destory(Material* material);

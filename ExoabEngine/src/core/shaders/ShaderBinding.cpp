@@ -1,13 +1,13 @@
 #include "ShaderBinding.hpp"
 
-ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uint32_t setID, std::vector<ShaderBinding>& shader_bindings)
+ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uint32_t setID, std::vector<ShaderBinding>* shader_bindings)
 {
     ShaderSet set = new _ShaderSet();
     auto framecount = gFrameOverlapCount;
     // 1) Create setlayout
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     std::vector<IBuffer2> buffers;
-    for (auto& bind : shader_bindings)
+    for (auto& bind : *shader_bindings)
     {
         VkDescriptorSetLayoutBinding binding;
         binding.binding = bind.m_bindingID;
@@ -69,7 +69,9 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
         }
         bindings.push_back(binding);
     }
-    set->m_bindings = shader_bindings;
+    set->m_bindings.resize(shader_bindings->size());
+    for (int i = 0; i < shader_bindings->size(); i++)
+        set->m_bindings[i] = (*shader_bindings)[i];
     VkDescriptorSetLayoutCreateInfo createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     createInfo.pNext = nullptr;
@@ -197,9 +199,9 @@ VkPipelineLayout ShaderBinding_CreatePipelineLayout(vk::VkContext context, std::
     return layout;
 }
 
-void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescriptorPoolSize>& poolSizes, std::vector<ShaderBinding>& bindings)
+void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescriptorPoolSize>& poolSizes, const std::vector<ShaderBinding>* bindings)
 {
-    for (auto& bind : bindings) {
+    for (auto& bind : *bindings) {
         switch (bind.m_type)
         {
         case SHADER_BINDING_UNIFORM_BUFFER:

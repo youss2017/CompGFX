@@ -130,9 +130,20 @@ namespace vk {
 	*/
 	VkDescriptorPool Gfx_CreateDescriptorPool(VkContext context, int maxSets, const std::vector<VkDescriptorPoolSize>& poolSizes, VkDescriptorPoolCreateFlags flags = (VkDescriptorPoolCreateFlags)0);
 
-	VkPipelineLayout Gfx_CreatePipelineLayout
-	(VkContext context, const std::vector<VkDescriptorSetLayout>& setLayouts, const std::vector<VkPushConstantRange>& pushconstants);
 	void Gfx_SubmitCmdBuffers(VkQueue queue, std::vector<VkCommandBuffer> cmdBuffers, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitDstStageMask, std::vector<VkSemaphore> signalSemaphores, VkFence fence);
+
+	VkSampler Gfx_CreateSampler(VkContext context,
+		VkFilter magFilter = VK_FILTER_LINEAR,
+		VkFilter minFilter = VK_FILTER_LINEAR,
+		VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+		VkSamplerAddressMode u = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		VkSamplerAddressMode v = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		VkSamplerAddressMode w = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		float mipLodBias = 0.0,
+		VkBool32 anisotropyEnable = VK_TRUE,
+		float maxAnisotropy = 16.0,
+		float minLod = 0.0,
+		float maxLod = 1000.0);
 
 	// https://harrylovescode.gitbooks.io/vulkan-api/content/chap07/chap07.html with some modifications
 	void Gfx_SetImageLayout(VkCommandBuffer cmdBuffer, VkImage image,

@@ -24,6 +24,7 @@ namespace ShaderTypes {
 		{
 			VkDrawIndexedIndirectCommand command;
 			uint16_t ObjectDataIndex;
+			uint16_t TexIndex;
 		};
 
 		struct TerrainTransform

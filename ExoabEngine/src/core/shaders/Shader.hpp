@@ -44,7 +44,6 @@ private:
     // Essentially copies data from #include "[file]" into the text since shaderc cannot do that.
     std::string ProcessIncludeDirectives(std::string source_code, std::string root_directory);
     void InitalizeVulkan();
-    void InitalizeOpenGL();
     void EvaluateCaching(std::filesystem::path shader_path, bool& UsingCache, bool& Cached, std::string& identifier);
 
 public:

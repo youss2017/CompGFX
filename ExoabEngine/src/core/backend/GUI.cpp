@@ -1,6 +1,5 @@
 #include "GUI.h"
 #include "backend/VkGraphicsCard.hpp"
-#include "backend/GLGraphicsCard.hpp"
 #include <imgui/backends/imgui_impl_glfw.h>
 
 static VkDescriptorPool ImGuiPool;
@@ -74,6 +73,7 @@ void Gui_VKInitalizeImGui(VkInstance Instance, VkAllocationCallbacks *allocation
     init_info.ImageCount = SwapchainImageCount;
     init_info.CheckVkResultFn = NULL;
     ImGui_ImplVulkan_Init(&init_info, renderPass);
+    ImFont* fftt = io.Fonts->AddFontFromFileTTF("assets/fonts/CascadiaCodePL-SemiBold.ttf", 14.5f);
 
     // Upload Fonts
     {
@@ -131,37 +131,6 @@ void Gui_VKDestroyImGui(VkAllocationCallbacks *allocation_callback)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     vkDestroyDescriptorPool(g_Device, ImGuiPool, allocation_callback);
-}
-
-void Gui_GLInitalizeImGui(PlatformWindow *window)
-{
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window->GetWindow(), true);
-    ImGui_ImplOpenGL3_Init();
-}
-
-void Gui_GLBeginGUIFrame()
-{
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-}
-
-void Gui_GLDestroyImGui()
-{
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-}
-
-void Gui_GLEndGUIFrame()
-{
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 ImFont* Gui_VkLoadFont(VkDevice device, VkQueue queue, const char* path, float size)

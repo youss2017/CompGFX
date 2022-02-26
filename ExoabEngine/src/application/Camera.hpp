@@ -1,5 +1,5 @@
 #pragma once
-#include "core/MaxEnergyMath.h"
+#include "../core/MaxEnergyMath.h"
 #include <glm/glm.hpp>
 
 // TODO: Replace this with glm

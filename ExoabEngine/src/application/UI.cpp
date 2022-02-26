@@ -1,8 +1,8 @@
 #include "UI.hpp"
 #include <backend/VkGraphicsCard.hpp>
 #include <backend/GUI.h>
-#include "utils/Profiling.hpp"
-#include "graphics/Graphics.hpp"
+#include "../utils/Profiling.hpp"
+#include "../graphics/Graphics.hpp"
 #include <imgui.h>
 #include <string>
 #include <sstream>
@@ -23,7 +23,6 @@ namespace UI
 void UI::Initalize(void* _context, void* _gfx)
 {
 	vk::VkContext context = ToVKContext(_context);
-	s_Font0 = Gui_VkLoadFont(context->defaultDevice, context->defaultQueue, "assets/fonts/CascadiaCodePL-SemiBold.ttf", 14.5f);
     s_Context = _context;
     s_Gfx = (Graphics3D*)_gfx;
 }
@@ -32,7 +31,6 @@ void UI::RenderUI()
 {
     PROFILE_FUNCTION();
     ImGui::Begin("ImGui");
-    ImGui::PushFont(s_Font0);
     ImGui::Text("Im Graphics!");
     if (ImGui::Button("Toggle Wireframe View"))
     {
@@ -51,7 +49,6 @@ void UI::RenderUI()
             UI::ShowDepthBuffer = true;
         }
     }
-    ImGui::PopFont();
     ImGui::End();
     int corner = 0;
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
@@ -68,7 +65,6 @@ void UI::RenderUI()
     ImGui::SetNextWindowViewport(viewport->ID);
     window_flags |= ImGuiWindowFlags_NoMove;
     ImGui::Begin("Information Overlay", nullptr, window_flags);
-    ImGui::PushFont(s_Font0);
     ImGui::Text("Overlay");
     ImGui::Separator();
     ImGui::Text("%.4f FPS", FrameRate);
@@ -76,6 +72,5 @@ void UI::RenderUI()
     std::stringstream ss;
     ss << FrameRate << " FPS";
     ImGui::Text(ss.str().c_str());
-    ImGui::PopFont();
     ImGui::End();
 }

@@ -53,7 +53,7 @@ struct _ShaderSet
 
 typedef _ShaderSet* ShaderSet;
 
-void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescriptorPoolSize>& poolSizes, std::vector<ShaderBinding>& bindings);
-ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uint32_t setID, std::vector<ShaderBinding>& bindings);
+void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescriptorPoolSize>& poolSizes, const std::vector<ShaderBinding>* bindings);
+ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uint32_t setID, std::vector<ShaderBinding>* bindings);
 VkPipelineLayout ShaderBinding_CreatePipelineLayout(vk::VkContext context, std::vector<ShaderSet> sets, std::vector<VkPushConstantRange> ranges);
 void ShaderBinding_DestroySets(vk::VkContext context, std::vector<ShaderSet> sets);

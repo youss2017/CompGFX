@@ -142,12 +142,12 @@ ITerrain Terrain_Create(GraphicsContext context, VkSampler sampler, int width, i
 
 	uint32_t frameCount = gFrameOverlapCount;
 	std::vector<VkDescriptorPoolSize> poolSize;
-	ShaderBinding_CalculatePoolSizes(frameCount, poolSize, vert_bindings);
-	ShaderBinding_CalculatePoolSizes(frameCount, poolSize, frag_bindings);
+	ShaderBinding_CalculatePoolSizes(frameCount, poolSize, &vert_bindings);
+	ShaderBinding_CalculatePoolSizes(frameCount, poolSize, &frag_bindings);
 
 	terrain->m_pool = vk::Gfx_CreateDescriptorPool(ToVKContext(context), 2 * frameCount, poolSize);
-	terrain->m_Set0 = ShaderBinding_Create(ToVKContext(context), terrain->m_pool, 0, vert_bindings);
-	terrain->m_Set1 = ShaderBinding_Create(ToVKContext(context), terrain->m_pool, 1, frag_bindings);
+	terrain->m_Set0 = ShaderBinding_Create(ToVKContext(context), terrain->m_pool, 0, &vert_bindings);
+	terrain->m_Set1 = ShaderBinding_Create(ToVKContext(context), terrain->m_pool, 1, &frag_bindings);
 
 	std::vector<VkPushConstantRange> ranges(1);
 	ranges[0].offset = 0;

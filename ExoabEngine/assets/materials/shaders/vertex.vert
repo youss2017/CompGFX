@@ -36,6 +36,7 @@ struct DrawData
 {
 	VkDrawIndexedIndirectCommand command;
 	uint16_t ObjectDataIndex;
+	uint16_t TexIndex;
 };
 
 layout (std430, set = 0, binding = 0) readonly buffer VerticesSSBO
@@ -60,6 +61,7 @@ layout (std430, set = 0, binding = 3) readonly buffer DrawSSBO
 
 layout (location = 0) out vec3 Normal;
 layout (location = 1) out vec2 TexCoord;
+layout (location = 2) out flat uint TexIndex;
 
 // Since shaders don't pointers (therefore no references &), we must copy the Vertex which isn't allowed with int8 and float16
 // therefore the following is the next best thing
@@ -85,5 +87,6 @@ void main()
 	ObjectData od = u_ModelData[int(draw.ObjectDataIndex)];
 	Normal =  mat3(od.m_NormalModel) * (vec3(int(vertex.nx), int(vertex.ny), int(vertex.nz)) / 127.0 - 1.0);
 	TexCoord = vec2(float(vertex.tu), float(vertex.tv));
+	TexIndex = uint(draw.TexIndex);
 	gl_Position = u_Scene.m_Projection * u_Scene.m_View * od.m_Model * vec4(vertex.x, vertex.y, vertex.z, 1.0);
 }

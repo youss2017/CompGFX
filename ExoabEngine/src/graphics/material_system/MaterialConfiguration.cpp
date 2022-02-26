@@ -1,6 +1,5 @@
 #include "MaterialConfiguration.hpp"
 #include "../../core/backend/VkGraphicsCard.hpp"
-#include "../../core/backend/GLGraphicsCard.hpp"
 #include "../../core/pipeline/Pipeline.hpp"
 #include "../../utils/common.hpp"
 #include "../../utils/StringUtils.hpp"

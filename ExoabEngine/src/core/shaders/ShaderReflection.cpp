@@ -1,6 +1,5 @@
 #include "ShaderReflection.hpp"
 #include "../backend/VkGraphicsCard.hpp"
-#include "../backend/GLGraphicsCard.hpp"
 #include "../../utils/common.hpp"
 #include "../../utils/StringUtils.hpp"
 #include "../../utils/Logger.hpp"
