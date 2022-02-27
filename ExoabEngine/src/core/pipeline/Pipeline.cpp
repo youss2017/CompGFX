@@ -138,7 +138,7 @@ static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexIn
     return input_state;
 }
 
-IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
+IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
 {
     vk::VkContext context = ToVKContext(_context);
     std::array<VkPipelineShaderStageCreateInfo, 2> Stages;
@@ -347,30 +347,9 @@ IPipelineState Vulkan_PipelineState_Create(GraphicsContext _context, const Pipel
     return state;
 }
 
-void Vulkan_PipelineState_Destroy(IPipelineState state)
+void PipelineState_Destroy(IPipelineState state)
 {
     auto vcont = ToVKContext(state->m_context);
     vkDestroyPipeline(vcont->defaultDevice, (VkPipeline)state->m_pipeline, vcont->m_allocation_callback);
     delete state;
-}
-
-
-PFN_PipelineState_Create *PipelineState_Create = nullptr;
-PFN_PipelineState_Destroy *PipelineState_Destroy = nullptr;
-
-void PipelineState_LinkFunctions(GraphicsContext context)
-{
-    char ApiType = *(char *)context;
-    if (ApiType == 0)
-    {
-        PipelineState_Create = Vulkan_PipelineState_Create;
-        PipelineState_Destroy = Vulkan_PipelineState_Destroy;
-    }
-    else if (ApiType == 1)
-    {
-    }
-    else
-    {
-        Utils::Break();
-    }
 }

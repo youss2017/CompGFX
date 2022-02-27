@@ -23,7 +23,7 @@ public:
     inline std::string GetShaderFilename() { return m_ShaderFilename; }
     inline std::string GetShaderDirectory() { return m_ShaderDirectory; }
     inline shaderc_shader_kind GetShaderKind() { return m_ShaderKind; }
-    inline APIHandle GetShader() { return m_ShaderHandle; }
+    inline VkShaderModule GetShader() { return m_ShaderHandle; }
     inline const std::string& GetEntryPoint() { return m_EntryPointFunction; }
 
     // Call delete[] on byecode pointer when your done with it.
@@ -36,7 +36,7 @@ private:
     std::string m_Source;
     bool m_CompileStatus = false;
     shaderc_shader_kind m_ShaderKind;
-    APIHandle m_ShaderHandle = NULL;
+    VkShaderModule m_ShaderHandle = NULL;
 
     static std::string s_CacheDirectory;
 

@@ -75,9 +75,13 @@ Shader::Shader(GraphicsContext context, const char *__ShaderPath, const char *En
     {
         shader_type = shaderc_shader_kind::shaderc_glsl_fragment_shader;
     }
+    else if (extension.compare(L".comp") == 0)
+    {
+        shader_type = shaderc_shader_kind::shaderc_glsl_compute_shader;
+    }
     else
     {
-        log_error("Unsupported shader extension or an invalid shader extension. (Support shader extensions are .vert, .frag)", __FILE__, __LINE__);
+        log_error("Unsupported shader extension or an invalid shader extension. (Support shader extensions are .vert, .frag, .comp)", __FILE__, __LINE__);
         assert(0);
     }
     m_ShaderKind = shader_type;
@@ -257,7 +261,7 @@ void Shader::InitalizeVulkan()
     createInfo.pCode = this->GetBytecode();
     VkShaderModule m;
     vkcheck(vkCreateShaderModule(context->defaultDevice, &createInfo, context->m_allocation_callback, &m));
-    m_ShaderHandle = (APIHandle)m;
+    m_ShaderHandle = m;
 }
 
 void Shader::EvaluateCaching(std::filesystem::path shader_path, bool &UsingCache, bool &Cached, std::string &identifier)

@@ -17,6 +17,7 @@ namespace UI
     bool ShowDepthBuffer = false;
     bool ShowWireframe = false;
     double FrameRate = 0.0;
+    double FrameTime = 0.0;
     float C_x, C_y, C_z;
 }
 
@@ -68,9 +69,7 @@ void UI::RenderUI()
     ImGui::Text("Overlay");
     ImGui::Separator();
     ImGui::Text("%.4f FPS", FrameRate);
+    ImGui::Text("%.4f ms", FrameTime);
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
-    std::stringstream ss;
-    ss << FrameRate << " FPS";
-    ImGui::Text(ss.str().c_str());
     ImGui::End();
 }

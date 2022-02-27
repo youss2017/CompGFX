@@ -18,7 +18,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
         {
             case SHADER_BINDING_UNIFORM_BUFFER:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                if (!bind.m_useclientbuffer) {
+                if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
@@ -27,7 +27,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 break;
             case SHADER_BINDING_UNIFORM_BUFFER_DYNAMIC:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-                if (!bind.m_useclientbuffer) {
+                if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::UniformBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
@@ -36,7 +36,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 break;
             case SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                if (!bind.m_useclientbuffer) {
+                if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
@@ -45,7 +45,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 break;
             case SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-                if (!bind.m_useclientbuffer) {
+                if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
                         bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BufferType::StorageBuffer | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
@@ -174,8 +174,9 @@ void ShaderBinding_DestroySets(vk::VkContext context, std::vector<ShaderSet> set
         {
             if (binding.m_textures.size() > 0 || binding.m_useclientbuffer)
                 continue;
-            for(unsigned int q = 0; q < gFrameOverlapCount; q++)
-                Buffer2_Destroy(binding.m_buffer[q]);
+            if(!binding.m_preinitalized)
+                for(unsigned int q = 0; q < gFrameOverlapCount; q++)
+                    Buffer2_Destroy(binding.m_buffer[q]);
         }
         vkDestroyDescriptorSetLayout(context->defaultDevice, set->m_setlayout, nullptr);
         delete set;

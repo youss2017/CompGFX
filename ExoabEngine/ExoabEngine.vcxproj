@@ -115,6 +115,7 @@
     <ClInclude Include="external\VulkanMemoryAllocator\src\VmaUsage.h" />
     <ClInclude Include="src\application\Camera.hpp" />
     <ClInclude Include="src\application\Application.hpp" />
+    <ClInclude Include="src\application\ecs\EntityController.hpp" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />
     <ClInclude Include="src\core\backend\VkGraphicsCard.hpp" />
@@ -128,6 +129,7 @@
     <ClInclude Include="src\core\memory\vulkan_memory_allocator.hpp" />
     <ClInclude Include="src\core\pipeline\Framebuffer.hpp" />
     <ClInclude Include="src\core\pipeline\Pipeline.hpp" />
+    <ClInclude Include="src\core\pipeline\PipelineCS.hpp" />
     <ClInclude Include="src\core\shaders\Shader.hpp" />
     <ClInclude Include="src\core\shaders\ShaderBinding.hpp" />
     <ClInclude Include="src\core\shaders\ShaderReflection.hpp" />
@@ -183,6 +185,7 @@
     <ClCompile Include="external\VulkanMemoryAllocator\src\VmaUsage.cpp" />
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
+    <ClCompile Include="src\application\ecs\EntityController.cpp" />
     <ClCompile Include="src\core\backend\Swapchain.cpp" />
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\VulkanLoader.c" />
@@ -193,6 +196,7 @@
     <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />
     <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
     <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
+    <ClCompile Include="src\core\pipeline\PipelineCS.cpp" />
     <ClCompile Include="src\core\shaders\Shader.cpp" />
     <ClCompile Include="src\core\shaders\ShaderBinding.cpp" />
     <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
@@ -218,6 +222,7 @@
   <ItemGroup>
     <None Include="assets\materials\basic.mc" />
     <None Include="imgui.ini" />
+    <None Include="src\application\ecs\Entity.hpp" />
     <None Include="src\utils\common.inl" />
   </ItemGroup>
   <ItemGroup>

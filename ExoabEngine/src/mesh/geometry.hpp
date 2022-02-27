@@ -23,6 +23,8 @@ namespace Mesh {
 		uint indicesCount;
 		std::vector<GeometryVertex> m_vertices;
 		std::vector<uint16_t> m_indices;
+		glm::vec3 m_bounding_sphere_center;
+		float m_bounding_sphere_radius;
 	};
 	
 	// geometry_path_list - path to every mesh path (e.g. .obj, .fbx, etc)

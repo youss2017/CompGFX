@@ -16,6 +16,8 @@ namespace ShaderTypes {
 
 		struct ObjectData
 		{
+			vec3 bounding_sphere_center;
+			float bounding_sphere_radius;
 			mat4 m_Model;
 			mat4 m_NormalModel;
 		};
@@ -23,8 +25,8 @@ namespace ShaderTypes {
 		struct DrawData
 		{
 			VkDrawIndexedIndirectCommand command;
-			uint16_t ObjectDataIndex;
-			uint16_t TexIndex;
+			uint ObjectDataIndex;
+			uint TexIndex;
 		};
 
 		struct TerrainTransform

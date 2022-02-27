@@ -1,55 +1,17 @@
 #version 450
-
-#extension GL_EXT_shader_8bit_storage : require
-#extension GL_EXT_shader_16bit_storage : require
-#extension GL_ARB_shader_draw_parameters : require
-#extension GL_EXT_scalar_block_layout : require
-
-struct Vertex
-{
-	float16_t x, y, z;
-	uint8_t nx, ny, nz, nw;
-	float16_t tu, tv;
-};
-
-struct SceneData
-{
-	mat4 m_View;
-	mat4 m_Projection;
-};
-
-struct ObjectData
-{
-	mat4 m_Model;
-	mat4 m_NormalModel;
-};
-
-struct VkDrawIndexedIndirectCommand {
-    uint indexCount;
-    uint instanceCount;
-    uint firstIndex;
-    int  vertexOffset;
-    uint firstInstance;
-};
-
-struct DrawData
-{
-	VkDrawIndexedIndirectCommand command;
-	uint16_t ObjectDataIndex;
-	uint16_t TexIndex;
-};
+#include "types.h"
 
 layout (std430, set = 0, binding = 0) readonly buffer VerticesSSBO
 {
 	Vertex u_Vertices[];
 };
 
-layout (set = 0, binding = 1) uniform SceneDataUBO
+layout (std430, set = 0, binding = 1) uniform SceneDataUBO
 {
 	SceneData u_Scene;
 };
 
-layout (set = 0, binding = 2) readonly buffer ObjectDataSSBO
+layout (std430, set = 0, binding = 2) readonly buffer ObjectDataSSBO
 {
 	ObjectData u_ModelData[];
 };

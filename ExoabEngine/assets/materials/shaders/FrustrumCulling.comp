@@ -1,0 +1,36 @@
+#version 450
+#include "types.h"
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+layout (std430, set = 0, binding = 0) readonly buffer ObjectDataSSBO {
+    ObjectData u_ObjData[];
+};
+
+layout (std430, set = 0, binding = 1) buffer InputDrawCommands
+{
+    DrawData u_Draws[];
+};
+
+layout (push_constant) uniform FrustrumPlanes
+{
+    // max draws divided by 2
+    uint u_Size;
+    vec4 u_CullPlanes[6];
+};
+
+void main()
+{
+    uint gIDx = gl_GlobalInvocationID.x;
+    uint gIDy = gl_GlobalInvocationID.y;
+
+    uint drawIndex = gIDx;//gIDy * u_Size + gIDx;
+
+    // TODO: Perform frustrum culling here
+    vec3 center = u_ObjData[u_Draws[drawIndex].ObjectDataIndex].bounding_sphere_center;
+    float radius = u_ObjData[u_Draws[drawIndex].ObjectDataIndex].bounding_sphere_radius;
+
+    bool visible = true;
+    u_Draws[drawIndex].command.instanceCount = visible ? 1 : 0;
+
+}

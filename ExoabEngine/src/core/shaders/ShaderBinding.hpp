@@ -21,9 +21,9 @@ struct ShaderBinding
 	uint32_t m_bindingID;
 	bool m_hostvisible;
 	bool m_useclientbuffer;
+	bool m_preinitalized = false;
 	BufferType m_additional_buffer_flags = (BufferType)0;
 	VkShaderStageFlags m_shaderStages;
-	// only for ubos
 	uint32_t m_size;
 	// Only for textures and sperate samplers
 	// Array size is the size of m_textures list

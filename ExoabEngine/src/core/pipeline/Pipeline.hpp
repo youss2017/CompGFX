@@ -202,10 +202,5 @@ struct PipelineState
 
 typedef PipelineState *IPipelineState;
 
-typedef IPipelineState PFN_PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment);
-typedef void PFN_PipelineState_Destroy(IPipelineState state);
-
-extern PFN_PipelineState_Create *PipelineState_Create;
-extern PFN_PipelineState_Destroy *PipelineState_Destroy;
-
-void PipelineState_LinkFunctions(GraphicsContext context);
+IPipelineState PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment);
+void PipelineState_Destroy(IPipelineState state);

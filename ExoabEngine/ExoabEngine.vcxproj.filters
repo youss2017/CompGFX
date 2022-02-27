@@ -177,6 +177,12 @@
     <ClInclude Include="src\application\Application.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\pipeline\PipelineCS.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\ecs\EntityController.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -359,6 +365,12 @@
     <ClCompile Include="src\application\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\pipeline\PipelineCS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\application\ecs\EntityController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\utils\common.inl">
@@ -366,6 +378,7 @@
     </None>
     <None Include="imgui.ini" />
     <None Include="assets\materials\basic.mc" />
+    <None Include="src\application\ecs\Entity.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="external\VulkanMemoryAllocator\src\vk_mem_alloc.natvis" />

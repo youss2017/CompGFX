@@ -23,10 +23,10 @@ namespace Mesh
 				logerror(errmsg.c_str());
 				return false;
 			}
-			Geometry geomtry;
-			geomtry.firstVertex = vertices.size();
-			geomtry.firstIndex = indices.size();
-			geomtry.verticesCount = geomtry.indicesCount = 0;
+			Geometry geometry;
+			geometry.firstVertex = vertices.size();
+			geometry.firstIndex = indices.size();
+			geometry.verticesCount = geometry.indicesCount = 0;
 			std::stringstream infostream;
 			infostream << meshIndex++ << " --> Loading Geomtry from model with " << scene->mNumMeshes << " submeshes: " << path;
 			loginfos(infostream.str());
@@ -71,13 +71,22 @@ namespace Mesh
 					indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[1]);
 					indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[2]);
 				}
-				geomtry.verticesCount += scene->mMeshes[i]->mNumVertices;
-				geomtry.indicesCount += scene->mMeshes[i]->mNumFaces * 3;
-				geomtry.m_vertices = vertices;
-				geomtry.m_indices = indices;
+				geometry.verticesCount += scene->mMeshes[i]->mNumVertices;
+				geometry.indicesCount += scene->mMeshes[i]->mNumFaces * 3;
+				geometry.m_vertices = vertices;
+				geometry.m_indices = indices;
 			}
-			out_geometry_vertices_indices_positions.push_back(geomtry);
+			out_geometry_vertices_indices_positions.push_back(geometry);
 			imp.FreeScene();
+			geometry.m_bounding_sphere_center = glm::vec3(0.0);
+			for(auto& vertex : geometry.m_vertices)
+				geometry.m_bounding_sphere_center += glm::vec3(meshopt_quantizeFloat(vertex.x, 2), meshopt_quantizeFloat(vertex.y, 2.0), meshopt_quantizeFloat(vertex.z, 2.0));
+			geometry.m_bounding_sphere_radius = 0;
+			for (auto& vertex : geometry.m_vertices) {
+				glm::vec3 pos = glm::vec3(meshopt_quantizeFloat(vertex.x, 2), meshopt_quantizeFloat(vertex.y, 2.0), meshopt_quantizeFloat(vertex.z, 2.0));
+				if(abs(glm::distance(pos, geometry.m_bounding_sphere_center) > geometry.m_bounding_sphere_radius))
+					geometry.m_bounding_sphere_radius = abs(glm::distance(pos, geometry.m_bounding_sphere_center));
+			}
 		}
 		vertices.shrink_to_fit();
 		indices.shrink_to_fit();

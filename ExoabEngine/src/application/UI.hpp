@@ -6,6 +6,7 @@ namespace UI
 	extern bool ShowDepthBuffer;
 	extern bool ShowWireframe;
 	extern double FrameRate;
+	extern double FrameTime;
 	extern float C_x, C_y, C_z;
 	void Initalize(void* context, void* gfx);
 	void RenderUI();

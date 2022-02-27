@@ -61,7 +61,8 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.descriptorIndexing = VK_TRUE;
     vulkan12features.runtimeDescriptorArray = VK_TRUE;
     vulkan12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-    //vulkan12features.bufferDeviceAddress = VK_TRUE;
+    vulkan12features.shaderInt8 = VK_TRUE;
+    vulkan12features.uniformBufferStandardLayout = VK_TRUE;
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -174,7 +175,6 @@ void Graphics3D_LinkFunctions(IGraphics3D gfx)
 {
     FramebufferStateManagment_LinkFunctions(gfx->m_context);
     Framebuffer_LinkFunctions(gfx->m_context);
-    PipelineState_LinkFunctions(gfx->m_context);
 }
 
 #if PROFILE_ENABLED == 2
