@@ -26,6 +26,8 @@ namespace Mesh
 			Geometry geometry;
 			geometry.firstVertex = vertices.size();
 			geometry.firstIndex = indices.size();
+			geometry.m_bounding_sphere_center = glm::vec3(0.0);
+			geometry.m_bounding_sphere_radius = 0;
 			geometry.verticesCount = geometry.indicesCount = 0;
 			std::stringstream infostream;
 			infostream << meshIndex++ << " --> Loading Geomtry from model with " << scene->mNumMeshes << " submeshes: " << path;
@@ -52,6 +54,11 @@ namespace Mesh
 					v.ny = (scene->mMeshes[i]->mNormals[j].y);
 					v.nz = (scene->mMeshes[i]->mNormals[j].z);
 #endif
+					glm::vec3 position = glm::vec3(scene->mMeshes[i]->mVertices[j].x, scene->mMeshes[i]->mVertices[j].y, scene->mMeshes[i]->mVertices[j].z);
+					geometry.m_bounding_sphere_center += position;
+					geometry.m_bounding_sphere_center /= 2.0;
+					if (abs(glm::distance(position, geometry.m_bounding_sphere_center)) > geometry.m_bounding_sphere_radius)
+						geometry.m_bounding_sphere_radius = abs(glm::distance(position, geometry.m_bounding_sphere_center));
 					if (scene->mMeshes[i]->mTextureCoords[0]) {
 #if 1
 						v.tu = meshopt_quantizeHalf(scene->mMeshes[i]->mTextureCoords[0][j].x);
@@ -76,17 +83,8 @@ namespace Mesh
 				geometry.m_vertices = vertices;
 				geometry.m_indices = indices;
 			}
-			out_geometry_vertices_indices_positions.push_back(geometry);
 			imp.FreeScene();
-			geometry.m_bounding_sphere_center = glm::vec3(0.0);
-			for(auto& vertex : geometry.m_vertices)
-				geometry.m_bounding_sphere_center += glm::vec3(meshopt_quantizeFloat(vertex.x, 2), meshopt_quantizeFloat(vertex.y, 2.0), meshopt_quantizeFloat(vertex.z, 2.0));
-			geometry.m_bounding_sphere_radius = 0;
-			for (auto& vertex : geometry.m_vertices) {
-				glm::vec3 pos = glm::vec3(meshopt_quantizeFloat(vertex.x, 2), meshopt_quantizeFloat(vertex.y, 2.0), meshopt_quantizeFloat(vertex.z, 2.0));
-				if(abs(glm::distance(pos, geometry.m_bounding_sphere_center) > geometry.m_bounding_sphere_radius))
-					geometry.m_bounding_sphere_radius = abs(glm::distance(pos, geometry.m_bounding_sphere_center));
-			}
+			out_geometry_vertices_indices_positions.push_back(geometry);
 		}
 		vertices.shrink_to_fit();
 		indices.shrink_to_fit();

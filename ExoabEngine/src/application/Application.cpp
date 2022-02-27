@@ -21,7 +21,7 @@ static constexpr bool s_DebugMode = false;
 static constexpr const char* s_ShaderCache = "assets/materials/shaders/spirv_cache/";
 static constexpr const char* s_FramebufferReserve = "assets/materials/framebuffer_reserve.cfg";
 static constexpr bool s_EnableImGui = true;
-static constexpr uint32_t s_MaxObjects = 250'000;
+static constexpr uint32_t s_MaxObjects = 500'000;
 
 namespace Application
 {
@@ -207,7 +207,11 @@ bool Application::CreateResources()
 	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, &computeBindings);
 	computeSetPool = vk::Gfx_CreateDescriptorPool(gContext, 1 * gFrameOverlapCount, poolSize);
 	computeSet0 = ShaderBinding_Create(gContext, computeSetPool, 0, &computeBindings);
-	computeLayout = ShaderBinding_CreatePipelineLayout(gContext, { computeSet0 }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, 4 + sizeof(glm::vec4) * 6} });
+	struct FrustrumPlanes
+	{
+		glm::vec4 u_CullPlanes[6];
+	};
+	computeLayout = ShaderBinding_CreatePipelineLayout(gContext, { computeSet0 }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)}});
 	Shader computeShader = Shader(gContext, "assets/materials/shaders/FrustrumCulling.comp");
 	computeFrustrum = Pipeline_CreateCompute(gContext, &computeShader, computeLayout, 0);
 
@@ -296,16 +300,23 @@ void Application::Render()
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeFrustrum);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeLayout, 0, 1, &computeSet0->m_set[FrameIndex], 0, nullptr);
 	struct {
-		unsigned int u_Size;
 		glm::vec4 u_FrustrumPlanes[6];
 	} computePushblock;
-	computePushblock.u_Size = gECS->GetDrawCount();
+
+	glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f));
+	computePushblock.u_FrustrumPlanes[0] = proj[3] + proj[0];
+	computePushblock.u_FrustrumPlanes[1] = proj[3] - proj[0];
+	computePushblock.u_FrustrumPlanes[2] = proj[3] + proj[1];
+	computePushblock.u_FrustrumPlanes[3] = proj[3] - proj[1];
+	computePushblock.u_FrustrumPlanes[4] = proj[3] - proj[2];
+	computePushblock.u_FrustrumPlanes[5] = glm::vec4(0.0);
+
 	vkCmdPushConstants(cmd, computeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
-	int temp = (computePushblock.u_Size + 31) / 32;
+	int temp = (gECS->GetDrawCount() + 31) / 32;
 	vkCmdDispatch(cmd, temp, 1, 1);
 
 	VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-	barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 	barrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
 	barrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
