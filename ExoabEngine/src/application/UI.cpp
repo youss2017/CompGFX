@@ -18,6 +18,11 @@ namespace UI
     bool ShowWireframe = false;
     double FrameRate = 0.0;
     double FrameTime = 0.0;
+    double FrustrumCullingTime = 0.0;
+    double InputDrawCount = 0.0;
+    double OutputDrawCount = 0.0;
+    double VertexShaderTime = 0.0;
+    double FragmentShaderTime = 0.0;
     float C_x, C_y, C_z;
 }
 
@@ -68,8 +73,12 @@ void UI::RenderUI()
     ImGui::Begin("Information Overlay", nullptr, window_flags);
     ImGui::Text("Overlay");
     ImGui::Separator();
-    ImGui::Text("%.4f FPS", FrameRate);
-    ImGui::Text("%.4f ms", FrameTime);
+    ImGui::Text("%.2f FPS", FrameRate);
+    ImGui::Text("%.2f ms", FrameTime);
+    ImGui::Text("%.2f ms (Frustrum Culling Compute)", FrustrumCullingTime);
+    ImGui::Text("InDraws %d, OutDraws %d --> %.2f%%", int(InputDrawCount), int(OutputDrawCount), 100.0 * (OutputDrawCount / InputDrawCount));
+    ImGui::Text("%.2f ms (Vertex Shader)", VertexShaderTime);
+    ImGui::Text("%.2f ms (Fragment Shader)", FragmentShaderTime);
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
     ImGui::End();
 }

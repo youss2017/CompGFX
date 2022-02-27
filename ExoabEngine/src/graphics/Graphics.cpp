@@ -41,6 +41,9 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
         shaderInt8, shaderInt16, shaderFloat16 allow arithmetics but are not supported.
     */
 
+    VkPhysicalDeviceHostQueryResetFeatures QueryReset{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES };
+    QueryReset.hostQueryReset = VK_TRUE;
+
     VkPhysicalDeviceMemoryPriorityFeaturesEXT MemoryPriority;
     MemoryPriority.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
     MemoryPriority.pNext = nullptr;
@@ -63,6 +66,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     vulkan12features.shaderInt8 = VK_TRUE;
     vulkan12features.uniformBufferStandardLayout = VK_TRUE;
+    vulkan12features.hostQueryReset = VK_TRUE;
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;

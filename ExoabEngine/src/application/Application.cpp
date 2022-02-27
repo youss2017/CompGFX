@@ -21,7 +21,8 @@ static constexpr bool s_DebugMode = false;
 static constexpr const char* s_ShaderCache = "assets/materials/shaders/spirv_cache/";
 static constexpr const char* s_FramebufferReserve = "assets/materials/framebuffer_reserve.cfg";
 static constexpr bool s_EnableImGui = true;
-static constexpr uint32_t s_MaxObjects = 500'000;
+static constexpr uint32_t s_MaxObjects = 25'1776;
+static constexpr uint32_t s_Range = 250;
 
 namespace Application
 {
@@ -39,6 +40,8 @@ namespace Application
 	VkSampler gSampler0;
 	ITexture2 gWoodTex;
 	Camera gCamera({0,0,0});
+	static VkQueryPool s_Query[gFrameOverlapCount];
+	static bool s_QueryWrite = true;
 	
 	static struct {
 		uint32_t count;
@@ -59,6 +62,7 @@ namespace Application
 	static ShaderTypes::SceneData* s_ScenePtr[gFrameOverlapCount];
 	ShaderTypes::ObjectData* gObjectData[gFrameOverlapCount];
 	ShaderTypes::DrawData* gDraws[gFrameOverlapCount];
+	static uint32_t* s_CulledDrawCount[gFrameOverlapCount];
 
 }
 
@@ -113,7 +117,7 @@ bool Application::LoadAssets()
 	s_Entites.ent = new Entity[s_Entites.count];
 	
 	srand(42);
-	int range = 450;
+	int range = s_Range;
 	for (unsigned int i = 0; i < s_Entites.count; i++)
 	{
 		s_Entites.ent[i].m_geometryID = EntityGeometryID(rand() % 2);
@@ -140,7 +144,7 @@ bool Application::CreateResources()
 	std::vector<ShaderBinding> bindings(4);
 	bindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings[0].m_bindingID = 0;
-	bindings[0].m_hostvisible = true;
+	bindings[0].m_hostvisible = false;
 	bindings[0].m_useclientbuffer = true;
 	bindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[0].m_size = 0;
@@ -148,6 +152,7 @@ bool Application::CreateResources()
 	
 	bindings[1] = bindings[0];
 	bindings[1].m_useclientbuffer = false;
+	bindings[1].m_hostvisible = true;
 	bindings[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
 	bindings[1].m_bindingID = 1;
 	bindings[1].m_size = sizeof(ShaderTypes::SceneData);
@@ -155,10 +160,12 @@ bool Application::CreateResources()
 	bindings[2] = bindings[1];
 	bindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings[2].m_bindingID = 2;
+	bindings[2].m_hostvisible = true;
 	bindings[2].m_size = s_MaxObjects * sizeof(ShaderTypes::ObjectData);
 	
 	bindings[3] = bindings[2];
 	bindings[3].m_bindingID = 3;
+	bindings[3].m_hostvisible = false;
 	bindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
 	bindings[3].m_size = s_MaxObjects * sizeof(ShaderTypes::DrawData);
 	
@@ -176,15 +183,7 @@ bool Application::CreateResources()
 	gMaterial0 = Material_Create(gContext, &basicmc, gFBOStateManagment0, nullptr, { {0, &bindings}, {1, &set1Bindings} }, {});
 	gFBO0 = Material_CreateFramebuffer(gContext, &basicmc, gConfiguration, gFBOStateManagment0, gFramebufferReserve);
 
-	for (int i = 0; i < gFrameOverlapCount; i++)
-	{
-		s_ScenePtr[i] = (ShaderTypes::SceneData*)Buffer2_Map(bindings[1].m_buffer[i]);
-		gObjectData[i] = (ShaderTypes::ObjectData*)Buffer2_Map(bindings[2].m_ssbo[i]);
-		gDraws[i] = (ShaderTypes::DrawData*)Buffer2_Map(bindings[3].m_ssbo[i]);
-		gECS->UpdateDrawCommandAndObjectDataBuffer(gDraws[i], gObjectData[i]);
-	}
-
-	std::vector<ShaderBinding> computeBindings(2);
+	std::vector<ShaderBinding> computeBindings(4);
 	computeBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	computeBindings[0].m_bindingID = 0;
 	computeBindings[0].m_hostvisible = true;
@@ -198,10 +197,28 @@ bool Application::CreateResources()
 	computeBindings[1].m_bindingID = 1;
 	computeBindings[1].m_hostvisible = true;
 	computeBindings[1].m_useclientbuffer = false;
-	computeBindings[1].m_preinitalized = true;
+	computeBindings[1].m_preinitalized  = false;
 	computeBindings[1].m_additional_buffer_flags = (BufferType)0;
 	computeBindings[1].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[1].m_ssbo = bindings[3].m_ssbo;
+	computeBindings[1].m_size = bindings[3].m_size;
+
+	computeBindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	computeBindings[2].m_bindingID = 2;
+	computeBindings[2].m_hostvisible = false;
+	computeBindings[2].m_useclientbuffer = false;
+	computeBindings[2].m_preinitalized = true;
+	computeBindings[2].m_additional_buffer_flags = (BufferType)0;
+	computeBindings[2].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeBindings[2].m_ssbo = bindings[3].m_ssbo;
+
+	computeBindings[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	computeBindings[3].m_bindingID = 3;
+	computeBindings[3].m_hostvisible = true;
+	computeBindings[3].m_useclientbuffer = false;
+	computeBindings[3].m_preinitalized = false;
+	computeBindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
+	computeBindings[3].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeBindings[3].m_size = sizeof(uint32_t);
 
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, &computeBindings);
@@ -215,6 +232,15 @@ bool Application::CreateResources()
 	Shader computeShader = Shader(gContext, "assets/materials/shaders/FrustrumCulling.comp");
 	computeFrustrum = Pipeline_CreateCompute(gContext, &computeShader, computeLayout, 0);
 
+	for (int i = 0; i < gFrameOverlapCount; i++)
+	{
+		s_Query[i] = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, 6, 0);
+		s_ScenePtr[i] = (ShaderTypes::SceneData*)Buffer2_Map(bindings[1].m_buffer[i]);
+		gObjectData[i] = (ShaderTypes::ObjectData*)Buffer2_Map(bindings[2].m_ssbo[i]);
+		gDraws[i] = (ShaderTypes::DrawData*)Buffer2_Map(computeSet0->m_bindings[1].m_ssbo[i]);
+		s_CulledDrawCount[i] = (uint32_t*)Buffer2_Map(computeSet0->m_bindings[3].m_ssbo[i]);
+		gECS->UpdateDrawCommandAndObjectDataBuffer(gDraws[i], gObjectData[i]);
+	}
 	return true;
 }
 
@@ -263,6 +289,26 @@ bool Application::Update(double dTime, double FrameRate)
 	memcpy(&s_ScenePtr[frame.m_FrameIndex]->m_Projection, &proj, sizeof(glm::mat4));
 	memcpy(&s_ScenePtr[frame.m_FrameIndex]->m_View, &view, sizeof(glm::mat4));
 	
+	Buffer2_Flush(gMaterial0->m_sets[0]->m_bindings[1].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
+	Buffer2_Flush(gMaterial0->m_sets[0]->m_bindings[2].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
+	Buffer2_Flush(computeSet0->m_bindings[1].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
+
+	/*
+	    VK_QUERY_RESULT_WAIT_BIT = 0x00000002,
+    VK_QUERY_RESULT_WITH_AVAILABILITY_BIT = 0x00000004,
+	*/
+
+	uint64_t results[6];
+	VkResult qs = vkGetQueryPoolResults(gContext->defaultDevice, s_Query[frame.m_FrameIndex], 0, 6, sizeof(results), results, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+	if (qs == VK_SUCCESS)
+	{
+		UI::FrustrumCullingTime = (double(results[1] - results[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		UI::VertexShaderTime = (double(results[3] - results[2]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		UI::FragmentShaderTime = (double(results[5] - results[4]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		UI::InputDrawCount = double(s_MaxObjects);
+		UI::OutputDrawCount = double(*s_CulledDrawCount[frame.m_FrameIndex]);
+	}
+
 	return true;
 }
 
@@ -297,13 +343,16 @@ void Application::Render()
 	BeginInfo.clearValueCount = 2;
 	BeginInfo.pClearValues = pClearValues;
 	
+	vkCmdFillBuffer(cmd, computeSet0->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, sizeof(uint32_t), 0);
+	vkCmdResetQueryPool(cmd, s_Query[FrameIndex], 0, 6);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 0);
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeFrustrum);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeLayout, 0, 1, &computeSet0->m_set[FrameIndex], 0, nullptr);
 	struct {
 		glm::vec4 u_FrustrumPlanes[6];
 	} computePushblock;
 
-	glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f));
+	glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f) * gCamera.GetViewMatrix());
 	computePushblock.u_FrustrumPlanes[0] = proj[3] + proj[0];
 	computePushblock.u_FrustrumPlanes[1] = proj[3] - proj[0];
 	computePushblock.u_FrustrumPlanes[2] = proj[3] + proj[1];
@@ -314,6 +363,7 @@ void Application::Render()
 	vkCmdPushConstants(cmd, computeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
 	int temp = (gECS->GetDrawCount() + 31) / 32;
 	vkCmdDispatch(cmd, temp, 1, 1);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 1);
 
 	VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
 	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -333,7 +383,12 @@ void Application::Render()
 	VkDescriptorSet sets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex]};
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, sets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT16);
-	vkCmdDrawIndexedIndirect(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, s_Entites.count, sizeof(ShaderTypes::DrawData));
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, s_Query[FrameIndex], 2);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, s_Query[FrameIndex], 4);
+	//vkCmdDrawIndexedIndirect(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, s_Entites.count, sizeof(ShaderTypes::DrawData));
+	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, computeSet0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, s_Entites.count, sizeof(ShaderTypes::DrawData));
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, s_Query[FrameIndex], 5);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, s_Query[FrameIndex], 3);
 	
 	vkCmdEndRenderPass(cmd);
 	vkEndCommandBuffer(cmd);
@@ -347,7 +402,7 @@ void Application::Render()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &frame.m_PresentSemaphore;
 	vkQueueSubmit(gContext->defaultQueue, 1, &submitInfo, frame.m_RenderFence);
-	
+
 	if (s_EnableImGui)
 		UI::RenderUI();
 	gSwapchain.Present(gFBO0->m_textures[UI::ShowDepthBuffer]->m_vk_images_per_frame[FrameIndex], gFBO0->m_textures[UI::ShowDepthBuffer]->m_vk_views_per_frame[FrameIndex], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
@@ -358,6 +413,8 @@ void Application::Destroy()
 {
 	PROFILE_FUNCTION();
 	Graphics3D_WaitGPUIdle(gGfx);
+	for(int i = 0; i < gFrameOverlapCount; i++)
+	vkDestroyQueryPool(gContext->defaultDevice, s_Query[i], nullptr);
 	vkDestroyDescriptorPool(gContext->defaultDevice, computeSetPool, nullptr);
 	ShaderBinding_DestroySets(gContext, { computeSet0 });
 	vkDestroyPipelineLayout(gContext->defaultDevice, computeLayout, nullptr);

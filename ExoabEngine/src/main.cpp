@@ -43,6 +43,7 @@ int main(int argc, char** argv)
 #endif
     /* Load Game Settings from settings.cfg */
     ConfigurationSettings config = LoadConfiguration();
+    config.VSync = false;
     if(!Application::Initalize(&config)) {
         log_error("Could not initalize Application");
         return 0x1;

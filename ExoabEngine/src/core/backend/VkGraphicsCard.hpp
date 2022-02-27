@@ -151,6 +151,8 @@ namespace vk {
 		VkImageLayout oldLayout,
 		VkImageLayout newLayout);
 
+	VkQueryPool Gfx_CreateQueryPool(VkContext context, VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics);
+
 	size_t PadUniformBuffer(VkContext context, size_t struct_size);
 	std::string GetVkResultString(VkResult result);
 

@@ -73,6 +73,10 @@ char8_t *Buffer2_Map(IBuffer2 buffer)
 
 void Buffer2_Flush(IBuffer2 buffer, int offset, int size)
 {
+	if (size == VK_WHOLE_SIZE)
+	{
+		size = buffer->size;
+	}
 	VkAlloc::FlushBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, offset, size);
 }
 

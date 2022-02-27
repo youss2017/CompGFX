@@ -7,9 +7,18 @@ layout (std430, set = 0, binding = 0) readonly buffer ObjectDataSSBO {
     ObjectData u_ObjData[];
 };
 
-layout (std430, set = 0, binding = 1) buffer InputDrawCommands
+layout (std430, set = 0, binding = 1) readonly buffer InputDrawCommands
 {
     DrawData u_Draws[];
+};
+
+layout (std430, set = 0, binding = 2) writeonly buffer OutputDrawCommands {
+    DrawData u_OutDraws[];
+};
+
+layout (std430, set = 0, binding = 3) buffer DrawCountSSBO
+{
+    uint u_DrawCount;
 };
 
 layout (push_constant) uniform FrustrumPlanes
@@ -31,6 +40,10 @@ void main()
         visible = visible && dot(u_CullPlanes[i], center) > -radius;
     }
 
-    u_Draws[drawIndex].command.instanceCount = visible ? 1 : 0;
+    if(visible) {
+        uint drawCommandIndex = atomicAdd(u_DrawCount, 1);
+        u_OutDraws[drawCommandIndex] = u_Draws[drawIndex];
+        u_OutDraws[drawCommandIndex].command.instanceCount = 1;
+    }
 
 }

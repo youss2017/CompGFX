@@ -674,6 +674,17 @@ namespace vk
 		return alignedSize;
 	}
 
+	VkQueryPool Gfx_CreateQueryPool(VkContext context, VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics)
+	{
+		VkQueryPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
+		createInfo.queryType = queryType;
+		createInfo.queryCount = queryCount;
+		createInfo.pipelineStatistics = pipelineStatistics;
+		VkQueryPool pool;
+		vkCreateQueryPool(context->defaultDevice, &createInfo, nullptr, &pool);
+		return pool;
+	}
+
 	std::string GetVkResultString(VkResult result)
 	{
 		if (VK_SUCCESS == result)
