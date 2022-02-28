@@ -214,3 +214,9 @@ void Material_Destory(Material* material)
 	PipelineState_Destroy(material->m_pipeline_state);
 	delete material;
 }
+
+void Material_RecreatePipeline(Material* material, PipelineSpecification specification)
+{
+	PipelineState_Destroy(material->m_pipeline_state);
+	material->m_pipeline_state = PipelineState_Create(material->m_context, specification, material->m_state_managment, material->m_input_description, material->m_layout, material->m_vertex_shader, material->m_fragment_shader);
+}

@@ -21,8 +21,8 @@ static constexpr bool s_DebugMode = false;
 static constexpr const char* s_ShaderCache = "assets/materials/shaders/spirv_cache/";
 static constexpr const char* s_FramebufferReserve = "assets/materials/framebuffer_reserve.cfg";
 static constexpr bool s_EnableImGui = true;
-static constexpr uint32_t s_MaxObjects = 25'1776;
-static constexpr uint32_t s_Range = 250;
+static constexpr uint32_t s_MaxObjects = 100'000;
+static constexpr uint32_t s_Range = 20;
 
 namespace Application
 {
@@ -39,7 +39,8 @@ namespace Application
 	Material* gMaterial0;
 	VkSampler gSampler0;
 	ITexture2 gWoodTex;
-	Camera gCamera({0,0,0});
+	Camera gCamera({ 0,0,0 });
+	Camera gCamera2({0,0,0});
 	static VkQueryPool s_Query[gFrameOverlapCount];
 	static bool s_QueryWrite = true;
 	
@@ -226,7 +227,8 @@ bool Application::CreateResources()
 	computeSet0 = ShaderBinding_Create(gContext, computeSetPool, 0, &computeBindings);
 	struct FrustrumPlanes
 	{
-		glm::vec4 u_CullPlanes[6];
+		uint32_t u_MaxDraw[4];
+		glm::vec4 u_CullPlanes[5];
 	};
 	computeLayout = ShaderBinding_CreatePipelineLayout(gContext, { computeSet0 }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)}});
 	Shader computeShader = Shader(gContext, "assets/materials/shaders/FrustrumCulling.comp");
@@ -241,6 +243,7 @@ bool Application::CreateResources()
 		s_CulledDrawCount[i] = (uint32_t*)Buffer2_Map(computeSet0->m_bindings[3].m_ssbo[i]);
 		gECS->UpdateDrawCommandAndObjectDataBuffer(gDraws[i], gObjectData[i]);
 	}
+
 	return true;
 }
 
@@ -279,6 +282,16 @@ bool Application::Update(double dTime, double FrameRate)
 		Quit = true;
 		return false;
 	}
+
+	if (UI::StateChanged)
+	{
+		UI::StateChanged = false;
+		auto spec = gMaterial0->m_pipeline_state->m_spec;
+		spec.m_PolygonMode = UI::ShowWireframe ? PolygonMode::LINE : PolygonMode::FILL;
+		Graphics3D_WaitGPUIdle(gGfx);
+		Material_RecreatePipeline(gMaterial0, spec);
+	}
+
 	UI::FrameRate = FrameRate;
 	UI::FrameTime = dTime * 1e3;
 
@@ -349,19 +362,27 @@ void Application::Render()
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeFrustrum);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeLayout, 0, 1, &computeSet0->m_set[FrameIndex], 0, nullptr);
 	struct {
-		glm::vec4 u_FrustrumPlanes[6];
+		uint32_t u_MaxDraw[4];
+		glm::vec4 u_FrustrumPlanes[5];
 	} computePushblock;
 
-	glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f) * gCamera.GetViewMatrix());
-	computePushblock.u_FrustrumPlanes[0] = proj[3] + proj[0];
-	computePushblock.u_FrustrumPlanes[1] = proj[3] - proj[0];
-	computePushblock.u_FrustrumPlanes[2] = proj[3] + proj[1];
-	computePushblock.u_FrustrumPlanes[3] = proj[3] - proj[1];
-	computePushblock.u_FrustrumPlanes[4] = proj[3] - proj[2];
-	computePushblock.u_FrustrumPlanes[5] = glm::vec4(0.0);
+	if (!UI::LockFrustrum)
+		memcpy(&gCamera2, &gCamera, sizeof(Camera));
+
+	glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f) * gCamera2.GetViewMatrix());
+	auto normalizePlane = [](glm::vec4 p) -> glm::vec4
+	{
+		return p / glm::length(glm::vec3(p));
+	};
+	computePushblock.u_FrustrumPlanes[0] = normalizePlane(proj[3] + proj[0]);
+	computePushblock.u_FrustrumPlanes[1] = normalizePlane(proj[3] - proj[0]);
+	computePushblock.u_FrustrumPlanes[2] = normalizePlane(proj[3] + proj[1]);
+	computePushblock.u_FrustrumPlanes[3] = normalizePlane(proj[3] - proj[1]);
+	computePushblock.u_FrustrumPlanes[4] = normalizePlane(proj[3] - proj[2]);
+	computePushblock.u_MaxDraw[0] = s_MaxObjects;
 
 	vkCmdPushConstants(cmd, computeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
-	int temp = (gECS->GetDrawCount() + 31) / 32;
+	int temp = (gECS->GetDrawCount() + 63) / 64;
 	vkCmdDispatch(cmd, temp, 1, 1);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 1);
 
@@ -382,14 +403,13 @@ void Application::Render()
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_pipeline_state->m_pipeline);
 	VkDescriptorSet sets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex]};
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, sets, 0, nullptr);
-	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT16);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, s_Query[FrameIndex], 2);
+	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, s_Query[FrameIndex], 2);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, s_Query[FrameIndex], 4);
-	//vkCmdDrawIndexedIndirect(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, s_Entites.count, sizeof(ShaderTypes::DrawData));
-	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, computeSet0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, s_Entites.count, sizeof(ShaderTypes::DrawData));
+	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, computeSet0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, s_MaxObjects, sizeof(ShaderTypes::DrawData));
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT, s_Query[FrameIndex], 3);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, s_Query[FrameIndex], 5);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, s_Query[FrameIndex], 3);
-	
+
 	vkCmdEndRenderPass(cmd);
 	vkEndCommandBuffer(cmd);
 	VkPipelineStageFlags stage[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };

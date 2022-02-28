@@ -1,7 +1,7 @@
 #version 450
 #include "types.h"
 
-layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 layout (std430, set = 0, binding = 0) readonly buffer ObjectDataSSBO {
     ObjectData u_ObjData[];
@@ -23,12 +23,16 @@ layout (std430, set = 0, binding = 3) buffer DrawCountSSBO
 
 layout (push_constant) uniform FrustrumPlanes
 {
-    vec4 u_CullPlanes[6];
+    int u_MaxDraw;
+    int padding[3];
+    vec4 u_CullPlanes[5];
 };
 
 void main()
 {
     uint gIDx = gl_GlobalInvocationID.x;
+    if(gIDx >= u_MaxDraw)
+        return;
 
     uint drawIndex = gIDx;
 
@@ -36,14 +40,13 @@ void main()
     float radius = u_ObjData[u_Draws[drawIndex].ObjectDataIndex].bounding_sphere_radius;
 
     bool visible = true;
-    for(int i = 0; i < 6; i++) {
+    for(int i = 0; i < 5; i++) {
         visible = visible && dot(u_CullPlanes[i], center) > -radius;
     }
 
     if(visible) {
         uint drawCommandIndex = atomicAdd(u_DrawCount, 1);
         u_OutDraws[drawCommandIndex] = u_Draws[drawIndex];
-        u_OutDraws[drawCommandIndex].command.instanceCount = 1;
     }
 
 }

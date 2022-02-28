@@ -25,7 +25,7 @@ namespace VkAlloc
 		vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
 		vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
 		VmaAllocatorCreateInfo createInfo{};
-		//createInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT | 
+		createInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT | VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT;
 		//					VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT | 
 		//					VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT | 
 		//					VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT | 
@@ -81,19 +81,14 @@ namespace VkAlloc
 			createInfo.pQueueFamilyIndices = nullptr;
 			VmaAllocationCreateInfo vmaCreateInfo{};
 			createInfo.flags = 0;
-			vmaCreateInfo.usage = desc.m_properties == DEVICE_MEMORY_PROPERTY::CPU_ONLY ? VMA_MEMORY_USAGE_AUTO_PREFER_HOST : VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+			vmaCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 			// TODO: Look into VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT 
 			switch (desc.m_properties) {
 				case DEVICE_MEMORY_PROPERTY::CPU_ONLY:
-					vmaCreateInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-					buffer->m_suballocation.m_host_visible = true;
-					break;
 				case DEVICE_MEMORY_PROPERTY::CPU_TO_GPU:
-					vmaCreateInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+					vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 					buffer->m_suballocation.m_host_visible = true;
 					break;
 				case DEVICE_MEMORY_PROPERTY::GPU_ONLY:
@@ -150,14 +145,14 @@ namespace VkAlloc
 			// TODO: Look into VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT 
 			switch (desc.m_properties) {
 			case DEVICE_MEMORY_PROPERTY::CPU_ONLY:
-				vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-				vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+				vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+				vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 				vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 				image->m_suballocation.m_host_visible = true;
 				break;
 			case DEVICE_MEMORY_PROPERTY::CPU_TO_GPU:
-				vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-				vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+				vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+				vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 				vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 				image->m_suballocation.m_host_visible = true;
 				break;

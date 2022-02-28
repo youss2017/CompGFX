@@ -11,9 +11,10 @@ namespace Mesh {
 
 	struct GeometryVertex
 	{
-		uint16_t x, y, z;
+		vec4 position;
 		uint8_t nx, ny, nz, nw;
 		uint16_t tu, tv;
+		int padding[2];
 	};
 	struct Geometry
 	{
@@ -22,7 +23,7 @@ namespace Mesh {
 		uint verticesCount;
 		uint indicesCount;
 		std::vector<GeometryVertex> m_vertices;
-		std::vector<uint16_t> m_indices;
+		std::vector<uint32_t> m_indices;
 		glm::vec3 m_bounding_sphere_center;
 		float m_bounding_sphere_radius;
 	};

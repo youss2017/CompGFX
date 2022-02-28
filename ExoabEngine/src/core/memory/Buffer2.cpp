@@ -71,17 +71,21 @@ char8_t *Buffer2_Map(IBuffer2 buffer)
 	return *mapped_pointer;
 }
 
-void Buffer2_Flush(IBuffer2 buffer, int offset, int size)
+void Buffer2_Flush(IBuffer2 buffer, uint64_t offset, uint64_t size)
 {
 	if (size == VK_WHOLE_SIZE)
 	{
-		size = buffer->size;
+		size = buffer->size - offset;
 	}
 	VkAlloc::FlushBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, offset, size);
 }
 
-void Buffer2_Invalidate(IBuffer2 buffer, int offset, int size)
+void Buffer2_Invalidate(IBuffer2 buffer, uint64_t offset, uint64_t size)
 {
+	if (size == VK_WHOLE_SIZE)
+	{
+		size = buffer->size - offset;
+	}
 	VkAlloc::InvalidateBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, offset, size);
 }
 

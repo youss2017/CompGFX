@@ -16,6 +16,7 @@ namespace UI
     extern bool StateChanged = false;
     bool ShowDepthBuffer = false;
     bool ShowWireframe = false;
+    bool LockFrustrum = false;
     double FrameRate = 0.0;
     double FrameTime = 0.0;
     double FrustrumCullingTime = 0.0;
@@ -54,6 +55,14 @@ void UI::RenderUI()
         {
             UI::ShowDepthBuffer = true;
         }
+    }
+    if (UI::LockFrustrum) {
+        if (ImGui::Button("Unlock Frustrum"))
+            UI::LockFrustrum = false;
+    }
+    else {
+        if (ImGui::Button("Lock Frustrum"))
+            UI::LockFrustrum = true;
     }
     ImGui::End();
     int corner = 0;

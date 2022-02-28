@@ -6,9 +6,10 @@
 
 struct Vertex
 {
-	float16_t x, y, z;
+	vec4 position;
 	uint8_t nx, ny, nz, nw;
 	float16_t tu, tv;
+	int padding[2];
 };
 
 struct SceneData

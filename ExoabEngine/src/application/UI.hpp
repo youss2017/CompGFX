@@ -5,6 +5,7 @@ namespace UI
 	extern bool StateChanged;
 	extern bool ShowDepthBuffer;
 	extern bool ShowWireframe;
+	extern bool LockFrustrum;
 	extern double FrameRate;
 	extern double FrameTime;
 	extern double FrustrumCullingTime;

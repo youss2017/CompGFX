@@ -50,5 +50,5 @@ void main()
 	Normal =  mat3(od.m_NormalModel) * (vec3(int(vertex.nx), int(vertex.ny), int(vertex.nz)) / 127.0 - 1.0);
 	TexCoord = vec2(float(vertex.tu), float(vertex.tv));
 	TexIndex = uint(draw.TexIndex);
-	gl_Position = u_Scene.m_Projection * u_Scene.m_View * od.m_Model * vec4(vertex.x, vertex.y, vertex.z, 1.0);
+	gl_Position = u_Scene.m_Projection * u_Scene.m_View * od.m_Model * vertex.position;
 }

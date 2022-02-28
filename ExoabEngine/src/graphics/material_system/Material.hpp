@@ -52,3 +52,5 @@ Material* Material_Create(GraphicsContext context, MaterialConfiguration* config
 	PipelineVertexInputDescription* vertexInputDescription, const std::string& absolute_vertex_path, const std::string& absolute_fragment_path, 
 	const std::vector<MaterialSetDescription>& setBindings, std::vector<VkPushConstantRange> pushblocks);
 void Material_Destory(Material* material);
+
+void Material_RecreatePipeline(Material* material, PipelineSpecification specification);
