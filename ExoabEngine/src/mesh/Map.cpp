@@ -46,12 +46,12 @@ Map Map_Create(int width, int xresolution, int height, int yresolution)
 					vertex.inPosition[2] = y;
 					vertex.inPosition[3] = 1.0;
 					vertex.inNormal[0] = 0;
-					vertex.inNormal[1] = 1.0;
+					vertex.inNormal[1] = 1;
 					vertex.inNormal[2] = 0;
 					vertex.inTextureIDs[0] = 0;
-					vertex.inTextureIDs[1] = 0;
-					vertex.inTextureIDs[2] = 0;
-					vertex.inTextureIDs[3] = 0;
+					vertex.inTextureIDs[1] = -1;
+					vertex.inTextureIDs[2] = -1;
+					vertex.inTextureIDs[3] = -1;
 					vertex.inTextureWeights[0] = 1.0;
 					vertex.inTextureWeights[1] = 0.0;
 					vertex.inTextureWeights[2] = 0.0;

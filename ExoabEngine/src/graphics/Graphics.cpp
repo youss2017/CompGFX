@@ -41,16 +41,12 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
         shaderInt8, shaderInt16, shaderFloat16 allow arithmetics but are not supported.
     */
 
-    VkPhysicalDeviceHostQueryResetFeatures QueryReset{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES };
-    QueryReset.hostQueryReset = VK_TRUE;
-
-    VkPhysicalDeviceMemoryPriorityFeaturesEXT MemoryPriority;
-    MemoryPriority.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
-    MemoryPriority.pNext = nullptr;
-    MemoryPriority.memoryPriority = VK_TRUE;
+    VkPhysicalDeviceDynamicRenderingFeatures DynamicRenderingFeature{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR };
+    DynamicRenderingFeature.pNext = nullptr;
+    DynamicRenderingFeature.dynamicRendering = VK_TRUE;
 
     VkPhysicalDevice16BitStorageFeatures Storage16Bit{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
-    Storage16Bit.pNext = &MemoryPriority;
+    Storage16Bit.pNext = &DynamicRenderingFeature;
     Storage16Bit.storageBuffer16BitAccess = VK_TRUE;
     Storage16Bit.uniformAndStorageBuffer16BitAccess = VK_TRUE;
 
@@ -67,6 +63,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.shaderInt8 = VK_TRUE;
     vulkan12features.uniformBufferStandardLayout = VK_TRUE;
     vulkan12features.hostQueryReset = VK_TRUE;
+    vulkan12features.imagelessFramebuffer = VK_TRUE;
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -107,7 +104,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                 //VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
                                                 //VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME
                                                 },
-                                               features, VK_API_VERSION_1_2);
+                                               features, VK_API_VERSION_1_3);
     Graphics3D_LinkFunctions(gfx);
     auto vcont = ToVKContext(gfx->m_context);
     gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);

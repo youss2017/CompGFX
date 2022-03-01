@@ -12,6 +12,14 @@ struct Vertex
 	int padding[2];
 };
 
+struct AnimatedVertex {
+	vec4 position;
+	vec4 normal;
+	vec4 texcoord;
+	ivec4 boneIDs;
+	vec4 weights;
+};
+
 struct SceneData
 {
 	mat4 m_View;

@@ -143,8 +143,8 @@ static PxMaterial* gMaterial;
 
 PxRigidDynamic* createDynamic(const PxTransform& t, const PxGeometry& geometry, const PxVec3& velocity = PxVec3(0))
 {
-	PxRigidDynamic* dynamic = PxCreateDynamic(*gPhysics, t, geometry, *gMaterial, 10.0f);
-	dynamic->setAngularDamping(0.5f);
+	PxRigidDynamic* dynamic = PxCreateDynamic(*gPhysics, t, geometry, *gMaterial, 25.0f);
+	dynamic->setAngularDamping(0.05f);
 	dynamic->setLinearVelocity(velocity);
 	gScene->addActor(*dynamic);
 	return dynamic;
@@ -160,7 +160,7 @@ void createStack(const PxTransform& t, PxU32 size, PxReal halfExtent)
 			PxTransform localTm(PxVec3(PxReal(j * 2) - PxReal(size - i), PxReal(i * 2 + 1), 0) * halfExtent);
 			PxRigidDynamic* body = gPhysics->createRigidDynamic(t.transform(localTm));
 			body->attachShape(*shape);
-			PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
+			PxRigidBodyExt::updateMassAndInertia(*body, 150.0f);
 			gScene->addActor(*body);
 		}
 	}
@@ -176,7 +176,7 @@ void Physx_Test()
 	for (PxU32 i = 0; i < 5; i++)
 		createStack(PxTransform(PxVec3(0, 0, stackZ -= 10.0f)), 10, 2.0f);
 
-	createDynamic(PxTransform(PxVec3(0, 10, 100)), PxSphereGeometry(10), PxVec3(0, -5, -10));
+	createDynamic(PxTransform(PxVec3(0, 10, 100)), PxSphereGeometry(10), PxVec3(0, 0, -900));
 	
 	while (1)
 	{
@@ -195,7 +195,7 @@ void Physx_Destroy() {
 
 void Physx_Simulate()
 {
-	gScene->simulate(1.0 / 60.0);
+	gScene->simulate(1.0 / 260.0);
 	gScene->fetchResults(true);
 }
 
@@ -206,10 +206,15 @@ physx::PxMaterial* Physx_CreateMaterial(float staticFriction, float dynamicFrict
 
 physx::PxTriangleMesh* Physx_CreateTriangleMesh(Mesh::Geometry& geometry)
 {
+	physx::PxVec3* vertices = new PxVec3[geometry.m_vertices.size()];
+	for (int i = 0; i < geometry.m_vertices.size(); i++) {
+		auto p = geometry.m_vertices[i].position;
+		vertices[i] = PxVec3(p.x, p.y, p.z);
+	}
 	PxTriangleMeshDesc meshDesc;
-	meshDesc.points.count = geometry.verticesCount;
-	meshDesc.points.stride = sizeof(Mesh::GeometryVertex);
-	meshDesc.points.data = geometry.m_vertices.data();
+	meshDesc.points.count = geometry.m_vertices.size();
+	meshDesc.points.stride = sizeof(PxVec3);
+	meshDesc.points.data = vertices;
 
 	meshDesc.triangles.count = geometry.indicesCount;
 	meshDesc.triangles.stride = 3 * sizeof(PxU32);
@@ -222,6 +227,7 @@ physx::PxTriangleMesh* Physx_CreateTriangleMesh(Mesh::Geometry& geometry)
 		return NULL;
 
 	PxDefaultMemoryInputData readBuffer(writeBuffer.getData(), writeBuffer.getSize());
+	delete[] vertices;
 	return gPhysics->createTriangleMesh(readBuffer);
 }
 

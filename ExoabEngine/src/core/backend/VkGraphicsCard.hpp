@@ -153,6 +153,17 @@ namespace vk {
 
 	VkQueryPool Gfx_CreateQueryPool(VkContext context, VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics);
 
+	struct SingleUseCmdBuffer {
+		VkDevice device;
+		VkQueue queue;
+		VkCommandPool pool;
+		VkFence fence;
+		VkCommandBuffer cmd;
+	};
+
+	SingleUseCmdBuffer Gfx_CreateSingleUseCmdBuffer(VkContext context);
+	void Gfx_SubmitSingleUseCmdBufferAndDestroy(SingleUseCmdBuffer& buffer);
+
 	size_t PadUniformBuffer(VkContext context, size_t struct_size);
 	std::string GetVkResultString(VkResult result);
 

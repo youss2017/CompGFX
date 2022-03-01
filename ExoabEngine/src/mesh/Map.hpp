@@ -16,8 +16,8 @@ struct MapVertex
 {
     glm::vec4 inPosition;
     glm::vec4 inNormal;
-    glm::uvec4 inTextureIDs;
-    glm::uvec4 inTextureWeights;
+    glm::ivec4 inTextureIDs;
+    glm::vec4 inTextureWeights;
     glm::vec2 inTexCoords;
     int padding[2];
 };

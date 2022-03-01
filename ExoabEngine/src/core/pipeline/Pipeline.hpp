@@ -188,6 +188,7 @@ struct PipelineSpecification
     float m_MinSampleShading;
     float m_NearField = 0.0f;
     float m_FarField = 1.0f;
+    bool m_dynamicRendering = false;
 };
 
 struct PipelineState

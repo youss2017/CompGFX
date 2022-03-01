@@ -232,7 +232,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     MultisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     MultisampleState.pNext = nullptr;
     MultisampleState.flags = 0;
-    MultisampleState.rasterizationSamples = (VkSampleCountFlagBits)StateManagment->m_Samples;
+    MultisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;// (VkSampleCountFlagBits)StateManagment->m_Samples;
     // TODO: Determine if sample shading is useful and makes a visual difference
     MultisampleState.sampleShadingEnable = VK_FALSE;
     MultisampleState.minSampleShading = 0.0f;
@@ -311,9 +311,17 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     DynamicState.dynamicStateCount = DynamicStates.size();
     DynamicState.pDynamicStates = DynamicStates.data();
 
+    VkPipelineRenderingCreateInfo dynamicCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+    dynamicCreateInfo.viewMask = 0;
+    dynamicCreateInfo.colorAttachmentCount = 1;
+    VkFormat colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    dynamicCreateInfo.pColorAttachmentFormats = &colorFormat;
+    dynamicCreateInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
+    dynamicCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
     VkGraphicsPipelineCreateInfo createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    createInfo.pNext = nullptr;
+    createInfo.pNext = spec.m_dynamicRendering ? &dynamicCreateInfo : nullptr;
     createInfo.flags = (s_DebugMode) ? (VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT | VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR) : (0);
     createInfo.stageCount = 2;
     createInfo.pStages = Stages.data();
@@ -327,7 +335,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     createInfo.pColorBlendState = &ColorBlendState;
     createInfo.pDynamicState = &DynamicState;
     createInfo.layout = layout;
-    createInfo.renderPass = (VkRenderPass)StateManagment->m_renderpass;
+    createInfo.renderPass = spec.m_dynamicRendering ? nullptr : (VkRenderPass)StateManagment->m_renderpass;
     createInfo.subpass = 0; // No subpass support
     createInfo.basePipelineHandle = 0;
     createInfo.basePipelineIndex = 0;

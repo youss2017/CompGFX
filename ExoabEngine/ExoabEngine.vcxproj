@@ -59,7 +59,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -70,7 +70,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.198.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>PhysXCooking_64.dll;glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -82,7 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.2.198.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -93,7 +93,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(ProjectName)\external\bin\release;C:\VulkanSDK\1.2.198.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>PhysXCooking_64.dll;glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>

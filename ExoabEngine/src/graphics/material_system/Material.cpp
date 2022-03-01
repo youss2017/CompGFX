@@ -196,6 +196,7 @@ Material* Material_Create(GraphicsContext _context, MaterialConfiguration* confi
 	specification.m_Topology = PolygonTopology::TRIANGLE_LIST;
 	specification.m_SampleRateShadingEnabled = configuration->SampleShading;
 	specification.m_MinSampleShading = Utils::ClampValues(configuration->minSampleShading, 0.0f, 1.0f);
+	specification.m_dynamicRendering = true;
 	material->m_pipeline_state = PipelineState_Create(context, specification, framebufferStateManagment, material->m_input_description, material->m_layout, material->m_vertex_shader, material->m_fragment_shader);
 
 	return material;

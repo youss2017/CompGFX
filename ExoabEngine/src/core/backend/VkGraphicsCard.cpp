@@ -662,6 +662,33 @@ namespace vk
 		vkCmdPipelineBarrier(cmdBuffer, srcFlags, dstFlags, 0, 0, NULL, 0, NULL, 1, &imageBarrier);
 	}
 
+	SingleUseCmdBuffer Gfx_CreateSingleUseCmdBuffer(VkContext context)
+	{
+		SingleUseCmdBuffer buf;
+		buf.device = context->defaultDevice;
+		buf.queue = context->defaultQueue;
+		buf.fence = Gfx_CreateFence(context, false);
+		buf.pool = Gfx_CreateCommandPool(context, true, true, false);
+		buf.cmd = Gfx_AllocCommandBuffer(context, buf.pool, true);
+		VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		vkBeginCommandBuffer(buf.cmd, &beginInfo);
+		return buf;
+	}
+
+	void Gfx_SubmitSingleUseCmdBufferAndDestroy(SingleUseCmdBuffer& buffer)
+	{
+		vkEndCommandBuffer(buffer.cmd);
+		VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &buffer.cmd;
+		vkQueueSubmit(buffer.queue, 1, &submitInfo, buffer.fence);
+		vkWaitForFences(buffer.device, 1, &buffer.fence, true, UINT64_MAX);
+		vkDestroyFence(buffer.device, buffer.fence, nullptr);
+		vkDestroyCommandPool(buffer.device, buffer.pool, nullptr);
+	}
+
+
 	size_t PadUniformBuffer(VkContext context, size_t struct_size)
 	{
 		// Calculate required alignment based on minimum device offset alignment

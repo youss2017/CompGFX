@@ -84,7 +84,7 @@ void UI::RenderUI()
     ImGui::Text("%.2f FPS", FrameRate);
     ImGui::Text("%.2f ms --- Frame Time", FrameTime);
     ImGui::Text("%.2f ms --- CPU Time", FrameTime - GPUPassTime);
-    ImGui::Text("%.2f ms --- GPU Pass Time", GPUPassTime);
+    ImGui::Text("%.2f ms --- GPU Time", GPUPassTime);
     ImGui::Text("%.2f ms --- Frustrum Culling Compute", FrustrumCullingTime);
     ImGui::Text("InDraws %d, OutDraws %d --> %.2f%%", int(InputDrawCount), int(OutputDrawCount), 100.0 * (OutputDrawCount / InputDrawCount));
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);

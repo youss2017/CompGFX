@@ -23,8 +23,8 @@ static constexpr const char* s_ShaderCache = "assets/shaders/spirv_cacheoptimize
 #endif
 static constexpr const char* s_FramebufferReserve = "assets/materials/framebuffer_reserve.cfg";
 static constexpr bool s_EnableImGui = true;
-static constexpr uint32_t s_MaxObjects = 100;
-static constexpr uint32_t s_Range = 50;
+static constexpr uint32_t s_MaxObjects = 10;
+static constexpr uint32_t s_Range = 10;
 
 namespace Application
 {
@@ -112,7 +112,7 @@ bool Application::LoadAssets()
 {
 	PROFILE_FUNCTION();
 	bool MeshLoadStatus = Mesh::LoadVerticesIndicesSSBOs(gContext, 
-		{ "assets/mesh/cube.obj",
+		{ "assets/mesh/ball.obj",
 		 "assets/mesh/ball.obj"
 		}, gGeomtry, &gVerticesSSBO, &gIndicesBuffer);
 	if (!MeshLoadStatus)
@@ -125,25 +125,24 @@ bool Application::LoadAssets()
 	
 	srand(42);
 	int range = s_Range;
-	for (unsigned int i = 0; i < 1; i++)
+	for (unsigned int i = 0; i < s_MaxObjects; i++)
 	{
 		s_Entites.ent[i].m_geometryID = EntityGeometryID(rand() % 2);
 		s_Entites.ent[i].m_objData.bounding_sphere_center = glm::vec3(0.0);
 		s_Entites.ent[i].m_objData.bounding_sphere_radius = 1.0;
-		//s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
-		s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, -2));
+		s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
+		//s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, -2));
 		s_Entites.ent[i].m_objData.m_NormalModel = glm::mat4(1.0);
 		s_Entites.ent[i].m_textureID = 0;
 		gECS->AddEntity(&s_Entites.ent[i]);
 	}
 
-	physx::PxMaterial* mat = Physx_CreateMaterial(0.5, 0.5, 0.6);
-	physx::PxTriangleMesh* gmesh = Physx_CreateTriangleMesh(gGeomtry[s_Entites.ent[0].m_geometryID]);
-	physx::PxRigidDynamic* actor = Physx_CreateDynamicActor(mat, gmesh, { 4, 4, 4 }, physx::PxTransform(0, -5, -2));
-	//physx::PxShape* shape = Physx_CreateShape(physx::PxTriangleMeshGeometry(gmesh, physx::PxMeshScale({4, 4, 4})), mat);
-	//actor->attachShape(*shape);
-	physx::PxRigidBodyExt::updateMassAndInertia(*actor, 10.0f);
-	gScene->addActor(*actor);
+	//physx::PxMaterial* mat = Physx_CreateMaterial(0.5, 0.5, 0.6);
+	//physx::PxTriangleMesh* gmesh = Physx_CreateTriangleMesh(gGeomtry[s_Entites.ent[0].m_geometryID]);
+	//
+	//physx::PxRigidDynamic* actor = Physx_CreateDynamicActor(mat, gmesh, { 2, 2, 2 }, physx::PxTransform());
+	//physx::PxRigidBodyExt::updateMassAndInertia(*actor, 10.0f);
+	//gScene->addActor(*actor);
 
 	//mat->release();
 	//gmesh->release();
@@ -255,7 +254,7 @@ bool Application::CreateResources()
 
 	/********* Map Material **********/
 
-	Map testingMap = Map_Create(4, 1, 4, 1);
+	Map testingMap = Map_Create(100, 4, 100, 4);
 	gMapIndicesCount = testingMap.m_indices.size();
 	gMapVertices = Buffer2_Create(gContext, BufferType::StorageBuffer, testingMap.m_vertices.size() * sizeof(MapVertex), BufferMemoryType::GPU_ONLY);
 	gMapIndices = Buffer2_Create(gContext, BufferType::IndexBuffer, testingMap.m_indices.size() * sizeof(uint32_t), BufferMemoryType::GPU_ONLY);
@@ -307,6 +306,25 @@ bool Application::CreateResources()
 		s_CulledDrawCount[i] = (uint32_t*)Buffer2_Map(computeSet0->m_bindings[3].m_ssbo[i]);
 		gECS->UpdateDrawCommandAndObjectDataBuffer(gDraws[i], gObjectData[i]);
 	}
+
+	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
+	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	VkImageMemoryBarrier shaderReadBarrier[gFrameOverlapCount]{};
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		shaderReadBarrier[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		shaderReadBarrier[i].srcAccessMask = VK_ACCESS_NONE;
+		shaderReadBarrier[i].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		shaderReadBarrier[i].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		shaderReadBarrier[i].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		shaderReadBarrier[i].srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+		shaderReadBarrier[i].dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+		shaderReadBarrier[i].image = gFBO0->m_textures[0]->m_vk_images_per_frame[i];
+		shaderReadBarrier[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		shaderReadBarrier[i].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+		shaderReadBarrier[i].subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+	}
+	vkCmdPipelineBarrier(transitionCmd.cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, gFrameOverlapCount, shaderReadBarrier);
+	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
 
 	return true;
 }
@@ -386,7 +404,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	UI::InputDrawCount = double(gECS->GetDrawCount());
 	UI::OutputDrawCount = double(*s_CulledDrawCount[frame.m_FrameIndex]);
 
-	Physx_Simulate();
+	//Physx_Simulate();
 
 	return true;
 }
@@ -422,6 +440,7 @@ void Application::Render()
 	BeginInfo.clearValueCount = 2;
 	BeginInfo.pClearValues = pClearValues;
 	
+	/**** ==================FRUSTRUM CULLING================== ****/
 	vkCmdFillBuffer(cmd, computeSet0->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, sizeof(uint32_t), 0);
 
 	vkCmdResetQueryPool(cmd, s_Query[FrameIndex], 0, 4);
@@ -462,8 +481,67 @@ void Application::Render()
 	barrier.offset = 0;
 	barrier.size = VK_WHOLE_SIZE;
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	/**** ==================FRUSTRUM CULLING================== ****/
 
-	vkCmdBeginRenderPass(cmd, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	//vkCmdBeginRenderPass(cmd, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	VkRenderingInfo renderingInfo;
+	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderingInfo.pNext = nullptr;
+	renderingInfo.flags = 0;
+	renderingInfo.renderArea = BeginInfo.renderArea;
+	renderingInfo.layerCount = 1;
+	renderingInfo.viewMask = 0;
+	renderingInfo.colorAttachmentCount = 1;
+
+	VkRenderingAttachmentInfo colorAttachment{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+	colorAttachment.imageView = gFBO0->m_textures[0]->m_vk_views_per_frame[FrameIndex];
+	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+	colorAttachment.resolveImageView = nullptr;
+	colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.clearValue.color = attachments[0].clearColor.color;
+	VkRenderingAttachmentInfo depthAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	depthAttachment.imageView = gFBO0->m_textures[1]->m_vk_views_per_frame[FrameIndex];
+	depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+	depthAttachment.resolveImageView = nullptr;
+	depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depthAttachment.clearValue.depthStencil = gMaterial0->m_state_managment->m_depth_attachment.value().clearColor.depthStencil;
+
+	renderingInfo.pColorAttachments = &colorAttachment;
+	renderingInfo.pDepthAttachment = &depthAttachment;
+	renderingInfo.pStencilAttachment = nullptr;
+	vkCmdBeginRendering(cmd, &renderingInfo);
+	VkImageMemoryBarrier renderBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	renderBarrier.srcAccessMask = VK_ACCESS_NONE;
+	renderBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	renderBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	renderBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	renderBarrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	renderBarrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	renderBarrier.image = gFBO0->m_textures[0]->m_vk_images_per_frame[FrameIndex];
+	renderBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	renderBarrier.subresourceRange.layerCount = 1;
+	renderBarrier.subresourceRange.levelCount = 1;
+
+	VkImageMemoryBarrier depthBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	depthBarrier.srcAccessMask = VK_ACCESS_NONE;
+	depthBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthBarrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	depthBarrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	depthBarrier.image = gFBO0->m_textures[1]->m_vk_images_per_frame[FrameIndex];
+	depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	depthBarrier.subresourceRange.layerCount = 1;
+	depthBarrier.subresourceRange.levelCount = 1;
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &renderBarrier);
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &depthBarrier);
+
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 
@@ -486,8 +564,22 @@ void Application::Render()
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 3);
 
-	vkCmdEndRenderPass(cmd);
+	VkImageMemoryBarrier presentBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	presentBarrier.dstAccessMask = VK_ACCESS_NONE;
+	presentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	presentBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	presentBarrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	presentBarrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	presentBarrier.image = gFBO0->m_textures[0]->m_vk_images_per_frame[FrameIndex];
+	presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	presentBarrier.subresourceRange.layerCount = 1;
+	presentBarrier.subresourceRange.levelCount = 1;
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
+
+	vkCmdEndRendering(cmd);
 	vkEndCommandBuffer(cmd);
+
 	VkPipelineStageFlags stage[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 	submitInfo.waitSemaphoreCount = 1;

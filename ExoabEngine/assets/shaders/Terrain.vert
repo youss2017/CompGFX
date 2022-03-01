@@ -8,8 +8,8 @@ struct Vertex
 {
     vec4 inPosition;
     vec4 inNormal;
-    uvec4 inTextureIDs;
-    uvec4 inTextureWeights;
+    ivec4 inTextureIDs;
+    vec4 inTextureWeights;
     vec2 inTexCoords;
     int padding[2];
 };
@@ -28,7 +28,7 @@ layout (set = 0, binding = 1) uniform transform
 };
 
 layout (location = 0) out vec3 Normal;
-layout (location = 1) out uvec3 TextureIDs;
+layout (location = 1) out ivec3 TextureIDs;
 layout (location = 2) out vec3 TextureWeights;
 layout (location = 3) out vec2 TexCoord;
 

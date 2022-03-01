@@ -1,46 +1,26 @@
 #version 450 core
+#include "types.h"
 
-layout(location = 0) in vec3 pos;
-layout(location = 1) in vec3 norm;
-layout(location = 2) in vec2 tex;
-layout(location = 5) in ivec4 boneIds; 
-layout(location = 6) in vec4 weights;
-
-layout (binding = 0) uniform ViewProjection
-{
-    mat4 projection;
-    mat4 view;
+layout (std140, set = 0, binding = 0) readonly buffer VerticesSSBO {
+    AnimatedVertex u_Vertices[];
 };
 
-layout (binding = 1) uniform MODEL
-{
-    mat4 model;
+layout (std140, set = 0, binding = 1) uniform MVP {
+    mat4 u_Model;
+    mat4 u_View;
+    mat4 u_Projection;
 };
+
+layout (location = 0) out vec3 Normal;
+layout (location = 1) out vec2 TexCoord;
 
 const int MAX_BONES = 100;
 const int MAX_BONE_INFLUENCE = 4;
-uniform mat4 finalBonesMatrices[MAX_BONES];
-	
-layout (location = 0) out vec2 TexCoords;
-	
-void main()
-{
-    vec4 totalPosition = vec4(0.0f);
-    for(int i = 0 ; i < MAX_BONE_INFLUENCE ; i++)
-    {
-        if(boneIds[i] == -1) 
-            continue;
-        if(boneIds[i] >=MAX_BONES) 
-        {
-            totalPosition = vec4(pos,1.0f);
-            break;
-        }
-        vec4 localPosition = finalBonesMatrices[boneIds[i]] * vec4(pos,1.0f);
-        totalPosition += localPosition * weights[i];
-        vec3 localNormal = mat3(finalBonesMatrices[boneIds[i]]) * norm;
-    }
-		
-    mat4 viewModel = view * model;
-    gl_Position =  projection * viewModel * totalPosition;
-    TexCoords = tex;
+
+layout (std140, set = 0, binding = 2) uniform BoneMatrices {
+    mat4 u_FinalBoneMatrices[MAX_BONES];
+};
+
+void main() {
+
 }
