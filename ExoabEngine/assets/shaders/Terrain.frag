@@ -9,7 +9,7 @@ layout (location = 2) in vec3 TextureWeights;
 layout (location = 3) in vec2 TexCoord;
 
 // The first texture is the base texture
-layout (set = 1, binding = 0) uniform sampler2D TerrainTextures[];
+layout (set = 1, binding = 0) uniform sampler2D TerrainTextures[1];
 
 layout (push_constant) uniform pushblock
 {
@@ -27,8 +27,8 @@ void main()
     vec4 Texture2 = texture(TerrainTextures[nonuniformEXT(TextureIDs.y)], TexCoord) * TextureWeights[TextureIDs.y];
     vec4 Texture3 = texture(TerrainTextures[nonuniformEXT(TextureIDs.z)], TexCoord) * TextureWeights[TextureIDs.z];
     vec4 FinalTexture = BaseTexture + Texture1 + Texture2 + Texture3;
-    float CosineBetweenLight = dot(Normal, u_LightDirection);
+    float diffuse = -dot(Normal, u_LightDirection);
 
     // TODO: Support Normal Map and Specular Map
-    FragColor = (FinalTexture - FinalTexture + texture(TerrainTextures[nonuniformEXT(0)], TiledTexCoord)) * CosineBetweenLight;
+    FragColor = texture(TerrainTextures[0], TexCoord) * diffuse;
 }

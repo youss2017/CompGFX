@@ -28,6 +28,21 @@ layout (push_constant) uniform FrustrumPlanes
     vec4 u_CullPlanes[5];
 };
 
+bool TestAABBPlane(vec3 box_min, vec3 box_max, vec4 p) {
+	// Convert AABB to center-extents representation
+	vec3 c = (box_max + box_min) * 0.5f; // Compute AABB center
+	vec3 e = box_max - c; // Compute positive extents
+
+	// Compute the projection interval radius of b onto L(t) = b.c + t * p.n
+	float r = e[0] * abs(p[0]) + e[1] * abs(p[1]) + e[2] * abs(p[2]);
+
+	// Compute distance of box center from plane
+	float s = dot(vec3(p), c) + p[3];
+
+	// Intersection occurs when distance s falls within [-r,+r] interval
+	return abs(s) < r;
+}
+
 void main()
 {
     uint gIDx = gl_GlobalInvocationID.x;

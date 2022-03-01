@@ -122,7 +122,6 @@
     <ClInclude Include="src\core\backend\VulkanLoader.h" />
     <ClInclude Include="src\core\EngineBase.h" />
     <ClInclude Include="src\core\backend\GUI.h" />
-    <ClInclude Include="src\core\MaxEnergyMath.h" />
     <ClInclude Include="src\core\memory\Buffer2.hpp" />
     <ClInclude Include="src\core\memory\cvector.h" />
     <ClInclude Include="src\core\memory\Texture2.hpp" />
@@ -190,7 +189,6 @@
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\VulkanLoader.c" />
     <ClCompile Include="src\core\backend\GUI.cpp" />
-    <ClCompile Include="src\core\MaxEnergyMath.cpp" />
     <ClCompile Include="src\core\memory\Buffer2.cpp" />
     <ClCompile Include="src\core\memory\Texture2.cpp" />
     <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />

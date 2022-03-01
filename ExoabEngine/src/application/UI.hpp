@@ -11,8 +11,7 @@ namespace UI
 	extern double FrustrumCullingTime;
 	extern double InputDrawCount;
 	extern double OutputDrawCount;
-	extern double VertexShaderTime;
-	extern double FragmentShaderTime;
+	extern double GPUPassTime;
 	extern float C_x, C_y, C_z;
 	void Initalize(void* context, void* gfx);
 	void RenderUI();

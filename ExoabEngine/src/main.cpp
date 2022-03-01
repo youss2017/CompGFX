@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 #endif
     /* Load Game Settings from settings.cfg */
     ConfigurationSettings config = LoadConfiguration();
-    config.VSync = false;
+    config.VSync = true;
     if(!Application::Initalize(&config)) {
         log_error("Could not initalize Application");
         return 0x1;
@@ -66,18 +66,21 @@ int main(int argc, char** argv)
     auto start = std::chrono::high_resolution_clock::now();
     double FrameRate = 0.0;
     double Checkpoint = 0;
+    bool UpdateUIInfo = false;
     while (!Application::Quit)
     {
-        if(Application::Update(dElapsedTime, FrameRate))
+        UpdateUIInfo = dTimeFromStart - Checkpoint >= 5.4e-1;
+        if(Application::Update(dTimeFromStart, dElapsedTime, FrameRate, UpdateUIInfo))
             Application::Render();
         auto end = std::chrono::high_resolution_clock::now();
         dElapsedTime = (end - start).count();
         start = end;
         dElapsedTime /= 1000'000'000;
         dTimeFromStart += dElapsedTime;
-        if (dTimeFromStart - Checkpoint >= 5.4e-1) {
+        if (UpdateUIInfo) {
             Checkpoint = dTimeFromStart;
             FrameRate = 1.0 / dElapsedTime;
+            UpdateUIInfo = false;
         }
     }
     PROFILE_END_SESSION();

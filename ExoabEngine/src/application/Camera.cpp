@@ -1,6 +1,7 @@
 #include "Camera.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 
-Camera::Camera(Vec3 vPosition, Vec3 vLookDir) : vPosition(vPosition), vLookDir(vLookDir) {}
+Camera::Camera(glm::vec3 vPosition, glm::vec3 vLookDir) : vPosition(vPosition), vLookDir(vLookDir) {}
 
 void Camera::Pitch(double dAngle, bool isDegree) {
 	if (!isDegree) {
@@ -8,7 +9,7 @@ void Camera::Pitch(double dAngle, bool isDegree) {
 	}
 	const double dMaxPitchAngle = 90.0f * 0.995f;
 	dPitchAngle += dAngle;
-	dPitchAngle = clamp<double>(dPitchAngle, -dMaxPitchAngle, dMaxPitchAngle);
+	dPitchAngle = glm::clamp<double>(dPitchAngle, -dMaxPitchAngle, dMaxPitchAngle);
 }
 
 void Camera::Yaw(double dAngle, bool isDegree) {
@@ -22,68 +23,67 @@ void Camera::Yaw(double dAngle, bool isDegree) {
 		dYawAngle = 0;
 }
 
-void Camera::Move(Vec3 pos) {
-	vPosition.add(pos);
+void Camera::Move(glm::vec3 pos) {
+	vPosition += pos;
 }
 
-void Camera::SetPosition(Vec3 pos) {
+void Camera::SetPosition(glm::vec3 pos) {
 	vPosition = { pos.x, pos.y, pos.z };
 }
 
 void Camera::MoveForward(double dDistance) {
-	Vec3 vForwardVector = GetLookDir();
-	vForwardVector.mul(dDistance);
-	vPosition.add(vForwardVector);
+	glm::vec3 vForwardVector = GetLookDir();
+	vForwardVector *= dDistance;
+	vPosition += vForwardVector;
 }
 
 void Camera::MoveSideways(double dDistance) {
-	Vec3 _vLookDir = GetLookDir();
-	Vec3 forward = Vec3::Sub(_vLookDir.add(vPosition), vPosition);
-	forward.normalize();
-	Vec3 vUp = { 0, 1, 0 };
+	glm::vec3 _vLookDir = GetLookDir();
+	glm::vec3 forward = (_vLookDir + vPosition) - vPosition;
+	forward = glm::normalize(forward);
+	glm::vec3 vUp = { 0, 1, 0 };
 	
-	Vec3 a = Vec3::Mul(forward, vUp.dot(forward));
-	Vec3 newUp = Vec3::Sub(vUp, a);
-	newUp.normalize();
+	glm::vec3 a = forward * glm::dot(vUp, forward);
+	glm::vec3 newUp = vUp - a;
+	newUp = glm::normalize(newUp);
 
-	Vec3 newRight = Vec3::crossproduct(newUp, forward);
-	newRight.normalize();
+	glm::vec3 newRight = glm::cross(newUp, forward);
+	newRight = glm::normalize(newRight);
 
-	newRight.mul(dDistance);
-	vPosition.add(newRight);
+	newRight *= dDistance;
+	vPosition += newRight;
 }
 
 void Camera::MoveAlongUpAxis(double dDistance) {
-	Vec3 _vLookDir = GetLookDir();
-	Vec3 forward = Vec3::Sub(_vLookDir.add(vPosition), vPosition);
-	forward.normalize();
-	Vec3 vUp = { 0, 1, 0 };
-	Vec3 a = Vec3::Mul(forward, vUp.dot(forward));
-	Vec3 newUp = Vec3::Sub(vUp, a);
-	newUp.normalize();
+	glm::vec3 _vLookDir = GetLookDir();
+	glm::vec3 forward = (_vLookDir + vPosition) - vPosition;
+	forward = glm::normalize(forward);
+	glm::vec3 vUp = { 0, 1, 0 };
+	glm::vec3 a = forward * glm::dot(vUp, forward);
+	glm::vec3 newUp = vUp - a;
+	newUp = glm::normalize(newUp);
 
-	newUp.mul(dDistance);
+	newUp *= dDistance;
 
-	vPosition.add(newUp);
+	vPosition += newUp;
 }
 
 void Camera::MoveUp(double dDistance) {
-	Vec3 vUp = { 0, 1, 0 };
-	vUp.mul(dDistance);
-	vPosition.add(vUp);
+	glm::vec3 vUp = { 0, 1, 0 };
+	vUp *= dDistance;
+	vPosition += vUp;
 }
 
-Vec3 Camera::GetPosition() noexcept {
+glm::vec3 Camera::GetPosition() noexcept {
 	return vPosition;
 }
 
-Vec3 Camera::GetLookDir() {
-	Vec3 tmpLookDir = vLookDir;
-	Mat4 rotX = Mat4::MakeRotationX(dPitchAngle, true);
-	Mat4 rotY = Mat4::MakeRotationY(dYawAngle, true);
-	Mat4 rotation = rotY * rotX;
-	Mat4::MulVec4ByMat4(tmpLookDir, tmpLookDir, rotation);
-	return tmpLookDir;
+glm::vec3 Camera::GetLookDir() {
+	glm::vec3 tmpLookDir = vLookDir;
+	glm::mat4 rotX = glm::rotate(glm::mat4(1.0), glm::radians(float(-dPitchAngle)), glm::vec3(1.0, 0.0, 0.0));
+	glm::mat4 rotY = glm::rotate(glm::mat4(1.0), glm::radians(float(-dYawAngle)), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 rotation = rotX * rotY;
+	return glm::vec4(tmpLookDir, 1.0) * rotation;
 }
 
 double Camera::GetYawDegrees() {
@@ -94,28 +94,11 @@ double Camera::GetPitchDegrees() {
 	return dPitchAngle;
 }
 
-//#include <DirectXMath.h>
-
-glm::mat4	 Camera::GetViewMatrix() {
-	Vec3 tmpLookDir = GetLookDir();
-	Vec3 vTarget = Vec3::Add(vPosition, tmpLookDir);
-	/*DirectX::XMVECTOR eyeposition;
-	DirectX::XMVECTOR target;
-	DirectX::XMVECTOR updirection;
-
-	DirectX::XMMATRIX lookat = 
-		DirectX::XMMatrixTranspose(
-		DirectX::XMMatrixLookAtLH(
-		DirectX::XMVectorSet(vPosition.x, vPosition.y, vPosition.z, 1.0),
-		DirectX::XMVectorSet(vTarget.x, vTarget.y, vTarget.z, 1.0),
-		DirectX::XMVectorSet(vUp.x, vUp.y, vUp.z, 1.0))
-		);
-
-	Mat4 test = *((Mat4*)&lookat);*/
-	Mat4 lookAt =  Mat4::MakeLookAtMatrix(vPosition, vUp, vTarget);
-	lookAt = lookAt.Transpose(lookAt);
-	glm::mat4 la = *(glm::mat4*)&lookAt;
-	return la;
+glm::mat4 Camera::GetViewMatrix() {
+	glm::vec3 tmpLookDir = GetLookDir();
+	glm::vec3 vTarget = vPosition + tmpLookDir;
+	glm::mat4 lookAt = glm::lookAt(vTarget, vPosition, vUp);
+	return lookAt;
 }
 
 void Camera::ResetCamera() {

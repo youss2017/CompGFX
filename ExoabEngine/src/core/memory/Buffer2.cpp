@@ -34,6 +34,9 @@ IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, 
 
 void Buffer2_UploadData(IBuffer2 buffer, char8_t *pData, size_t offset, size_t size)
 {
+	if (size == VK_WHOLE_SIZE) {
+		size = buffer->size - offset;
+	}
 	if (buffer->memoryType != BufferMemoryType::GPU_ONLY)
 	{
 		char8_t *ptr = Buffer2_Map(buffer);

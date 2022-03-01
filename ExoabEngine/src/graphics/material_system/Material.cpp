@@ -7,7 +7,7 @@
 #include <utility>
 #include <algorithm>
 
-constexpr const char *ASSESTS_SHADER_ROOT_PATH = "assets/materials/shaders/";
+constexpr const char *ASSESTS_SHADER_ROOT_PATH = "assets/shaders/";
 
 IFramebufferStateManagement Material_CreateFramebufferStateManagment(GraphicsContext context, MaterialConfiguration *configuration, FramebufferReserve *reserve)
 {

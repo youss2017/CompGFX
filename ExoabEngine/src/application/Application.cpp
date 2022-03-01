@@ -1,5 +1,6 @@
 #include "Application.hpp"
 #include "../physics/Physics.hpp"
+#include "../mesh/Map.hpp"
 #include "UI.hpp"
 #include "Camera.hpp"
 #include "ecs/EntityController.hpp"
@@ -15,14 +16,15 @@ bool Application::Quit = false;
 
 #ifdef _DEBUG
 static constexpr bool s_DebugMode = true;
+static constexpr const char* s_ShaderCache = "assets/shaders/spirv_cache/";
 #else
 static constexpr bool s_DebugMode = false;
+static constexpr const char* s_ShaderCache = "assets/shaders/spirv_cacheoptimized/";
 #endif
-static constexpr const char* s_ShaderCache = "assets/materials/shaders/spirv_cache/";
 static constexpr const char* s_FramebufferReserve = "assets/materials/framebuffer_reserve.cfg";
 static constexpr bool s_EnableImGui = true;
-static constexpr uint32_t s_MaxObjects = 100'000;
-static constexpr uint32_t s_Range = 20;
+static constexpr uint32_t s_MaxObjects = 100;
+static constexpr uint32_t s_Range = 50;
 
 namespace Application
 {
@@ -37,6 +39,10 @@ namespace Application
 	IFramebufferStateManagement gFBOStateManagment0;
 	IMaterialFramebuffer gFBO0;
 	Material* gMaterial0;
+	Material* gMapMaterial;
+	ShaderTypes::TerrainTransform* gMapUBO[gFrameOverlapCount];
+	IBuffer2 gMapVertices, gMapIndices;
+	uint32_t gMapIndicesCount;
 	VkSampler gSampler0;
 	ITexture2 gWoodTex;
 	Camera gCamera({ 0,0,0 });
@@ -119,17 +125,28 @@ bool Application::LoadAssets()
 	
 	srand(42);
 	int range = s_Range;
-	for (unsigned int i = 0; i < s_Entites.count; i++)
+	for (unsigned int i = 0; i < 1; i++)
 	{
 		s_Entites.ent[i].m_geometryID = EntityGeometryID(rand() % 2);
 		s_Entites.ent[i].m_objData.bounding_sphere_center = glm::vec3(0.0);
 		s_Entites.ent[i].m_objData.bounding_sphere_radius = 1.0;
-		s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
+		//s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
+		s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, -2));
 		s_Entites.ent[i].m_objData.m_NormalModel = glm::mat4(1.0);
 		s_Entites.ent[i].m_textureID = 0;
 		gECS->AddEntity(&s_Entites.ent[i]);
 	}
 
+	physx::PxMaterial* mat = Physx_CreateMaterial(0.5, 0.5, 0.6);
+	physx::PxTriangleMesh* gmesh = Physx_CreateTriangleMesh(gGeomtry[s_Entites.ent[0].m_geometryID]);
+	physx::PxRigidDynamic* actor = Physx_CreateDynamicActor(mat, gmesh, { 4, 4, 4 }, physx::PxTransform(0, -5, -2));
+	//physx::PxShape* shape = Physx_CreateShape(physx::PxTriangleMeshGeometry(gmesh, physx::PxMeshScale({4, 4, 4})), mat);
+	//actor->attachShape(*shape);
+	physx::PxRigidBodyExt::updateMassAndInertia(*actor, 10.0f);
+	gScene->addActor(*actor);
+
+	//mat->release();
+	//gmesh->release();
 	return true;
 }
 
@@ -184,6 +201,8 @@ bool Application::CreateResources()
 	gMaterial0 = Material_Create(gContext, &basicmc, gFBOStateManagment0, nullptr, { {0, &bindings}, {1, &set1Bindings} }, {});
 	gFBO0 = Material_CreateFramebuffer(gContext, &basicmc, gConfiguration, gFBOStateManagment0, gFramebufferReserve);
 
+	/***** COMPUTE (Frustrum Culling) Pipeline  *****/
+
 	std::vector<ShaderBinding> computeBindings(4);
 	computeBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	computeBindings[0].m_bindingID = 0;
@@ -231,15 +250,60 @@ bool Application::CreateResources()
 		glm::vec4 u_CullPlanes[5];
 	};
 	computeLayout = ShaderBinding_CreatePipelineLayout(gContext, { computeSet0 }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)}});
-	Shader computeShader = Shader(gContext, "assets/materials/shaders/FrustrumCulling.comp");
+	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
 	computeFrustrum = Pipeline_CreateCompute(gContext, &computeShader, computeLayout, 0);
+
+	/********* Map Material **********/
+
+	Map testingMap = Map_Create(4, 1, 4, 1);
+	gMapIndicesCount = testingMap.m_indices.size();
+	gMapVertices = Buffer2_Create(gContext, BufferType::StorageBuffer, testingMap.m_vertices.size() * sizeof(MapVertex), BufferMemoryType::GPU_ONLY);
+	gMapIndices = Buffer2_Create(gContext, BufferType::IndexBuffer, testingMap.m_indices.size() * sizeof(uint32_t), BufferMemoryType::GPU_ONLY);
+	Buffer2_UploadData(gMapVertices, (char8_t*)testingMap.m_vertices.data(), 0, VK_WHOLE_SIZE);
+	Buffer2_UploadData(gMapIndices, (char8_t*)testingMap.m_indices.data(), 0, VK_WHOLE_SIZE);
+
+	std::vector<ShaderBinding> terrainBindings(2);
+	terrainBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	terrainBindings[0].m_bindingID = 0;
+	terrainBindings[0].m_hostvisible = false;
+	terrainBindings[0].m_useclientbuffer = true;
+	terrainBindings[0].m_preinitalized = false;
+	terrainBindings[0].m_additional_buffer_flags = (BufferType)0;
+	terrainBindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	terrainBindings[0].m_size = gMapVertices->size;
+	terrainBindings[0].m_client_buffer = gMapVertices;
+
+	terrainBindings[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
+	terrainBindings[1].m_bindingID = 1;
+	terrainBindings[1].m_hostvisible = true;
+	terrainBindings[1].m_useclientbuffer = false;
+	terrainBindings[1].m_preinitalized = false;
+	terrainBindings[1].m_additional_buffer_flags = (BufferType)0;
+	terrainBindings[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	terrainBindings[1].m_size = sizeof(ShaderTypes::TerrainTransform);
+
+	std::vector<ShaderBinding> terrainFragmentBinding(1);
+	terrainFragmentBinding[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
+	terrainFragmentBinding[0].m_bindingID = 0;
+	terrainFragmentBinding[0].m_hostvisible = false;
+	terrainFragmentBinding[0].m_useclientbuffer = false;
+	terrainFragmentBinding[0].m_preinitalized  = false;
+	terrainFragmentBinding[0].m_additional_buffer_flags = (BufferType)0;
+	terrainFragmentBinding[0].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainFragmentBinding[0].m_size = 0;
+	terrainFragmentBinding[0].m_sampler.push_back(gSampler0);
+	terrainFragmentBinding[0].m_textures.push_back(gWoodTex);
+	terrainFragmentBinding[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	gMapMaterial = Material_Create(gContext, &basicmc, gFBOStateManagment0, nullptr, "assets/shaders/Terrain.vert", "assets/shaders/Terrain.frag", { {0, & terrainBindings}, {1, &terrainFragmentBinding} }, {{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3)}});
 
 	for (int i = 0; i < gFrameOverlapCount; i++)
 	{
-		s_Query[i] = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, 6, 0);
+		s_Query[i] = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, 4, 0);
 		s_ScenePtr[i] = (ShaderTypes::SceneData*)Buffer2_Map(bindings[1].m_buffer[i]);
 		gObjectData[i] = (ShaderTypes::ObjectData*)Buffer2_Map(bindings[2].m_ssbo[i]);
 		gDraws[i] = (ShaderTypes::DrawData*)Buffer2_Map(computeSet0->m_bindings[1].m_ssbo[i]);
+		gMapUBO[i] = (ShaderTypes::TerrainTransform*)Buffer2_Map(gMapMaterial->m_sets[0]->m_bindings[1].m_buffer[i]);
 		s_CulledDrawCount[i] = (uint32_t*)Buffer2_Map(computeSet0->m_bindings[3].m_ssbo[i]);
 		gECS->UpdateDrawCommandAndObjectDataBuffer(gDraws[i], gObjectData[i]);
 	}
@@ -247,7 +311,7 @@ bool Application::CreateResources()
 	return true;
 }
 
-bool Application::Update(double dTime, double FrameRate)
+bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, bool UpdateUIInfo)
 {
 	PROFILE_FUNCTION();
 	if (!Graphics3D_PollEvents(gGfx))
@@ -290,10 +354,8 @@ bool Application::Update(double dTime, double FrameRate)
 		spec.m_PolygonMode = UI::ShowWireframe ? PolygonMode::LINE : PolygonMode::FILL;
 		Graphics3D_WaitGPUIdle(gGfx);
 		Material_RecreatePipeline(gMaterial0, spec);
+		Material_RecreatePipeline(gMapMaterial, spec);
 	}
-
-	UI::FrameRate = FrameRate;
-	UI::FrameTime = dTime * 1e3;
 
 	const auto &frame = Graphics3D_GetFrame(gGfx);
 
@@ -301,26 +363,30 @@ bool Application::Update(double dTime, double FrameRate)
 	glm::mat4 view = gCamera.GetViewMatrix();
 	memcpy(&s_ScenePtr[frame.m_FrameIndex]->m_Projection, &proj, sizeof(glm::mat4));
 	memcpy(&s_ScenePtr[frame.m_FrameIndex]->m_View, &view, sizeof(glm::mat4));
-	
+	ShaderTypes::TerrainTransform terrainT;
+	terrainT.u_Model = glm::scale(glm::mat4(1.0), glm::vec3(5.0, 5.0, 5.0));
+	terrainT.u_NormalModel = glm::transpose(glm::inverse(terrainT.u_Model));
+	terrainT.u_View = view;
+	terrainT.u_Projection = proj;
+	memcpy(gMapUBO[frame.m_FrameIndex], &terrainT, sizeof(ShaderTypes::TerrainTransform));
+
 	Buffer2_Flush(gMaterial0->m_sets[0]->m_bindings[1].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
 	Buffer2_Flush(gMaterial0->m_sets[0]->m_bindings[2].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
 	Buffer2_Flush(computeSet0->m_bindings[1].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
 
-	/*
-	    VK_QUERY_RESULT_WAIT_BIT = 0x00000002,
-    VK_QUERY_RESULT_WITH_AVAILABILITY_BIT = 0x00000004,
-	*/
-
-	uint64_t results[6];
-	VkResult qs = vkGetQueryPoolResults(gContext->defaultDevice, s_Query[frame.m_FrameIndex], 0, 6, sizeof(results), results, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-	if (qs == VK_SUCCESS)
+	uint64_t results[4];
+	VkResult qs = vkGetQueryPoolResults(gContext->defaultDevice, s_Query[frame.m_FrameIndex], 0, 4, sizeof(results), results, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+	if (qs == VK_SUCCESS && UpdateUIInfo)
 	{
 		UI::FrustrumCullingTime = (double(results[1] - results[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
-		UI::VertexShaderTime = (double(results[3] - results[2]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
-		UI::FragmentShaderTime = (double(results[5] - results[4]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
-		UI::InputDrawCount = double(s_MaxObjects);
-		UI::OutputDrawCount = double(*s_CulledDrawCount[frame.m_FrameIndex]);
+		UI::GPUPassTime = (double(results[3] - results[2]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		UI::FrameRate = FrameRate;
+		UI::FrameTime = dTime * 1e3;
 	}
+	UI::InputDrawCount = double(gECS->GetDrawCount());
+	UI::OutputDrawCount = double(*s_CulledDrawCount[frame.m_FrameIndex]);
+
+	Physx_Simulate();
 
 	return true;
 }
@@ -357,7 +423,8 @@ void Application::Render()
 	BeginInfo.pClearValues = pClearValues;
 	
 	vkCmdFillBuffer(cmd, computeSet0->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, sizeof(uint32_t), 0);
-	vkCmdResetQueryPool(cmd, s_Query[FrameIndex], 0, 6);
+
+	vkCmdResetQueryPool(cmd, s_Query[FrameIndex], 0, 4);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 0);
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeFrustrum);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeLayout, 0, 1, &computeSet0->m_set[FrameIndex], 0, nullptr);
@@ -379,12 +446,12 @@ void Application::Render()
 	computePushblock.u_FrustrumPlanes[2] = normalizePlane(proj[3] + proj[1]);
 	computePushblock.u_FrustrumPlanes[3] = normalizePlane(proj[3] - proj[1]);
 	computePushblock.u_FrustrumPlanes[4] = normalizePlane(proj[3] - proj[2]);
-	computePushblock.u_MaxDraw[0] = s_MaxObjects;
+	computePushblock.u_MaxDraw[0] = gECS->GetDrawCount();
 
-	vkCmdPushConstants(cmd, computeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
 	int temp = (gECS->GetDrawCount() + 63) / 64;
+	vkCmdPushConstants(cmd, computeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
 	vkCmdDispatch(cmd, temp, 1, 1);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 1);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 1);
 
 	VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
 	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -394,21 +461,30 @@ void Application::Render()
 	barrier.buffer = computeSet0->m_bindings[1].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer;
 	barrier.offset = 0;
 	barrier.size = VK_WHOLE_SIZE;
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &barrier, 0, nullptr);
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
 	vkCmdBeginRenderPass(cmd, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, s_Query[FrameIndex], 2);
+	
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_pipeline_state->m_pipeline);
 	VkDescriptorSet sets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex]};
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, sets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, s_Query[FrameIndex], 2);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, s_Query[FrameIndex], 4);
 	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, computeSet0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, s_MaxObjects, sizeof(ShaderTypes::DrawData));
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT, s_Query[FrameIndex], 3);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, s_Query[FrameIndex], 5);
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_pipeline_state->m_pipeline);
+	sets[0] = gMapMaterial->m_sets[0]->m_set[FrameIndex];
+	sets[1] = gMapMaterial->m_sets[1]->m_set[FrameIndex];
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_layout, 0, 2, sets, 0, nullptr);
+	vkCmdBindIndexBuffer(cmd, gMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+	const glm::vec3 LightDir = glm::vec3(0.0, -0.5, 0.5);
+	vkCmdPushConstants(cmd, gMapMaterial->m_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3), &LightDir);
+	vkCmdDrawIndexed(cmd, gMapIndicesCount, 1, 0, 0, 0);
+
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 3);
 
 	vkCmdEndRenderPass(cmd);
 	vkEndCommandBuffer(cmd);
@@ -442,6 +518,9 @@ void Application::Destroy()
 	FramebufferStateManagment_Destroy(gFBOStateManagment0);
 	Material_DestroyFramebuffer(gFBO0);
 	Material_Destory(gMaterial0);
+	Material_Destory(gMapMaterial);
+	Buffer2_Destroy(gMapVertices);
+	Buffer2_Destroy(gMapIndices);
 	vkDestroySampler(gContext->defaultDevice, gSampler0, nullptr);
 	Texture2_Destroy(gWoodTex);
 	Buffer2_Destroy(gVerticesSSBO);
@@ -451,4 +530,5 @@ void Application::Destroy()
 	Physx_Destroy();
 	delete[] s_Entites.ent;
 	delete gECS;
+	glfwTerminate();
 }

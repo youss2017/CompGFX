@@ -106,6 +106,7 @@ physx::PxPhysics* gPhysics = nullptr;
 physx::PxPvd* gPvd = nullptr;
 physx::PxCooking* gCooking = nullptr;
 physx::PxDefaultCpuDispatcher* gDispatcher = nullptr;
+physx::PxScene* gScene = nullptr;
 
 void Physx_Test();
 
@@ -127,12 +128,18 @@ bool Physx_Initalize()
 	if (!gCooking)
 		return false;
 	gDispatcher = PxDefaultCpuDispatcherCreate(1);
+
+	PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
+	sceneDesc.gravity = PxVec3(0.0, -9.81, 0.0);
+	sceneDesc.cpuDispatcher = gDispatcher;
+	sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+	gScene = gPhysics->createScene(sceneDesc);
+
 	//Physx_Test();
 	return true;
 }
 
-PxMaterial* gMaterial;
-PxScene* gScene;
+static PxMaterial* gMaterial;
 
 PxRigidDynamic* createDynamic(const PxTransform& t, const PxGeometry& geometry, const PxVec3& velocity = PxVec3(0))
 {
@@ -162,12 +169,6 @@ void createStack(const PxTransform& t, PxU32 size, PxReal halfExtent)
 
 void Physx_Test()
 {
-	PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
-	sceneDesc.gravity = PxVec3(0.0, -4.1, -.4);
-	sceneDesc.cpuDispatcher = gDispatcher;
-	sceneDesc.filterShader = PxDefaultSimulationFilterShader;
-	gScene = gPhysics->createScene(sceneDesc);
-
 	gMaterial = gPhysics->createMaterial(5.5f, 0.5f, 0.6f);
 	PxRigidStatic* groundPlane = PxCreatePlane(*gPhysics, PxPlane(0, 1, 0, 0), *gMaterial);
 	gScene->addActor(*groundPlane);
@@ -192,3 +193,52 @@ void Physx_Destroy() {
 	gFoundation->release();
 }
 
+void Physx_Simulate()
+{
+	gScene->simulate(1.0 / 60.0);
+	gScene->fetchResults(true);
+}
+
+physx::PxMaterial* Physx_CreateMaterial(float staticFriction, float dynamicFriction, float restitution)
+{
+	return gPhysics->createMaterial(staticFriction, dynamicFriction, restitution);
+}
+
+physx::PxTriangleMesh* Physx_CreateTriangleMesh(Mesh::Geometry& geometry)
+{
+	PxTriangleMeshDesc meshDesc;
+	meshDesc.points.count = geometry.verticesCount;
+	meshDesc.points.stride = sizeof(Mesh::GeometryVertex);
+	meshDesc.points.data = geometry.m_vertices.data();
+
+	meshDesc.triangles.count = geometry.indicesCount;
+	meshDesc.triangles.stride = 3 * sizeof(PxU32);
+	meshDesc.triangles.data = geometry.m_indices.data();
+
+	PxDefaultMemoryOutputStream writeBuffer;
+	PxTriangleMeshCookingResult::Enum result;
+	bool status = gCooking->cookTriangleMesh(meshDesc, writeBuffer, &result);
+	if (!status)
+		return NULL;
+
+	PxDefaultMemoryInputData readBuffer(writeBuffer.getData(), writeBuffer.getSize());
+	return gPhysics->createTriangleMesh(readBuffer);
+}
+
+physx::PxShape* Physx_CreateShape(physx::PxGeometry geometry, physx::PxMaterial* material)
+{
+	PxShape* shape = gPhysics->createShape(geometry, *material);
+	return shape;
+}
+
+physx::PxRigidDynamic* Physx_CreateDynamicActor(physx::PxMaterial* material, physx::PxTriangleMesh* mesh, glm::vec3 scale, physx::PxTransform pose)
+{
+	// created earlier
+	PxRigidActor* myActor = nullptr;
+
+	// create a shape instancing a triangle mesh at the given scale
+	PxMeshScale pscale({ scale.x, scale.y, scale.z }, PxQuat(PxIdentity));
+	PxTriangleMeshGeometry geom(mesh, pscale);
+	PxRigidDynamic* dynamicActor = gPhysics->createRigidDynamic(pose);
+	return dynamicActor;
+}
