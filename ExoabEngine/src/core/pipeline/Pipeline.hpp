@@ -188,7 +188,6 @@ struct PipelineSpecification
     float m_MinSampleShading;
     float m_NearField = 0.0f;
     float m_FarField = 1.0f;
-    bool m_dynamicRendering = false;
 };
 
 struct PipelineState
@@ -198,10 +197,10 @@ struct PipelineState
     VkPipeline m_pipeline;
     PipelineSpecification m_spec;
     VkPipelineLayout m_layout;
-    IFramebufferStateManagement m_StateManagment;
 };
 
 typedef PipelineState *IPipelineState;
 
-IPipelineState PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment);
+IPipelineState PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, PipelineVertexInputDescription& input_description, 
+    uint32_t width, uint32_t height, std::vector<FramebufferAttachment> attachments, VkPipelineLayout layout, Shader *vertex, Shader *fragment);
 void PipelineState_Destroy(IPipelineState state);

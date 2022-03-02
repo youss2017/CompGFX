@@ -63,7 +63,8 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.shaderInt8 = VK_TRUE;
     vulkan12features.uniformBufferStandardLayout = VK_TRUE;
     vulkan12features.hostQueryReset = VK_TRUE;
-    vulkan12features.imagelessFramebuffer = VK_TRUE;
+    // We are no longer using framebuffers (other than swapchain)
+    //vulkan12features.imagelessFramebuffer = VK_TRUE;
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -91,21 +92,22 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
         layer_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         layer_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
-    layers.push_back("VK_LAYER_KHRONOS_synchronization2");
-    gfx->m_context = vk::Gfx_CreateContext(Window, DebugMode, config->ForceIntegeratedGPU, layers, layer_extensions,
+    bool ForceIntegeratedGPU;
+#ifdef _DEBUG
+    ForceIntegeratedGPU = true;
+#else
+    ForceIntegeratedGPU = false;
+#endif
+    gfx->m_context = vk::Gfx_CreateContext(Window, DebugMode, ForceIntegeratedGPU, layers, layer_extensions,
                                                {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
                                                 VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
                                                 VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                                                 VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
                                                 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-                                                // TODO: Only enable this if supported.
-                                                //VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
-                                                //VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-                                                //VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME
+                                                VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
                                                 },
-                                               features, VK_API_VERSION_1_3);
-    Graphics3D_LinkFunctions(gfx);
+                                               features, VK_API_VERSION_1_2);
     auto vcont = ToVKContext(gfx->m_context);
     gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);
     
@@ -170,12 +172,6 @@ FrameData& Graphics3D_GetFrame(IGraphics3D gfx)
 bool Graphics3D_CheckVulkanSupport()
 {
     return glfwVulkanSupported() == GLFW_TRUE;
-}
-
-void Graphics3D_LinkFunctions(IGraphics3D gfx)
-{
-    FramebufferStateManagment_LinkFunctions(gfx->m_context);
-    Framebuffer_LinkFunctions(gfx->m_context);
 }
 
 #if PROFILE_ENABLED == 2

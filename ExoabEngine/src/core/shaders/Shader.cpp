@@ -13,6 +13,7 @@ constexpr bool OptimizeShaders = false;
 constexpr bool OptimizeShaders = true;
 #endif
 constexpr bool PrintGLSLShader = false;
+constexpr shaderc_spirv_version SPIRVCompilationLevel = shaderc_spirv_version_1_5;
 
 /* SPIR-V Catalog Format
     [File Directory]::[identifier]::[Filename Stem]::[Filename Extension]::[Last Accessed Data]
@@ -124,7 +125,7 @@ Shader::Shader(GraphicsContext context, const char *__ShaderPath, const char *En
         options.SetOptimizationLevel(OptimizeShaders ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
         options.SetAutoBindUniforms(true);
         options.SetAutoSampledTextures(true);
-        options.SetTargetSpirv(shaderc_spirv_version_1_4);
+        options.SetTargetSpirv(SPIRVCompilationLevel);
 
         assert(compiler.IsValid());
         auto spv = compiler.CompileGlslToSpv(m_Source.c_str(), m_Source.length(), shader_type, m_ShaderFilename.c_str(), m_EntryPointFunction.c_str(), options);
@@ -371,7 +372,7 @@ void Shader::CompileVulkanSPIRVText(const char *source_code, const char *filenam
     shaderc::CompileOptions options;
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
     options.SetOptimizationLevel(shaderc_optimization_level_performance);
-    options.SetTargetSpirv(shaderc_spirv_version_1_4);
+    options.SetTargetSpirv(SPIRVCompilationLevel);
 
     assert(compiler.IsValid());
 

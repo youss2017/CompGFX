@@ -37,11 +37,16 @@ vec4 InvertQuat(vec4 quat)
 
 vec4 MulQuat(vec4 q1, vec4 q2)
 {
-    float x =  q1.x * q2.w + q1.y * q2.z - q1.z * q2.y + q1.w * q2.x;
-    float y = -q1.x * q2.z + q1.y * q2.w + q1.z * q2.x + q1.w * q2.y;
-    float z =  q1.x * q2.y - q1.y * q2.x + q1.z * q2.w + q1.w * q2.z;
-    float w = -q1.x * q2.x - q1.y * q2.y - q1.z * q2.z + q1.w * q2.w;
-	return vec4(x, y, z, w);
+	float a = q1.x; float e = q2.x;
+	float b = q1.y; float f = q2.y;
+	float c = q1.z; float g = q2.z;
+	float d = q1.w; float h = q2.w;
+
+	float r = (a*e) - (b*f) - (c*g) - (d*h);
+	float i = (a*f) + (b*e) + (c*h) - (d*g);
+	float j = (a*g) - (b*h) + (c*e) + (d*f);
+	float k = (a*h) + (b*g) - (c*f) + (d*e);
+	return vec4(r, i, j, k);
 }
 
 void main()

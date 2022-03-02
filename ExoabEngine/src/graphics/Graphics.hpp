@@ -41,7 +41,6 @@ FrameData& Graphics3D_GetFrame(IGraphics3D gfx);
 
 IGraphics3D Graphics3D_Create(ConfigurationSettings* config, const char *Title, bool DebugMode, bool EnableImGui);
 bool Graphics3D_CheckVulkanSupport();
-void Graphics3D_LinkFunctions(IGraphics3D gfx);
 bool Graphics3D_PollEvents(IGraphics3D gfx);
 
 static inline void Graphics3D_NextFrame(IGraphics3D gfx) { gfx->m_FrameCount++; }

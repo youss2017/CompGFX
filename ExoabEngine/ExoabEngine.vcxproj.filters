@@ -33,9 +33,6 @@
     <ClInclude Include="src\core\memory\cvector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\pipeline\Framebuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\core\pipeline\Pipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -180,6 +177,9 @@
     <ClInclude Include="src\application\ecs\EntityController.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\pipeline\Framebuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -198,9 +198,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\backend\VulkanLoader.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\core\pipeline\Framebuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\pipeline\Pipeline.cpp">

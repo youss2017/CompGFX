@@ -192,7 +192,6 @@
     <ClCompile Include="src\core\memory\Buffer2.cpp" />
     <ClCompile Include="src\core\memory\Texture2.cpp" />
     <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />
-    <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
     <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
     <ClCompile Include="src\core\pipeline\PipelineCS.cpp" />
     <ClCompile Include="src\core\shaders\Shader.cpp" />

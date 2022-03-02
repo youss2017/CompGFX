@@ -186,7 +186,6 @@ struct Texture2DSpecification
 	bool m_GenerateMipMapLevels;
 	bool m_CreatePerFrame = false;
 	bool m_LazilyAllocate = false;
-	TextureSamplerSpecification m_Sampler = TextureSamplerSpecification();
 };
 
 namespace vk

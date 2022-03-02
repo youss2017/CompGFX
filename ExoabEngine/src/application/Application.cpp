@@ -36,7 +36,6 @@ namespace Application
 	FramebufferReserve* gFramebufferReserve = nullptr;
 	std::vector<Mesh::Geometry> gGeomtry;
 	IBuffer2 gVerticesSSBO, gIndicesBuffer;
-	IFramebufferStateManagement gFBOStateManagment0;
 	IMaterialFramebuffer gFBO0;
 	Material* gMaterial0;
 	Material* gMapMaterial;
@@ -316,8 +315,8 @@ bool Application::CreateResources()
 		shaderReadBarrier[i].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		shaderReadBarrier[i].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		shaderReadBarrier[i].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		shaderReadBarrier[i].srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
-		shaderReadBarrier[i].dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+		shaderReadBarrier[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		shaderReadBarrier[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		shaderReadBarrier[i].image = gFBO0->m_textures[0]->m_vk_images_per_frame[i];
 		shaderReadBarrier[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		shaderReadBarrier[i].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
@@ -475,8 +474,8 @@ void Application::Render()
 	VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
 	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-	barrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
-	barrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.buffer = computeSet0->m_bindings[1].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer;
 	barrier.offset = 0;
 	barrier.size = VK_WHOLE_SIZE;
@@ -521,8 +520,8 @@ void Application::Render()
 	renderBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	renderBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	renderBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	renderBarrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
-	renderBarrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	renderBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	renderBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	renderBarrier.image = gFBO0->m_textures[0]->m_vk_images_per_frame[FrameIndex];
 	renderBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	renderBarrier.subresourceRange.layerCount = 1;
@@ -533,8 +532,8 @@ void Application::Render()
 	depthBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	depthBarrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
-	depthBarrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	depthBarrier.image = gFBO0->m_textures[1]->m_vk_images_per_frame[FrameIndex];
 	depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	depthBarrier.subresourceRange.layerCount = 1;
@@ -569,8 +568,8 @@ void Application::Render()
 	presentBarrier.dstAccessMask = VK_ACCESS_NONE;
 	presentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	presentBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	presentBarrier.srcQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
-	presentBarrier.dstQueueFamilyIndex = gContext->defaultQueueFamilyIndex;
+	presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	presentBarrier.image = gFBO0->m_textures[0]->m_vk_images_per_frame[FrameIndex];
 	presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	presentBarrier.subresourceRange.layerCount = 1;
@@ -607,7 +606,6 @@ void Application::Destroy()
 	ShaderBinding_DestroySets(gContext, { computeSet0 });
 	vkDestroyPipelineLayout(gContext->defaultDevice, computeLayout, nullptr);
 	vkDestroyPipeline(gContext->defaultDevice, computeFrustrum, nullptr);
-	FramebufferStateManagment_Destroy(gFBOStateManagment0);
 	Material_DestroyFramebuffer(gFBO0);
 	Material_Destory(gMaterial0);
 	Material_Destory(gMapMaterial);

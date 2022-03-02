@@ -138,7 +138,8 @@ static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexIn
     return input_state;
 }
 
-IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, FramebufferStateManagement *StateManagment, PipelineVertexInputDescription& input_description, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
+IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, PipelineVertexInputDescription& input_description,
+    uint32_t width, uint32_t height, std::vector<FramebufferAttachment> attachments, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
 {
     vk::VkContext context = ToVKContext(_context);
     std::array<VkPipelineShaderStageCreateInfo, 2> Stages;
@@ -181,16 +182,16 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     VkViewport viewport;
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = 1;
-    viewport.height = 1;
+    viewport.width = width;
+    viewport.height = height;
     viewport.minDepth = spec.m_NearField;
     viewport.maxDepth = spec.m_FarField;
 
     VkRect2D scissor;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    scissor.extent.width = 1;
-    scissor.extent.height = 1;
+    scissor.extent.width = width;
+    scissor.extent.height = height;
 
     VkPipelineViewportStateCreateInfo ViewportState;
     ViewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -269,23 +270,9 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     DepthStencilState.minDepthBounds = 0.0f;
     DepthStencilState.maxDepthBounds = 1.0f;
 
-    int BlendAttachmentCount = StateManagment->m_ColorAttachmentCount;
-    VkPipelineColorBlendAttachmentState *pBlendAttachmentStates = (VkPipelineColorBlendAttachmentState *)alloca(sizeof(VkPipelineColorBlendAttachmentState) * BlendAttachmentCount);
-
-    auto IsAttachmentColor = [](const FramebufferAttachment &attachment) throw()->bool
-    {
-        if (attachment.m_format == TextureFormat::D32F)
-            return false;
-        return true;
-    };
-    const auto &state_managment_attachments = StateManagment->m_attachments;
-
-    for (int i = 0, j = 0; j < BlendAttachmentCount; i++)
-    {
-        if (IsAttachmentColor(state_managment_attachments[i]))
-        {
-            pBlendAttachmentStates[j++] = state_managment_attachments[i].BlendState;
-        }
+    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachmentStates(attachments.size());
+    for (int i = 0; i < BlendAttachmentStates.size(); i++) {
+        BlendAttachmentStates[i] = attachments[i].GetBlendState();
     }
 
     VkPipelineColorBlendStateCreateInfo ColorBlendState;
@@ -294,12 +281,12 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     ColorBlendState.flags = 0;
     ColorBlendState.logicOpEnable = VK_FALSE;
     ColorBlendState.logicOp = VK_LOGIC_OP_MAX_ENUM;
-    ColorBlendState.attachmentCount = BlendAttachmentCount;
-    ColorBlendState.pAttachments = pBlendAttachmentStates;
-    ColorBlendState.blendConstants[0] = StateManagment->m_BlendConstantRed;
-    ColorBlendState.blendConstants[1] = StateManagment->m_BlendConstantGreen;
-    ColorBlendState.blendConstants[2] = StateManagment->m_BlendConstantBlue;
-    ColorBlendState.blendConstants[3] = StateManagment->m_BlendConstantAlpha;
+    ColorBlendState.attachmentCount = BlendAttachmentStates.size();
+    ColorBlendState.pAttachments = BlendAttachmentStates.data();
+    ColorBlendState.blendConstants[0] = 0.0;
+    ColorBlendState.blendConstants[1] = 0.0;
+    ColorBlendState.blendConstants[2] = 0.0;
+    ColorBlendState.blendConstants[3] = 0.0;
 
     VkPipelineDynamicStateCreateInfo DynamicState;
     std::array<VkDynamicState, 2> DynamicStates;
@@ -321,7 +308,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
 
     VkGraphicsPipelineCreateInfo createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    createInfo.pNext = spec.m_dynamicRendering ? &dynamicCreateInfo : nullptr;
+    createInfo.pNext = &dynamicCreateInfo;
     createInfo.flags = (s_DebugMode) ? (VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT | VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR) : (0);
     createInfo.stageCount = 2;
     createInfo.pStages = Stages.data();
@@ -335,7 +322,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     createInfo.pColorBlendState = &ColorBlendState;
     createInfo.pDynamicState = &DynamicState;
     createInfo.layout = layout;
-    createInfo.renderPass = spec.m_dynamicRendering ? nullptr : (VkRenderPass)StateManagment->m_renderpass;
+    createInfo.renderPass = nullptr;
     createInfo.subpass = 0; // No subpass support
     createInfo.basePipelineHandle = 0;
     createInfo.basePipelineIndex = 0;
@@ -349,7 +336,6 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     state->m_context = context;
     state->m_pipeline = pipeline;
     state->m_spec = spec;
-    state->m_StateManagment = StateManagment;
     state->m_layout = layout;
 
     return state;
