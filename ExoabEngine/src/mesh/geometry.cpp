@@ -115,6 +115,12 @@ namespace Mesh
 					v.position.x = scene->mMeshes[i]->mVertices[j].x;
 					v.position.y = scene->mMeshes[i]->mVertices[j].y;
 					v.position.z = scene->mMeshes[i]->mVertices[j].z;
+					scene->mMeshes[i]->mTangents[j].x;
+					scene->mMeshes[i]->mTangents[j].y;
+					scene->mMeshes[i]->mTangents[j].z;
+					scene->mMeshes[i]->mBitangents[j].x;
+					scene->mMeshes[i]->mBitangents[j].y;
+					scene->mMeshes[i]->mBitangents[j].z;
 					v.position.w = 1.0f;
 					v.nx = uint8_t(scene->mMeshes[i]->mNormals[j].x * 127.0 + 127.0);
 					v.ny = uint8_t(scene->mMeshes[i]->mNormals[j].y * 127.0 + 127.0);

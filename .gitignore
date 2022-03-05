@@ -5,3 +5,4 @@ ExoabEngine/external/*
 ExoabEngine/assets/materials/shaders/spirv_cache/*
 *.dll
 *.lib
+*.spv

@@ -27,5 +27,5 @@ void Texture2_Destroy(ITexture2 texture);
 ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, bool mipmaps);
 
 // Converts "RGBA8" to TextureFormat::RGBA8
-TextureFormat Textures_StringToTextureFormat(std::string& input);
+//TextureFormat Textures_StringToTextureFormat(std::string& input);
 

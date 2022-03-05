@@ -422,7 +422,7 @@ MaterialConfiguration::MaterialConfiguration(const char *material_config)
                 else if (StrStartsWith(line, "format"))
                 {
                     std::string format_str = StrTrim(line.substr(8));
-                    CurrentAttachment.format = Textures_StringToTextureFormat(format_str);
+                    CurrentAttachment.format = VK_FORMAT_UNDEFINED;//Textures_StringToTextureFormat(format_str);
                 }
                 else if (StrStartsWith(line, "enda"))
                 {

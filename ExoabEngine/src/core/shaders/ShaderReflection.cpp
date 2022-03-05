@@ -102,7 +102,7 @@ ShaderReflection::ShaderReflection(Shader *shader)
         if (PrintReflectionInfo)
         {
             char buffer[150];
-            sprintf(buffer, "%s [%d bytes]; member count %d; set: %d, binding: %d; \n", uniform_buffer.name.c_str(), size, member_count, set, binding);
+            sprintf(buffer, "[UBO] %s [%d bytes]; member count %d; set: %d, binding: %d; \n", uniform_buffer.name.c_str(), size, member_count, set, binding);
             lograw(buffer);
         }
         std::string name0 = compiler->get_name(uniform_buffer.id);

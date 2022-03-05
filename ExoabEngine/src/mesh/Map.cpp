@@ -2,7 +2,7 @@
 #include <iostream>
 #include <meshoptimizer/src/meshoptimizer.h>
 
-Map Map_Create(int width, int xresolution, int height, int yresolution)
+Map Map_Create(int width, int xresolution, int height, int yresolution, int divide_count)
 {
 	Map terrain;
 	width = (width % 2 == 0) ? width : width + 1;
@@ -24,10 +24,11 @@ Map Map_Create(int width, int xresolution, int height, int yresolution)
 		max /= 10;
 		number_width++;
 	}
+	int step_y = int(1.0 / (float)yresolution);
+	int step_x = int(1.0 / (float)xresolution);
 	for (int h = -height / 2; h <= height / 2; h++)
 	{
 		float base_y = h;
-		float step_y = 1.0 / (float)yresolution;
 		for (int yr = 0; yr < yresolution; yr++)
 		{
 			float y = base_y + (yr * step_y);
@@ -36,7 +37,6 @@ Map Map_Create(int width, int xresolution, int height, int yresolution)
 			for (int w = -width / 2; w <= width / 2; w++)
 			{
 				float base_x = w;
-				float step_x = 1.0 / (float)xresolution;
 				for (int xr = 0; xr < xresolution; xr++)
 				{
 					float x = base_x + (xr * step_x);
@@ -97,21 +97,9 @@ Map Map_Create(int width, int xresolution, int height, int yresolution)
 	}
 	terrain.m_vertices = vertices;
 	terrain.m_indices = indices;
+	terrain.m_totalVerticesCount = terrain.m_vertices.size();
+	terrain.m_totalIndicesCount = terrain.m_indices.size();
 
-	// Break up terrain
-	uint32_t meshFragmentCount = 4;
-	uint32_t submeshTriangleCount = (indices.size() / 3) / meshFragmentCount;
-	vector<vector<MapVertex>> split_mesh;
-	vector<MapVertex> temp_vertices;
-	for (int i = 0, j = 0; i < indices.size(); i++) {
-		if (j == submeshTriangleCount * 3) {
-			j = 0;
-			split_mesh.push_back(temp_vertices);
-			temp_vertices.clear();
-		}
-		temp_vertices.push_back(vertices[indices[i]]);
-		j++;
-	}
 	return terrain;
 }
 

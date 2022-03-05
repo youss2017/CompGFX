@@ -57,6 +57,7 @@ namespace VkAlloc
 		VkSampleCountFlagBits    m_samples;
 		VkImageTiling            m_tiling;
 		VkImageUsageFlags        m_usage;
+		bool m_lazyAllocate;
 		float m_priority = 0.5f;
 	};
 

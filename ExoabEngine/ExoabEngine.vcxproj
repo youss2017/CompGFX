@@ -136,7 +136,6 @@
     <ClInclude Include="src\graphics\DebugRenderer.hpp" />
     <ClInclude Include="src\graphics\Font.hpp" />
     <ClInclude Include="src\graphics\Graphics.hpp" />
-    <ClInclude Include="src\graphics\material_system\FramebufferReserve.hpp" />
     <ClInclude Include="src\graphics\material_system\Material.hpp" />
     <ClInclude Include="src\graphics\material_system\MaterialConfiguration.hpp" />
     <ClInclude Include="src\mesh\entity.hpp" />
@@ -192,6 +191,7 @@
     <ClCompile Include="src\core\memory\Buffer2.cpp" />
     <ClCompile Include="src\core\memory\Texture2.cpp" />
     <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />
+    <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
     <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
     <ClCompile Include="src\core\pipeline\PipelineCS.cpp" />
     <ClCompile Include="src\core\shaders\Shader.cpp" />
@@ -200,7 +200,6 @@
     <ClCompile Include="src\graphics\DebugRenderer.cpp" />
     <ClCompile Include="src\graphics\Font.cpp" />
     <ClCompile Include="src\graphics\Graphics.cpp" />
-    <ClCompile Include="src\graphics\material_system\FramebufferReserve.cpp" />
     <ClCompile Include="src\graphics\material_system\Material.cpp" />
     <ClCompile Include="src\graphics\material_system\MaterialConfiguration.cpp" />
     <ClCompile Include="src\main.cpp" />

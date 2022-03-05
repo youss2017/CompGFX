@@ -24,11 +24,12 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 		case TextureUsage::TEXTURE:
 			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			break;
-		case TextureUsage::COLOR_ATTACHMENT:
+		case TextureUsage::COLOR:
 			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			break;
-		case TextureUsage::DEPTH_ATTACHMENT:
-			desc.m_usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		case TextureUsage::DEPTH_STENCIL:
+		case TextureUsage::DEPTH_ONLY:
+			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			break;
 		default:
 			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -38,6 +39,7 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	texture->m_vk_description = desc;
 	texture->m_context = context;
 	texture->m_specification = specification;
+	desc.m_lazyAllocate = specification.m_LazilyAllocate;
 	VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, 1, &desc, &texture->m_vk_image);
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -59,11 +61,16 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 		return VK_COMPONENT_SWIZZLE_IDENTITY;
 	};
 	viewInfo.image = texture->m_vk_image->m_image;
-	viewInfo.components.r = GetVkSwizzle(specification.m_Sampler.SwizzleRed);
-	viewInfo.components.g = GetVkSwizzle(specification.m_Sampler.SwizzleGreen);
-	viewInfo.components.b = GetVkSwizzle(specification.m_Sampler.SwizzleBlue);
-	viewInfo.components.a = GetVkSwizzle(specification.m_Sampler.SwizzleAlpha);
-	viewInfo.subresourceRange.aspectMask = specification.m_TextureUsage == TextureUsage::DEPTH_ATTACHMENT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+	viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	if (specification.m_TextureUsage == TextureUsage::COLOR || specification.m_TextureUsage == TextureUsage::TEXTURE)
+		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	else if(specification.m_TextureUsage == TextureUsage::DEPTH_STENCIL)
+		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	else
+		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	viewInfo.subresourceRange.baseMipLevel = 0;
 	viewInfo.subresourceRange.levelCount = desc.m_mipLevels;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
@@ -303,126 +310,11 @@ ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, boo
 	Texture2DSpecification specification;
 	specification.m_Width = w;
 	specification.m_Height = h;
-	specification.m_Format = TextureFormat::RGBA8;
+	specification.m_Format = VK_FORMAT_R8G8B8A8_UNORM;
 	specification.m_GenerateMipMapLevels = mipmaps;
+	specification.m_TextureUsage = TextureUsage::TEXTURE;
 	ITexture2 texture = Texture2_Create(context, specification);
 	Texture2_UploadPixels(texture, pixels, w * h * sizeof(uint32_t));
 	stbi_image_free(pixels);
 	return texture;
 }
-
-TextureFormat Textures_StringToTextureFormat(std::string& _input)
-{
-	std::string input = Utils::StrUpperCase(_input);
-	if (Utils::StrContains(input, "UNDEFINED"))
-		return TextureFormat::UNDEFINED;
-	if (Utils::StrContains(input, "R8"))
-		return TextureFormat::R8;
-	if (Utils::StrContains(input, "R8_SNORM"))
-		return TextureFormat::R8_SNORM;
-	if (Utils::StrContains(input, "R16"))
-		return TextureFormat::R16;
-	if (Utils::StrContains(input, "R16_SNORM"))
-		return TextureFormat::R16_SNORM;
-	if (Utils::StrContains(input, "RG8"))
-		return TextureFormat::RG8;
-	if (Utils::StrContains(input, "RG8_SNORM"))
-		return TextureFormat::RG8_SNORM;
-	if (Utils::StrContains(input, "RG16"))
-		return TextureFormat::RG16;
-	if (Utils::StrContains(input, "RG16_SNORM"))
-		return TextureFormat::RG16_SNORM;
-	if (Utils::StrContains(input, "RGB8"))
-		return TextureFormat::RGB8;
-	if (Utils::StrContains(input, "RGB8_SNORM"))
-		return TextureFormat::RGB8_SNORM;
-	if (Utils::StrContains(input, "RGB16_SNORM"))
-		return TextureFormat::RGB16_SNORM;
-	if (Utils::StrContains(input, "RGBA8"))
-		return TextureFormat::RGBA8;
-	if (Utils::StrContains(input, "RGBA8_SNORM"))
-		return TextureFormat::RGBA8_SNORM;
-	if (Utils::StrContains(input, "RGBA16"))
-		return TextureFormat::RGBA16;
-	if (Utils::StrContains(input, "SRGB8"))
-		return TextureFormat::SRGB8;
-	if (Utils::StrContains(input, "SRGB8_ALPHA8"))
-		return TextureFormat::SRGB8_ALPHA8;
-	if (Utils::StrContains(input, "R16F"))
-		return TextureFormat::R16F;
-	if (Utils::StrContains(input, "RG16F"))
-		return TextureFormat::RG16F;
-	if (Utils::StrContains(input, "RGB16F"))
-		return TextureFormat::RGB16F;
-	if (Utils::StrContains(input, "RGBA16F"))
-		return TextureFormat::RGBA16F;
-	if (Utils::StrContains(input, "R32F"))
-		return TextureFormat::R32F;
-	if (Utils::StrContains(input, "D32"))
-		return TextureFormat::D32F;
-	if (Utils::StrContains(input, "RG32F"))
-		return TextureFormat::RG32F;
-	if (Utils::StrContains(input, "RGB32F"))
-		return TextureFormat::RGB32F;
-	if (Utils::StrContains(input, "RGBA32F"))
-		return TextureFormat::RGBA32F;
-	if (Utils::StrContains(input, "R8I"))
-		return TextureFormat::R8I;
-	if (Utils::StrContains(input, "R8UI"))
-		return TextureFormat::R8UI;
-	if (Utils::StrContains(input, "R16I"))
-		return TextureFormat::R16I;
-	if (Utils::StrContains(input, "R16UI"))
-		return TextureFormat::R16UI;
-	if (Utils::StrContains(input, "R32I"))
-		return TextureFormat::R32I;
-	if (Utils::StrContains(input, "R32UI"))
-		return TextureFormat::R32UI;
-	if (Utils::StrContains(input, "RG8I"))
-		return TextureFormat::RG8I;
-	if (Utils::StrContains(input, "RG8UI"))
-		return TextureFormat::RG8UI;
-	if (Utils::StrContains(input, "RG16I"))
-		return TextureFormat::RG16I;
-	if (Utils::StrContains(input, "RG16UI"))
-		return TextureFormat::RG16UI;
-	if (Utils::StrContains(input, "RG32I"))
-		return TextureFormat::RG32I;
-	if (Utils::StrContains(input, "RG32UI"))
-		return TextureFormat::RG32UI;
-	if (Utils::StrContains(input, "RGB8I"))
-		return TextureFormat::RGB8I;
-	if (Utils::StrContains(input, "RGB8UI"))
-		return TextureFormat::RGB8UI;
-	if (Utils::StrContains(input, "RGB16I"))
-		return TextureFormat::RGB16I;
-	if (Utils::StrContains(input, "RGB16UI"))
-		return TextureFormat::RGB16UI;
-	if (Utils::StrContains(input, "RGB32I"))
-		return TextureFormat::RGB32I;
-	if (Utils::StrContains(input, "RGB32UI"))
-		return TextureFormat::RGB32UI;
-	if (Utils::StrContains(input, "RGBA8I"))
-		return TextureFormat::RGBA8I;
-	if (Utils::StrContains(input, "RGBA8UI"))
-		return TextureFormat::RGBA8UI;
-	if (Utils::StrContains(input, "RGBA16I"))
-		return TextureFormat::RGBA16I;
-	if (Utils::StrContains(input, "RGBA16UI"))
-		return TextureFormat::RGBA16UI;
-	if (Utils::StrContains(input, "RGBA32I"))
-		return TextureFormat::RGBA32I;
-	if (Utils::StrContains(input, "RGBA32UI"))
-		return TextureFormat::RGBA32UI;
-	if (Utils::StrContains(input, "BGRA8"))
-		return TextureFormat::BGRA8;
-	if (Utils::StrContains(input, "SBGR8_ALPHA8"))
-		return TextureFormat::SBGR8_ALPHA8;
-	if (Utils::StrContains(input, "R11G11B10F"))
-		return TextureFormat::R11G11B10F;
-	std::string error_message = "Could not parse string format '" + input + "'";
-	logerror(error_message.c_str());
-	assert(0);
-	return TextureFormat::UNDEFINED;
-}
-

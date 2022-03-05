@@ -4,13 +4,13 @@
 #include "UI.hpp"
 #include "Camera.hpp"
 #include "ecs/EntityController.hpp"
-#include <material_system/FramebufferReserve.hpp>
 #include <material_system/Material.hpp>
 #include <pipeline/PipelineCS.hpp>
 #include <Logger.hpp>
 #include <vector>
 #include <glfw/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <backend/VkGraphicsCard.hpp>
 
 bool Application::Quit = false;
 
@@ -33,21 +33,20 @@ namespace Application
 	vk::VkContext gContext = nullptr;
 	vk::GraphicsSwapchain gSwapchain;
 	PlatformWindow* gWindow;
-	FramebufferReserve* gFramebufferReserve = nullptr;
 	std::vector<Mesh::Geometry> gGeomtry;
 	IBuffer2 gVerticesSSBO, gIndicesBuffer;
-	IMaterialFramebuffer gFBO0;
 	Material* gMaterial0;
 	Material* gMapMaterial;
 	ShaderTypes::TerrainTransform* gMapUBO[gFrameOverlapCount];
 	IBuffer2 gMapVertices, gMapIndices;
-	uint32_t gMapIndicesCount;
 	VkSampler gSampler0;
 	ITexture2 gWoodTex;
 	Camera gCamera({ 0,0,0 });
 	Camera gCamera2({0,0,0});
 	static VkQueryPool s_Query[gFrameOverlapCount];
 	static bool s_QueryWrite = true;
+	Framebuffer gFBO0;
+	Map testingMap;
 	
 	static struct {
 		uint32_t count;
@@ -98,7 +97,7 @@ bool Application::Initalize(ConfigurationSettings* configuration)
 	gWindow = gGfx->m_window;
 
 	Shader::ConfigureShaderCache(s_ShaderCache);
-	gFramebufferReserve = new FramebufferReserve(gContext, *configuration, s_FramebufferReserve);
+	//gFramebufferReserve = new FramebufferReserve(gContext, *configuration, s_FramebufferReserve);
 
 	if (s_EnableImGui)
 		UI::Initalize(gContext, gGfx);
@@ -136,23 +135,20 @@ bool Application::LoadAssets()
 		gECS->AddEntity(&s_Entites.ent[i]);
 	}
 
-	//physx::PxMaterial* mat = Physx_CreateMaterial(0.5, 0.5, 0.6);
-	//physx::PxTriangleMesh* gmesh = Physx_CreateTriangleMesh(gGeomtry[s_Entites.ent[0].m_geometryID]);
-	//
-	//physx::PxRigidDynamic* actor = Physx_CreateDynamicActor(mat, gmesh, { 2, 2, 2 }, physx::PxTransform());
-	//physx::PxRigidBodyExt::updateMassAndInertia(*actor, 10.0f);
-	//gScene->addActor(*actor);
-
-	//mat->release();
-	//gmesh->release();
 	return true;
 }
 
 bool Application::CreateResources()
 {
 	PROFILE_FUNCTION();
+	gFBO0.m_width = 1280;
+	gFBO0.m_height = 720;
+	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, 1280, 720, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 147, 147, 147, 0 });
+	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 1280, 720, VK_FORMAT_D32_SFLOAT, { 1.0f, 1.0f, 1.0f, 1.0f });
+	gFBO0.AddColorAttachment(0, colorAttachment);
+	gFBO0.SetDepthAttachment(depthAttachment);
+
 	MaterialConfiguration basicmc = MaterialConfiguration("assets/materials/basic.mc");
-	gFBOStateManagment0 = Material_CreateFramebufferStateManagment(gContext, &basicmc, gFramebufferReserve);
 
 	gSampler0 = vk::Gfx_CreateSampler(gContext);
 	gWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
@@ -196,8 +192,7 @@ bool Application::CreateResources()
 	set1Bindings[0].m_textures.push_back(gWoodTex);
 	set1Bindings[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	gMaterial0 = Material_Create(gContext, &basicmc, gFBOStateManagment0, nullptr, { {0, &bindings}, {1, &set1Bindings} }, {});
-	gFBO0 = Material_CreateFramebuffer(gContext, &basicmc, gConfiguration, gFBOStateManagment0, gFramebufferReserve);
+	gMaterial0 = Material_Create(gContext, gFBO0, &basicmc, nullptr, { {0, &bindings}, {1, &set1Bindings} }, {});
 
 	/***** COMPUTE (Frustrum Culling) Pipeline  *****/
 
@@ -253,12 +248,11 @@ bool Application::CreateResources()
 
 	/********* Map Material **********/
 
-	Map testingMap = Map_Create(100, 4, 100, 4);
-	gMapIndicesCount = testingMap.m_indices.size();
-	gMapVertices = Buffer2_Create(gContext, BufferType::StorageBuffer, testingMap.m_vertices.size() * sizeof(MapVertex), BufferMemoryType::GPU_ONLY);
-	gMapIndices = Buffer2_Create(gContext, BufferType::IndexBuffer, testingMap.m_indices.size() * sizeof(uint32_t), BufferMemoryType::GPU_ONLY);
-	Buffer2_UploadData(gMapVertices, (char8_t*)testingMap.m_vertices.data(), 0, VK_WHOLE_SIZE);
-	Buffer2_UploadData(gMapIndices, (char8_t*)testingMap.m_indices.data(), 0, VK_WHOLE_SIZE);
+	testingMap = Map_Create(10, 1, 10, 1, 5);
+	gMapVertices = Buffer2_Create(gContext, BufferType::StorageBuffer, testingMap.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY);
+	gMapIndices = Buffer2_Create(gContext, BufferType::IndexBuffer, testingMap.m_totalIndicesCount * sizeof(uint32_t), BufferMemoryType::GPU_ONLY);
+	Buffer2_UploadData(gMapVertices, (char8_t*)testingMap.m_vertices.data(), 0, testingMap.m_vertices.size() * sizeof(MapVertex));
+	Buffer2_UploadData(gMapIndices, (char8_t*)testingMap.m_indices.data(), 0, testingMap.m_indices.size() * sizeof(uint32_t));
 
 	std::vector<ShaderBinding> terrainBindings(2);
 	terrainBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
@@ -293,7 +287,7 @@ bool Application::CreateResources()
 	terrainFragmentBinding[0].m_textures.push_back(gWoodTex);
 	terrainFragmentBinding[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	gMapMaterial = Material_Create(gContext, &basicmc, gFBOStateManagment0, nullptr, "assets/shaders/Terrain.vert", "assets/shaders/Terrain.frag", { {0, & terrainBindings}, {1, &terrainFragmentBinding} }, {{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3)}});
+	gMapMaterial = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/Terrain.vert", "assets/shaders/Terrain.frag", { {0, & terrainBindings}, {1, &terrainFragmentBinding} }, {{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3)}});
 
 	for (int i = 0; i < gFrameOverlapCount; i++)
 	{
@@ -317,7 +311,7 @@ bool Application::CreateResources()
 		shaderReadBarrier[i].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		shaderReadBarrier[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		shaderReadBarrier[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		shaderReadBarrier[i].image = gFBO0->m_textures[0]->m_vk_images_per_frame[i];
+		shaderReadBarrier[i].image = gFBO0.m_color_attachments[0].GetAttachment()->m_vk_images_per_frame[i];
 		shaderReadBarrier[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		shaderReadBarrier[i].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 		shaderReadBarrier[i].subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
@@ -420,24 +414,10 @@ void Application::Render()
 	vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 	vkResetFences(device, 1, &frame.m_RenderFence);
 	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	auto& attachments = gMaterial0->m_state_managment->m_attachments;
+	//auto& attachments = gMaterial0->m_state_managment->m_attachments;
 	VkClearValue pClearValues[2];
-	pClearValues[0] = attachments[0].clearColor;
-	pClearValues[1] = gMaterial0->m_state_managment->m_depth_attachment.value().clearColor;
-	VkRenderPassBeginInfo BeginInfo;
-	VkViewport viewport;
-	VkRect2D scissor;
-	BeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	BeginInfo.pNext = nullptr;
-	BeginInfo.renderPass = gMaterial0->m_state_managment->m_renderpass;
-	BeginInfo.framebuffer = gFBO0->m_framebuffers[frame.m_FrameIndex];
-	gFBO0->m_framebuffer->GetViewport(BeginInfo.renderArea.offset.x, BeginInfo.renderArea.offset.y, BeginInfo.renderArea.extent.width, BeginInfo.renderArea.extent.height);
-	gFBO0->m_framebuffer->GetViewport(viewport.x, viewport.y, viewport.width, viewport.height);
-	gFBO0->m_framebuffer->GetScissor(scissor.offset.x, scissor.offset.y, scissor.extent.width, scissor.extent.height);
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-	BeginInfo.clearValueCount = 2;
-	BeginInfo.pClearValues = pClearValues;
+	pClearValues[0] = { 0, 0, 0, 0 };
+	pClearValues[1] = { 1.0 };
 	
 	/**** ==================FRUSTRUM CULLING================== ****/
 	vkCmdFillBuffer(cmd, computeSet0->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, sizeof(uint32_t), 0);
@@ -482,39 +462,38 @@ void Application::Render()
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 	/**** ==================FRUSTRUM CULLING================== ****/
 
-	//vkCmdBeginRenderPass(cmd, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
 	renderingInfo.flags = 0;
-	renderingInfo.renderArea = BeginInfo.renderArea;
+	renderingInfo.renderArea = { {0, 0}, {1280, 720} };
 	renderingInfo.layerCount = 1;
 	renderingInfo.viewMask = 0;
 	renderingInfo.colorAttachmentCount = 1;
 
 	VkRenderingAttachmentInfo colorAttachment{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
-	colorAttachment.imageView = gFBO0->m_textures[0]->m_vk_views_per_frame[FrameIndex];
+	colorAttachment.imageView = gFBO0.m_color_attachments[0].GetAttachment()->m_vk_views_per_frame[FrameIndex];
 	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	colorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
 	colorAttachment.resolveImageView = nullptr;
 	colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.clearValue.color = attachments[0].clearColor.color;
+	colorAttachment.clearValue.color = gFBO0.m_color_attachments[0].m_clear_color;
 	VkRenderingAttachmentInfo depthAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-	depthAttachment.imageView = gFBO0->m_textures[1]->m_vk_views_per_frame[FrameIndex];
+	depthAttachment.imageView = gFBO0.m_depth_attachment->GetAttachment()->m_vk_views_per_frame[FrameIndex];
 	depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	depthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
 	depthAttachment.resolveImageView = nullptr;
 	depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	depthAttachment.clearValue.depthStencil = gMaterial0->m_state_managment->m_depth_attachment.value().clearColor.depthStencil;
+	depthAttachment.clearValue.depthStencil.depth = 1.0f;
 
 	renderingInfo.pColorAttachments = &colorAttachment;
 	renderingInfo.pDepthAttachment = &depthAttachment;
 	renderingInfo.pStencilAttachment = nullptr;
-	vkCmdBeginRendering(cmd, &renderingInfo);
+	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
 	VkImageMemoryBarrier renderBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	renderBarrier.srcAccessMask = VK_ACCESS_NONE;
 	renderBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -522,7 +501,7 @@ void Application::Render()
 	renderBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	renderBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	renderBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	renderBarrier.image = gFBO0->m_textures[0]->m_vk_images_per_frame[FrameIndex];
+	renderBarrier.image = gFBO0.m_color_attachments[0].GetAttachment()->m_vk_images_per_frame[FrameIndex];
 	renderBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	renderBarrier.subresourceRange.layerCount = 1;
 	renderBarrier.subresourceRange.levelCount = 1;
@@ -534,12 +513,15 @@ void Application::Render()
 	depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	depthBarrier.image = gFBO0->m_textures[1]->m_vk_images_per_frame[FrameIndex];
+	depthBarrier.image = gFBO0.m_depth_attachment->GetAttachment()->m_vk_images_per_frame[FrameIndex];
 	depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	depthBarrier.subresourceRange.layerCount = 1;
 	depthBarrier.subresourceRange.levelCount = 1;
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &renderBarrier);
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &depthBarrier);
+
+	VkViewport viewport = { 0, 0, 1280, 720, 0.0f, 1.0f };
+	VkRect2D scissor = { 0, 0, 1280, 720 };
 
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
@@ -556,10 +538,10 @@ void Application::Render()
 	sets[0] = gMapMaterial->m_sets[0]->m_set[FrameIndex];
 	sets[1] = gMapMaterial->m_sets[1]->m_set[FrameIndex];
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_layout, 0, 2, sets, 0, nullptr);
-	vkCmdBindIndexBuffer(cmd, gMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
 	const glm::vec3 LightDir = glm::vec3(0.0, -0.5, 0.5);
 	vkCmdPushConstants(cmd, gMapMaterial->m_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3), &LightDir);
-	vkCmdDrawIndexed(cmd, gMapIndicesCount, 1, 0, 0, 0);
+	vkCmdBindIndexBuffer(cmd, gMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexed(cmd, testingMap.m_indices.size(), 1, 0, 0, 0);
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 3);
 
@@ -570,13 +552,13 @@ void Application::Render()
 	presentBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	presentBarrier.image = gFBO0->m_textures[0]->m_vk_images_per_frame[FrameIndex];
+	presentBarrier.image = gFBO0.m_color_attachments[0].GetImage(FrameIndex);
 	presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	presentBarrier.subresourceRange.layerCount = 1;
 	presentBarrier.subresourceRange.levelCount = 1;
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentBarrier);
 
-	vkCmdEndRendering(cmd);
+	vkCmdEndRenderingKHR(cmd);
 	vkEndCommandBuffer(cmd);
 
 	VkPipelineStageFlags stage[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -592,7 +574,7 @@ void Application::Render()
 
 	if (s_EnableImGui)
 		UI::RenderUI();
-	gSwapchain.Present(gFBO0->m_textures[UI::ShowDepthBuffer]->m_vk_images_per_frame[FrameIndex], gFBO0->m_textures[UI::ShowDepthBuffer]->m_vk_views_per_frame[FrameIndex], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+	gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
 	Graphics3D_NextFrame(gGfx);
 }
 
@@ -606,16 +588,16 @@ void Application::Destroy()
 	ShaderBinding_DestroySets(gContext, { computeSet0 });
 	vkDestroyPipelineLayout(gContext->defaultDevice, computeLayout, nullptr);
 	vkDestroyPipeline(gContext->defaultDevice, computeFrustrum, nullptr);
-	Material_DestroyFramebuffer(gFBO0);
 	Material_Destory(gMaterial0);
 	Material_Destory(gMapMaterial);
 	Buffer2_Destroy(gMapVertices);
 	Buffer2_Destroy(gMapIndices);
+	gFBO0.DestroyAllBoundAttachments();
 	vkDestroySampler(gContext->defaultDevice, gSampler0, nullptr);
 	Texture2_Destroy(gWoodTex);
 	Buffer2_Destroy(gVerticesSSBO);
 	Buffer2_Destroy(gIndicesBuffer);
-	delete gFramebufferReserve;
+	//delete gFramebufferReserve;
 	Graphics3D_Destroy(gGfx);
 	Physx_Destroy();
 	delete[] s_Entites.ent;

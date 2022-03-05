@@ -164,6 +164,8 @@ namespace VkAlloc
 			default:
 				assert(0);
 			}
+			if (desc.m_lazyAllocate)
+				vmaCreateInfo.preferredFlags |= VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
 			vmaCreateInfo.memoryTypeBits = UINT32_MAX;
 			vmaCreateInfo.pool = nullptr;
 			vmaCreateInfo.pUserData = nullptr;

@@ -28,7 +28,7 @@ struct MaterialAttachment
     VkImageLayout m_initialLayout;
     VkImageLayout m_imageLayout;
     VkImageLayout m_finialLayout;
-    TextureFormat format;
+    VkFormat format;
 };
 
 #if 0

@@ -9,19 +9,19 @@
 
 constexpr const char *ASSESTS_SHADER_ROOT_PATH = "assets/shaders/";
 
-Material* Material_Create(GraphicsContext _context, int width, int height, MaterialConfiguration* configuration, PipelineVertexInputDescription* vertexInputDescription, const std::vector<MaterialSetDescription>& setBindings, std::vector<VkPushConstantRange> pushblocks)
+Material* Material_Create(GraphicsContext _context, Framebuffer fbo, MaterialConfiguration* configuration, PipelineVertexInputDescription* vertexInputDescription, const std::vector<MaterialSetDescription>& setBindings, std::vector<VkPushConstantRange> pushblocks)
 {
-	return Material_Create(_context, width, height, configuration, vertexInputDescription, ASSESTS_SHADER_ROOT_PATH + configuration->vertex_shader, ASSESTS_SHADER_ROOT_PATH + configuration->fragment_shader, setBindings, pushblocks);
+	return Material_Create(_context, fbo, configuration, vertexInputDescription, ASSESTS_SHADER_ROOT_PATH + configuration->vertex_shader, ASSESTS_SHADER_ROOT_PATH + configuration->fragment_shader, setBindings, pushblocks);
 }
 
-Material* Material_Create(GraphicsContext _context, int width, int height, MaterialConfiguration* configuration, PipelineVertexInputDescription* vertexInputDescription, const std::string& absolute_vertex_path, const std::string& absolute_fragment_path,
+Material* Material_Create(GraphicsContext _context, Framebuffer fbo, MaterialConfiguration* configuration, PipelineVertexInputDescription* vertexInputDescription, const std::string& absolute_vertex_path, const std::string& absolute_fragment_path,
 	const std::vector<MaterialSetDescription>& setBindings, std::vector<VkPushConstantRange> pushblocks)
 {
 	vk::VkContext context = ToVKContext(_context);
 	Material* material = new Material();
 	material->m_context = context;
-	material->width = width;
-	material->height = height;
+	material->width = fbo.m_width;
+	material->height = fbo.m_height;
 	// 1) Load Shaders
 	material->m_vertex_shader = new Shader(context, absolute_vertex_path.c_str());
 	material->m_fragment_shader = new Shader(context, absolute_fragment_path.c_str());
@@ -60,8 +60,8 @@ Material* Material_Create(GraphicsContext _context, int width, int height, Mater
 	specification.m_Topology = PolygonTopology::TRIANGLE_LIST;
 	specification.m_SampleRateShadingEnabled = configuration->SampleShading;
 	specification.m_MinSampleShading = Utils::ClampValues(configuration->minSampleShading, 0.0f, 1.0f);
-	material->m_pipeline_state = PipelineState_Create(context, specification, material->m_input_description, width, height, attachments, material->m_layout, material->m_vertex_shader, material->m_fragment_shader);
-
+	material->m_pipeline_state = PipelineState_Create(context, specification, material->m_input_description, fbo, material->m_layout, material->m_vertex_shader, material->m_fragment_shader);
+	material->m_fbo = fbo;
 	return material;
 }
 
@@ -82,5 +82,5 @@ void Material_Destory(Material* material)
 void Material_RecreatePipeline(Material* material, PipelineSpecification specification)
 {
 	PipelineState_Destroy(material->m_pipeline_state);
-	material->m_pipeline_state = PipelineState_Create(material->m_context, specification, material->m_input_description, material->width, material->height, attachments, material->m_layout, material->m_vertex_shader, material->m_fragment_shader);
+	material->m_pipeline_state = PipelineState_Create(material->m_context, specification, material->m_input_description, material->m_fbo, material->m_layout, material->m_vertex_shader, material->m_fragment_shader);
 }

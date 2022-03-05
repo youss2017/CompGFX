@@ -139,7 +139,7 @@ static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexIn
 }
 
 IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, PipelineVertexInputDescription& input_description,
-    uint32_t width, uint32_t height, std::vector<FramebufferAttachment> attachments, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
+    Framebuffer fbo, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
 {
     vk::VkContext context = ToVKContext(_context);
     std::array<VkPipelineShaderStageCreateInfo, 2> Stages;
@@ -182,16 +182,16 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     VkViewport viewport;
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = width;
-    viewport.height = height;
+    viewport.width = fbo.m_width;
+    viewport.height = fbo.m_height;
     viewport.minDepth = spec.m_NearField;
     viewport.maxDepth = spec.m_FarField;
 
     VkRect2D scissor;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    scissor.extent.width = width;
-    scissor.extent.height = height;
+    scissor.extent.width = fbo.m_width;
+    scissor.extent.height = fbo.m_height;
 
     VkPipelineViewportStateCreateInfo ViewportState;
     ViewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -233,7 +233,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     MultisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     MultisampleState.pNext = nullptr;
     MultisampleState.flags = 0;
-    MultisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;// (VkSampleCountFlagBits)StateManagment->m_Samples;
+    MultisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     // TODO: Determine if sample shading is useful and makes a visual difference
     MultisampleState.sampleShadingEnable = VK_FALSE;
     MultisampleState.minSampleShading = 0.0f;
@@ -270,9 +270,9 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     DepthStencilState.minDepthBounds = 0.0f;
     DepthStencilState.maxDepthBounds = 1.0f;
 
-    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachmentStates(attachments.size());
+    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachmentStates(fbo.m_color_attachments.size());
     for (int i = 0; i < BlendAttachmentStates.size(); i++) {
-        BlendAttachmentStates[i] = attachments[i].GetBlendState();
+        BlendAttachmentStates[i] = fbo.m_color_attachments[i].GetBlendState();
     }
 
     VkPipelineColorBlendStateCreateInfo ColorBlendState;
@@ -300,11 +300,13 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
 
     VkPipelineRenderingCreateInfo dynamicCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
     dynamicCreateInfo.viewMask = 0;
-    dynamicCreateInfo.colorAttachmentCount = 1;
-    VkFormat colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    dynamicCreateInfo.pColorAttachmentFormats = &colorFormat;
-    dynamicCreateInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
-    dynamicCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+    dynamicCreateInfo.colorAttachmentCount = fbo.m_color_attachments.size();
+    std::vector<VkFormat> colorFormat(dynamicCreateInfo.colorAttachmentCount);
+    for (int i = 0; i < colorFormat.size(); i++)
+        colorFormat[i] = fbo.m_color_attachments[i].GetFormat();
+    dynamicCreateInfo.pColorAttachmentFormats = &colorFormat[0];
+    dynamicCreateInfo.depthAttachmentFormat = fbo.m_depth_attachment->GetFormat();
+    dynamicCreateInfo.stencilAttachmentFormat = fbo.m_depth_attachment->GetFormat();
 
     VkGraphicsPipelineCreateInfo createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

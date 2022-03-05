@@ -64,7 +64,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.uniformBufferStandardLayout = VK_TRUE;
     vulkan12features.hostQueryReset = VK_TRUE;
     // We are no longer using framebuffers (other than swapchain)
-    //vulkan12features.imagelessFramebuffer = VK_TRUE;
+    vulkan12features.imagelessFramebuffer = VK_TRUE;
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
