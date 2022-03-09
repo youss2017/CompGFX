@@ -1,22 +1,34 @@
 #pragma once
 #include "Entity.hpp"
 #include "../../mesh/geometry.hpp"
+#include <memory/Buffer2.hpp>
 
-class EntityController
-{
+class EntityController {
+
 public:
-	EntityController(std::vector<Mesh::Geometry>& geometry, uint32_t MaxDrawCount, uint32_t MaxObjectCount) : m_geometry(geometry), m_maxDrawCount(MaxDrawCount), m_maxObjectCount(MaxObjectCount) {}
+	EntityController(uint32_t max_objects, std::vector<Mesh::Geometry>& geometry);
+	~EntityController();
 
-	// We need a pointer, so that if you update object data in the entity
-	// we can access it in the entity controller.
-	void AddEntity(Entity* entity);
-	void UpdateDrawCommandAndObjectDataBuffer(ShaderTypes::DrawData* drawCommands, ShaderTypes::ObjectData* objectData);
-	void UpdateDrawCommandAndObjectDataBufferSection(uint32_t offset, uint32_t size, ShaderTypes::DrawData* drawCommands, ShaderTypes::ObjectData* objectData);
-	inline uint32_t GetDrawCount() { return m_entites.size(); }
+	bool AddEntity(IEntity entitiy);
+	void RemoveEntity(IEntity entity);
+
+	void Prepare(uint32_t frameIndex);
+	IBuffer2 GetObjectBuffer(uint32_t frameIndex) { return m_objectBuffer[frameIndex]; }
+	auto GetObjectBufferArray() { return &m_objectBuffer[0]; }
+
+	IBuffer2 GetDrawBuffer(uint32_t frameIndex) { return m_drawBuffer[frameIndex]; }
+	auto GetDrawBufferArray() { return &m_drawBuffer[0]; }
+	inline uint32_t GetDrawCount() { return m_drawCount; }
 
 private:
+	std::vector<bool> m_entSlots;
+	std::vector<IEntity> m_ents;
+	uint32_t m_maxObjects;
+	uint32_t m_objectCount;
+	IBuffer2 m_objectBuffer[gFrameOverlapCount];
+	IBuffer2 m_drawBuffer[gFrameOverlapCount];
+	ShaderTypes::ObjectData* m_objDataPtr[gFrameOverlapCount];
+	ShaderTypes::DrawData* m_drawPtr[gFrameOverlapCount];
 	std::vector<Mesh::Geometry> m_geometry;
-	std::vector<Entity*> m_entites;
-	uint32_t m_maxDrawCount, m_maxObjectCount;
-	uint32_t m_next_objdata_index = 0;
+	uint32_t m_drawCount;
 };

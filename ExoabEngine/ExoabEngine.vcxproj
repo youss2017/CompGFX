@@ -116,6 +116,7 @@
     <ClInclude Include="src\application\Camera.hpp" />
     <ClInclude Include="src\application\Application.hpp" />
     <ClInclude Include="src\application\ecs\EntityController.hpp" />
+    <ClInclude Include="src\application\FrustrumCulling.hpp" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />
     <ClInclude Include="src\core\backend\VkGraphicsCard.hpp" />
@@ -184,6 +185,7 @@
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
     <ClCompile Include="src\application\ecs\EntityController.cpp" />
+    <ClCompile Include="src\application\FrustrumCulling.cpp" />
     <ClCompile Include="src\core\backend\Swapchain.cpp" />
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\VulkanLoader.c" />

@@ -11,6 +11,7 @@
 #include <glfw/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <backend/VkGraphicsCard.hpp>
+#include "FrustrumCulling.hpp"
 
 bool Application::Quit = false;
 
@@ -26,11 +27,11 @@ static constexpr bool s_EnableImGui = true;
 static constexpr uint32_t s_MaxObjects = 10;
 static constexpr uint32_t s_Range = 10;
 
+vk::VkContext gContext = nullptr;
 namespace Application
 {
 	ConfigurationSettings gConfiguration;
 	IGraphics3D gGfx;
-	vk::VkContext gContext = nullptr;
 	vk::GraphicsSwapchain gSwapchain;
 	PlatformWindow* gWindow;
 	std::vector<Mesh::Geometry> gGeomtry;
@@ -48,25 +49,14 @@ namespace Application
 	Framebuffer gFBO0;
 	Map testingMap;
 	
-	static struct {
-		uint32_t count;
-		Entity* ent;
-	} s_Entites;
-
 	EntityController* gECS;
-
-	static VkDescriptorPool computeSetPool;
-	static ShaderSet computeSet0;
-	static VkPipelineLayout computeLayout;
-	static VkPipeline computeFrustrum;
+	static FrustrumCompute frustrumCompute;
 
 	// Shader Data
 	// !!! IMPORTANT !!! Write ONLY by using memcpy
 	// using the '=' operator will cause a read operation, since were using coherent memory
 	// that means read from GPU memory to CPU memory
 	static ShaderTypes::SceneData* s_ScenePtr[gFrameOverlapCount];
-	ShaderTypes::ObjectData* gObjectData[gFrameOverlapCount];
-	ShaderTypes::DrawData* gDraws[gFrameOverlapCount];
 	static uint32_t* s_CulledDrawCount[gFrameOverlapCount];
 
 }
@@ -116,23 +106,21 @@ bool Application::LoadAssets()
 	if (!MeshLoadStatus)
 		return false;
 
-	gECS = new EntityController(gGeomtry, s_MaxObjects, s_MaxObjects);
+	gECS = new EntityController(s_MaxObjects, gGeomtry);
 
-	s_Entites.count = s_MaxObjects;
-	s_Entites.ent = new Entity[s_Entites.count];
-	
 	srand(42);
 	int range = s_Range;
 	for (unsigned int i = 0; i < s_MaxObjects; i++)
 	{
-		s_Entites.ent[i].m_geometryID = EntityGeometryID(rand() % 2);
-		s_Entites.ent[i].m_objData.bounding_sphere_center = glm::vec3(0.0);
-		s_Entites.ent[i].m_objData.bounding_sphere_radius = 1.0;
-		s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
+		IEntity ent = NewEntity();
+		ent->m_geometryID = EntityGeometryID(rand() % 2);
+		ent->m_objData.bounding_sphere_center = glm::vec3(0.0);
+		ent->m_objData.bounding_sphere_radius = 1.0;
+		ent->m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
 		//s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, -2));
-		s_Entites.ent[i].m_objData.m_NormalModel = glm::mat4(1.0);
-		s_Entites.ent[i].m_textureID = 0;
-		gECS->AddEntity(&s_Entites.ent[i]);
+		ent->m_objData.m_NormalModel = glm::mat4(1.0);
+		ent->m_textureID = 0;
+		gECS->AddEntity(ent);
 	}
 
 	return true;
@@ -143,7 +131,7 @@ bool Application::CreateResources()
 	PROFILE_FUNCTION();
 	gFBO0.m_width = 1280;
 	gFBO0.m_height = 720;
-	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, 1280, 720, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 147, 147, 147, 0 });
+	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, 1280, 720, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
 	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 1280, 720, VK_FORMAT_D32_SFLOAT, { 1.0f, 1.0f, 1.0f, 1.0f });
 	gFBO0.AddColorAttachment(0, colorAttachment);
 	gFBO0.SetDepthAttachment(depthAttachment);
@@ -161,26 +149,35 @@ bool Application::CreateResources()
 	bindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[0].m_size = 0;
 	bindings[0].m_client_buffer = gVerticesSSBO;
-	
-	bindings[1] = bindings[0];
-	bindings[1].m_useclientbuffer = false;
-	bindings[1].m_hostvisible = true;
+
 	bindings[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
 	bindings[1].m_bindingID = 1;
+	bindings[1].m_hostvisible = true;
+	bindings[1].m_useclientbuffer = false;
+	bindings[1].m_preinitalized = false;
+	bindings[1].m_additional_buffer_flags  = (BufferType)0;
+	bindings[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[1].m_size = sizeof(ShaderTypes::SceneData);
 	
-	bindings[2] = bindings[1];
 	bindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings[2].m_bindingID = 2;
 	bindings[2].m_hostvisible = true;
+	bindings[2].m_useclientbuffer = false;
+	bindings[2].m_preinitalized = true;
+	bindings[2].m_additional_buffer_flags = (BufferType)0;
+	bindings[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[2].m_size = s_MaxObjects * sizeof(ShaderTypes::ObjectData);
-	
-	bindings[3] = bindings[2];
+	bindings[2].m_ssbo = gECS->GetObjectBufferArray();
+
+	bindings[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings[3].m_bindingID = 3;
-	bindings[3].m_hostvisible = false;
+	bindings[3].m_hostvisible = true;
+	bindings[3].m_useclientbuffer = false;
+	bindings[3].m_preinitalized = false;
 	bindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
+	bindings[3].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[3].m_size = s_MaxObjects * sizeof(ShaderTypes::DrawData);
-	
+
 	std::vector<ShaderBinding> set1Bindings(1);
 	set1Bindings[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
 	set1Bindings[0].m_bindingID = 0;
@@ -196,56 +193,8 @@ bool Application::CreateResources()
 
 	/***** COMPUTE (Frustrum Culling) Pipeline  *****/
 
-	std::vector<ShaderBinding> computeBindings(4);
-	computeBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[0].m_bindingID = 0;
-	computeBindings[0].m_hostvisible = true;
-	computeBindings[0].m_useclientbuffer = false;
-	computeBindings[0].m_preinitalized = true;
-	computeBindings[0].m_additional_buffer_flags = (BufferType)0;
-	computeBindings[0].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[0].m_ssbo = bindings[2].m_ssbo;
-
-	computeBindings[1].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[1].m_bindingID = 1;
-	computeBindings[1].m_hostvisible = true;
-	computeBindings[1].m_useclientbuffer = false;
-	computeBindings[1].m_preinitalized  = false;
-	computeBindings[1].m_additional_buffer_flags = (BufferType)0;
-	computeBindings[1].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[1].m_size = bindings[3].m_size;
-
-	computeBindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[2].m_bindingID = 2;
-	computeBindings[2].m_hostvisible = false;
-	computeBindings[2].m_useclientbuffer = false;
-	computeBindings[2].m_preinitalized = true;
-	computeBindings[2].m_additional_buffer_flags = (BufferType)0;
-	computeBindings[2].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[2].m_ssbo = bindings[3].m_ssbo;
-
-	computeBindings[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[3].m_bindingID = 3;
-	computeBindings[3].m_hostvisible = true;
-	computeBindings[3].m_useclientbuffer = false;
-	computeBindings[3].m_preinitalized = false;
-	computeBindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
-	computeBindings[3].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[3].m_size = sizeof(uint32_t);
-
-	std::vector<VkDescriptorPoolSize> poolSize;
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, &computeBindings);
-	computeSetPool = vk::Gfx_CreateDescriptorPool(gContext, 1 * gFrameOverlapCount, poolSize);
-	computeSet0 = ShaderBinding_Create(gContext, computeSetPool, 0, &computeBindings);
-	struct FrustrumPlanes
-	{
-		uint32_t u_MaxDraw[4];
-		glm::vec4 u_CullPlanes[5];
-	};
-	computeLayout = ShaderBinding_CreatePipelineLayout(gContext, { computeSet0 }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)}});
-	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
-	computeFrustrum = Pipeline_CreateCompute(gContext, &computeShader, computeLayout, 0);
-
+	frustrumCompute = Application::CreateFrustrumCompute(gECS->GetObjectBufferArray(), gECS->GetDrawBufferArray(), bindings[3].m_ssbo);
+	
 	/********* Map Material **********/
 
 	testingMap = Map_Create(10, 1, 10, 1, 5);
@@ -293,11 +242,8 @@ bool Application::CreateResources()
 	{
 		s_Query[i] = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, 4, 0);
 		s_ScenePtr[i] = (ShaderTypes::SceneData*)Buffer2_Map(bindings[1].m_buffer[i]);
-		gObjectData[i] = (ShaderTypes::ObjectData*)Buffer2_Map(bindings[2].m_ssbo[i]);
-		gDraws[i] = (ShaderTypes::DrawData*)Buffer2_Map(computeSet0->m_bindings[1].m_ssbo[i]);
 		gMapUBO[i] = (ShaderTypes::TerrainTransform*)Buffer2_Map(gMapMaterial->m_sets[0]->m_bindings[1].m_buffer[i]);
-		s_CulledDrawCount[i] = (uint32_t*)Buffer2_Map(computeSet0->m_bindings[3].m_ssbo[i]);
-		gECS->UpdateDrawCommandAndObjectDataBuffer(gDraws[i], gObjectData[i]);
+		s_CulledDrawCount[i] = (uint32_t*)Buffer2_Map(frustrumCompute.m_set0->m_bindings[3].m_ssbo[i]);
 	}
 
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
@@ -367,8 +313,8 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		Material_RecreatePipeline(gMaterial0, spec);
 		Material_RecreatePipeline(gMapMaterial, spec);
 	}
-
 	const auto &frame = Graphics3D_GetFrame(gGfx);
+	gECS->Prepare(frame.m_FrameIndex);
 
 	glm::mat4 proj = glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f);
 	glm::mat4 view = gCamera.GetViewMatrix();
@@ -380,10 +326,6 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	terrainT.u_View = view;
 	terrainT.u_Projection = proj;
 	memcpy(gMapUBO[frame.m_FrameIndex], &terrainT, sizeof(ShaderTypes::TerrainTransform));
-
-	Buffer2_Flush(gMaterial0->m_sets[0]->m_bindings[1].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
-	Buffer2_Flush(gMaterial0->m_sets[0]->m_bindings[2].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
-	Buffer2_Flush(computeSet0->m_bindings[1].m_buffer[frame.m_FrameIndex], 0, VK_WHOLE_SIZE);
 
 	uint64_t results[4];
 	VkResult qs = vkGetQueryPoolResults(gContext->defaultDevice, s_Query[frame.m_FrameIndex], 0, 4, sizeof(results), results, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
@@ -400,6 +342,54 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	//Physx_Simulate();
 
 	return true;
+}
+
+namespace Application {
+	void FrustrumCulling(VkCommandBuffer cmd, uint32_t FrameIndex) {
+		/**** ==================FRUSTRUM CULLING================== ****/
+		vkCmdFillBuffer(cmd, frustrumCompute.m_set0->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, sizeof(uint32_t), 0);
+
+		vkCmdResetQueryPool(cmd, s_Query[FrameIndex], 0, 4);
+		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 0);
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, frustrumCompute.m_pipeline);
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, frustrumCompute.m_layout, 0, 1, &frustrumCompute.m_set0->m_set[FrameIndex], 0, nullptr);
+		struct {
+			uint32_t u_MaxDraw[4];
+			glm::vec4 u_FrustrumPlanes[5];
+		} computePushblock;
+
+		if (!UI::LockFrustrum)
+			memcpy(&gCamera2, &gCamera, sizeof(Camera));
+
+		glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f) * gCamera2.GetViewMatrix());
+		auto normalizePlane = [](glm::vec4 p) -> glm::vec4
+		{
+			return p / glm::length(glm::vec3(p));
+		};
+		computePushblock.u_FrustrumPlanes[0] = normalizePlane(proj[3] + proj[0]);
+		computePushblock.u_FrustrumPlanes[1] = normalizePlane(proj[3] - proj[0]);
+		computePushblock.u_FrustrumPlanes[2] = normalizePlane(proj[3] + proj[1]);
+		computePushblock.u_FrustrumPlanes[3] = normalizePlane(proj[3] - proj[1]);
+		computePushblock.u_FrustrumPlanes[4] = normalizePlane(proj[3] - proj[2]);
+		computePushblock.u_MaxDraw[0] = gECS->GetDrawCount();
+
+		int temp = (gECS->GetDrawCount() + 31) / 32;
+		vkCmdPushConstants(cmd, frustrumCompute.m_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
+		vkCmdDispatch(cmd, temp, 1, 1);
+		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 1);
+
+		VkBufferMemoryBarrier barrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.buffer = frustrumCompute.m_set0->m_bindings[1].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer;
+		barrier.offset = 0;
+		barrier.size = VK_WHOLE_SIZE;
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+		/**** ==================FRUSTRUM CULLING================== ****/
+	}
+
 }
 
 void Application::Render()
@@ -419,49 +409,7 @@ void Application::Render()
 	pClearValues[0] = { 0, 0, 0, 0 };
 	pClearValues[1] = { 1.0 };
 	
-	/**** ==================FRUSTRUM CULLING================== ****/
-	vkCmdFillBuffer(cmd, computeSet0->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, sizeof(uint32_t), 0);
-
-	vkCmdResetQueryPool(cmd, s_Query[FrameIndex], 0, 4);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 0);
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeFrustrum);
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeLayout, 0, 1, &computeSet0->m_set[FrameIndex], 0, nullptr);
-	struct {
-		uint32_t u_MaxDraw[4];
-		glm::vec4 u_FrustrumPlanes[5];
-	} computePushblock;
-
-	if (!UI::LockFrustrum)
-		memcpy(&gCamera2, &gCamera, sizeof(Camera));
-
-	glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f) * gCamera2.GetViewMatrix());
-	auto normalizePlane = [](glm::vec4 p) -> glm::vec4
-	{
-		return p / glm::length(glm::vec3(p));
-	};
-	computePushblock.u_FrustrumPlanes[0] = normalizePlane(proj[3] + proj[0]);
-	computePushblock.u_FrustrumPlanes[1] = normalizePlane(proj[3] - proj[0]);
-	computePushblock.u_FrustrumPlanes[2] = normalizePlane(proj[3] + proj[1]);
-	computePushblock.u_FrustrumPlanes[3] = normalizePlane(proj[3] - proj[1]);
-	computePushblock.u_FrustrumPlanes[4] = normalizePlane(proj[3] - proj[2]);
-	computePushblock.u_MaxDraw[0] = gECS->GetDrawCount();
-
-	int temp = (gECS->GetDrawCount() + 63) / 64;
-	vkCmdPushConstants(cmd, computeLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
-	vkCmdDispatch(cmd, temp, 1, 1);
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 1);
-
-	VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.buffer = computeSet0->m_bindings[1].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer;
-	barrier.offset = 0;
-	barrier.size = VK_WHOLE_SIZE;
-	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-	/**** ==================FRUSTRUM CULLING================== ****/
-
+	FrustrumCulling(cmd, FrameIndex);
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
@@ -471,7 +419,7 @@ void Application::Render()
 	renderingInfo.viewMask = 0;
 	renderingInfo.colorAttachmentCount = 1;
 
-	VkRenderingAttachmentInfo colorAttachment{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+	VkRenderingAttachmentInfo colorAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	colorAttachment.imageView = gFBO0.m_color_attachments[0].GetAttachment()->m_vk_views_per_frame[FrameIndex];
 	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	colorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
@@ -494,6 +442,7 @@ void Application::Render()
 	renderingInfo.pDepthAttachment = &depthAttachment;
 	renderingInfo.pStencilAttachment = nullptr;
 	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
+	
 	VkImageMemoryBarrier renderBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	renderBarrier.srcAccessMask = VK_ACCESS_NONE;
 	renderBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -520,19 +469,13 @@ void Application::Render()
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &renderBarrier);
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &depthBarrier);
 
-	VkViewport viewport = { 0, 0, 1280, 720, 0.0f, 1.0f };
-	VkRect2D scissor = { 0, 0, 1280, 720 };
-
-	vkCmdSetViewport(cmd, 0, 1, &viewport);
-	vkCmdSetScissor(cmd, 0, 1, &scissor);
-
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, s_Query[FrameIndex], 2);
 	
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_pipeline_state->m_pipeline);
 	VkDescriptorSet sets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex]};
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, sets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, computeSet0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, s_MaxObjects, sizeof(ShaderTypes::DrawData));
+	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, frustrumCompute.m_set0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, s_MaxObjects, sizeof(ShaderTypes::DrawData));
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_pipeline_state->m_pipeline);
 	sets[0] = gMapMaterial->m_sets[0]->m_set[FrameIndex];
@@ -584,10 +527,7 @@ void Application::Destroy()
 	Graphics3D_WaitGPUIdle(gGfx);
 	for(int i = 0; i < gFrameOverlapCount; i++)
 	vkDestroyQueryPool(gContext->defaultDevice, s_Query[i], nullptr);
-	vkDestroyDescriptorPool(gContext->defaultDevice, computeSetPool, nullptr);
-	ShaderBinding_DestroySets(gContext, { computeSet0 });
-	vkDestroyPipelineLayout(gContext->defaultDevice, computeLayout, nullptr);
-	vkDestroyPipeline(gContext->defaultDevice, computeFrustrum, nullptr);
+	DestroyFrusturumCompute(frustrumCompute);
 	Material_Destory(gMaterial0);
 	Material_Destory(gMapMaterial);
 	Buffer2_Destroy(gMapVertices);
@@ -597,10 +537,7 @@ void Application::Destroy()
 	Texture2_Destroy(gWoodTex);
 	Buffer2_Destroy(gVerticesSSBO);
 	Buffer2_Destroy(gIndicesBuffer);
-	//delete gFramebufferReserve;
-	Graphics3D_Destroy(gGfx);
 	Physx_Destroy();
-	delete[] s_Entites.ent;
 	delete gECS;
-	glfwTerminate();
+	Graphics3D_Destroy(gGfx);
 }

@@ -1,48 +1,65 @@
 #include "EntityController.hpp"
+#include <backend/VkGraphicsCard.hpp>
 
-void EntityController::AddEntity(Entity* entity)
+extern vk::VkContext gContext;
+
+EntityController::EntityController(uint32_t max_objects, std::vector<Mesh::Geometry>& geometry)
+: m_maxObjects(max_objects), m_objectCount(0), m_entSlots(max_objects), m_ents(max_objects), m_geometry(geometry), m_drawCount(0u)
 {
-	entity->m_reserved_objectdata_index = m_next_objdata_index++;
-	m_entites.push_back(entity);
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		m_objectBuffer[i] = Buffer2_Create(gContext, BufferType::StorageBuffer, max_objects * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
+		m_objDataPtr[i] = (ShaderTypes::ObjectData*)Buffer2_Map(m_objectBuffer[i]);
+		m_drawBuffer[i] = Buffer2_Create(gContext, BufferType(BufferType::StorageBuffer | BufferType::IndirectBuffer), max_objects * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
+		m_drawPtr[i] = (ShaderTypes::DrawData*)Buffer2_Map(m_drawBuffer[i]);
+	}
+	std::fill(m_entSlots.begin(), m_entSlots.end(), true);
+	std::fill(m_ents.begin(), m_ents.end(), nullptr);
 }
-
-void EntityController::UpdateDrawCommandAndObjectDataBuffer(ShaderTypes::DrawData* drawCommands, ShaderTypes::ObjectData* objectData)
+EntityController::~EntityController()
 {
-	int i = 0;
-	for (auto& e : m_entites)
-	{
-		const Mesh::Geometry& geometry = m_geometry[e->m_geometryID];
-		ShaderTypes::DrawData drawCommand;
-		drawCommand.command.firstIndex = geometry.firstIndex;
-		drawCommand.command.firstInstance = 0;
-		drawCommand.command.indexCount = geometry.indicesCount;
-		drawCommand.command.instanceCount = 1;
-		drawCommand.command.vertexOffset = geometry.firstVertex;
-		drawCommand.ObjectDataIndex = e->m_reserved_objectdata_index;
-		drawCommand.TexIndex = e->m_textureID;
-		memcpy(&drawCommands[i], &drawCommand, sizeof(ShaderTypes::DrawData));
-		memcpy(&objectData[i], &e->m_objData, sizeof(ShaderTypes::ObjectData));
-		i++;
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		Buffer2_Destroy(m_objectBuffer[i]);
+		Buffer2_Destroy(m_drawBuffer[i]);
 	}
 }
 
-void EntityController::UpdateDrawCommandAndObjectDataBufferSection(uint32_t offset, uint32_t size, ShaderTypes::DrawData* drawCommands, ShaderTypes::ObjectData* objectData)
+bool EntityController::AddEntity(IEntity entity)
 {
-	assert(offset + size <= m_maxDrawCount);
-	for (int i = offset; i < m_entites.size(); i++)
-	{
-		Entity* e = m_entites[i];
-		const Mesh::Geometry& geometry = m_geometry[e->m_geometryID];
-		ShaderTypes::DrawData drawCommand;
-		drawCommand.command.firstIndex = geometry.firstIndex;
-		drawCommand.command.firstInstance = 0;
-		drawCommand.command.indexCount = geometry.indicesCount;
-		drawCommand.command.instanceCount = 1;
-		drawCommand.command.vertexOffset = geometry.firstVertex;
-		drawCommand.ObjectDataIndex = e->m_reserved_objectdata_index;
-		drawCommand.TexIndex = e->m_textureID;
-		memcpy(&drawCommands[i], &drawCommand, sizeof(ShaderTypes::DrawData));
-		memcpy(&objectData[i], &e->m_objData, sizeof(ShaderTypes::ObjectData));
-		i++;
+	for(uint32_t available_slot = 0; available_slot < m_entSlots.size(); available_slot++) {
+		if (m_entSlots[available_slot]) {
+			m_entSlots[available_slot] = false;
+			m_ents[available_slot] = entity;
+			entity->m_reserved_objectdata_index = available_slot;
+			m_drawCount++;
+			return true;
+		}
+	}
+	return false;
+}
+void EntityController::RemoveEntity(IEntity entity)
+{
+	m_entSlots[entity->m_reserved_objectdata_index] = false;
+	m_ents[entity->m_reserved_objectdata_index] = nullptr;
+	m_drawCount--;
+}
+
+void EntityController::Prepare(uint32_t frameIndex)
+{
+	uint32_t drawCommandIndex = 0;
+	for (auto& ent : m_ents) {
+		if (!ent)
+			continue;
+		memcpy(&m_objDataPtr[frameIndex][ent->m_reserved_objectdata_index], &ent->m_objData, sizeof(ShaderTypes::ObjectData));
+		VkDrawIndexedIndirectCommand command;
+		Mesh::Geometry& g = m_geometry[ent->m_geometryID];
+		command.indexCount = g.indicesCount;
+		command.instanceCount = 1;
+		command.firstIndex = g.firstIndex;
+		command.vertexOffset = g.firstVertex;
+		command.firstInstance = 0;
+		memcpy(&m_drawPtr[frameIndex][drawCommandIndex].command, &command, sizeof(VkDrawIndexedIndirectCommand));
+		memcpy(&m_drawPtr[frameIndex][drawCommandIndex].ObjectDataIndex, &ent->m_reserved_objectdata_index, sizeof(uint32_t));
+		memcpy(&m_drawPtr[frameIndex][drawCommandIndex].TexIndex, &ent->m_textureID, sizeof(uint32_t));
+		drawCommandIndex++;
 	}
 }

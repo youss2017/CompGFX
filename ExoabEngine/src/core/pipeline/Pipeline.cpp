@@ -289,9 +289,9 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     ColorBlendState.blendConstants[3] = 0.0;
 
     VkPipelineDynamicStateCreateInfo DynamicState;
-    std::array<VkDynamicState, 2> DynamicStates;
-    DynamicStates[0] = VK_DYNAMIC_STATE_VIEWPORT;
-    DynamicStates[1] = VK_DYNAMIC_STATE_SCISSOR;
+    std::array<VkDynamicState, 0> DynamicStates;
+    //DynamicStates[0] = VK_DYNAMIC_STATE_VIEWPORT;
+    //DynamicStates[1] = VK_DYNAMIC_STATE_SCISSOR;
     DynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     DynamicState.pNext = nullptr;
     DynamicState.flags = 0;
@@ -322,7 +322,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     createInfo.pMultisampleState = &MultisampleState;
     createInfo.pDepthStencilState = &DepthStencilState;
     createInfo.pColorBlendState = &ColorBlendState;
-    createInfo.pDynamicState = &DynamicState;
+    createInfo.pDynamicState = nullptr;
     createInfo.layout = layout;
     createInfo.renderPass = nullptr;
     createInfo.subpass = 0; // No subpass support
