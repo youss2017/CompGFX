@@ -9,12 +9,24 @@ namespace Mesh {
 
 	using namespace glm;
 
+	struct Joint {
+		std::string mName;
+		mat4 mTransformation;
+		std::vector<Joint> mChildern;
+	};
+
+	struct Animation {
+		double mDuration;
+		double mTicksPerSecond;
+
+	};
+
 	struct GeometryVertex
 	{
 		vec4 position;
-		uint8_t nx, ny, nz, nw;
-		uint16_t tu, tv;
-		int padding[2];
+		vec4 normal;
+		float tu, tv;
+		float padding[2];
 	};
 	struct Geometry
 	{
@@ -33,6 +45,17 @@ namespace Mesh {
 	// Note: indices will be loaded or generated for all models!
 	// Indices are not SSBOs and they are 16bit
 	bool LoadVerticesIndicesSSBOs(void* context, std::vector<std::string> geometry_path_list, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer);
+
+	struct GeometryVertexBone {
+		vec4 position;
+		vec4 normal;
+		float tu, tv;
+		float padding[2];
+		ivec4 boneIDs;
+		vec4 boneWeights;
+	};
+
+	void LoadVerticesIndicesBONE(std::string path);
 
 
 };

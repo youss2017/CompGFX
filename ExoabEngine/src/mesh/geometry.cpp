@@ -84,7 +84,6 @@ namespace Mesh
 			return false;
 		Assimp::Importer imp;
 		std::vector<GeometryVertex> vertices;
-		std::vector<glm::vec3> points;
 		std::vector<uint32> indices;
 		int meshIndex = 0;
 		for (auto& path : geometry_path_list)
@@ -111,42 +110,21 @@ namespace Mesh
 				for (uint j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
 				{
 					GeometryVertex v;
-#if 1
 					v.position.x = scene->mMeshes[i]->mVertices[j].x;
 					v.position.y = scene->mMeshes[i]->mVertices[j].y;
 					v.position.z = scene->mMeshes[i]->mVertices[j].z;
-					scene->mMeshes[i]->mTangents[j].x;
-					scene->mMeshes[i]->mTangents[j].y;
-					scene->mMeshes[i]->mTangents[j].z;
-					scene->mMeshes[i]->mBitangents[j].x;
-					scene->mMeshes[i]->mBitangents[j].y;
-					scene->mMeshes[i]->mBitangents[j].z;
 					v.position.w = 1.0f;
-					v.nx = uint8_t(scene->mMeshes[i]->mNormals[j].x * 127.0 + 127.0);
-					v.ny = uint8_t(scene->mMeshes[i]->mNormals[j].y * 127.0 + 127.0);
-					v.nz = uint8_t(scene->mMeshes[i]->mNormals[j].z * 127.0 + 127.0);
-					points.push_back({ v.position.x, v.position.y, v.position.z });
-#else
-					v.x = (scene->mMeshes[i]->mVertices[j].x);
-					v.y = (scene->mMeshes[i]->mVertices[j].y);
-					v.z = (scene->mMeshes[i]->mVertices[j].z);
-					v.nx = (scene->mMeshes[i]->mNormals[j].x);
-					v.ny = (scene->mMeshes[i]->mNormals[j].y);
-					v.nz = (scene->mMeshes[i]->mNormals[j].z);
-#endif
+					v.normal.x = scene->mMeshes[i]->mNormals[j].x;
+					v.normal.y = scene->mMeshes[i]->mNormals[j].y;
+					v.normal.z = scene->mMeshes[i]->mNormals[j].z;
 					glm::vec3 position = glm::vec3(scene->mMeshes[i]->mVertices[j].x, scene->mMeshes[i]->mVertices[j].y, scene->mMeshes[i]->mVertices[j].z);
 					geometry.m_bounding_sphere_center += position;
 					geometry.m_bounding_sphere_center /= 2.0;
 					if (glm::distance(position, geometry.m_bounding_sphere_center) > geometry.m_bounding_sphere_radius)
 						geometry.m_bounding_sphere_radius = glm::distance(position, geometry.m_bounding_sphere_center);
 					if (scene->mMeshes[i]->mTextureCoords[0]) {
-#if 1
-						v.tu = meshopt_quantizeHalf(scene->mMeshes[i]->mTextureCoords[0][j].x);
-						v.tv = meshopt_quantizeHalf(scene->mMeshes[i]->mTextureCoords[0][j].y);
-#else
-						v.tu = (scene->mMeshes[i]->mTextureCoords[0][j].x);
-						v.tv = (scene->mMeshes[i]->mTextureCoords[0][j].y);
-#endif
+						v.tu = scene->mMeshes[i]->mTextureCoords[0][j].x;
+						v.tv = scene->mMeshes[i]->mTextureCoords[0][j].y;
 					}
 					else
 						v.tu = v.tv = 0;
@@ -158,6 +136,7 @@ namespace Mesh
 					indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[1]);
 					indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[2]);
 				}
+
 				geometry.verticesCount += scene->mMeshes[i]->mNumVertices;
 				geometry.indicesCount += scene->mMeshes[i]->mNumFaces * 3;
 				geometry.m_vertices = vertices;
@@ -186,6 +165,100 @@ namespace Mesh
 		*pVerticesSSBO = vertices_ssbo;
 		*pIndicesBuffer = indices_buffer;
 		return true;
+	}
+
+	void LoadVerticesIndicesBONE(std::string path)
+	{
+		Assimp::Importer imp;
+		const aiScene* scene = imp.ReadFile(path, aiProcessPreset_TargetRealtime_MaxQuality);
+		if (!scene) {
+			std::string errmsg = "Error parsing '" + std::string(path) + "', because: " + std::string(imp.GetErrorString());
+			logerror(errmsg.c_str());
+		}
+		std::vector<GeometryVertexBone> vertices;
+		std::vector<uint32> indices;
+
+		for (uint i = 0; i < scene->mNumMeshes; i++)
+		{
+			vertices.reserve(scene->mMeshes[i]->mNumVertices);
+			indices.reserve(scene->mMeshes[i]->mNumFaces * 3);
+			for (uint j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
+			{
+				GeometryVertexBone v;
+				v.position.x = scene->mMeshes[i]->mVertices[j].x;
+				v.position.y = scene->mMeshes[i]->mVertices[j].y;
+				v.position.z = scene->mMeshes[i]->mVertices[j].z;
+				v.position.w = 1.0f;
+				v.normal.x = scene->mMeshes[i]->mNormals[j].x;
+				v.normal.y = scene->mMeshes[i]->mNormals[j].y;
+				v.normal.z = scene->mMeshes[i]->mNormals[j].z;
+				v.boneIDs = glm::ivec4(-1);
+				glm::vec3 position = glm::vec3(scene->mMeshes[i]->mVertices[j].x, scene->mMeshes[i]->mVertices[j].y, scene->mMeshes[i]->mVertices[j].z);
+				if (scene->mMeshes[i]->mTextureCoords[0]) {
+					v.tu = scene->mMeshes[i]->mTextureCoords[0][j].x;
+					v.tv = scene->mMeshes[i]->mTextureCoords[0][j].y;
+				}
+				else
+					v.tu = v.tv = 0;
+				vertices.push_back(v);
+			}
+			for (uint j = 0; j < scene->mMeshes[i]->mNumFaces; j++)
+			{
+				indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[0]);
+				indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[1]);
+				indices.push_back(scene->mMeshes[i]->mFaces[j].mIndices[2]);
+			}
+
+			for (uint j = 0; j < scene->mMeshes[i]->mNumBones; j++) {
+				aiBone* bone = scene->mMeshes[i]->mBones[j];
+				std::cout << bone->mName.C_Str() << " ";
+				for (uint w = 0; w < bone->mNumWeights; w++) {
+					aiVertexWeight weight = bone->mWeights[w];
+					GeometryVertexBone& vertex = vertices[weight.mVertexId];
+					// make sure there are no duplicates.
+					if (vertex.boneIDs[0] == j || vertex.boneIDs[1] == j || vertex.boneIDs[2] == j || vertex.boneIDs[3] == j)
+						continue;
+					if (vertex.boneIDs[0] == -1) {
+						vertex.boneIDs[0] = j;
+						vertex.boneWeights[0] = weight.mWeight;
+					}
+					else if (vertex.boneIDs[1] == -1) {
+						vertex.boneIDs[1] = j;
+						vertex.boneWeights[1] = weight.mWeight;
+					}
+					else if (vertex.boneIDs[2] == -1) {
+						vertex.boneIDs[2] = j;
+						vertex.boneWeights[2] = weight.mWeight;
+					}
+					else if (vertex.boneIDs[3] == -1) {
+						vertex.boneIDs[3] = j;
+						vertex.boneWeights[3] = weight.mWeight;
+					}
+					else {
+						log_error("Max supported joints/bones is 4!", __FILE__, __LINE__);
+					}
+				}
+			}
+
+			for (auto& vertex : vertices) {
+				if (vertex.boneIDs[0] == -1) {
+					vertex.boneIDs[0] = 0;
+					vertex.boneWeights[0] = 0.0f;
+				}
+				if (vertex.boneIDs[1] == -1) {
+					vertex.boneIDs[1] = 0;
+					vertex.boneWeights[1] = 0.0f;
+				}
+				if (vertex.boneIDs[2] == -1) {
+					vertex.boneIDs[2] = 0;
+					vertex.boneWeights[2] = 0.0f;
+				}
+				if (vertex.boneIDs[3] == -1) {
+					vertex.boneIDs[3] = 0;
+					vertex.boneWeights[3] = 0.0f;
+				}
+			}
+		}
 	}
 
 }

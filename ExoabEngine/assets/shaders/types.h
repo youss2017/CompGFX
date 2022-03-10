@@ -1,4 +1,3 @@
-
 #extension GL_EXT_shader_8bit_storage : require
 #extension GL_EXT_shader_16bit_storage : require
 #extension GL_ARB_shader_draw_parameters : require
@@ -7,17 +6,9 @@
 struct Vertex
 {
 	vec4 position;
-	uint8_t nx, ny, nz, nw;
-	float16_t tu, tv;
-	int padding[2];
-};
-
-struct AnimatedVertex {
-	vec4 position;
 	vec4 normal;
-	vec4 texcoord;
-	ivec4 boneIDs;
-	vec4 weights;
+	vec2 texcoord;
+	float padding[2];
 };
 
 struct SceneData

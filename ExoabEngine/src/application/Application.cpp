@@ -100,8 +100,8 @@ bool Application::LoadAssets()
 {
 	PROFILE_FUNCTION();
 	bool MeshLoadStatus = Mesh::LoadVerticesIndicesSSBOs(gContext, 
-		{ "assets/mesh/ball.obj",
-		 "assets/mesh/ball.obj"
+		{ "assets/mesh/Ball.obj",
+		 "assets/mesh/Ball.obj",
 		}, gGeomtry, &gVerticesSSBO, &gIndicesBuffer);
 	if (!MeshLoadStatus)
 		return false;
@@ -414,7 +414,7 @@ void Application::Render()
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
 	renderingInfo.flags = 0;
-	renderingInfo.renderArea = { {0, 0}, {1280, 720} };
+	renderingInfo.renderArea = { {0, 0}, { gFBO0.m_width, gFBO0.m_height } };
 	renderingInfo.layerCount = 1;
 	renderingInfo.viewMask = 0;
 	renderingInfo.colorAttachmentCount = 1;

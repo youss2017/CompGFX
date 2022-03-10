@@ -52,8 +52,8 @@ vec4 MulQuat(vec4 q1, vec4 q2)
 void main()
 {
 	ObjectData od = u_ModelData[int(draw.ObjectDataIndex)];
-	Normal =  mat3(od.m_NormalModel) * (vec3(int(vertex.nx), int(vertex.ny), int(vertex.nz)) / 127.0 - 1.0);
-	TexCoord = vec2(float(vertex.tu), float(vertex.tv));
+	Normal =  mat3(od.m_NormalModel) * vertex.normal.xyz;
+	TexCoord = vertex.texcoord;
 	TexIndex = uint(draw.TexIndex);
 	gl_Position = u_Scene.m_Projection * u_Scene.m_View * od.m_Model * vertex.position;
 }
