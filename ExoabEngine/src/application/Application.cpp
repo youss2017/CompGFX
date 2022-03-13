@@ -37,7 +37,7 @@ namespace Application
 	std::vector<Mesh::Geometry> gGeomtry;
 	IBuffer2 gVerticesSSBO, gIndicesBuffer;
 	Material* gMaterial0;
-	Material* gMaterial1;
+	//Material* gMaterial1;
 	Material* gMapMaterial;
 	ShaderTypes::TerrainTransform* gMapUBO[gFrameOverlapCount];
 	IBuffer2 gMapVertices, gMapIndices;
@@ -60,8 +60,8 @@ namespace Application
 	static ShaderTypes::SceneData* s_ScenePtr[gFrameOverlapCount];
 	static uint32_t* s_CulledDrawCount[gFrameOverlapCount];
 
-	static IBuffer2 sAnimVertices, sAnimIndices;
-	static std::vector<Mesh::SkinnedMesh> skinnedMeshes;
+	//static IBuffer2 sAnimVertices, sAnimIndices;
+	//static std::vector<Mesh::SkinnedMesh> skinnedMeshes;
 }
 
 bool Application::Initalize(ConfigurationSettings* configuration)
@@ -109,9 +109,9 @@ bool Application::LoadAssets()
 	if (!MeshLoadStatus)
 		return false;
 
-	Mesh::LoadVerticesIndicesBONE(gContext, { "assets/mesh/horse.dae" }, skinnedMeshes, &sAnimVertices, &sAnimIndices);
+	//Mesh::LoadVerticesIndicesBONE(gContext, { "assets/mesh/horse.dae" }, skinnedMeshes, &sAnimVertices, &sAnimIndices);
 
-	gECS = new EntityController(s_MaxObjects, gGeomtry);
+	gECS = new EntityController(gGeomtry);
 
 	srand(140);
 	int range = s_Range;
@@ -172,7 +172,7 @@ bool Application::CreateResources()
 	bindings[2].m_preinitalized = true;
 	bindings[2].m_additional_buffer_flags = (BufferType)0;
 	bindings[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[2].m_size = s_MaxObjects * sizeof(ShaderTypes::ObjectData);
+	bindings[2].m_size = gECS->GetDrawCount() * sizeof(ShaderTypes::ObjectData);
 	bindings[2].m_ssbo = gECS->GetObjectBufferArray();
 
 	bindings[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
@@ -182,7 +182,7 @@ bool Application::CreateResources()
 	bindings[3].m_preinitalized = false;
 	bindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
 	bindings[3].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[3].m_size = s_MaxObjects * sizeof(ShaderTypes::DrawData);
+	bindings[3].m_size = gECS->GetDrawCount() * sizeof(ShaderTypes::DrawData);
 
 	std::vector<ShaderBinding> set1Bindings(1);
 	set1Bindings[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
@@ -243,7 +243,7 @@ bool Application::CreateResources()
 	terrainFragmentBinding[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	gMapMaterial = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/Terrain.vert", "assets/shaders/Terrain.frag", { {0, &terrainBindings}, {1, &terrainFragmentBinding} }, {{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3)}});
-
+#if 0
 	std::vector<ShaderBinding> bindings1(3);
 	bindings1[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings1[0].m_bindingID = 0;
@@ -274,7 +274,7 @@ bool Application::CreateResources()
 	bindings1[2].m_size = sizeof(ShaderTypes::DrawCommand);
 
 	gMaterial1 = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/AniVertex.vert", "assets/shaders/fragment2.frag", { {0, &bindings1} }, {});
-
+#endif
 	for (int i = 0; i < gFrameOverlapCount; i++)
 	{
 		s_Query[i] = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, 4, 0);
@@ -348,7 +348,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		spec.m_PolygonMode = UI::ShowWireframe ? PolygonMode::LINE : PolygonMode::FILL;
 		Graphics3D_WaitGPUIdle(gGfx);
 		Material_RecreatePipeline(gMaterial0, spec);
-		Material_RecreatePipeline(gMaterial1, spec);
+		//Material_RecreatePipeline(gMaterial1, spec);
 		Material_RecreatePipeline(gMapMaterial, spec);
 	}
 	const auto &frame = Graphics3D_GetFrame(gGfx);
@@ -513,7 +513,7 @@ void Application::Render()
 	VkDescriptorSet sets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex]};
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, sets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, frustrumCompute.m_set0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, s_MaxObjects, sizeof(ShaderTypes::DrawData));
+	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, frustrumCompute.m_set0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, gECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_pipeline_state->m_pipeline);
 	sets[0] = gMapMaterial->m_sets[0]->m_set[FrameIndex];
@@ -523,7 +523,7 @@ void Application::Render()
 	vkCmdPushConstants(cmd, gMapMaterial->m_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3), &LightDir);
 	vkCmdBindIndexBuffer(cmd, gMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(cmd, testingMap.m_indices.size(), 1, 0, 0, 0);
-
+#if 0
 	auto objData = (ShaderTypes::ObjectDataBONE*)Buffer2_Map(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex]);
 	auto drawCommand = (ShaderTypes::DrawCommand*)Buffer2_Map(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]);
 
@@ -539,7 +539,7 @@ void Application::Render()
 	objData[0].view = gCamera.GetViewMatrix();
 	objData[0].projection = glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f);
 	std::vector<glm::mat4> finalTransforms;
-	skinnedMeshes[0].GetBoneTransforms(finalTransforms);
+	skinnedMeshes[0].GetFinalTransforms(finalTransforms);
 	//memcpy(&objData[0].finalBoneTransformations[0], &finalTransforms[0], sizeof(glm::mat4)* finalTransforms.size());
 
 	Buffer2_Flush(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex], 0, VK_WHOLE_SIZE);
@@ -547,12 +547,12 @@ void Application::Render()
 
 	//Buffer2_Unmap(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex]);
 	//Buffer2_Unmap(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]);
-
 	sets[0] = gMaterial1->m_sets[0]->m_set[FrameIndex];
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial1->m_pipeline_state->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial1->m_layout, 0, 1, sets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, sAnimIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, 1, sizeof(ShaderTypes::DrawCommand));
+#endif
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 3);
 
@@ -595,11 +595,11 @@ void Application::Destroy()
 	Graphics3D_WaitGPUIdle(gGfx);
 	for(int i = 0; i < gFrameOverlapCount; i++)
 	vkDestroyQueryPool(gContext->defaultDevice, s_Query[i], nullptr);
-	Buffer2_Destroy(sAnimVertices);
-	Buffer2_Destroy(sAnimIndices);
+	//Buffer2_Destroy(sAnimVertices);
+	//Buffer2_Destroy(sAnimIndices);
 	DestroyFrusturumCompute(frustrumCompute);
 	Material_Destory(gMaterial0);
-	Material_Destory(gMaterial1);
+	//Material_Destory(gMaterial1);
 	Material_Destory(gMapMaterial);
 	Buffer2_Destroy(gMapVertices);
 	Buffer2_Destroy(gMapIndices);

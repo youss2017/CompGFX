@@ -3,13 +3,19 @@
 
 extern vk::VkContext gContext;
 
-EntityController::EntityController(uint32_t max_objects, std::vector<Mesh::Geometry>& geometry)
-: m_maxObjects(max_objects), m_objectCount(0), m_entSlots(max_objects), m_ents(max_objects), m_geometry(geometry), m_drawCount(0u)
+EntityController::EntityController(std::vector<Mesh::Geometry>& geometry)
+: m_geometry(geometry), m_drawCount(0u)
 {
+	uint32_t drawCount = 0;
+	for (auto& g : geometry)
+		drawCount += g.mSubmeshList.size();
+	m_drawCount = drawCount;
+	m_entSlots.resize(drawCount);
+	m_ents.resize(drawCount);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
-		m_objectBuffer[i] = Buffer2_Create(gContext, BufferType::StorageBuffer, max_objects * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
+		m_objectBuffer[i] = Buffer2_Create(gContext, BufferType::StorageBuffer, drawCount * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
 		m_objDataPtr[i] = (ShaderTypes::ObjectData*)Buffer2_Map(m_objectBuffer[i]);
-		m_drawBuffer[i] = Buffer2_Create(gContext, BufferType(BufferType::StorageBuffer | BufferType::IndirectBuffer), max_objects * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
+		m_drawBuffer[i] = Buffer2_Create(gContext, BufferType(BufferType::StorageBuffer | BufferType::IndirectBuffer), drawCount * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
 		m_drawPtr[i] = (ShaderTypes::DrawData*)Buffer2_Map(m_drawBuffer[i]);
 	}
 	std::fill(m_entSlots.begin(), m_entSlots.end(), true);
@@ -50,16 +56,19 @@ void EntityController::Prepare(uint32_t frameIndex)
 		if (!ent)
 			continue;
 		memcpy(&m_objDataPtr[frameIndex][ent->m_reserved_objectdata_index], &ent->m_objData, sizeof(ShaderTypes::ObjectData));
-		VkDrawIndexedIndirectCommand command;
 		Mesh::Geometry& g = m_geometry[ent->m_geometryID];
-		command.indexCount = g.indicesCount;
-		command.instanceCount = 1;
-		command.firstIndex = g.firstIndex;
-		command.vertexOffset = g.firstVertex;
-		command.firstInstance = 0;
-		memcpy(&m_drawPtr[frameIndex][drawCommandIndex].command, &command, sizeof(VkDrawIndexedIndirectCommand));
-		memcpy(&m_drawPtr[frameIndex][drawCommandIndex].ObjectDataIndex, &ent->m_reserved_objectdata_index, sizeof(uint32_t));
-		memcpy(&m_drawPtr[frameIndex][drawCommandIndex].TexIndex, &ent->m_textureID, sizeof(uint32_t));
-		drawCommandIndex++;
+		for (int i = 0; i < g.mSubmeshList.size(); i++) {
+			VkDrawIndexedIndirectCommand command;
+			const Mesh::GeometrySubmesh& submesh = g.mSubmeshList[i];
+			command.indexCount = submesh.indicesCount;
+			command.instanceCount = 1;
+			command.firstIndex = submesh.firstIndex;
+			command.vertexOffset = submesh.firstVertex;
+			command.firstInstance = 0;
+			memcpy(&m_drawPtr[frameIndex][drawCommandIndex].command, &command, sizeof(VkDrawIndexedIndirectCommand));
+			memcpy(&m_drawPtr[frameIndex][drawCommandIndex].ObjectDataIndex, &ent->m_reserved_objectdata_index, sizeof(uint32_t));
+			memcpy(&m_drawPtr[frameIndex][drawCommandIndex].TexIndex, &ent->m_textureID, sizeof(uint32_t));
+			drawCommandIndex++;
+		}
 	}
 }

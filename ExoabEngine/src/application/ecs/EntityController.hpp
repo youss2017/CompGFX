@@ -6,7 +6,7 @@
 class EntityController {
 
 public:
-	EntityController(uint32_t max_objects, std::vector<Mesh::Geometry>& geometry);
+	EntityController(std::vector<Mesh::Geometry>& geometry);
 	~EntityController();
 
 	bool AddEntity(IEntity entitiy);
@@ -23,12 +23,10 @@ public:
 private:
 	std::vector<bool> m_entSlots;
 	std::vector<IEntity> m_ents;
-	uint32_t m_maxObjects;
-	uint32_t m_objectCount;
+	uint32_t m_drawCount;
 	IBuffer2 m_objectBuffer[gFrameOverlapCount];
 	IBuffer2 m_drawBuffer[gFrameOverlapCount];
 	ShaderTypes::ObjectData* m_objDataPtr[gFrameOverlapCount];
 	ShaderTypes::DrawData* m_drawPtr[gFrameOverlapCount];
 	std::vector<Mesh::Geometry> m_geometry;
-	uint32_t m_drawCount;
 };

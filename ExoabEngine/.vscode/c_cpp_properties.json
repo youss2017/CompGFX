@@ -4,7 +4,23 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "c:\\VulkanSDK\\1.3.204.1\\Include\\"
+                "c:\\VulkanSDK\\1.3.204.1\\Include\\",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/VulkanMemoryAllocator/include/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/meshoptimizer/src/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/src/core/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/src/graphics/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/src/utils/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/imgui/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/imgui/backends/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/glm/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/stb/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/glad/include/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/assimp/include/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/glfw/include/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/PhysX/physx/include/",
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/PhysX/pxshared/include/"
             ],
             "defines": [
                 "_DEBUG",
