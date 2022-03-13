@@ -4,6 +4,9 @@
 #include <vector>
 #include <string>
 #include <memory/Buffer2.hpp>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include "SkinnedMesh.hpp"
 
 namespace Mesh {
 
@@ -28,8 +31,8 @@ namespace Mesh {
 		float tu, tv;
 		float padding[2];
 	};
-	struct Geometry
-	{
+
+	struct GeometrySubmesh{
 		uint firstVertex;
 		uint firstIndex;
 		uint verticesCount;
@@ -39,6 +42,11 @@ namespace Mesh {
 		glm::vec3 m_bounding_sphere_center;
 		float m_bounding_sphere_radius;
 	};
+
+	struct Geometry
+	{
+		std::vector<GeometrySubmesh> mSubmeshList;
+	};
 	
 	// geometry_path_list - path to every mesh path (e.g. .obj, .fbx, etc)
 	// out_geometry_vertices_indices_positions - an output std::vector used to provide information about where vertices and indices start
@@ -46,16 +54,7 @@ namespace Mesh {
 	// Indices are not SSBOs and they are 16bit
 	bool LoadVerticesIndicesSSBOs(void* context, std::vector<std::string> geometry_path_list, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer);
 
-	struct GeometryVertexBone {
-		vec4 position;
-		vec4 normal;
-		float tu, tv;
-		float padding[2];
-		ivec4 boneIDs;
-		vec4 boneWeights;
-	};
-
-	void LoadVerticesIndicesBONE(std::string path);
+	void LoadVerticesIndicesBONE(void* context, std::vector<std::string> path, std::vector<Mesh::SkinnedMesh>& OutSkinnedMesh, IBuffer2* pOutVertices, IBuffer2* pOutIndices);
 
 
 };

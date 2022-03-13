@@ -3,6 +3,8 @@
 #include <vulkan/vulkan_core.h>
 #include <glm/glm.hpp>
 
+#define MAX_BONES 100
+
 namespace ShaderTypes {
 
 	using namespace glm;
@@ -35,6 +37,24 @@ namespace ShaderTypes {
 			mat4 u_Model;
 			mat4 u_NormalModel;
 			mat4 u_Projection;
+		};
+
+		struct DrawCommand {
+			uint    indexCount;
+			uint    instanceCount;
+			uint    firstIndex;
+			int     vertexOffset;
+			uint    firstInstance;
+			// my data
+			uint objDataIndex;
+			uint padding[2];
+		};
+
+		struct ObjectDataBONE {
+			mat4 model;
+			mat4 view;
+			mat4 projection;
+			mat4 finalBoneTransformations[MAX_BONES];
 		};
 
 	};

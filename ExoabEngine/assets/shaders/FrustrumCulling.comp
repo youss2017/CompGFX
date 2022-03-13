@@ -58,7 +58,7 @@ void main()
     for(int i = 0; i < 5; i++) {
         visible = visible && dot(u_CullPlanes[i], center) > -radius;
     }
-
+    //visible = false;
     if(visible) {
         uint drawCommandIndex = atomicAdd(u_DrawCount, 1);
         u_OutDraws[drawCommandIndex] = u_Draws[drawIndex];

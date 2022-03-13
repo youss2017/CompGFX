@@ -25,6 +25,7 @@ struct MaterialSetDescription
 {
 	uint32_t m_setID;
 	std::vector<ShaderBinding>* m_binding_ptr;
+	ShaderSet m_set = nullptr;
 };
 
 // setBindings must be from lower setID to higher setID

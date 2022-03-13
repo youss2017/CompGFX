@@ -1,0 +1,23 @@
+#version 450 core
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout (push_constant) uniform pushblock {
+    // These are the dimensions of the output texture
+    uint u_Width;
+    uint u_Height;
+    float u_Threshold;
+};
+
+// https://www.khronos.org/opengl/wiki/Image_Load_Store
+
+layout (binding = 0) uniform sampler2D Source;
+layout (binding = 1, r11f_g11f_b10f) restrict uniform writeonly image2D Output;
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    if(pos.x >= u_Width || pos.y >= u_Height)
+        return;
+    vec2 texcoord = vec2(pos.xy) / vec2(u_Width, u_Height);
+    imageStore(Output, pos, texture(Source, texcoord) - vec4(u_Threshold));
+}

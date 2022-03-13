@@ -24,7 +24,7 @@ static constexpr const char* s_ShaderCache = "assets/shaders/spirv_cacheoptimize
 #endif
 static constexpr const char* s_FramebufferReserve = "assets/materials/framebuffer_reserve.cfg";
 static constexpr bool s_EnableImGui = true;
-static constexpr uint32_t s_MaxObjects = 10;
+static constexpr uint32_t s_MaxObjects = 1;
 static constexpr uint32_t s_Range = 10;
 
 vk::VkContext gContext = nullptr;
@@ -37,6 +37,7 @@ namespace Application
 	std::vector<Mesh::Geometry> gGeomtry;
 	IBuffer2 gVerticesSSBO, gIndicesBuffer;
 	Material* gMaterial0;
+	Material* gMaterial1;
 	Material* gMapMaterial;
 	ShaderTypes::TerrainTransform* gMapUBO[gFrameOverlapCount];
 	IBuffer2 gMapVertices, gMapIndices;
@@ -59,6 +60,8 @@ namespace Application
 	static ShaderTypes::SceneData* s_ScenePtr[gFrameOverlapCount];
 	static uint32_t* s_CulledDrawCount[gFrameOverlapCount];
 
+	static IBuffer2 sAnimVertices, sAnimIndices;
+	static std::vector<Mesh::SkinnedMesh> skinnedMeshes;
 }
 
 bool Application::Initalize(ConfigurationSettings* configuration)
@@ -101,14 +104,16 @@ bool Application::LoadAssets()
 	PROFILE_FUNCTION();
 	bool MeshLoadStatus = Mesh::LoadVerticesIndicesSSBOs(gContext, 
 		{ "assets/mesh/Ball.obj",
-		 "assets/mesh/Ball.obj",
+		  "assets/mesh/CmdHQ.fbx",
 		}, gGeomtry, &gVerticesSSBO, &gIndicesBuffer);
 	if (!MeshLoadStatus)
 		return false;
 
+	Mesh::LoadVerticesIndicesBONE(gContext, { "assets/mesh/horse.dae" }, skinnedMeshes, &sAnimVertices, &sAnimIndices);
+
 	gECS = new EntityController(s_MaxObjects, gGeomtry);
 
-	srand(42);
+	srand(140);
 	int range = s_Range;
 	for (unsigned int i = 0; i < s_MaxObjects; i++)
 	{
@@ -117,6 +122,7 @@ bool Application::LoadAssets()
 		ent->m_objData.bounding_sphere_center = glm::vec3(0.0);
 		ent->m_objData.bounding_sphere_radius = 1.0;
 		ent->m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
+		ent->m_objData.m_Model *= glm::scale(glm::mat4(1.0), glm::vec3(0.005f));
 		//s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, -2));
 		ent->m_objData.m_NormalModel = glm::mat4(1.0);
 		ent->m_textureID = 0;
@@ -236,7 +242,38 @@ bool Application::CreateResources()
 	terrainFragmentBinding[0].m_textures.push_back(gWoodTex);
 	terrainFragmentBinding[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	gMapMaterial = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/Terrain.vert", "assets/shaders/Terrain.frag", { {0, & terrainBindings}, {1, &terrainFragmentBinding} }, {{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3)}});
+	gMapMaterial = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/Terrain.vert", "assets/shaders/Terrain.frag", { {0, &terrainBindings}, {1, &terrainFragmentBinding} }, {{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3)}});
+
+	std::vector<ShaderBinding> bindings1(3);
+	bindings1[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	bindings1[0].m_bindingID = 0;
+	bindings1[0].m_hostvisible = false;
+	bindings1[0].m_useclientbuffer = true;
+	bindings1[0].m_preinitalized = false;
+	bindings1[0].m_additional_buffer_flags = (BufferType)0;
+	bindings1[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings1[0].m_size = 0;
+	bindings1[0].m_client_buffer = sAnimVertices;
+
+	bindings1[1].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	bindings1[1].m_bindingID = 1;
+	bindings1[1].m_hostvisible = true;
+	bindings1[1].m_useclientbuffer = false;
+	bindings1[1].m_preinitalized = false;
+	bindings1[1].m_additional_buffer_flags = (BufferType)0;
+	bindings1[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings1[1].m_size = sizeof(ShaderTypes::ObjectDataBONE);
+
+	bindings1[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	bindings1[2].m_bindingID = 2;
+	bindings1[2].m_hostvisible = true;
+	bindings1[2].m_useclientbuffer = false;
+	bindings1[2].m_preinitalized = false;
+	bindings1[2].m_additional_buffer_flags = BufferType::IndirectBuffer;
+	bindings1[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings1[2].m_size = sizeof(ShaderTypes::DrawCommand);
+
+	gMaterial1 = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/AniVertex.vert", "assets/shaders/fragment2.frag", { {0, &bindings1} }, {});
 
 	for (int i = 0; i < gFrameOverlapCount; i++)
 	{
@@ -311,6 +348,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		spec.m_PolygonMode = UI::ShowWireframe ? PolygonMode::LINE : PolygonMode::FILL;
 		Graphics3D_WaitGPUIdle(gGfx);
 		Material_RecreatePipeline(gMaterial0, spec);
+		Material_RecreatePipeline(gMaterial1, spec);
 		Material_RecreatePipeline(gMapMaterial, spec);
 	}
 	const auto &frame = Graphics3D_GetFrame(gGfx);
@@ -344,6 +382,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	return true;
 }
 
+
 namespace Application {
 	void FrustrumCulling(VkCommandBuffer cmd, uint32_t FrameIndex) {
 		/**** ==================FRUSTRUM CULLING================== ****/
@@ -360,7 +399,6 @@ namespace Application {
 
 		if (!UI::LockFrustrum)
 			memcpy(&gCamera2, &gCamera, sizeof(Camera));
-
 		glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f) * gCamera2.GetViewMatrix());
 		auto normalizePlane = [](glm::vec4 p) -> glm::vec4
 		{
@@ -486,6 +524,36 @@ void Application::Render()
 	vkCmdBindIndexBuffer(cmd, gMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(cmd, testingMap.m_indices.size(), 1, 0, 0, 0);
 
+	auto objData = (ShaderTypes::ObjectDataBONE*)Buffer2_Map(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex]);
+	auto drawCommand = (ShaderTypes::DrawCommand*)Buffer2_Map(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]);
+
+	drawCommand[0].indexCount = sAnimIndices->size / sizeof(uint32_t);
+	drawCommand[0].instanceCount = 1;
+	drawCommand[0].firstIndex = 0;
+	drawCommand[0].vertexOffset = 0;
+	drawCommand[0].firstInstance = 0;
+	drawCommand[0].objDataIndex = 0;
+
+	objData[0].model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, 0)) * (glm::rotate(glm::mat4(1.0), glm::radians(270.0f), glm::vec3(0.0, 1.0, 0.0)) * glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1, 0, 0)));
+	objData[0].model *= glm::scale(glm::mat4(1.0), glm::vec3(0.01, 0.01, 0.01));
+	objData[0].view = gCamera.GetViewMatrix();
+	objData[0].projection = glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f);
+	std::vector<glm::mat4> finalTransforms;
+	skinnedMeshes[0].GetBoneTransforms(finalTransforms);
+	//memcpy(&objData[0].finalBoneTransformations[0], &finalTransforms[0], sizeof(glm::mat4)* finalTransforms.size());
+
+	Buffer2_Flush(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex], 0, VK_WHOLE_SIZE);
+	Buffer2_Flush(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex], 0, VK_WHOLE_SIZE);
+
+	//Buffer2_Unmap(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex]);
+	//Buffer2_Unmap(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]);
+
+	sets[0] = gMaterial1->m_sets[0]->m_set[FrameIndex];
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial1->m_pipeline_state->m_pipeline);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial1->m_layout, 0, 1, sets, 0, nullptr);
+	vkCmdBindIndexBuffer(cmd, sAnimIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexedIndirect(cmd, gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, 1, sizeof(ShaderTypes::DrawCommand));
+
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 3);
 
 	VkImageMemoryBarrier presentBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
@@ -527,8 +595,11 @@ void Application::Destroy()
 	Graphics3D_WaitGPUIdle(gGfx);
 	for(int i = 0; i < gFrameOverlapCount; i++)
 	vkDestroyQueryPool(gContext->defaultDevice, s_Query[i], nullptr);
+	Buffer2_Destroy(sAnimVertices);
+	Buffer2_Destroy(sAnimIndices);
 	DestroyFrusturumCompute(frustrumCompute);
 	Material_Destory(gMaterial0);
+	Material_Destory(gMaterial1);
 	Material_Destory(gMapMaterial);
 	Buffer2_Destroy(gMapVertices);
 	Buffer2_Destroy(gMapIndices);

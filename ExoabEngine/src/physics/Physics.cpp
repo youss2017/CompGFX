@@ -206,6 +206,7 @@ physx::PxMaterial* Physx_CreateMaterial(float staticFriction, float dynamicFrict
 
 physx::PxTriangleMesh* Physx_CreateTriangleMesh(Mesh::Geometry& geometry)
 {
+#if 0
 	physx::PxVec3* vertices = new PxVec3[geometry.m_vertices.size()];
 	for (int i = 0; i < geometry.m_vertices.size(); i++) {
 		auto p = geometry.m_vertices[i].position;
@@ -229,6 +230,8 @@ physx::PxTriangleMesh* Physx_CreateTriangleMesh(Mesh::Geometry& geometry)
 	PxDefaultMemoryInputData readBuffer(writeBuffer.getData(), writeBuffer.getSize());
 	delete[] vertices;
 	return gPhysics->createTriangleMesh(readBuffer);
+#endif
+	return nullptr;
 }
 
 physx::PxShape* Physx_CreateShape(physx::PxGeometry geometry, physx::PxMaterial* material)

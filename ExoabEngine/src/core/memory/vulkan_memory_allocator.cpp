@@ -190,8 +190,8 @@ namespace VkAlloc
 	void FlushBuffer(CONTEXT context, BUFFER buffer, uint32_t offset, uint32_t size)
 	{
 		assert(buffer->m_suballocation.m_host_visible && "Buffer must be host visible, CPU_ONLY OR CPU_TO_GPU!");
-		if (buffer->m_suballocation.m_coherent)
-			return;
+		//if (buffer->m_suballocation.m_coherent)
+		//	return;
 		vmaFlushAllocation(context->m_allocator, buffer->m_suballocation.m_allocation, offset, size);
 	}
 	void InvalidateBuffer(CONTEXT context, BUFFER buffer, uint32_t offset, uint32_t size)

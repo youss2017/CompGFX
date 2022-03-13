@@ -36,15 +36,22 @@ Material* Material_Create(GraphicsContext _context, Framebuffer fbo, MaterialCon
 	std::vector<VkDescriptorPoolSize> poolSize;
 	for (auto& setBinding : setBindings)
 	{
-		ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, setBinding.m_binding_ptr);
+		if (setBinding.m_binding_ptr)
+			ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, setBinding.m_binding_ptr);
 	}
 	material->m_pool = vk::Gfx_CreateDescriptorPool(context, setBindings.size() * gFrameOverlapCount, poolSize);
 	uint32_t setID = 0;
 	std::vector<ShaderSet> sets;
 	for (auto& setBinding : setBindings)
 	{
-		ShaderSet set = ShaderBinding_Create(context, material->m_pool, setID, setBinding.m_binding_ptr);
-		material->m_sets.insert(std::make_pair(setID, set));
+		ShaderSet set = nullptr;
+		if (setBinding.m_binding_ptr) {
+			set = ShaderBinding_Create(context, material->m_pool, setID, setBinding.m_binding_ptr);
+		}
+		else {
+			set = setBinding.m_set;
+		}
+		material->m_sets.insert(std::make_pair(setBinding.m_setID, set));
 		sets.push_back(set);
 		setID++;
 	}

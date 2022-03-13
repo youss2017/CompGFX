@@ -1,0 +1,29 @@
+#version 450 core
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout (binding = 0) uniform sampler2D Source;
+layout (binding = 1, r11f_g11f_b10f) restrict uniform writeonly image2D Dest;
+
+layout (push_constant) uniform pushblock {
+    uint u_Width;
+    uint u_Height;
+};
+
+vec4 texture_bilinear(in sampler2D t, in vec2 uv, in vec2 textureSize, in vec2 texelSize)
+{
+    vec4 tl = texture(t, uv);
+    vec4 tr = texture(t, uv + vec2(texelSize.x, 0.0));
+    vec4 bl = texture(t, uv + vec2(0.0, texelSize.y));
+    vec4 br = texture(t, uv + vec2(texelSize.x, texelSize.y));
+    vec2 f = fract( uv * textureSize );
+    vec4 tA = mix( tl, tr, f.x );
+    vec4 tB = mix( bl, br, f.x );
+    return mix( tA, tB, f.y );
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    if(pos.x >= u_Width || pos.y >= u_Height)
+        return;
+}
