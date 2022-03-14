@@ -147,7 +147,7 @@ bool Application::CreateResources()
 	gSampler0 = vk::Gfx_CreateSampler(gContext);
 	gWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
 	
-	std::vector<ShaderBinding> bindings(4);
+	std::vector<ShaderBinding> bindings(3);
 	bindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings[0].m_bindingID = 0;
 	bindings[0].m_hostvisible = false;
@@ -164,7 +164,7 @@ bool Application::CreateResources()
 	bindings[1].m_additional_buffer_flags  = (BufferType)0;
 	bindings[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[1].m_size = sizeof(ShaderTypes::SceneData);
-	
+	/*
 	bindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings[2].m_bindingID = 2;
 	bindings[2].m_hostvisible = true;
@@ -174,15 +174,15 @@ bool Application::CreateResources()
 	bindings[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[2].m_size = gECS->GetDrawCount() * sizeof(ShaderTypes::ObjectData);
 	bindings[2].m_ssbo = gECS->GetObjectBufferArray();
-
-	bindings[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings[3].m_bindingID = 3;
-	bindings[3].m_hostvisible = true;
-	bindings[3].m_useclientbuffer = false;
-	bindings[3].m_preinitalized = false;
-	bindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
-	bindings[3].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[3].m_size = gECS->GetDrawCount() * sizeof(ShaderTypes::DrawData);
+	*/
+	bindings[2/*3*/].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	bindings[2/*3*/].m_bindingID = 3;
+	bindings[2/*3*/].m_hostvisible = true;
+	bindings[2/*3*/].m_useclientbuffer = false;
+	bindings[2/*3*/].m_preinitalized = false;
+	bindings[2/*3*/].m_additional_buffer_flags = BufferType::IndirectBuffer;
+	bindings[2/*3*/].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[2/*3*/].m_size = gECS->GetDrawCount() * sizeof(ShaderTypes::DrawData);
 
 	std::vector<ShaderBinding> set1Bindings(1);
 	set1Bindings[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
@@ -195,11 +195,15 @@ bool Application::CreateResources()
 	set1Bindings[0].m_textures.push_back(gWoodTex);
 	set1Bindings[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	gMaterial0 = Material_Create(gContext, gFBO0, &basicmc, nullptr, { {0, &bindings}, {1, &set1Bindings} }, {});
+	VkPushConstantRange vertexRange{};
+	vertexRange.offset = 0;
+	vertexRange.size = 8;
+	vertexRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	gMaterial0 = Material_Create(gContext, gFBO0, &basicmc, nullptr, { {0, &bindings}, {1, &set1Bindings} }, {vertexRange});
 
 	/***** COMPUTE (Frustrum Culling) Pipeline  *****/
 
-	frustrumCompute = Application::CreateFrustrumCompute(gECS->GetObjectBufferArray(), gECS->GetDrawBufferArray(), bindings[3].m_ssbo);
+	frustrumCompute = Application::CreateFrustrumCompute(gECS->GetObjectBufferArray(), gECS->GetDrawBufferArray(), bindings[2/*3*/].m_ssbo);
 	
 	/********* Map Material **********/
 
@@ -513,7 +517,10 @@ void Application::Render()
 	VkDescriptorSet sets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex]};
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, sets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, frustrumCompute.m_set0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, gECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
+	
+	uint64_t gpupointer = Buffer2_GetGPUPointer(gECS->GetObjectBuffer(FrameIndex));
+	vkCmdPushConstants(cmd, gMaterial0->m_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 8, &gpupointer);
+	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[/*3*/2].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, frustrumCompute.m_set0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, gECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_pipeline_state->m_pipeline);
 	sets[0] = gMapMaterial->m_sets[0]->m_set[FrameIndex];

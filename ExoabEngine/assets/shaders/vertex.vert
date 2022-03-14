@@ -1,5 +1,10 @@
 #version 450
 #include "types.h"
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#define sizeof(Type) (uint64_t(Type(uint64_t(0))+1))
 
 layout (std430, set = 0, binding = 0) readonly buffer VerticesSSBO
 {
@@ -11,9 +16,18 @@ layout (std430, set = 0, binding = 1) uniform SceneDataUBO
 	SceneData u_Scene;
 };
 
+layout(buffer_reference, std430, buffer_reference_align = 16) buffer ObjectData_BlockType {
+	ObjectData v[]; 
+};
+
+/*
 layout (std430, set = 0, binding = 2) readonly buffer ObjectDataSSBO
 {
 	ObjectData u_ModelData[];
+};
+*/
+layout(push_constant) uniform pushblock {
+	uint64_t u_ModelDataPointer;
 };
 
 layout (std430, set = 0, binding = 3) readonly buffer DrawSSBO
@@ -51,7 +65,8 @@ vec4 MulQuat(vec4 q1, vec4 q2)
 
 void main()
 {
-	ObjectData od = u_ModelData[int(draw.ObjectDataIndex)];
+	ObjectData_BlockType objData = ObjectData_BlockType(u_ModelDataPointer);
+	ObjectData od = objData.v[int(draw.ObjectDataIndex)];
 	Normal =  mat3(od.m_NormalModel) * vertex.normal.xyz;
 	TexCoord = vertex.texcoord;
 	TexIndex = uint(draw.TexIndex);

@@ -63,6 +63,8 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.shaderInt8 = VK_TRUE;
     vulkan12features.uniformBufferStandardLayout = VK_TRUE;
     vulkan12features.hostQueryReset = VK_TRUE;
+    vulkan12features.bufferDeviceAddress = VK_TRUE;
+    vulkan12features.shaderInt8 = VK_TRUE;
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -75,6 +77,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     features.features.samplerAnisotropy = VK_TRUE;
     features.features.sampleRateShading = VK_TRUE;
     features.features.multiDrawIndirect = VK_TRUE;
+    features.features.shaderInt64 = VK_TRUE;
     std::vector<const char *> layer_extensions;
     uint32_t extensions_count;
     const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);

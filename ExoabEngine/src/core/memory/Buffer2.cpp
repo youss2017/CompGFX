@@ -1,7 +1,7 @@
 #include "Buffer2.hpp"
 #include <backend/VkGraphicsCard.hpp>
 
-IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, BufferMemoryType memoryType)
+IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage)
 {
 	vk::VkContext context = ToVKContext(_context);
 	using namespace VkAlloc;
@@ -23,6 +23,8 @@ IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, 
 		desc.m_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	if (type & BufferType::INTE_TRANSFER_DST)
 		desc.m_usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	if (pointerUsage)
+		desc.m_usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 	IBuffer2 buffer = new GPUBuffer2();
 	buffer->m_context = _context;
 	buffer->memoryType = memoryType;
@@ -102,6 +104,17 @@ void Buffer2_Unmap(IBuffer2 buffer)
 void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size)
 {
 	assert(0);// VkAlloc::ReAllocBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer, new_size);
+}
+
+uint64_t Buffer2_GetGPUPointer(IBuffer2 buffer)
+{
+	VkBufferDeviceAddressInfo info{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+	info.buffer = buffer->m_vk_buffer->m_buffer;
+	uint64_t ptr = vkGetBufferDeviceAddress(ToVKContext(buffer->m_context)->defaultDevice, &info);
+	if (ptr == uint64_t(NULL)) {
+		logerror("Could not get GPU buffer pointer!");
+	}
+	return ptr;
 }
 
 void Buffer2_Destroy(IBuffer2 buffer)
