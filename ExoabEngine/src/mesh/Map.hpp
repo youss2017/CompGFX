@@ -19,7 +19,6 @@ struct MapVertex
     glm::ivec4 inTextureIDs;
     glm::vec4 inTextureWeights;
     glm::vec2 inTexCoords;
-    int padding[2];
 };
 
 struct Map

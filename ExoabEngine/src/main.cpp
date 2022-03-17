@@ -44,7 +44,15 @@ int main(int argc, char** argv)
     /* Load Game Settings from settings.cfg */
     ConfigurationSettings config = LoadConfiguration();
     config.VSync = true;
-    if(!Application::Initalize(&config)) {
+    bool rd = false;
+    if (argc > 1) {
+        std::string arg1 = Utils::StrLowerCase(argv[1]);
+        if (strstr(arg1.c_str(), "debug") || strstr(arg1.c_str(), "renderdoc")) {
+            rd = true;
+            log_info("[RenderDOC Debugging]", false);
+        }
+    }
+    if(!Application::Initalize(&config, rd)) {
         log_error("Could not initalize Application");
         return 0x1;
     }

@@ -10,7 +10,7 @@
 
 // [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
 // [NOTE]: there will be a mismatch of format between pipeline state objects and render pass
-static constexpr VkFormat cs_SwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
+constexpr VkFormat cs_SwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
 // =============================================== Graphics3D ===============================================
 
@@ -18,7 +18,7 @@ static constexpr VkFormat cs_SwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
 void Graphics3D_Internal_DisplayProfileResults();
 #endif;
 
-IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, bool DebugMode, bool EnableImGui)
+IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, bool DebugMode, bool EnableImGui, bool RenderDOC)
 {
     Graphics3D *gfx = new Graphics3D();
     PlatformWindow *Window;
@@ -63,8 +63,14 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.shaderInt8 = VK_TRUE;
     vulkan12features.uniformBufferStandardLayout = VK_TRUE;
     vulkan12features.hostQueryReset = VK_TRUE;
-    vulkan12features.bufferDeviceAddress = VK_TRUE;
     vulkan12features.shaderInt8 = VK_TRUE;
+    if (RenderDOC) {
+        log_warning("Disabled bufferDeviceAddress feature so we can use RenderDOC.", false);
+    }
+    else {
+        log_warning("bufferDeviceAddress is turned on, CANNOT debug with RenderDOC, in renderdoc use 'debug' or 'renderdoc' in command line arguments.", false);
+        vulkan12features.bufferDeviceAddress = VK_TRUE;
+    }
 
     VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters;
     DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
@@ -87,7 +93,6 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     {
         layers.push_back("VK_LAYER_KHRONOS_validation");
         layer_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        layer_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
     bool ForceIntegeratedGPU;
 #ifdef _DEBUG
@@ -98,11 +103,11 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     gfx->m_context = vk::Gfx_CreateContext(Window, DebugMode, ForceIntegeratedGPU, layers, layer_extensions,
                                                {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
-                                                VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
                                                 VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
-                                                VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
-                                                VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-                                                VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+                                                VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+#if defined(_DEBUG)
+                                                VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
+#endif
                                                 },
                                                features, VK_API_VERSION_1_2);
     auto vcont = ToVKContext(gfx->m_context);

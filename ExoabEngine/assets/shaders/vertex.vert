@@ -1,36 +1,32 @@
-#version 450
+#version 460
 #include "types.h"
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_buffer_reference2 : require
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_buffer_reference2 : enable
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
-#define sizeof(Type) (uint64_t(Type(uint64_t(0))+1))
 
-layout (std430, set = 0, binding = 0) readonly buffer VerticesSSBO
+#extension GL_EXT_debug_printf : disable
+
+layout (scalar, binding = 0) restrict readonly buffer VerticesSSBO
 {
 	Vertex u_Vertices[];
 };
 
-layout (std430, set = 0, binding = 1) uniform SceneDataUBO
+layout (scalar, binding = 1) uniform GlobalDataUBO
 {
-	SceneData u_Scene;
+	float u_DeltaTime;
+	float u_TimeFromStart;
+	mat4 u_View;
+	mat4 u_Projection;
+	mat4 u_ProjView;
 };
 
-layout(buffer_reference, std430, buffer_reference_align = 16) buffer ObjectData_BlockType {
-	ObjectData v[]; 
-};
-
-/*
-layout (std430, set = 0, binding = 2) readonly buffer ObjectDataSSBO
+layout (scalar, binding = 2) readonly buffer ObjectDataSSBO
 {
-	ObjectData u_ModelData[];
-};
-*/
-layout(push_constant) uniform pushblock {
-	uint64_t u_ModelDataPointer;
+	GeometryData u_ModelData[];
 };
 
-layout (std430, set = 0, binding = 3) readonly buffer DrawSSBO
+layout (scalar, binding = 3) readonly buffer DrawSSBO
 {
 	DrawData u_Draws[];
 };
@@ -38,6 +34,8 @@ layout (std430, set = 0, binding = 3) readonly buffer DrawSSBO
 layout (location = 0) out vec3 Normal;
 layout (location = 1) out vec2 TexCoord;
 layout (location = 2) out flat uint TexIndex;
+layout (location = 3) out float TimeFromStart;
+layout (location = 4) out vec3 CameraForward;
 
 // Since shaders don't pointers (therefore no references &), we must copy the Vertex which isn't allowed with int8 and float16
 // therefore the following is the next best thing
@@ -65,10 +63,13 @@ vec4 MulQuat(vec4 q1, vec4 q2)
 
 void main()
 {
-	ObjectData_BlockType objData = ObjectData_BlockType(u_ModelDataPointer);
-	ObjectData od = objData.v[int(draw.ObjectDataIndex)];
-	Normal =  mat3(od.m_NormalModel) * vertex.normal.xyz;
+	GeometryData geoData = u_ModelData[draw.mGeometryDataIndex];
+	InstanceData instance = InstanceData_T(geoData.mCulledInstancePtr).v[gl_InstanceIndex];
+	Normal = vertex.normal;
 	TexCoord = vertex.texcoord;
-	TexIndex = uint(draw.TexIndex);
-	gl_Position = u_Scene.m_Projection * u_Scene.m_View * od.m_Model * vertex.position;
+	TexIndex = uint(instance.TexIndex[0]);
+	TimeFromStart = u_TimeFromStart;
+	gl_Position = u_ProjView * instance.mModel * vec4(vertex.position, 1.0);
+	mat4 inverted = inverse(u_View);
+	CameraForward = -normalize(vec3(inverted[2]));
 }

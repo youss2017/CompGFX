@@ -3,72 +3,82 @@
 
 extern vk::VkContext gContext;
 
-EntityController::EntityController(std::vector<Mesh::Geometry>& geometry)
-: m_geometry(geometry), m_drawCount(0u)
+EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
+: mGeometry(geometry)
 {
-	uint32_t drawCount = 0;
-	for (auto& g : geometry)
-		drawCount += g.mSubmeshList.size();
-	m_drawCount = drawCount;
-	m_entSlots.resize(drawCount);
-	m_ents.resize(drawCount);
-	for (int i = 0; i < gFrameOverlapCount; i++) {
-		m_objectBuffer[i] = Buffer2_Create(gContext, BufferType::StorageBuffer, drawCount * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
-		m_objDataPtr[i] = (ShaderTypes::ObjectData*)Buffer2_Map(m_objectBuffer[i]);
-		m_drawBuffer[i] = Buffer2_Create(gContext, BufferType(BufferType::StorageBuffer | BufferType::IndirectBuffer), drawCount * sizeof(ShaderTypes::ObjectData), BufferMemoryType::CPU_TO_CPU);
-		m_drawPtr[i] = (ShaderTypes::DrawData*)Buffer2_Map(m_drawBuffer[i]);
+	int inputGeometryDataSize = 0;
+	for (int drawDataIndex = 0; inputGeometryDataSize < geometry.size(); inputGeometryDataSize++) {
+		IEntity entity = NewEntity();
+		const Mesh::Geometry& g = geometry[inputGeometryDataSize];
+		for (auto& submesh : g.mSubmeshList) {
+			ShaderTypes::DrawData draw;
+			draw.indexCount = submesh.indicesCount;
+			draw.instanceCount = 0;
+			draw.firstIndex = submesh.firstIndex;
+			draw.vertexOffset = submesh.firstVertex;
+			draw.firstInstance = 0;
+			draw.GeometryDataIndex = inputGeometryDataSize;
+			mDraws.push_back(draw);
+			entity->m_reserved_drawdata_indices.push_back(drawDataIndex++);
+		}
+		entity->m_reserved_geometrydata_index = inputGeometryDataSize;
+		mEntites.insert(std::make_pair(EntityGeometryID(inputGeometryDataSize), entity));
+		ShaderTypes::GeometryData geoData;
+		geoData.bounding_sphere_center = g.m_bounding_sphere_center;
+		geoData.bounding_sphere_radius = g.m_bounding_sphere_radius;
+		geoData.mInstancePtr = 0;
+		mGeoData.push_back(geoData);
 	}
-	std::fill(m_entSlots.begin(), m_entSlots.end(), true);
-	std::fill(m_ents.begin(), m_ents.end(), nullptr);
+
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		mInputDrawData[i] = Buffer2_CreatePreInitalized(gContext, BufferType(BUFFER_TYPE_STORAGE | BUFER_TYPE_TRANSFER_DST), mDraws.data(), mDraws.size() * sizeof(ShaderTypes::DrawData), BufferMemoryType::CPU_TO_CPU, true);
+		mInputGeometryData[i] = Buffer2_CreatePreInitalized(gContext, BufferType(BUFFER_TYPE_STORAGE | BUFER_TYPE_TRANSFER_DST), mGeoData.data(), mGeoData.size() * sizeof(ShaderTypes::GeometryData), BufferMemoryType::CPU_TO_CPU, true);
+	}
 }
+
 EntityController::~EntityController()
 {
 	for (int i = 0; i < gFrameOverlapCount; i++) {
-		Buffer2_Destroy(m_objectBuffer[i]);
-		Buffer2_Destroy(m_drawBuffer[i]);
+		Buffer2_Destroy(mInputDrawData[i]);
+		Buffer2_Destroy(mInputGeometryData[i]);
 	}
 }
 
-bool EntityController::AddEntity(IEntity entity)
+void EntityController::PrepareDataForFrame(uint32_t frameIndex)
 {
-	for(uint32_t available_slot = 0; available_slot < m_entSlots.size(); available_slot++) {
-		if (m_entSlots[available_slot]) {
-			m_entSlots[available_slot] = false;
-			m_ents[available_slot] = entity;
-			entity->m_reserved_objectdata_index = available_slot;
-			m_drawCount++;
-			return true;
+	ShaderTypes::DrawData* draws = (ShaderTypes::DrawData*)Buffer2_Map(mInputDrawData[frameIndex]);
+	ShaderTypes::GeometryData* geoData = (ShaderTypes::GeometryData*)Buffer2_Map(mInputGeometryData[frameIndex]);
+
+	for (auto& entitymap : mEntites) {
+		IEntity entity = entitymap.second;
+		Mesh::Geometry g = mGeometry[entity->m_geometryID];
+		int sindex = 0;
+		for (auto drawDataIndex : entity->m_reserved_drawdata_indices) {
+			ShaderTypes::DrawData draw;
+			const Mesh::GeometrySubmesh& submesh = g.mSubmeshList[sindex];
+			draw.indexCount = submesh.indicesCount;
+			draw.instanceCount = entity->mInstanceCount;
+			draw.firstIndex = submesh.firstIndex;
+			draw.vertexOffset = submesh.firstVertex;
+			draw.firstInstance = 0;
+			draw.GeometryDataIndex = entity->m_reserved_geometrydata_index;
+			memcpy(draws + drawDataIndex, &draw, sizeof(ShaderTypes::DrawData));
+		}
+		if (entity->mInstanceBuffer) {
+			uint64_t GPUpointer = Buffer2_GetGPUPointer(entity->mInstanceBuffer);
+			uint64_t CulledGPUpointer = Buffer2_GetGPUPointer(entity->mCulledInstanceBuffer);
+			memcpy(&(geoData + entity->m_reserved_geometrydata_index)->mInstancePtr, &GPUpointer, 8);
+			memcpy(&(geoData + entity->m_reserved_geometrydata_index)->mCulledInstancePtr, &CulledGPUpointer, 8);
 		}
 	}
-	return false;
-}
-void EntityController::RemoveEntity(IEntity entity)
-{
-	m_entSlots[entity->m_reserved_objectdata_index] = false;
-	m_ents[entity->m_reserved_objectdata_index] = nullptr;
-	m_drawCount--;
+	Buffer2_Flush(mInputDrawData[frameIndex], 0, VK_WHOLE_SIZE);
+	Buffer2_Flush(mInputGeometryData[frameIndex], 0, VK_WHOLE_SIZE);
 }
 
-void EntityController::Prepare(uint32_t frameIndex)
+uint32_t EntityController::GetInstanceCount()
 {
-	uint32_t drawCommandIndex = 0;
-	for (auto& ent : m_ents) {
-		if (!ent)
-			continue;
-		memcpy(&m_objDataPtr[frameIndex][ent->m_reserved_objectdata_index], &ent->m_objData, sizeof(ShaderTypes::ObjectData));
-		Mesh::Geometry& g = m_geometry[ent->m_geometryID];
-		for (int i = 0; i < g.mSubmeshList.size(); i++) {
-			VkDrawIndexedIndirectCommand command;
-			const Mesh::GeometrySubmesh& submesh = g.mSubmeshList[i];
-			command.indexCount = submesh.indicesCount;
-			command.instanceCount = 1;
-			command.firstIndex = submesh.firstIndex;
-			command.vertexOffset = submesh.firstVertex;
-			command.firstInstance = 0;
-			memcpy(&m_drawPtr[frameIndex][drawCommandIndex].command, &command, sizeof(VkDrawIndexedIndirectCommand));
-			memcpy(&m_drawPtr[frameIndex][drawCommandIndex].ObjectDataIndex, &ent->m_reserved_objectdata_index, sizeof(uint32_t));
-			memcpy(&m_drawPtr[frameIndex][drawCommandIndex].TexIndex, &ent->m_textureID, sizeof(uint32_t));
-			drawCommandIndex++;
-		}
-	}
+	uint32_t count = 0;
+	for (auto e : mEntites)
+		count += e.second->mInstanceCount;
+	return count;
 }

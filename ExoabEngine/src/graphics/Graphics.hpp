@@ -39,7 +39,7 @@ void Graphics3D_Destroy(IGraphics3D gfx);
 
 FrameData& Graphics3D_GetFrame(IGraphics3D gfx);
 
-IGraphics3D Graphics3D_Create(ConfigurationSettings* config, const char *Title, bool DebugMode, bool EnableImGui);
+IGraphics3D Graphics3D_Create(ConfigurationSettings* config, const char *Title, bool DebugMode, bool EnableImGui, bool RenderDOC);
 bool Graphics3D_CheckVulkanSupport();
 bool Graphics3D_PollEvents(IGraphics3D gfx);
 

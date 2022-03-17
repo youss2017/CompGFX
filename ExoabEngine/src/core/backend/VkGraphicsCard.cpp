@@ -38,6 +38,9 @@ namespace vk
 				log_error(pCallbackData->pMessage, "N/A", 0, false);
 			}
 		}
+		else if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+			loginfo(pCallbackData->pMessage);
+		}
 		else
 		{
 			std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
@@ -49,7 +52,7 @@ namespace vk
 	{
 		createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		createInfo.pfnUserCallback = debugCallback;
 	}
@@ -686,6 +689,19 @@ namespace vk
 		vkWaitForFences(buffer.device, 1, &buffer.fence, true, UINT64_MAX);
 		vkDestroyFence(buffer.device, buffer.fence, nullptr);
 		vkDestroyCommandPool(buffer.device, buffer.pool, nullptr);
+	}
+
+	VkBufferMemoryBarrier Gfx_BufferMemoryBarrier(VkAccessFlags srcAccess, VkAccessFlags dstAccess, VkBuffer buffer)
+	{
+		VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+		barrier.srcAccessMask = srcAccess;
+		barrier.dstAccessMask = dstAccess;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.buffer = buffer;
+		barrier.offset = 0;
+		barrier.size = VK_WHOLE_SIZE;
+		return barrier;
 	}
 
 

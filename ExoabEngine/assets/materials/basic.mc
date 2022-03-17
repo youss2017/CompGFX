@@ -7,7 +7,7 @@ PIPELINE
     polygon_mode: FILL
     depth_compare_op: LESS ; NEVER, EQUAL, LEQUAL, GREATER, NEQUAL, GEQUAL, ALWAYS
     cull_mode: BACK ; BACK, FRONT_AND_BACK, NONE
-    front_face: CW ; CW, (counter clockwise or clockwise)
+    front_face: CCW ; CW, (counter clockwise or clockwise)
 END
 
 BLENDSTATE (0)

@@ -117,6 +117,7 @@
     <ClInclude Include="src\application\Application.hpp" />
     <ClInclude Include="src\application\ecs\EntityController.hpp" />
     <ClInclude Include="src\application\FrustrumCulling.hpp" />
+    <ClInclude Include="src\utils\atomic.h" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />
     <ClInclude Include="src\core\backend\VkGraphicsCard.hpp" />

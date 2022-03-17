@@ -28,13 +28,13 @@ namespace Mesh
 			std::stringstream infostream;
 			infostream << meshIndex++ << " --> Loading Geomtry from model with " << scene->mNumMeshes << " submeshes: " << path;
 			loginfos(infostream.str());
+			geometry.m_bounding_sphere_center = glm::vec3(0.0);
+			geometry.m_bounding_sphere_radius = 0;
 			for (uint i = 0; i < scene->mNumMeshes; i++)
 			{
 				GeometrySubmesh submesh;
 				submesh.firstVertex = vertices.size();
 				submesh.firstIndex = indices.size();
-				submesh.m_bounding_sphere_center = glm::vec3(0.0);
-				submesh.m_bounding_sphere_radius = 0;
 				submesh.verticesCount = submesh.indicesCount = 0;
 				for (uint j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
 				{
@@ -42,15 +42,14 @@ namespace Mesh
 					v.position.x = scene->mMeshes[i]->mVertices[j].x;
 					v.position.y = scene->mMeshes[i]->mVertices[j].y;
 					v.position.z = scene->mMeshes[i]->mVertices[j].z;
-					v.position.w = 1.0f;
 					v.normal.x = scene->mMeshes[i]->mNormals[j].x;
 					v.normal.y = scene->mMeshes[i]->mNormals[j].y;
 					v.normal.z = scene->mMeshes[i]->mNormals[j].z;
 					glm::vec3 position = glm::vec3(scene->mMeshes[i]->mVertices[j].x, scene->mMeshes[i]->mVertices[j].y, scene->mMeshes[i]->mVertices[j].z);
-					submesh.m_bounding_sphere_center += position;
-					submesh.m_bounding_sphere_center /= 2.0;
-					if (glm::distance(position, submesh.m_bounding_sphere_center) > submesh.m_bounding_sphere_radius)
-						submesh.m_bounding_sphere_radius = glm::distance(position, submesh.m_bounding_sphere_center);
+					geometry.m_bounding_sphere_center += position;
+					geometry.m_bounding_sphere_center /= 2.0;
+					if (glm::distance(position, geometry.m_bounding_sphere_center) > geometry.m_bounding_sphere_radius)
+						geometry.m_bounding_sphere_radius = glm::distance(position, geometry.m_bounding_sphere_center);
 					if (scene->mMeshes[i]->mTextureCoords[0]) {
 						v.tu = scene->mMeshes[i]->mTextureCoords[0][j].x;
 						v.tv = scene->mMeshes[i]->mTextureCoords[0][j].y;
@@ -88,8 +87,8 @@ namespace Mesh
 		std::stringstream memory_info;
 		memory_info << "Using about " << (vertices.size() * sizeof(GeometryVertex) / 1024.0) << " kb for vertices and " << (indices.size() * sizeof(uint32) / 1024.0) << " kb for indices.";
 		loginfos(memory_info.str());
-		IBuffer2 vertices_ssbo = Buffer2_Create(context, BufferType::StorageBuffer, vertices.size() * sizeof(GeometryVertex), BufferMemoryType::GPU_ONLY);
-		IBuffer2 indices_buffer = Buffer2_Create(context, BufferType::IndexBuffer, indices.size() * sizeof(uint32), BufferMemoryType::GPU_ONLY);
+		IBuffer2 vertices_ssbo = Buffer2_Create(context, BUFFER_TYPE_STORAGE, vertices.size() * sizeof(GeometryVertex), BufferMemoryType::GPU_ONLY);
+		IBuffer2 indices_buffer = Buffer2_Create(context, BUFFER_TYPE_INDEX, indices.size() * sizeof(uint32), BufferMemoryType::GPU_ONLY);
 		Buffer2_UploadData(vertices_ssbo, (char8_t*)vertices.data(), 0, vertices.size() * sizeof(GeometryVertex));
 		Buffer2_UploadData(indices_buffer, (char8_t*)indices.data(), 0, indices.size() * sizeof(uint32));
 		*pVerticesSSBO = vertices_ssbo;
@@ -107,8 +106,8 @@ namespace Mesh
 			indicesSize += mesh.mIndices.size() * sizeof(uint32_t);
 			OutSkinnedMesh.push_back(mesh);
 		}
-		*pOutVertices = Buffer2_Create(context, BufferType::StorageBuffer, verticesSize, BufferMemoryType::GPU_ONLY);
-		*pOutIndices = Buffer2_Create(context, BufferType::IndexBuffer, indicesSize, BufferMemoryType::GPU_ONLY);
+		*pOutVertices = Buffer2_Create(context, BUFFER_TYPE_STORAGE, verticesSize, BufferMemoryType::GPU_ONLY);
+		*pOutIndices = Buffer2_Create(context, BUFFER_TYPE_INDEX, indicesSize, BufferMemoryType::GPU_ONLY);
 		size_t verticesOffset = 0;
 		size_t indicesOffset = 0;
 		for (auto& skinnedMesh : OutSkinnedMesh) {

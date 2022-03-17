@@ -3,7 +3,7 @@
 
 DebugRenderer::DebugRenderer(GraphicsContext context)
 {
-	m_vertices_buffer = Buffer2_Create(context, BufferType::VertexBuffer, sizeof(DebugVertex) * 1000, BufferMemoryType::CPU_ONLY);
+	m_vertices_buffer = Buffer2_Create(context, BUFFER_TYPE_VERTEX, sizeof(DebugVertex) * 1000, BufferMemoryType::CPU_ONLY);
 }
 
 void DebugRenderer::Destroy()

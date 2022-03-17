@@ -118,7 +118,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 {
 	vk::VkContext context = (vk::VkContext)texture->m_context;
 	// create staging buffer
-	IBuffer2 staging_buffer = Buffer2_Create(texture->m_context, BufferType::INTE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY);
+	IBuffer2 staging_buffer = Buffer2_Create(texture->m_context, BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY);
 	// load data to buffer
 	char8_t* staging_buffer_ptr = Buffer2_Map(staging_buffer);
 	memcpy(staging_buffer_ptr, pixels, size);

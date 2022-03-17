@@ -1,30 +1,34 @@
 #version 450
 #include "types.h"
+#extension GL_EXT_debug_printf : disable
 
-layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
-
-layout (std430, set = 0, binding = 0) readonly buffer ObjectDataSSBO {
-    ObjectData u_ObjData[];
+/*
+    the x group is for instance culling
+    the y group is for the draw data
+*/
+layout (local_size_x = 64, local_size_y = 8, local_size_z = 1) in;
+// Both ObjectData arrays MUST be the same size!
+// The instancePtr will be copied from binding0 to binding1
+layout (scalar, binding = 0) readonly buffer InputGeometryDataSSBO {
+    GeometryData u_GeoData[];
 };
 
-layout (std430, set = 0, binding = 1) readonly buffer InputDrawCommands
+layout (scalar, binding = 1) buffer OutGeometryDataSSBO {
+    GeometryData u_OutGeoData[];
+};
+
+layout (scalar, binding = 2) readonly buffer InputDrawCommands
 {
     DrawData u_Draws[];
 };
 
-layout (std430, set = 0, binding = 2) writeonly buffer OutputDrawCommands {
+layout (scalar, binding = 3) buffer OutputDrawCommands {
     DrawData u_OutDraws[];
 };
 
-layout (std430, set = 0, binding = 3) buffer DrawCountSSBO
+layout (scalar, push_constant) uniform FrustrumPlanes
 {
-    uint u_DrawCount;
-};
-
-layout (push_constant) uniform FrustrumPlanes
-{
-    int u_MaxDraw;
-    int padding[3];
+    int u_MaxGeometry;
     vec4 u_CullPlanes[5];
 };
 
@@ -43,25 +47,56 @@ bool TestAABBPlane(vec3 box_min, vec3 box_max, vec4 p) {
 	return abs(s) < r;
 }
 
+#define atomicRead(val) (atomicExchange(val, val))
+
 void main()
 {
     uint gIDx = gl_GlobalInvocationID.x;
-    if(gIDx >= u_MaxDraw)
+    uint gIDy = gl_GlobalInvocationID.y;
+    if(gIDy >= u_MaxGeometry)
         return;
+    uint drawIndex = gIDy;
+    uint instanceIndex = gIDx;
+    DrawData draw = u_Draws[drawIndex];
+    if(draw.instanceCount <= instanceIndex) {
+        return;
+    }
+    // Get instance model transform
+    InstanceData_T instancePtr = InstanceData_T(u_GeoData[draw.mGeometryDataIndex].mInstancePtr);
+    mat4 model = instancePtr.v[instanceIndex].mModel;
 
-    uint drawIndex = gIDx;
+    vec4 center = model * vec4(u_GeoData[draw.mGeometryDataIndex].bounding_sphere_center, 1.0);
+    vec3 radius3 = (u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius * 4.0) * vec3(model[0][0], model[1][1], model[2][2]);
+    float radius = max(max(radius3.x, radius3.y), radius3.z);
+    //debugPrintfEXT("<%.2f, %.2f, %.2f, %.2f> radius: %.2f (original %.2f)\n", center.xyzw, radius, u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius);
 
-    vec4 center = u_ObjData[u_Draws[drawIndex].ObjectDataIndex].m_Model * vec4(u_ObjData[u_Draws[drawIndex].ObjectDataIndex].bounding_sphere_center, 1.0);
-    float radius = u_ObjData[u_Draws[drawIndex].ObjectDataIndex].bounding_sphere_radius;
-
+    // Is this instance visible?
     bool visible = true;
     for(int i = 0; i < 5; i++) {
+        //debugPrintfEXT("Plane [%d] <%.2f, %.2f, %.2f, %.2f>\n", i, u_CullPlanes[i].xyzw);
         visible = visible && dot(u_CullPlanes[i], center) > -radius;
     }
+    //debugPrintfEXT("Instance visible? %d\n", (visible ? 1 : 0));
+    visible = true;
     //visible = false;
+    //if(instanceIndex % 2 == 0)
+    //    visible = false;
     if(visible) {
-        uint drawCommandIndex = atomicAdd(u_DrawCount, 1);
-        u_OutDraws[drawCommandIndex] = u_Draws[drawIndex];
+        InstanceData_T culledInstancePtr = InstanceData_T(u_GeoData[draw.mGeometryDataIndex].mCulledInstancePtr);
+        uint culledInstanceIndex = atomicAdd(u_OutDraws[drawIndex].instanceCount, 1);
+        culledInstancePtr.v[culledInstanceIndex] = instancePtr.v[instanceIndex];
+
+        u_OutDraws[drawIndex].indexCount = u_Draws[drawIndex].indexCount;
+        u_OutDraws[drawIndex].firstIndex = u_Draws[drawIndex].firstIndex;
+        u_OutDraws[drawIndex].vertexOffset = u_Draws[drawIndex].vertexOffset;
+        u_OutDraws[drawIndex].firstInstance = 0;
+        u_OutDraws[drawIndex].mGeometryDataIndex = u_Draws[drawIndex].mGeometryDataIndex;
+        // Copy objectData
+        vec3 center = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_center;
+        u_OutGeoData[draw.mGeometryDataIndex].bounding_sphere_center = center;
+        u_OutGeoData[draw.mGeometryDataIndex].bounding_sphere_radius = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius;
+        u_OutGeoData[draw.mGeometryDataIndex].mInstancePtr = u_GeoData[draw.mGeometryDataIndex].mInstancePtr;
+        u_OutGeoData[draw.mGeometryDataIndex].mCulledInstancePtr = u_GeoData[draw.mGeometryDataIndex].mCulledInstancePtr;
     }
 
 }

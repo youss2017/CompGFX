@@ -37,34 +37,18 @@ namespace Application
 	std::vector<Mesh::Geometry> gGeomtry;
 	IBuffer2 gVerticesSSBO, gIndicesBuffer;
 	Material* gMaterial0;
-	//Material* gMaterial1;
-	Material* gMapMaterial;
-	ShaderTypes::TerrainTransform* gMapUBO[gFrameOverlapCount];
-	IBuffer2 gMapVertices, gMapIndices;
 	VkSampler gSampler0;
 	ITexture2 gWoodTex;
+	ITexture2 gStatueTex;
 	Camera gCamera({ 0,0,0 });
-	Camera gCamera2({0,0,0});
-	static VkQueryPool s_Query[gFrameOverlapCount];
-	static bool s_QueryWrite = true;
 	Framebuffer gFBO0;
-	Map testingMap;
 	
 	EntityController* gECS;
 	static FrustrumCompute frustrumCompute;
 
-	// Shader Data
-	// !!! IMPORTANT !!! Write ONLY by using memcpy
-	// using the '=' operator will cause a read operation, since were using coherent memory
-	// that means read from GPU memory to CPU memory
-	static ShaderTypes::SceneData* s_ScenePtr[gFrameOverlapCount];
-	static uint32_t* s_CulledDrawCount[gFrameOverlapCount];
-
-	//static IBuffer2 sAnimVertices, sAnimIndices;
-	//static std::vector<Mesh::SkinnedMesh> skinnedMeshes;
 }
 
-bool Application::Initalize(ConfigurationSettings* configuration)
+bool Application::Initalize(ConfigurationSettings* configuration, bool RenderDoc)
 {
 	PROFILE_FUNCTION();
 	log_configure(true, true);
@@ -84,7 +68,7 @@ bool Application::Initalize(ConfigurationSettings* configuration)
 		return false;
 	}
 
-	gGfx = Graphics3D_Create(configuration, configuration->WindowTitle.c_str(), s_DebugMode, s_EnableImGui);
+	gGfx = Graphics3D_Create(configuration, configuration->WindowTitle.c_str(), s_DebugMode, s_EnableImGui, RenderDoc);
 	gContext = ToVKContext(gGfx->m_context);
 	gSwapchain = gGfx->m_vswapchain;
 	gWindow = gGfx->m_window;
@@ -103,9 +87,7 @@ bool Application::LoadAssets()
 {
 	PROFILE_FUNCTION();
 	bool MeshLoadStatus = Mesh::LoadVerticesIndicesSSBOs(gContext, 
-		{ "assets/mesh/Ball.obj",
-		  "assets/mesh/CmdHQ.fbx",
-		}, gGeomtry, &gVerticesSSBO, &gIndicesBuffer);
+		{ "assets/mesh/ball.obj" }, gGeomtry, &gVerticesSSBO, &gIndicesBuffer);
 	if (!MeshLoadStatus)
 		return false;
 
@@ -114,21 +96,25 @@ bool Application::LoadAssets()
 	gECS = new EntityController(gGeomtry);
 
 	srand(140);
-	int range = s_Range;
-	for (unsigned int i = 0; i < s_MaxObjects; i++)
-	{
-		IEntity ent = NewEntity();
-		ent->m_geometryID = EntityGeometryID(rand() % 2);
-		ent->m_objData.bounding_sphere_center = glm::vec3(0.0);
-		ent->m_objData.bounding_sphere_radius = 1.0;
-		ent->m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3((rand() % range) - (range / 2), (rand() % range) - (range / 2), (rand() % range) - (range / 2)));
-		ent->m_objData.m_Model *= glm::scale(glm::mat4(1.0), glm::vec3(0.005f));
-		//s_Entites.ent[i].m_objData.m_Model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, -2));
-		ent->m_objData.m_NormalModel = glm::mat4(1.0);
-		ent->m_textureID = 0;
-		gECS->AddEntity(ent);
+	uint32_t instanceCount = 150'000;
+	uint32_t instanceSize = instanceCount * sizeof(ShaderTypes::InstanceData);
+	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
+	for (int i = 0; i < instanceCount; i++) {
+		float x = (rand() % 80) * 5;
+		float y = (rand() % 80) * 5;
+		float z = (rand() % 80) * 5;
+		glm::vec3 offset = glm::vec3(x, y, z + 2);
+		offset = offset - (offset / glm::vec3(2.0));
+		instance[i].mModel = glm::translate(glm::mat4(1.0), offset);
+		instance[i].mTextureID[0] = 0;
 	}
 
+	IEntity cube = gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE);
+	cube->m_geometryID = EntityGeometryID::ENTITY_GEOMETRY_CUBE;
+	cube->mInstanceCount = instanceCount;
+	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(gContext, BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::GPU_ONLY, true);
+	cube->mCulledInstanceBuffer = Buffer2_Create(gContext, BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true);
+	
 	return true;
 }
 
@@ -145,148 +131,66 @@ bool Application::CreateResources()
 	MaterialConfiguration basicmc = MaterialConfiguration("assets/materials/basic.mc");
 
 	gSampler0 = vk::Gfx_CreateSampler(gContext);
-	gWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
+	gWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true); 
+	gStatueTex = Texture2_CreateFromFile(gContext, "assets/textures/statue.jpg", true);
 	
-	std::vector<ShaderBinding> bindings(3);
-	bindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings[0].m_bindingID = 0;
-	bindings[0].m_hostvisible = false;
-	bindings[0].m_useclientbuffer = true;
-	bindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[0].m_size = 0;
-	bindings[0].m_client_buffer = gVerticesSSBO;
+	frustrumCompute = CreateFrustrumCompute(gECS->GetGeometryDataArray(), gECS->GetDrawDataArray());
 
-	bindings[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
-	bindings[1].m_bindingID = 1;
-	bindings[1].m_hostvisible = true;
-	bindings[1].m_useclientbuffer = false;
-	bindings[1].m_preinitalized = false;
-	bindings[1].m_additional_buffer_flags  = (BufferType)0;
-	bindings[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[1].m_size = sizeof(ShaderTypes::SceneData);
-	/*
-	bindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings[2].m_bindingID = 2;
-	bindings[2].m_hostvisible = true;
-	bindings[2].m_useclientbuffer = false;
-	bindings[2].m_preinitalized = true;
-	bindings[2].m_additional_buffer_flags = (BufferType)0;
-	bindings[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[2].m_size = gECS->GetDrawCount() * sizeof(ShaderTypes::ObjectData);
-	bindings[2].m_ssbo = gECS->GetObjectBufferArray();
-	*/
-	bindings[2/*3*/].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings[2/*3*/].m_bindingID = 3;
-	bindings[2/*3*/].m_hostvisible = true;
-	bindings[2/*3*/].m_useclientbuffer = false;
-	bindings[2/*3*/].m_preinitalized = false;
-	bindings[2/*3*/].m_additional_buffer_flags = BufferType::IndirectBuffer;
-	bindings[2/*3*/].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[2/*3*/].m_size = gECS->GetDrawCount() * sizeof(ShaderTypes::DrawData);
+	std::vector<ShaderBinding> geometryPass(4);
+	geometryPass[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	geometryPass[0].m_bindingID = 0;
+	geometryPass[0].m_hostvisible = false;
+	geometryPass[0].m_useclientbuffer = true;
+	geometryPass[0].m_preinitalized = false;
+	geometryPass[0].m_additional_buffer_flags = (BufferType)0;
+	geometryPass[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	geometryPass[0].m_size = 0;
+	geometryPass[0].m_client_buffer = gVerticesSSBO;
 
-	std::vector<ShaderBinding> set1Bindings(1);
-	set1Bindings[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	set1Bindings[0].m_bindingID = 0;
-	set1Bindings[0].m_hostvisible = false;
-	set1Bindings[0].m_useclientbuffer = false;
-	set1Bindings[0].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	set1Bindings[0].m_size = 0;
-	set1Bindings[0].m_sampler.push_back(gSampler0);
-	set1Bindings[0].m_textures.push_back(gWoodTex);
-	set1Bindings[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	geometryPass[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
+	geometryPass[1].m_bindingID = 1;
+	geometryPass[1].m_hostvisible = true;
+	geometryPass[1].m_useclientbuffer = false;
+	geometryPass[1].m_preinitalized = false;
+	geometryPass[1].m_additional_buffer_flags = (BufferType)0;
+	geometryPass[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	geometryPass[1].m_size = sizeof(ShaderTypes::GlobalData);
 
-	VkPushConstantRange vertexRange{};
-	vertexRange.offset = 0;
-	vertexRange.size = 8;
-	vertexRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	gMaterial0 = Material_Create(gContext, gFBO0, &basicmc, nullptr, { {0, &bindings}, {1, &set1Bindings} }, {vertexRange});
+	geometryPass[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	geometryPass[2].m_bindingID = 2;
+	geometryPass[2].m_hostvisible = false;
+	geometryPass[2].m_useclientbuffer = false;
+	geometryPass[2].m_preinitalized = true;
+	geometryPass[2].m_additional_buffer_flags = (BufferType)0;
+	geometryPass[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	geometryPass[2].m_ssbo = frustrumCompute.m_outputGeometryDataArray;
 
-	/***** COMPUTE (Frustrum Culling) Pipeline  *****/
+	geometryPass[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
+	geometryPass[3].m_bindingID = 3;
+	geometryPass[3].m_hostvisible = false;
+	geometryPass[3].m_useclientbuffer = false;
+	geometryPass[3].m_preinitalized = true;
+	geometryPass[3].m_additional_buffer_flags = (BufferType)0;
+	geometryPass[3].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	geometryPass[3].m_ssbo = frustrumCompute.m_outputDrawDataArray;
 
-	frustrumCompute = Application::CreateFrustrumCompute(gECS->GetObjectBufferArray(), gECS->GetDrawBufferArray(), bindings[2/*3*/].m_ssbo);
+	std::vector<ShaderBinding> geometryPassFragment(1);
+	geometryPassFragment[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
+	geometryPassFragment[0].m_bindingID = 0;
+	geometryPassFragment[0].m_hostvisible = false;
+	geometryPassFragment[0].m_useclientbuffer = false;
+	geometryPassFragment[0].m_preinitalized = false;
+	geometryPassFragment[0].m_additional_buffer_flags = (BufferType)0;
+	geometryPassFragment[0].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	geometryPassFragment[0].m_sampler.push_back(gSampler0);
+	geometryPassFragment[0].m_textures.push_back(gWoodTex);
+	geometryPassFragment[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	//geometryPassFragment[0].m_sampler.push_back(gSampler0);
+	//geometryPassFragment[0].m_textures.push_back(gStatueTex);
+	//geometryPassFragment[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	gMaterial0 = Material_Create(gContext, gFBO0, &basicmc, nullptr, { {0, &geometryPass}, {1, &geometryPassFragment } }, {});
 	
-	/********* Map Material **********/
-
-	testingMap = Map_Create(10, 1, 10, 1, 5);
-	gMapVertices = Buffer2_Create(gContext, BufferType::StorageBuffer, testingMap.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY);
-	gMapIndices = Buffer2_Create(gContext, BufferType::IndexBuffer, testingMap.m_totalIndicesCount * sizeof(uint32_t), BufferMemoryType::GPU_ONLY);
-	Buffer2_UploadData(gMapVertices, (char8_t*)testingMap.m_vertices.data(), 0, testingMap.m_vertices.size() * sizeof(MapVertex));
-	Buffer2_UploadData(gMapIndices, (char8_t*)testingMap.m_indices.data(), 0, testingMap.m_indices.size() * sizeof(uint32_t));
-
-	std::vector<ShaderBinding> terrainBindings(2);
-	terrainBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	terrainBindings[0].m_bindingID = 0;
-	terrainBindings[0].m_hostvisible = false;
-	terrainBindings[0].m_useclientbuffer = true;
-	terrainBindings[0].m_preinitalized = false;
-	terrainBindings[0].m_additional_buffer_flags = (BufferType)0;
-	terrainBindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	terrainBindings[0].m_size = gMapVertices->size;
-	terrainBindings[0].m_client_buffer = gMapVertices;
-
-	terrainBindings[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
-	terrainBindings[1].m_bindingID = 1;
-	terrainBindings[1].m_hostvisible = true;
-	terrainBindings[1].m_useclientbuffer = false;
-	terrainBindings[1].m_preinitalized = false;
-	terrainBindings[1].m_additional_buffer_flags = (BufferType)0;
-	terrainBindings[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	terrainBindings[1].m_size = sizeof(ShaderTypes::TerrainTransform);
-
-	std::vector<ShaderBinding> terrainFragmentBinding(1);
-	terrainFragmentBinding[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	terrainFragmentBinding[0].m_bindingID = 0;
-	terrainFragmentBinding[0].m_hostvisible = false;
-	terrainFragmentBinding[0].m_useclientbuffer = false;
-	terrainFragmentBinding[0].m_preinitalized  = false;
-	terrainFragmentBinding[0].m_additional_buffer_flags = (BufferType)0;
-	terrainFragmentBinding[0].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	terrainFragmentBinding[0].m_size = 0;
-	terrainFragmentBinding[0].m_sampler.push_back(gSampler0);
-	terrainFragmentBinding[0].m_textures.push_back(gWoodTex);
-	terrainFragmentBinding[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-	gMapMaterial = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/Terrain.vert", "assets/shaders/Terrain.frag", { {0, &terrainBindings}, {1, &terrainFragmentBinding} }, {{VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3)}});
-#if 0
-	std::vector<ShaderBinding> bindings1(3);
-	bindings1[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings1[0].m_bindingID = 0;
-	bindings1[0].m_hostvisible = false;
-	bindings1[0].m_useclientbuffer = true;
-	bindings1[0].m_preinitalized = false;
-	bindings1[0].m_additional_buffer_flags = (BufferType)0;
-	bindings1[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings1[0].m_size = 0;
-	bindings1[0].m_client_buffer = sAnimVertices;
-
-	bindings1[1].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings1[1].m_bindingID = 1;
-	bindings1[1].m_hostvisible = true;
-	bindings1[1].m_useclientbuffer = false;
-	bindings1[1].m_preinitalized = false;
-	bindings1[1].m_additional_buffer_flags = (BufferType)0;
-	bindings1[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings1[1].m_size = sizeof(ShaderTypes::ObjectDataBONE);
-
-	bindings1[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings1[2].m_bindingID = 2;
-	bindings1[2].m_hostvisible = true;
-	bindings1[2].m_useclientbuffer = false;
-	bindings1[2].m_preinitalized = false;
-	bindings1[2].m_additional_buffer_flags = BufferType::IndirectBuffer;
-	bindings1[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings1[2].m_size = sizeof(ShaderTypes::DrawCommand);
-
-	gMaterial1 = Material_Create(gContext, gFBO0, &basicmc, nullptr, "assets/shaders/AniVertex.vert", "assets/shaders/fragment2.frag", { {0, &bindings1} }, {});
-#endif
-	for (int i = 0; i < gFrameOverlapCount; i++)
-	{
-		s_Query[i] = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, 4, 0);
-		s_ScenePtr[i] = (ShaderTypes::SceneData*)Buffer2_Map(bindings[1].m_buffer[i]);
-		gMapUBO[i] = (ShaderTypes::TerrainTransform*)Buffer2_Map(gMapMaterial->m_sets[0]->m_bindings[1].m_buffer[i]);
-		s_CulledDrawCount[i] = (uint32_t*)Buffer2_Map(frustrumCompute.m_set0->m_bindings[3].m_ssbo[i]);
-	}
-
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
 	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
 	VkImageMemoryBarrier shaderReadBarrier[gFrameOverlapCount]{};
@@ -317,21 +221,21 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	/* Camera Controls */
 	double RotateRate = 45.0;
 	if (gWindow->IsKeyDown('w')) {
-		gCamera.MoveForward(dTime * -22.0);
-	}if (gWindow->IsKeyDown('s')) {
 		gCamera.MoveForward(dTime * 22.0);
+	}if (gWindow->IsKeyDown('s')) {
+		gCamera.MoveForward(dTime * -22.0);
 	}if (gWindow->IsKeyDown('a')) {
 		gCamera.MoveSideways(dTime * -22.0);
 	}if (gWindow->IsKeyDown('d')) {
 		gCamera.MoveSideways(dTime * 22.0);
 	}if (gWindow->IsKeyDown('q')) {
-		gCamera.Yaw(dTime * RotateRate, true);
-	}if (gWindow->IsKeyDown('e')) {
 		gCamera.Yaw(dTime * -RotateRate, true);
+	}if (gWindow->IsKeyDown('e')) {
+		gCamera.Yaw(dTime * RotateRate, true);
 	}if (gWindow->IsKeyDown('z')) {
-		gCamera.Pitch(dTime * RotateRate, true);
-	}if (gWindow->IsKeyDown('x')) {
 		gCamera.Pitch(dTime * -RotateRate, true);
+	}if (gWindow->IsKeyDown('x')) {
+		gCamera.Pitch(dTime * RotateRate, true);
 	}if (gWindow->IsKeyDown(GLFW_KEY_UP)) {
 		gCamera.MoveAlongUpAxis(dTime * -22.0);
 	}if (gWindow->IsKeyDown(GLFW_KEY_DOWN)) {
@@ -339,6 +243,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	}
 	auto position = gCamera.GetPosition();
     UI::C_x = position.x, UI::C_y = position.y, UI::C_z = position.z;
+	UI::FrameRate = FrameRate;
 	if (gWindow->IsKeyUp(GLFW_KEY_ESCAPE))
 	{
 		Quit = true;
@@ -352,86 +257,23 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		spec.m_PolygonMode = UI::ShowWireframe ? PolygonMode::LINE : PolygonMode::FILL;
 		Graphics3D_WaitGPUIdle(gGfx);
 		Material_RecreatePipeline(gMaterial0, spec);
-		//Material_RecreatePipeline(gMaterial1, spec);
-		Material_RecreatePipeline(gMapMaterial, spec);
 	}
 	const auto &frame = Graphics3D_GetFrame(gGfx);
-	gECS->Prepare(frame.m_FrameIndex);
+	gECS->PrepareDataForFrame(frame.m_FrameIndex);
 
-	glm::mat4 proj = glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f);
-	glm::mat4 view = gCamera.GetViewMatrix();
-	memcpy(&s_ScenePtr[frame.m_FrameIndex]->m_Projection, &proj, sizeof(glm::mat4));
-	memcpy(&s_ScenePtr[frame.m_FrameIndex]->m_View, &view, sizeof(glm::mat4));
-	ShaderTypes::TerrainTransform terrainT;
-	terrainT.u_Model = glm::scale(glm::mat4(1.0), glm::vec3(5.0, 5.0, 5.0));
-	terrainT.u_NormalModel = glm::transpose(glm::inverse(terrainT.u_Model));
-	terrainT.u_View = view;
-	terrainT.u_Projection = proj;
-	memcpy(gMapUBO[frame.m_FrameIndex], &terrainT, sizeof(ShaderTypes::TerrainTransform));
+	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
 
-	uint64_t results[4];
-	VkResult qs = vkGetQueryPoolResults(gContext->defaultDevice, s_Query[frame.m_FrameIndex], 0, 4, sizeof(results), results, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-	if (qs == VK_SUCCESS && UpdateUIInfo)
-	{
-		UI::FrustrumCullingTime = (double(results[1] - results[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
-		UI::GPUPassTime = (double(results[3] - results[2]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
-		UI::FrameRate = FrameRate;
-		UI::FrameTime = dTime * 1e3;
-	}
-	UI::InputDrawCount = double(gECS->GetDrawCount());
-	UI::OutputDrawCount = double(*s_CulledDrawCount[frame.m_FrameIndex]);
-
-	//Physx_Simulate();
+	auto globalDataBuffer = gMaterial0->m_sets[0]->m_bindings[1].m_buffer[frame.m_FrameIndex];
+	void* ptr = Buffer2_Map(globalDataBuffer);
+	ShaderTypes::GlobalData data;
+	data.u_DeltaTime = dTime;
+	data.u_TimeFromStart = dTimeFromStart;
+	data.u_View = gCamera.GetViewMatrix();
+	data.u_Projection = proj;
+	data.u_ProjView = proj * gCamera.GetViewMatrix();
+	memcpy(ptr, &data, sizeof(data));
 
 	return true;
-}
-
-
-namespace Application {
-	void FrustrumCulling(VkCommandBuffer cmd, uint32_t FrameIndex) {
-		/**** ==================FRUSTRUM CULLING================== ****/
-		vkCmdFillBuffer(cmd, frustrumCompute.m_set0->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, sizeof(uint32_t), 0);
-
-		vkCmdResetQueryPool(cmd, s_Query[FrameIndex], 0, 4);
-		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 0);
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, frustrumCompute.m_pipeline);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, frustrumCompute.m_layout, 0, 1, &frustrumCompute.m_set0->m_set[FrameIndex], 0, nullptr);
-		struct {
-			uint32_t u_MaxDraw[4];
-			glm::vec4 u_FrustrumPlanes[5];
-		} computePushblock;
-
-		if (!UI::LockFrustrum)
-			memcpy(&gCamera2, &gCamera, sizeof(Camera));
-		glm::mat4 proj = glm::transpose(glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f) * gCamera2.GetViewMatrix());
-		auto normalizePlane = [](glm::vec4 p) -> glm::vec4
-		{
-			return p / glm::length(glm::vec3(p));
-		};
-		computePushblock.u_FrustrumPlanes[0] = normalizePlane(proj[3] + proj[0]);
-		computePushblock.u_FrustrumPlanes[1] = normalizePlane(proj[3] - proj[0]);
-		computePushblock.u_FrustrumPlanes[2] = normalizePlane(proj[3] + proj[1]);
-		computePushblock.u_FrustrumPlanes[3] = normalizePlane(proj[3] - proj[1]);
-		computePushblock.u_FrustrumPlanes[4] = normalizePlane(proj[3] - proj[2]);
-		computePushblock.u_MaxDraw[0] = gECS->GetDrawCount();
-
-		int temp = (gECS->GetDrawCount() + 31) / 32;
-		vkCmdPushConstants(cmd, frustrumCompute.m_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(computePushblock), &computePushblock);
-		vkCmdDispatch(cmd, temp, 1, 1);
-		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, s_Query[FrameIndex], 1);
-
-		VkBufferMemoryBarrier barrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.buffer = frustrumCompute.m_set0->m_bindings[1].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer;
-		barrier.offset = 0;
-		barrier.size = VK_WHOLE_SIZE;
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-		/**** ==================FRUSTRUM CULLING================== ****/
-	}
-
 }
 
 void Application::Render()
@@ -446,12 +288,42 @@ void Application::Render()
 	vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 	vkResetFences(device, 1, &frame.m_RenderFence);
 	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	//auto& attachments = gMaterial0->m_state_managment->m_attachments;
-	VkClearValue pClearValues[2];
-	pClearValues[0] = { 0, 0, 0, 0 };
-	pClearValues[1] = { 1.0 };
-	
-	FrustrumCulling(cmd, FrameIndex);
+
+	size_t drawBufferSize = gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->size;
+	VkBuffer inputDrawDataBuffer = gMaterial0->m_sets[0]->m_bindings[3].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer;
+	VkBuffer outputDrawDataBuffer = frustrumCompute.m_outputDrawDataArray[FrameIndex]->m_vk_buffer->m_buffer;
+	vkCmdFillBuffer(cmd, outputDrawDataBuffer, 0, VK_WHOLE_SIZE, 0);
+	VkBufferCopy copyRegion = { 0, 0, drawBufferSize };
+	//vkCmdCopyBuffer(cmd, inputDrawDataBuffer, outputDrawDataBuffer, 1, &copyRegion);
+	VkBufferMemoryBarrier drawBufferBarrier = vk::Gfx_BufferMemoryBarrier(VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, outputDrawDataBuffer);
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &drawBufferBarrier, 0, nullptr);
+	VkBufferMemoryBarrier computeVertexShaderBarrier[2] = {
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, frustrumCompute.m_outputGeometryDataArray[FrameIndex]->m_vk_buffer->m_buffer),
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, frustrumCompute.m_outputDrawDataArray[FrameIndex]->m_vk_buffer->m_buffer)
+	};
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 2, computeVertexShaderBarrier, 0, nullptr);
+
+	VkDescriptorSet computeSets[1] = { frustrumCompute.m_set0->m_set[FrameIndex] };
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, frustrumCompute.m_pipeline);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, frustrumCompute.m_layout, 0, 1, computeSets, 0, nullptr);
+	int drawCount = gECS->GetDrawCount();
+	int instanceCount = gECS->GetInstanceCount();
+
+	glm::mat4 projT = glm::transpose(gCamera.GetViewMatrix() * glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->m_width, float(gWindow->m_height), 0.1f, 1000.0f));
+	auto normalizePlane = [](glm::vec4 p) -> glm::vec4
+	{
+		return p / glm::length(glm::vec3(p));
+	};
+	FrustrumPlanes planes;
+	planes.u_MaxGeometry = gGeomtry.size();
+	planes.u_CullPlanes[0] = normalizePlane(projT[3] + projT[0]);
+	planes.u_CullPlanes[1] = normalizePlane(projT[3] - projT[0]);
+	planes.u_CullPlanes[2] = normalizePlane(projT[3] + projT[1]);
+	planes.u_CullPlanes[3] = normalizePlane(projT[3] - projT[1]);
+	planes.u_CullPlanes[4] = normalizePlane(projT[3] - projT[2]);
+	vkCmdPushConstants(cmd, frustrumCompute.m_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(planes), &planes);
+	vkCmdDispatch(cmd, (instanceCount + 63) / 64, (drawCount + 7) / 8, 1);
+
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
@@ -510,58 +382,12 @@ void Application::Render()
 	depthBarrier.subresourceRange.levelCount = 1;
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &renderBarrier);
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &depthBarrier);
-
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, s_Query[FrameIndex], 2);
 	
+	VkDescriptorSet geometrySets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex] };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_pipeline_state->m_pipeline);
-	VkDescriptorSet sets[2] = { gMaterial0->m_sets[0]->m_set[FrameIndex], gMaterial0->m_sets[1]->m_set[FrameIndex]};
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, sets, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial0->m_layout, 0, 2, geometrySets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, gIndicesBuffer->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	
-	uint64_t gpupointer = Buffer2_GetGPUPointer(gECS->GetObjectBuffer(FrameIndex));
-	vkCmdPushConstants(cmd, gMaterial0->m_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 8, &gpupointer);
-	vkCmdDrawIndexedIndirectCount(cmd, gMaterial0->m_sets[0]->m_bindings[/*3*/2].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, frustrumCompute.m_set0->m_bindings[3].m_buffer[FrameIndex]->m_vk_buffer->m_buffer, 0, gECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
-
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_pipeline_state->m_pipeline);
-	sets[0] = gMapMaterial->m_sets[0]->m_set[FrameIndex];
-	sets[1] = gMapMaterial->m_sets[1]->m_set[FrameIndex];
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMapMaterial->m_layout, 0, 2, sets, 0, nullptr);
-	const glm::vec3 LightDir = glm::vec3(0.0, -0.5, 0.5);
-	vkCmdPushConstants(cmd, gMapMaterial->m_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec3), &LightDir);
-	vkCmdBindIndexBuffer(cmd, gMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(cmd, testingMap.m_indices.size(), 1, 0, 0, 0);
-#if 0
-	auto objData = (ShaderTypes::ObjectDataBONE*)Buffer2_Map(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex]);
-	auto drawCommand = (ShaderTypes::DrawCommand*)Buffer2_Map(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]);
-
-	drawCommand[0].indexCount = sAnimIndices->size / sizeof(uint32_t);
-	drawCommand[0].instanceCount = 1;
-	drawCommand[0].firstIndex = 0;
-	drawCommand[0].vertexOffset = 0;
-	drawCommand[0].firstInstance = 0;
-	drawCommand[0].objDataIndex = 0;
-
-	objData[0].model = glm::translate(glm::mat4(1.0), glm::vec3(0, -5, 0)) * (glm::rotate(glm::mat4(1.0), glm::radians(270.0f), glm::vec3(0.0, 1.0, 0.0)) * glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1, 0, 0)));
-	objData[0].model *= glm::scale(glm::mat4(1.0), glm::vec3(0.01, 0.01, 0.01));
-	objData[0].view = gCamera.GetViewMatrix();
-	objData[0].projection = glm::perspective(90.0f, gWindow->m_width / float(gWindow->m_height), 0.1f, 1000.0f);
-	std::vector<glm::mat4> finalTransforms;
-	skinnedMeshes[0].GetFinalTransforms(finalTransforms);
-	//memcpy(&objData[0].finalBoneTransformations[0], &finalTransforms[0], sizeof(glm::mat4)* finalTransforms.size());
-
-	Buffer2_Flush(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex], 0, VK_WHOLE_SIZE);
-	Buffer2_Flush(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex], 0, VK_WHOLE_SIZE);
-
-	//Buffer2_Unmap(gMaterial1->m_sets[0]->m_bindings[1].m_ssbo[FrameIndex]);
-	//Buffer2_Unmap(gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]);
-	sets[0] = gMaterial1->m_sets[0]->m_set[FrameIndex];
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial1->m_pipeline_state->m_pipeline);
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gMaterial1->m_layout, 0, 1, sets, 0, nullptr);
-	vkCmdBindIndexBuffer(cmd, sAnimIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexedIndirect(cmd, gMaterial1->m_sets[0]->m_bindings[2].m_ssbo[FrameIndex]->m_vk_buffer->m_buffer, 0, 1, sizeof(ShaderTypes::DrawCommand));
-#endif
-
-	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_Query[FrameIndex], 3);
+	vkCmdDrawIndexedIndirect(cmd, frustrumCompute.m_outputDrawDataArray[FrameIndex]->m_vk_buffer->m_buffer, 0, gECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
 	VkImageMemoryBarrier presentBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -600,19 +426,14 @@ void Application::Destroy()
 {
 	PROFILE_FUNCTION();
 	Graphics3D_WaitGPUIdle(gGfx);
-	for(int i = 0; i < gFrameOverlapCount; i++)
-	vkDestroyQueryPool(gContext->defaultDevice, s_Query[i], nullptr);
-	//Buffer2_Destroy(sAnimVertices);
-	//Buffer2_Destroy(sAnimIndices);
 	DestroyFrusturumCompute(frustrumCompute);
 	Material_Destory(gMaterial0);
-	//Material_Destory(gMaterial1);
-	Material_Destory(gMapMaterial);
-	Buffer2_Destroy(gMapVertices);
-	Buffer2_Destroy(gMapIndices);
+	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mInstanceBuffer);
+	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
 	gFBO0.DestroyAllBoundAttachments();
 	vkDestroySampler(gContext->defaultDevice, gSampler0, nullptr);
 	Texture2_Destroy(gWoodTex);
+	Texture2_Destroy(gStatueTex);
 	Buffer2_Destroy(gVerticesSSBO);
 	Buffer2_Destroy(gIndicesBuffer);
 	Physx_Destroy();

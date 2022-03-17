@@ -26,10 +26,9 @@ namespace Mesh {
 
 	struct GeometryVertex
 	{
-		vec4 position;
-		vec4 normal;
+		vec3 position;
+		vec3 normal;
 		float tu, tv;
-		float padding[2];
 	};
 
 	struct GeometrySubmesh{
@@ -39,13 +38,13 @@ namespace Mesh {
 		uint indicesCount;
 		std::vector<GeometryVertex> m_vertices;
 		std::vector<uint32_t> m_indices;
-		glm::vec3 m_bounding_sphere_center;
-		float m_bounding_sphere_radius;
 	};
 
 	struct Geometry
 	{
 		std::vector<GeometrySubmesh> mSubmeshList;
+		glm::vec3 m_bounding_sphere_center;
+		float m_bounding_sphere_radius;
 	};
 	
 	// geometry_path_list - path to every mesh path (e.g. .obj, .fbx, etc)

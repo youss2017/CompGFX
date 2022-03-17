@@ -23,15 +23,15 @@ enum class EngineAPIType
 	OpenGL = 0x1
 };
 
-typedef enum BufferType {
-	VertexBuffer      = 0x0000001,
-	IndexBuffer       = 0x0000010,
-	UniformBuffer     = 0x0000100,
-	StorageBuffer     = 0x0001000,
-	IndirectBuffer    = 0x0010000,
-	INTE_TRANSFER_SRC = 0x0100000,
-	INTE_TRANSFER_DST = 0x1000000
-} BufferType;
+enum BufferType : int {
+	BUFFER_TYPE_VERTEX				 = 0x0000001,
+	BUFFER_TYPE_INDEX				 = 0x0000010,
+	BUFFER_TYPE_UNIFORM				 = 0x0000100,
+	BUFFER_TYPE_STORAGE				 = 0x0001000,
+	BUFFER_TYPE_INDIRECT			 = 0x0010000,
+	BUFER_TYPE_TRANSFER_SRC = 0x0100000,
+	BUFER_TYPE_TRANSFER_DST = 0x1000000
+};
 
 enum class TextureFilter
 {

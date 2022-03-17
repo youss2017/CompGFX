@@ -9,19 +9,19 @@ IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, 
 	desc.m_properties = memoryType == BufferMemoryType::GPU_ONLY ? DEVICE_MEMORY_PROPERTY::GPU_ONLY : ((memoryType == BufferMemoryType::CPU_TO_CPU) ? DEVICE_MEMORY_PROPERTY::CPU_TO_GPU : DEVICE_MEMORY_PROPERTY::CPU_ONLY);
 	desc.m_size = size;
 	desc.m_usage = memoryType == BufferMemoryType::GPU_ONLY ? VK_BUFFER_USAGE_TRANSFER_DST_BIT : 0;
-	if (type & BufferType::VertexBuffer)
+	if (type & BUFFER_TYPE_VERTEX)
 		desc.m_usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	if (type & BufferType::IndexBuffer)
+	if (type & BUFFER_TYPE_INDEX)
 		desc.m_usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	if (type & BufferType::UniformBuffer)
+	if (type & BUFFER_TYPE_UNIFORM)
 		desc.m_usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-	if (type & BufferType::StorageBuffer)
+	if (type & BUFFER_TYPE_STORAGE)
 		desc.m_usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	if (type & BufferType::IndirectBuffer)
+	if (type & BUFFER_TYPE_INDIRECT)
 		desc.m_usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	if (type & BufferType::INTE_TRANSFER_SRC)
+	if (type & BUFER_TYPE_TRANSFER_SRC)
 		desc.m_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	if (type & BufferType::INTE_TRANSFER_DST)
+	if (type & BUFER_TYPE_TRANSFER_DST)
 		desc.m_usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	if (pointerUsage)
 		desc.m_usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
@@ -31,6 +31,13 @@ IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, 
 	buffer->size = size;
 	buffer->type = type;
 	VkAlloc::CreateBuffers(context->m_future_memory_context, 1, &desc, &buffer->m_vk_buffer);
+	return buffer;
+}
+
+IBuffer2 Buffer2_CreatePreInitalized(GraphicsContext context, BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage)
+{
+	IBuffer2 buffer = Buffer2_Create(context, type, size, memoryType, pointerUsage);
+	Buffer2_UploadData(buffer, (char8_t*)pData, 0, VK_WHOLE_SIZE);
 	return buffer;
 }
 
@@ -46,7 +53,7 @@ void Buffer2_UploadData(IBuffer2 buffer, char8_t *pData, size_t offset, size_t s
 		Buffer2_Unmap(buffer);
 		return;
 	}
-	IBuffer2 intermediate = Buffer2_Create(buffer->m_context, BufferType::INTE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY);
+	IBuffer2 intermediate = Buffer2_Create(buffer->m_context, BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY);
 	Buffer2_UploadData(intermediate, pData, 0, size);
 	VkFence fence = vk::Gfx_CreateFence(ToVKContext(buffer->m_context), false);
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(ToVKContext(buffer->m_context), true, false);
@@ -68,11 +75,14 @@ void Buffer2_UploadData(IBuffer2 buffer, char8_t *pData, size_t offset, size_t s
 char8_t *Buffer2_Map(IBuffer2 buffer)
 {
 	assert(buffer->memoryType != BufferMemoryType::GPU_ONLY && "Cannot be static.");
+	if (buffer->m_mapped)
+		return buffer->m_mapped_ptr;
 	char8_t **mapped_pointer = (char8_t**)&buffer->m_vk_buffer->m_suballocation.m_allocation_info.pMappedData;
 	if (*mapped_pointer)
 		return *mapped_pointer;
 	VkAlloc::MapBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
 	buffer->m_mapped = true;
+	buffer->m_mapped_ptr = *mapped_pointer;
 	return *mapped_pointer;
 }
 
@@ -98,6 +108,7 @@ void Buffer2_Unmap(IBuffer2 buffer)
 {
 	assert(buffer->memoryType != BufferMemoryType::GPU_ONLY && "Cannot be static.");
 	buffer->m_mapped = false;
+	buffer->m_mapped_ptr = nullptr;
 	VkAlloc::UnmapBuffer(ToVKContext(buffer->m_context)->m_future_memory_context, buffer->m_vk_buffer);
 }
 
@@ -108,12 +119,15 @@ void Buffer2_ReAlloc(IBuffer2 buffer, size_t new_size)
 
 uint64_t Buffer2_GetGPUPointer(IBuffer2 buffer)
 {
+	if (buffer->mGPUPointer != 0)
+		return buffer->mGPUPointer;
 	VkBufferDeviceAddressInfo info{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
 	info.buffer = buffer->m_vk_buffer->m_buffer;
 	uint64_t ptr = vkGetBufferDeviceAddress(ToVKContext(buffer->m_context)->defaultDevice, &info);
 	if (ptr == uint64_t(NULL)) {
 		logerror("Could not get GPU buffer pointer!");
 	}
+	buffer->mGPUPointer = ptr;
 	return ptr;
 }
 

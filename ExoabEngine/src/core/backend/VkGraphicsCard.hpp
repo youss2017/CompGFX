@@ -164,6 +164,8 @@ namespace vk {
 	SingleUseCmdBuffer Gfx_CreateSingleUseCmdBuffer(VkContext context);
 	void Gfx_SubmitSingleUseCmdBufferAndDestroy(SingleUseCmdBuffer& buffer);
 
+	VkBufferMemoryBarrier  Gfx_BufferMemoryBarrier(VkAccessFlags srcAccess, VkAccessFlags dstAccess, VkBuffer buffer);
+
 	size_t PadUniformBuffer(VkContext context, size_t struct_size);
 	std::string GetVkResultString(VkResult result);
 

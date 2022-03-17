@@ -3,44 +3,34 @@
 extern vk::VkContext gContext;
 
 namespace Application {
-	FrustrumCompute CreateFrustrumCompute(IBuffer2* objectDataArray, IBuffer2* inputDrawArray, IBuffer2* ouptutDrawArray)
+	FrustrumCompute CreateFrustrumCompute(IBuffer2* inputGeometryDataArray, IBuffer2* inputDrawDataArray)
 	{
 		std::vector<ShaderBinding> computeBindings(4);
 		computeBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 		computeBindings[0].m_bindingID = 0;
-		computeBindings[0].m_hostvisible = true;
-		computeBindings[0].m_useclientbuffer = false;
 		computeBindings[0].m_preinitalized = true;
-		computeBindings[0].m_additional_buffer_flags = (BufferType)0;
 		computeBindings[0].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-		computeBindings[0].m_ssbo = objectDataArray;
+		computeBindings[0].m_ssbo = inputGeometryDataArray;
 
 		computeBindings[1].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 		computeBindings[1].m_bindingID = 1;
-		computeBindings[1].m_hostvisible = true;
-		computeBindings[1].m_useclientbuffer = false;
-		computeBindings[1].m_preinitalized = true;
-		computeBindings[1].m_additional_buffer_flags = (BufferType)0;
 		computeBindings[1].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-		computeBindings[1].m_ssbo = inputDrawArray;
+		computeBindings[1].m_size = inputGeometryDataArray[0]->size;
 
 		computeBindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 		computeBindings[2].m_bindingID = 2;
-		computeBindings[2].m_hostvisible = false;
-		computeBindings[2].m_useclientbuffer = false;
 		computeBindings[2].m_preinitalized = true;
-		computeBindings[2].m_additional_buffer_flags = (BufferType)0;
 		computeBindings[2].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-		computeBindings[2].m_ssbo = ouptutDrawArray;
+		computeBindings[2].m_ssbo = inputDrawDataArray;
 
 		computeBindings[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 		computeBindings[3].m_bindingID = 3;
 		computeBindings[3].m_hostvisible = true;
 		computeBindings[3].m_useclientbuffer = false;
 		computeBindings[3].m_preinitalized = false;
-		computeBindings[3].m_additional_buffer_flags = BufferType::IndirectBuffer;
+		computeBindings[3].m_additional_buffer_flags = BufferType(BUFFER_TYPE_INDIRECT | BUFER_TYPE_TRANSFER_SRC);
 		computeBindings[3].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-		computeBindings[3].m_size = sizeof(uint32_t);
+		computeBindings[3].m_size = inputDrawDataArray[0]->size;
 
 		std::vector<VkDescriptorPoolSize> poolSize;
 		ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, &computeBindings);
@@ -51,6 +41,9 @@ namespace Application {
 		compute.m_layout = ShaderBinding_CreatePipelineLayout(gContext, { compute.m_set0 }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
 		Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
 		compute.m_pipeline = Pipeline_CreateCompute(gContext, &computeShader, compute.m_layout, 0);
+
+		compute.m_outputGeometryDataArray = compute.m_set0->m_bindings[1].m_ssbo;
+		compute.m_outputDrawDataArray = compute.m_set0->m_bindings[3].m_ssbo;
 
 		return compute;
 	}
