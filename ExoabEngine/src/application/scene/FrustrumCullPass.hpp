@@ -16,6 +16,7 @@ namespace Application {
 		~FrustumCullPass();
 		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		VkCommandBuffer Frame(uint32_t FrameIndex);
+		VkResult GetComputeShaderStatistics(uint32_t FrameIndex, bool Wait, double& duration, uint64_t& invocations);
 
 	private:
 		Camera* mCamera;
@@ -27,6 +28,8 @@ namespace Application {
 		IBuffer2* mOutputDrawDataArray;
 		VkPipelineLayout mFrustrumLayout;
 		VkPipeline mFrustrum;
+		VkQueryPool mQuery;
+		VkQueryPool mInvocationQuery;
 		void* mFrustrumPlanesMapped[gFrameOverlapCount];
 		friend class GeometryPass;
 	};

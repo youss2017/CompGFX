@@ -62,7 +62,6 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     vulkan12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     vulkan12features.shaderInt8 = VK_TRUE;
     vulkan12features.uniformBufferStandardLayout = VK_TRUE;
-    vulkan12features.hostQueryReset = VK_TRUE;
     vulkan12features.shaderInt8 = VK_TRUE;
     if (RenderDOC) {
         log_warning("Disabled bufferDeviceAddress feature so we can use RenderDOC.", false);
@@ -84,6 +83,11 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
     features.features.sampleRateShading = VK_TRUE;
     features.features.multiDrawIndirect = VK_TRUE;
     features.features.shaderInt64 = VK_TRUE;
+
+    // unnecessary features.
+    features.features.pipelineStatisticsQuery = VK_TRUE;
+    vulkan12features.hostQueryReset = VK_TRUE;
+
     std::vector<const char *> layer_extensions;
     uint32_t extensions_count;
     const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);

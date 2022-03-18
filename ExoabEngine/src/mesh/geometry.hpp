@@ -43,6 +43,8 @@ namespace Mesh {
 	struct Geometry
 	{
 		std::vector<GeometrySubmesh> mSubmeshList;
+		glm::vec3 box_min;
+		glm::vec3 box_max;
 		glm::vec3 m_bounding_sphere_center;
 		float m_bounding_sphere_radius;
 	};

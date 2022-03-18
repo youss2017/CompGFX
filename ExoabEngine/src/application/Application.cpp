@@ -38,6 +38,7 @@ namespace Application
 	std::vector<Mesh::Geometry> gGeomtry;
 	IBuffer2 gVerticesSSBO, gIndicesBuffer;
 	Camera gCamera({ 0,0,0 });
+	Camera gLockedCamera({ 0,0,0 });
 	Framebuffer gFBO0;
 	
 	EntityController* gECS;
@@ -90,7 +91,7 @@ bool Application::LoadAssets()
 	gECS = new EntityController(gGeomtry);
 
 	srand(140);
-	uint32_t instanceCount = 850;
+	uint32_t instanceCount = 100;
 	uint32_t instanceSize = instanceCount * sizeof(ShaderTypes::InstanceData);
 	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
 	for (unsigned int i = 0; i < instanceCount; i++) {
@@ -122,10 +123,10 @@ bool Application::CreateResources()
 	gFBO0.AddColorAttachment(0, colorAttachment);
 	gFBO0.SetDepthAttachment(depthAttachment);
 
-	MaterialConfiguration basicmc = MaterialConfiguration("assets/materials/basic.mc");
+	MaterialConfiguration geometryPassConfig = MaterialConfiguration("assets/materials/geometryPass.mc");
 
-	cullPass = new FrustumCullPass(gECS, &gCamera);
-	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, basicmc, gFBO0, cullPass, &gCamera, gECS);
+	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
+	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, geometryPassConfig, gFBO0, cullPass, &gCamera, gECS);
 
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
 	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
@@ -142,10 +143,10 @@ bool Application::CreateResources()
 		shaderReadBarrier[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		shaderReadBarrier[i].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 		shaderReadBarrier[i].subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+		Framebuffer_TransistionAttachment(transitionCmd.cmd, &gFBO0.m_depth_attachment.value(), VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED, 0, 1, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
 	vkCmdPipelineBarrier(transitionCmd.cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, gFrameOverlapCount, shaderReadBarrier);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
-
 	return true;
 }
 
@@ -179,7 +180,6 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	}
 	auto position = gCamera.GetPosition();
     UI::C_x = position.x, UI::C_y = position.y, UI::C_z = position.z;
-	UI::FrameRate = FrameRate;
 	if (gWindow->IsKeyUp(GLFW_KEY_ESCAPE))
 	{
 		Quit = true;
@@ -189,12 +189,19 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	if (UI::StateChanged)
 	{
 		UI::StateChanged = false;
-		//auto spec = gMaterial0->m_pipeline_state->m_spec;
-		//spec.m_PolygonMode = UI::ShowWireframe ? PolygonMode::LINE : PolygonMode::FILL;
-		//Graphics3D_WaitGPUIdle(gGfx);
-		//Material_RecreatePipeline(gMaterial0, spec);
+		geoPass->SetWireframeMode(UI::ShowWireframe);
 	}
+	if (!UI::LockFrustrum) {
+		memcpy(&gLockedCamera, &gCamera, sizeof(Camera));
+	}
+
 	const auto &frame = Graphics3D_GetFrame(gGfx);
+	if (UpdateUIInfo) {
+		UI::FrameRate = FrameRate;
+		UI::FrameTime = dTime * 1e3;
+		cullPass->GetComputeShaderStatistics(frame.m_FrameIndex, false, UI::FrustrumCullingTime, UI::FrustrumInvocations);
+	}
+
 	cullPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 	geoPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 
@@ -227,7 +234,12 @@ void Application::Render()
 
 	if (s_EnableImGui)
 		UI::RenderUI();
-	gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+	if (UI::ShowDepthBuffer) {
+		gSwapchain.Present(gFBO0.m_depth_attachment.value().GetImage(FrameIndex), gFBO0.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+	}
+	else {
+		gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+	}
 	Graphics3D_NextFrame(gGfx);
 }
 

@@ -224,7 +224,7 @@
     <ClCompile Include="src\window\PlatformWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\materials\basic.mc" />
+    <None Include="assets\materials\geometryPass.mc" />
     <None Include="imgui.ini" />
     <None Include="src\application\ecs\Entity.hpp" />
     <None Include="src\utils\common.inl" />

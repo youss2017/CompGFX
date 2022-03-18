@@ -6,6 +6,49 @@
 
 namespace Mesh
 {
+	// https://stackoverflow.com/questions/41529743/computing-the-bounding-sphere-for-a-3d-mesh-in-python
+	void CalculateBoundingSphere(Geometry& geometry) {
+		float lx = 0.0, hx = 0.0;
+		float ly = 0.0, hy = 0.0;
+		float lz = 0.0, hz = 0.0;
+		for (const auto& s : geometry.mSubmeshList) {
+			for (const auto& v : s.m_vertices)
+			{
+				lx = glm::min(lx, v.position.x); hx = glm::max(lx, v.position.x);
+				ly = glm::min(ly, v.position.y); hx = glm::max(ly, v.position.y);
+				lz = glm::min(lz, v.position.z); hx = glm::max(lz, v.position.z);
+			}
+		}
+		glm::vec3 minp = glm::vec3(lx, ly, lz);
+		glm::vec3 maxp = glm::vec3(hx, hy, hz);
+		glm::vec3 center = (minp + maxp) / 2.0f;
+		
+		/*
+			x x
+			x x
+			. .
+			. .
+		*/
+		glm::vec3 fleft_top = glm::vec3(minp.x, maxp.y, minp.z),	fright_top = glm::vec3(maxp.x, maxp.y, minp.z);
+		glm::vec3 fleft_bottom = glm::vec3(minp.x, minp.y, minp.z), fright_bottom = glm::vec3(maxp.x, minp.y, minp.z);
+		glm::vec3 bleft_top = glm::vec3(minp.x, maxp.y, maxp.z),	bright_top = glm::vec3(maxp.x, maxp.y, maxp.z);
+		glm::vec3 bleft_bottom = glm::vec3(minp.x, minp.y, maxp.z), bright_bottom = glm::vec3(maxp.x, minp.y, maxp.z);
+
+		float d0 = glm::distance(center, fleft_top);
+		float d1 = glm::distance(center, fleft_bottom);
+		float d2 = glm::distance(center, bleft_top);
+		float d3 = glm::distance(center, bleft_bottom);
+		float d4 = glm::distance(center, fright_top);
+		float d5 = glm::distance(center, fright_bottom);
+		float d6 = glm::distance(center, bright_top);
+		float d7 = glm::distance(center, bright_bottom);
+
+		float radius = glm::max(glm::max(glm::max(glm::max(glm::max(glm::max(glm::max(d0, d1), d2), d3), d4), d5), d6), d7);
+		geometry.m_bounding_sphere_center = center;
+		geometry.m_bounding_sphere_radius = radius;
+		geometry.box_min = minp;
+		geometry.box_max = maxp;
+	}
 
 	bool LoadVerticesIndicesSSBOs(void* context, std::vector<std::string> geometry_path_list, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer)
 	{
@@ -45,11 +88,6 @@ namespace Mesh
 					v.normal.x = scene->mMeshes[i]->mNormals[j].x;
 					v.normal.y = scene->mMeshes[i]->mNormals[j].y;
 					v.normal.z = scene->mMeshes[i]->mNormals[j].z;
-					glm::vec3 position = glm::vec3(scene->mMeshes[i]->mVertices[j].x, scene->mMeshes[i]->mVertices[j].y, scene->mMeshes[i]->mVertices[j].z);
-					geometry.m_bounding_sphere_center += position;
-					geometry.m_bounding_sphere_center /= 2.0;
-					if (glm::distance(position, geometry.m_bounding_sphere_center) > geometry.m_bounding_sphere_radius)
-						geometry.m_bounding_sphere_radius = glm::distance(position, geometry.m_bounding_sphere_center);
 					if (scene->mMeshes[i]->mTextureCoords[0]) {
 						v.tu = scene->mMeshes[i]->mTextureCoords[0][j].x;
 						v.tv = scene->mMeshes[i]->mTextureCoords[0][j].y;
@@ -72,6 +110,7 @@ namespace Mesh
 				geometry.mSubmeshList.push_back(submesh);
 			}
 			imp.FreeScene();
+			CalculateBoundingSphere(geometry);
 			out_geometry_vertices_indices_positions.push_back(geometry);
 		}
 		vertices.shrink_to_fit();

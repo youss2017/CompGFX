@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 #endif
     /* Load Game Settings from settings.cfg */
     ConfigurationSettings config = LoadConfiguration();
-    config.VSync = false;
+    config.VSync = true;
     bool rd = false;
     if (argc > 1) {
         std::string arg1 = Utils::StrLowerCase(argv[1]);

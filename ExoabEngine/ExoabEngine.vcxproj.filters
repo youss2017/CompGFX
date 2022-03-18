@@ -389,7 +389,7 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="imgui.ini" />
-    <None Include="assets\materials\basic.mc" />
+    <None Include="assets\materials\geometryPass.mc" />
     <None Include="src\application\ecs\Entity.hpp" />
   </ItemGroup>
   <ItemGroup>

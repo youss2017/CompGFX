@@ -9,6 +9,7 @@ namespace UI
 	extern double FrameRate;
 	extern double FrameTime;
 	extern double FrustrumCullingTime;
+	extern unsigned long long  FrustrumInvocations;
 	extern double InputDrawCount;
 	extern double OutputDrawCount;
 	extern double GPUPassTime;

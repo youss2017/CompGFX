@@ -15,6 +15,7 @@ layout (scalar, binding = 1) uniform GlobalDataUBO
 {
 	float u_DeltaTime;
 	float u_TimeFromStart;
+	vec4 u_CameraForward;
 	mat4 u_View;
 	mat4 u_Projection;
 	mat4 u_ProjView;
@@ -33,8 +34,6 @@ layout (scalar, binding = 3) readonly buffer DrawSSBO
 layout (location = 0) out vec3 Normal;
 layout (location = 1) out vec2 TexCoord;
 layout (location = 2) out flat uint TexIndex;
-layout (location = 3) out float TimeFromStart;
-layout (location = 4) out vec3 CameraForward;
 
 // Since shaders don't pointers (therefore no references &), we must copy the Vertex which isn't allowed with int8 and float16
 // therefore the following is the next best thing
@@ -67,8 +66,5 @@ void main()
 	Normal = vertex.normal;
 	TexCoord = vertex.texcoord;
 	TexIndex = uint(instance.TexIndex[0]);
-	TimeFromStart = u_TimeFromStart;
 	gl_Position = u_ProjView * instance.mModel * vec4(vertex.position, 1.0);
-	mat4 inverted = inverse(u_View);
-	CameraForward = -normalize(vec3(inverted[2]));
 }

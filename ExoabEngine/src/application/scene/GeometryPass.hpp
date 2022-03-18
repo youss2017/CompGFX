@@ -18,6 +18,11 @@ namespace Application {
 		~GeometryPass();
 		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		VkCommandBuffer Frame(uint32_t FrameIndex);
+		void SetWireframeMode(bool mode);
+	private:
+		void RecordCommands(uint32_t FrameIndex);
+		IBuffer2 mIndicsSSBO;
+		FrustumCullPass* mCullPass;
 	private:
 		Camera* mCamera;
 		EntityController* mECS;
@@ -25,6 +30,7 @@ namespace Application {
 		VkSampler mSampler;
 		ITexture2 mWoodTex, mStatueTex;
 		Material* mGeoMaterial;
+		Framebuffer mFBO;
 	};
 
 }

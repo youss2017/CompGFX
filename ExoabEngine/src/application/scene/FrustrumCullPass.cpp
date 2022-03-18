@@ -67,11 +67,19 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	mOutputGeometryDataArray = mSet->m_bindings[1].m_ssbo;
 	mOutputDrawDataArray = mSet->m_bindings[3].m_ssbo;
 
+	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT);
+	
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		mFrustrumPlanesMapped[i] = Buffer2_Map(mSet->GetBuffer2(4, i));
 		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		VkCommandBuffer cmd = mCmds[i];
 		vkBeginCommandBuffer(cmd, &beginInfo);
+		vkCmdResetQueryPool(cmd, mQuery, (i * 2), 2);
+		vkCmdResetQueryPool(cmd, mInvocationQuery, i, 1);
+
+		vkCmdBeginQuery(cmd, mInvocationQuery, i, 0);
+		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 0);
 
 		VkBuffer outputDrawDataBuffer = mOutputDrawDataArray[i]->m_vk_buffer->m_buffer;
 		vkCmdFillBuffer(cmd, outputDrawDataBuffer, 0, VK_WHOLE_SIZE, 0);
@@ -91,6 +99,9 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 
 		vkCmdDispatch(cmd, (instanceCount + 63) / 64, (drawCount + 7) / 8, 1);
 
+		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 1);
+		vkCmdEndQuery(cmd, mInvocationQuery, i);
+
 		vkEndCommandBuffer(cmd);
 	}
 }
@@ -104,11 +115,14 @@ Application::FrustumCullPass::~FrustumCullPass()
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderBinding_DestroySets(gContext, { mSet });
 	vkDestroyPipeline(mDevice, mFrustrum, nullptr);
+	vkDestroyQueryPool(mDevice, mQuery, nullptr);
+	vkDestroyQueryPool(mDevice, mInvocationQuery, nullptr);
 }
 
 void Application::FrustumCullPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
 {
-	glm::mat4 projT = glm::transpose(mCamera->GetViewMatrix() * glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->m_width, float(gWindow->m_height), 0.1f, 1000.0f));
+	glm::mat4 view = mCamera->GetViewMatrix();
+	glm::mat4 projT = glm::transpose(glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->m_width, float(gWindow->m_height), 0.1f, 1000.0f) * view);
 	auto normalizePlane = [](glm::vec4 p) -> glm::vec4
 	{
 		return p / glm::length(glm::vec3(p));
@@ -128,3 +142,18 @@ VkCommandBuffer Application::FrustumCullPass::Frame(uint32_t FrameIndex)
 {
 	return mCmds[FrameIndex];
 }
+
+VkResult Application::FrustumCullPass::GetComputeShaderStatistics(uint32_t FrameIndex, bool Wait, double& duration, uint64_t& invocations)
+{
+	uint64_t data[2];
+	uint64_t invoc;
+	VkResult qr = vkGetQueryPoolResults(mDevice, mQuery, FrameIndex * 2, 2, sizeof(data), data, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
+	VkResult qr2 = vkGetQueryPoolResults(mDevice, mInvocationQuery, FrameIndex, 1, sizeof(uint64_t), &invoc, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
+	if (qr == VK_SUCCESS) {
+		duration = (double(data[1] - data[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		invocations = invoc;
+		return VK_SUCCESS;
+	}
+	return VK_TIMEOUT;
+}
+
