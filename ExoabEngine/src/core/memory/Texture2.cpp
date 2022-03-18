@@ -9,16 +9,17 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	using namespace VkAlloc;
 	IMAGE_DESCRIPITION desc;
 	desc.m_properties = DEVICE_MEMORY_PROPERTY::GPU_ONLY;
-	desc.m_flags = 0;
+	desc.m_flags = specification.mFlags;
 	desc.m_imageType = VK_IMAGE_TYPE_2D;
 	desc.m_format = (VkFormat)specification.m_Format;
 	desc.m_extent.width = specification.m_Width;
 	desc.m_extent.height = specification.m_Height;
 	desc.m_extent.depth = 1;
 	desc.m_mipLevels = specification.m_GenerateMipMapLevels ? std::floor(std::log2(std::max(specification.m_Width, specification.m_Height))) + 1 : 1;
-	desc.m_arrayLayers = 1;
+	desc.m_arrayLayers = specification.mLayers;;
 	desc.m_samples = (VkSampleCountFlagBits)specification.m_Samples;
 	desc.m_tiling = VK_IMAGE_TILING_OPTIMAL;
+	desc.m_usage = specification.mUsage;
 	switch (specification.m_TextureUsage)
 	{
 		case TextureUsage::TEXTURE:
@@ -42,7 +43,7 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	desc.m_lazyAllocate = specification.m_LazilyAllocate;
 	VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, 1, &desc, &texture->m_vk_image);
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.viewType = (desc.m_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
 	viewInfo.format = (VkFormat)specification.m_Format;
 	auto GetVkSwizzle = [](TextureSwizzle swizz) throw()->VkComponentSwizzle
 	{
@@ -72,9 +73,9 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	else
 		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	viewInfo.subresourceRange.baseMipLevel = 0;
-	viewInfo.subresourceRange.levelCount = desc.m_mipLevels;
+	viewInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount = 1;
+	viewInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;;
 	texture->m_vk_aspectmask = viewInfo.subresourceRange.aspectMask;
 	vkcheck(vkCreateImageView(ToVKContext(context)->defaultDevice, &viewInfo, nullptr, &texture->m_vk_view));
 	vk::VkContext cont = ToVKContext(context);
@@ -144,6 +145,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = (texture->m_specification.m_GenerateMipMapLevels) ? (std::floor(std::log2(std::max(texture->m_specification.m_Width, texture->m_specification.m_Height))) + 1) : 1;;
 	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.subresourceRange.layerCount = 1;
 	vk::Gfx_StartCommandBuffer(cmd_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	vkCmdPipelineBarrier(cmd_buffer,
@@ -168,6 +170,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	barrier_readable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 	barrier_readable.oldLayout = texture->m_vk_current_layout;
 	barrier_readable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier_readable.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier_readable.subresourceRange.levelCount = (texture->m_specification.m_GenerateMipMapLevels) ? (std::floor(std::log2(std::max(texture->m_specification.m_Width, texture->m_specification.m_Height))) + 1) : 1;
 	texture->m_vk_current_layout = barrier_readable.newLayout;
 	CurrentAccessFlag = barrier_readable.dstAccessMask;

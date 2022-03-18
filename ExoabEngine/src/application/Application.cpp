@@ -13,6 +13,7 @@
 #include <backend/VkGraphicsCard.hpp>
 #include "scene/FrustrumCullPass.hpp"
 #include "scene/GeometryPass.hpp"
+#include "scene/SkyboxPass.hpp"
 
 bool Application::Quit = false;
 
@@ -44,6 +45,7 @@ namespace Application
 	EntityController* gECS;
 	static FrustumCullPass* cullPass;
 	static GeometryPass* geoPass;
+	static SkyboxPass* skybox;
 }
 
 bool Application::Initalize(ConfigurationSettings* configuration, bool RenderDoc)
@@ -127,6 +129,7 @@ bool Application::CreateResources()
 
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
 	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, geometryPassConfig, gFBO0, cullPass, &gCamera, gECS);
+	skybox = new SkyboxPass("assets/textures/cubemap2.png", geoPass, &gCamera);
 
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
 	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
@@ -204,6 +207,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 
 	cullPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 	geoPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
+	skybox->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 
 	return true;
 }
@@ -219,14 +223,14 @@ void Application::Render()
 	vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 	vkResetFences(device, 1, &frame.m_RenderFence);
 	
-	VkCommandBuffer cmds[2] = { cullPass->Frame(FrameIndex), geoPass->Frame(FrameIndex) };
+	VkCommandBuffer cmds[3] = { cullPass->Frame(FrameIndex), geoPass->Frame(FrameIndex), skybox->Frame(FrameIndex) };
 
 	VkPipelineStageFlags stage[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &frame.m_RenderSemaphore;
 	submitInfo.pWaitDstStageMask = stage;
-	submitInfo.commandBufferCount = 2;
+	submitInfo.commandBufferCount = 3;
 	submitInfo.pCommandBuffers = cmds;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &frame.m_PresentSemaphore;
@@ -249,6 +253,7 @@ void Application::Destroy()
 	Graphics3D_WaitGPUIdle(gGfx);
 	delete cullPass;
 	delete geoPass;
+	delete skybox;
 	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mInstanceBuffer);
 	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
 	gFBO0.DestroyAllBoundAttachments();

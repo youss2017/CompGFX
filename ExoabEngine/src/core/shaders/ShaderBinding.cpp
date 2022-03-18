@@ -128,8 +128,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                     }
                     write.pImageInfo = imageInfos.data();
                     vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
-                }
-                else if (bind.m_type == SHADER_BINDING_SAMPLER) {
+                } else if (bind.m_type == SHADER_BINDING_SAMPLER) {
                     write.dstArrayElement = 0;
                     write.descriptorCount = bind.m_sampler.size();
                     std::vector<VkDescriptorImageInfo> imageInfos(bind.m_sampler.size());

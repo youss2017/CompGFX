@@ -17,7 +17,7 @@ namespace Application {
 	};
 }
 
-Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* camera) : Scene(gContext->defaultDevice), mECS(ecs), mCamera(camera)
+Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* camera) : Scene(gContext->defaultDevice, true), mECS(ecs), mCamera(camera)
 {
 	std::vector<ShaderBinding> computeBindings(5);
 	computeBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
@@ -108,9 +108,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 
 Application::FrustumCullPass::~FrustumCullPass()
 {
-	for (int i = 0; i < gFrameOverlapCount; i++) {
-		vkDestroyCommandPool(mDevice, mPools[i], nullptr);
-	}
+	Super_Scene();
 	vkDestroyPipelineLayout(mDevice, mFrustrumLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderBinding_DestroySets(gContext, { mSet });

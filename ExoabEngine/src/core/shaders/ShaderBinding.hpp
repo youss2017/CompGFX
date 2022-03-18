@@ -2,16 +2,17 @@
 #include <backend/VkGraphicsCard.hpp>
 #include <memory/Buffer2.hpp>
 #include <memory/Texture2.hpp>
+#include <memory/CubeMap.hpp>
 
 enum ShaderBindingFlags : int
 {
-	SHADER_BINDING_UNIFORM_BUFFER                       = 0x0000001,
-	SHADER_BINDING_UNIFORM_BUFFER_DYNAMIC               = 0x0000010,
-	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT         = 0x0000100,
-	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC = 0x0001000,
-	SHADER_BINDING_COMBINED_TEXTURE_SAMPLER             = 0x0010000,
-	SHADER_BINDING_TEXTURE                              = 0x0100000,
-	SHADER_BINDING_SAMPLER                              = 0x1000000,
+	SHADER_BINDING_UNIFORM_BUFFER                       = 0x00000001,
+	SHADER_BINDING_UNIFORM_BUFFER_DYNAMIC               = 0x00000010,
+	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT         = 0x00000100,
+	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC = 0x00001000,
+	SHADER_BINDING_COMBINED_TEXTURE_SAMPLER             = 0x00010000,
+	SHADER_BINDING_TEXTURE                              = 0x01000000,
+	SHADER_BINDING_SAMPLER                              = 0x10000000,
 };
 
 struct ShaderBinding

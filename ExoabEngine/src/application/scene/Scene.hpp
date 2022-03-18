@@ -8,14 +8,14 @@ namespace Application {
 	class Scene {
 		
 	public:
-		Scene(VkDevice device) : mDevice(device) {
+		Scene(VkDevice device, bool primary) : mDevice(device) {
 			for (int i = 0; i < gFrameOverlapCount; i++) {
 				VkCommandPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
 				vkCreateCommandPool(device, &createInfo, nullptr, &mPools[i]);
 				VkCommandBufferAllocateInfo allocInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
 				allocInfo.commandBufferCount = 1;
 				allocInfo.commandPool = mPools[i];
-				allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+				allocInfo.level = primary ? VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
 				vkAllocateCommandBuffers(device, &allocInfo, &mCmds[i]);
 			}
 		}
@@ -25,6 +25,13 @@ namespace Application {
 
 		virtual void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) = 0;
 		virtual VkCommandBuffer Frame(uint32_t FrameIndex) = 0;
+
+	protected:
+		void Super_Scene() {
+			for (int i = 0; i < gFrameOverlapCount; i++) {
+				vkDestroyCommandPool(mDevice, mPools[i], nullptr);
+			}
+		}
 
 	protected:
 		VkDevice mDevice;

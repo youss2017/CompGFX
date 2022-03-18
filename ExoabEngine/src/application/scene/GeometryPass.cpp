@@ -8,7 +8,7 @@ namespace Application {
 	extern PlatformWindow* gWindow;
 }
 
-Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs) : Scene(gContext->defaultDevice), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext);
 	mWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
 	mStatueTex = Texture2_CreateFromFile(gContext, "assets/textures/statue.jpg", true);
@@ -72,9 +72,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 }
 
 Application::GeometryPass::~GeometryPass() {
-	for (int i = 0; i < gFrameOverlapCount; i++) {
-		vkDestroyCommandPool(mDevice, mPools[i], nullptr);
-	}
+	Super_Scene();
 	vkDestroySampler(mDevice, mSampler, nullptr);
 	Texture2_Destroy(mWoodTex);
 	Texture2_Destroy(mStatueTex);
@@ -128,7 +126,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
-	renderingInfo.flags = 0;
+	renderingInfo.flags = VK_RENDERING_SUSPENDING_BIT;
 	renderingInfo.renderArea = { {0, 0}, { mFBO.m_width, mFBO.m_height } };
 	renderingInfo.layerCount = 1;
 	renderingInfo.viewMask = 0;

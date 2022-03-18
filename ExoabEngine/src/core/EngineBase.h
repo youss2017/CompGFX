@@ -122,9 +122,12 @@ struct Texture2DSpecification
 {
 	uint32_t m_Width;
 	uint32_t m_Height;
+	uint32_t mLayers = 1;
 	TextureUsage m_TextureUsage = TextureUsage::TEXTURE;
 	TextureSamples m_Samples = TextureSamples::MSAA_1;
 	VkFormat m_Format;
+	VkImageCreateFlags mFlags = 0;
+	VkImageUsageFlags mUsage = 0;
 	bool m_GenerateMipMapLevels;
 	bool m_CreatePerFrame = false;
 	bool m_LazilyAllocate = false;

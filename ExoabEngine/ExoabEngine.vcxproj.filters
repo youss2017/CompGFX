@@ -192,6 +192,12 @@
     <ClInclude Include="src\application\scene\GeometryPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\memory\CubeMap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\scene\SkyboxPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -381,6 +387,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\application\scene\GeometryPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\memory\CubeMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\application\scene\SkyboxPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

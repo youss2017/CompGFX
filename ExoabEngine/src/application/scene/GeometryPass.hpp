@@ -31,6 +31,7 @@ namespace Application {
 		ITexture2 mWoodTex, mStatueTex;
 		Material* mGeoMaterial;
 		Framebuffer mFBO;
+		friend class SkyboxPass;
 	};
 
 }

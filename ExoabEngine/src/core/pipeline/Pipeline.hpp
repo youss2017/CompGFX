@@ -178,7 +178,8 @@ enum class PolygonTopology
 struct PipelineSpecification
 {
     CullMode m_CullMode;
-    bool m_DepthEnabled, m_DepthWriteEnable;
+    bool m_DepthEnabled;
+    bool m_DepthWriteEnable;
     DepthFunction m_DepthFunc;
     PolygonMode m_PolygonMode;
     bool m_FrontFaceCCW; // Is the front face Counter Clockwise (TRUE) or Clockwise (FALSE)
