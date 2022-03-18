@@ -116,7 +116,9 @@
     <ClInclude Include="src\application\Camera.hpp" />
     <ClInclude Include="src\application\Application.hpp" />
     <ClInclude Include="src\application\ecs\EntityController.hpp" />
-    <ClInclude Include="src\application\FrustrumCulling.hpp" />
+    <ClInclude Include="src\application\scene\FrustrumCullPass.hpp" />
+    <ClInclude Include="src\application\scene\GeometryPass.hpp" />
+    <ClInclude Include="src\application\scene\Scene.hpp" />
     <ClInclude Include="src\utils\atomic.h" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />
@@ -187,7 +189,8 @@
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
     <ClCompile Include="src\application\ecs\EntityController.cpp" />
-    <ClCompile Include="src\application\FrustrumCulling.cpp" />
+    <ClCompile Include="src\application\scene\FrustrumCullPass.cpp" />
+    <ClCompile Include="src\application\scene\GeometryPass.cpp" />
     <ClCompile Include="src\core\backend\Swapchain.cpp" />
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\VulkanLoader.c" />

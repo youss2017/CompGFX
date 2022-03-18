@@ -49,6 +49,16 @@ struct _ShaderSet
 	VkDescriptorSetLayout m_setlayout;
 	// Count is frame count, use m_set[frame index]
 	VkDescriptorSet* m_set;
+
+	inline VkBuffer GetBuffer(uint32_t bindingID, uint32_t frameIndex) {
+		return m_bindings[bindingID].m_buffer[frameIndex]->m_vk_buffer->m_buffer;
+	}
+	inline IBuffer2 GetBuffer2(uint32_t bindingID, uint32_t frameIndex) {
+		return m_bindings[bindingID].m_buffer[frameIndex];
+	}
+	inline IBuffer2* GetBuffer2Array(uint32_t bindingID) {
+		return m_bindings[bindingID].m_buffer;
+	}
 };
 
 typedef _ShaderSet* ShaderSet;

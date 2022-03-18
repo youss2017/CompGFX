@@ -1,10 +1,9 @@
-#version 460
+#version 450
 #include "types.h"
 #extension GL_EXT_buffer_reference : enable
-#extension GL_EXT_buffer_reference2 : enable
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
-#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
 
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : disable
 #extension GL_EXT_debug_printf : disable
 
 layout (scalar, binding = 0) restrict readonly buffer VerticesSSBO

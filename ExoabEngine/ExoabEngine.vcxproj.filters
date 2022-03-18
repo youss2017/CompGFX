@@ -177,13 +177,19 @@
     <ClInclude Include="src\core\pipeline\Framebuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\FrustrumCulling.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\mesh\SkinnedMesh.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\atomic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\scene\Scene.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\scene\FrustrumCullPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\scene\GeometryPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -368,10 +374,13 @@
     <ClCompile Include="src\core\pipeline\Framebuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\application\FrustrumCulling.cpp">
+    <ClCompile Include="src\mesh\SkinnedMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\mesh\SkinnedMesh.cpp">
+    <ClCompile Include="src\application\scene\FrustrumCullPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\application\scene\GeometryPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
