@@ -304,7 +304,12 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     std::vector<VkFormat> colorFormat(dynamicCreateInfo.colorAttachmentCount);
     for (int i = 0; i < colorFormat.size(); i++)
         colorFormat[i] = fbo.m_color_attachments[i].GetFormat();
-    dynamicCreateInfo.pColorAttachmentFormats = &colorFormat[0];
+    if (colorFormat.size() > 0) {
+        dynamicCreateInfo.pColorAttachmentFormats = &colorFormat[0];
+    }
+    else {
+        dynamicCreateInfo.pColorAttachmentFormats = nullptr;
+    }
     dynamicCreateInfo.depthAttachmentFormat = fbo.m_depth_attachment->GetFormat();
     dynamicCreateInfo.stencilAttachmentFormat = fbo.m_depth_attachment->GetFormat();
 

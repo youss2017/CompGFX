@@ -55,7 +55,7 @@ namespace VkAlloc
 		uint32_t                 m_mipLevels;
 		uint32_t                 m_arrayLayers;
 		VkSampleCountFlagBits    m_samples;
-		VkImageTiling            m_tiling;
+		VkImageTiling			 m_tiling;
 		VkImageUsageFlags        m_usage;
 		bool m_lazyAllocate;
 		float m_priority = 0.5f;

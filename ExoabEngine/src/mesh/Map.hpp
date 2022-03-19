@@ -21,6 +21,7 @@ struct MapVertex
     glm::vec2 inTexCoords;
 };
 
+// TODO: Split map into smaller squares so we can do frustrum culling on the map.
 struct Map
 {
     uint32_t m_width, m_height;

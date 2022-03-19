@@ -673,7 +673,12 @@ namespace vk
         ShaderDepthStages[1].module = FragmentDepthModule;
         ShaderDepthStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         pipelineDepthCreateInfo.pStages = ShaderDepthStages;
-        
+
+        if (m_PresentPipeline)
+            vkDestroyPipeline(m_Device, m_PresentPipeline, nullptr);
+        if (m_PresentDepthPipeline)
+            vkDestroyPipeline(m_Device, m_PresentDepthPipeline, nullptr);
+
         vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, allocation_callback, &m_PresentPipeline);
         vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineDepthCreateInfo, allocation_callback, &m_PresentDepthPipeline);
         vkDestroyShaderModule(m_Device, FragmentDepthModule, nullptr);
@@ -683,16 +688,30 @@ namespace vk
     VkResult GraphicsSwapchain::PrepareNextFrame(uint64_t TimeOut, VkSemaphore NextFrameReadySemaphore, VkFence NextFrameReadyFence, uint32_t* pOutImageIndex)
     {
         PROFILE_FUNCTION();
+        if (m_Window->IsWindowMinimized())
+            return VK_TIMEOUT;
         VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, TimeOut, NextFrameReadySemaphore, NextFrameReadyFence, &m_ImageIndex);
         if (result != VK_SUCCESS)
         {
-            return result;
+            // Wait until swapchain is not used in-flight
+            vkQueueWaitIdle(m_Queue); // TODO: Fix validation layer errors when resizing
+            // the swapchain is to old, must be recreated.
+            // Before creating a new swapchain destroy views and framebuffers
+            for (uint32_t i = 0; i < m_BackBufferCount; i++)
+            {
+                vkDestroyImageView(m_Device, m_Views[i], m_allocation_callback);
+                vkDestroyFramebuffer(m_Device, m_Framebuffers[i], m_allocation_callback);
+            }
+            CreateSwapchain(m_allocation_callback);
+            // Recreate Pipeline since viewport/scissor have changed
+            CreatePipeline(m_allocation_callback);
+            vkAcquireNextImageKHR(m_Device, m_Swapchain, TimeOut, NextFrameReadySemaphore, NextFrameReadyFence, &m_ImageIndex);
         }
         if (m_UsingImGui)
             Gui_VKBeginGUIFrame();
         if(pOutImageIndex)
             *pOutImageIndex = m_ImageIndex;
-        return result;
+        return VK_SUCCESS;
     }
 
     void GraphicsSwapchain::Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline)
@@ -790,7 +809,6 @@ namespace vk
                 }
                 CreateSwapchain(m_allocation_callback);
                 // Recreate Pipeline since viewport/scissor have changed
-                vkDestroyPipeline(m_Device, m_PresentPipeline, m_allocation_callback);
                 CreatePipeline(m_allocation_callback);
             }
         }

@@ -30,7 +30,7 @@ enum BufferType : int {
 	BUFFER_TYPE_STORAGE				 = 0x0001000,
 	BUFFER_TYPE_INDIRECT			 = 0x0010000,
 	BUFER_TYPE_TRANSFER_SRC = 0x0100000,
-	BUFER_TYPE_TRANSFER_DST = 0x1000000
+	BUFFER_TYPE_TRANSFER_DST = 0x1000000
 };
 
 enum class TextureFilter
@@ -128,6 +128,7 @@ struct Texture2DSpecification
 	VkFormat m_Format;
 	VkImageCreateFlags mFlags = 0;
 	VkImageUsageFlags mUsage = 0;
+	VkImageTiling mTiling = VK_IMAGE_TILING_OPTIMAL;
 	bool m_GenerateMipMapLevels;
 	bool m_CreatePerFrame = false;
 	bool m_LazilyAllocate = false;

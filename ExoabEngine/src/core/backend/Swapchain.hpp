@@ -64,10 +64,9 @@ namespace vk {
                 return m_PresentPass;
             }
 
-        private:
+        private:    
             void CreateSwapchain(VkAllocationCallbacks* allocation_callback);
             void CreatePipeline(VkAllocationCallbacks* allocation_callback);
-
     };
 
 }

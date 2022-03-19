@@ -141,7 +141,7 @@ VkCommandBuffer Application::FrustumCullPass::Frame(uint32_t FrameIndex)
 	return mCmds[FrameIndex];
 }
 
-VkResult Application::FrustumCullPass::GetComputeShaderStatistics(uint32_t FrameIndex, bool Wait, double& duration, uint64_t& invocations)
+VkResult Application::FrustumCullPass::GetComputeShaderStatistics(bool Wait, uint32_t FrameIndex, double& duration, uint64_t& invocations)
 {
 	uint64_t data[2];
 	uint64_t invoc;

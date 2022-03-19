@@ -121,9 +121,11 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                     assert(bind.m_textures.size() == bind.m_textures_layouts.size());
                     for (int w = 0; w < bind.m_textures.size(); w++)
                     {
-                        assert(bind.m_textures[w]->m_vk_views_per_frame.size() == 0);
                         imageInfos[w].sampler = bind.m_sampler[w];
-                        imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
+                        if(bind.m_textures[w]->m_vk_views_per_frame.size() > 0)
+                            imageInfos[w].imageView = bind.m_textures[w]->m_vk_views_per_frame[i];
+                        else
+                            imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
                         imageInfos[w].imageLayout = bind.m_textures_layouts[w];
                     }
                     write.pImageInfo = imageInfos.data();

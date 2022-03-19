@@ -16,7 +16,7 @@ namespace Application {
 		~FrustumCullPass();
 		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		VkCommandBuffer Frame(uint32_t FrameIndex);
-		VkResult GetComputeShaderStatistics(uint32_t FrameIndex, bool Wait, double& duration, uint64_t& invocations);
+		VkResult GetComputeShaderStatistics(bool Wait, uint32_t FrameIndex, double& duration, uint64_t& invocations);
 
 	private:
 		Camera* mCamera;

@@ -14,6 +14,7 @@
 #include "scene/FrustrumCullPass.hpp"
 #include "scene/GeometryPass.hpp"
 #include "scene/SkyboxPass.hpp"
+#include "scene/ShadowPass.hpp"
 
 bool Application::Quit = false;
 
@@ -46,6 +47,8 @@ namespace Application
 	static FrustumCullPass* cullPass;
 	static GeometryPass* geoPass;
 	static SkyboxPass* skybox;
+	static ShadowPass* shadow;
+	static VkSemaphore shadowPassSemaphore[gFrameOverlapCount];
 }
 
 bool Application::Initalize(ConfigurationSettings* configuration, bool RenderDoc)
@@ -85,8 +88,9 @@ bool Application::Initalize(ConfigurationSettings* configuration, bool RenderDoc
 bool Application::LoadAssets()
 {
 	PROFILE_FUNCTION();
-	bool MeshLoadStatus = Mesh::LoadVerticesIndicesSSBOs(gContext, 
-		{ "assets/mesh/lucy.fbx" }, gGeomtry, &gVerticesSSBO, &gIndicesBuffer);
+	Mesh::GeometryConfiguration config;
+	config.Load("assets/geometry.cfg");
+	bool MeshLoadStatus = Mesh::LoadVerticesIndicesSSBOs(gContext, config, gGeomtry, &gVerticesSSBO, &gIndicesBuffer);
 	if (!MeshLoadStatus)
 		return false;
 
@@ -97,12 +101,12 @@ bool Application::LoadAssets()
 	uint32_t instanceSize = instanceCount * sizeof(ShaderTypes::InstanceData);
 	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
 	for (unsigned int i = 0; i < instanceCount; i++) {
-		float x = (rand() % 1000) * 26;
-		float y = (rand() % 1000) * 26;
-		float z = (rand() % 1000) * 26;
+		float x = (rand() % 10) * 5;
+		float y = (rand() % 10) * 5;
+		float z = (rand() % 10) * 5;
 		glm::vec3 offset = glm::vec3(x, y, z + 2);
 		offset = offset - (offset / glm::vec3(2.0));
-		instance[i].mModel = glm::translate(glm::scale(glm::mat4(1.0), glm::vec3(1e-3)), offset);
+		instance[i].mModel = glm::translate(glm::scale(glm::mat4(1.0), glm::vec3(1)), offset);
 		instance[i].mTextureID[0] = 0;
 	}
 
@@ -127,9 +131,15 @@ bool Application::CreateResources()
 
 	MaterialConfiguration geometryPassConfig = MaterialConfiguration("assets/materials/geometryPass.mc");
 
+	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, gECS, &gCamera, 1024);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
-	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, geometryPassConfig, gFBO0, cullPass, &gCamera, gECS);
-	skybox = new SkyboxPass("assets/textures/cubemap2.png", geoPass, &gCamera);
+	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, geometryPassConfig, gFBO0, cullPass, &gCamera, gECS, shadow);
+	skybox = new SkyboxPass("assets/textures/cubemap4.png", geoPass, &gCamera);
+	UI::CubemapLODMax = skybox->GetMaxLOD();
+
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		shadowPassSemaphore[i] = vk::Gfx_CreateSemaphore(gContext, false);
+	}
 
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
 	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
@@ -146,7 +156,7 @@ bool Application::CreateResources()
 		shaderReadBarrier[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		shaderReadBarrier[i].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 		shaderReadBarrier[i].subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-		Framebuffer_TransistionAttachment(transitionCmd.cmd, &gFBO0.m_depth_attachment.value(), VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED, 0, 1, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		Framebuffer_TransistionAttachment(transitionCmd.cmd, &gFBO0.m_depth_attachment.value(), VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	}
 	vkCmdPipelineBarrier(transitionCmd.cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, gFrameOverlapCount, shaderReadBarrier);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
@@ -202,12 +212,15 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	if (UpdateUIInfo) {
 		UI::FrameRate = FrameRate;
 		UI::FrameTime = dTime * 1e3;
-		cullPass->GetComputeShaderStatistics(frame.m_FrameIndex, false, UI::FrustrumCullingTime, UI::FrustrumInvocations);
+		cullPass->GetComputeShaderStatistics(false, frame.m_FrameIndex, UI::FrustrumCullingTime, UI::FrustrumInvocations);
+		geoPass->GetStatistics(false, frame.m_FrameIndex, UI::GeometryPassTime, UI::VertexInvocations, UI::FragmentInvocations);
 	}
+	skybox->SetLOD(UI::CubemapLOD);
 
 	cullPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 	geoPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 	skybox->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
+	shadow->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 
 	return true;
 }
@@ -219,19 +232,25 @@ void Application::Render()
 	const auto& frame = Graphics3D_GetFrame(gGfx);
 	uint32_t FrameIndex = frame.m_FrameIndex;
 	
-	gSwapchain.PrepareNextFrame(UINT64_MAX, frame.m_RenderSemaphore, nullptr, nullptr);
+	if (gSwapchain.PrepareNextFrame(UINT64_MAX, frame.m_RenderSemaphore, nullptr, nullptr) != VK_SUCCESS) {
+		return;
+	}
 	vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 	vkResetFences(device, 1, &frame.m_RenderFence);
 	
-	VkCommandBuffer cmds[3] = { cullPass->Frame(FrameIndex), geoPass->Frame(FrameIndex), skybox->Frame(FrameIndex) };
+	VkCommandBuffer cmds[2] = { cullPass->Frame(FrameIndex), shadow->Frame(FrameIndex) };
+	vk::Gfx_SubmitCmdBuffers(gContext->defaultQueue, { cmds[0], cmds[1] }, { frame.m_RenderSemaphore }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { shadowPassSemaphore[FrameIndex] }, nullptr);
 
-	VkPipelineStageFlags stage[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkCommandBuffer cmds2[2] = { geoPass->Frame(FrameIndex), skybox->Frame(FrameIndex),  };
+
+	VkSemaphore waitSemaphores[1] = { shadowPassSemaphore[FrameIndex] };
+	VkPipelineStageFlags stage[1] = { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
 	VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &frame.m_RenderSemaphore;
+	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = stage;
-	submitInfo.commandBufferCount = 3;
-	submitInfo.pCommandBuffers = cmds;
+	submitInfo.commandBufferCount = 2;
+	submitInfo.pCommandBuffers = cmds2;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &frame.m_PresentSemaphore;
 	vkQueueSubmit(gContext->defaultQueue, 1, &submitInfo, frame.m_RenderFence);
@@ -239,7 +258,8 @@ void Application::Render()
 	if (s_EnableImGui)
 		UI::RenderUI();
 	if (UI::ShowDepthBuffer) {
-		gSwapchain.Present(gFBO0.m_depth_attachment.value().GetImage(FrameIndex), gFBO0.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+		//gSwapchain.Present(gFBO0.m_depth_attachment.value().GetImage(FrameIndex), gFBO0.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+		gSwapchain.Present(shadow->mFBO.m_depth_attachment.value().GetImage(FrameIndex), shadow->mFBO.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
 	}
 	else {
 		gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
@@ -254,6 +274,10 @@ void Application::Destroy()
 	delete cullPass;
 	delete geoPass;
 	delete skybox;
+	delete shadow;
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		vkDestroySemaphore(gContext->defaultDevice, shadowPassSemaphore[i], nullptr);
+	}
 	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mInstanceBuffer);
 	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
 	gFBO0.DestroyAllBoundAttachments();

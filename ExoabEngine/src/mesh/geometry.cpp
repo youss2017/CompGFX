@@ -3,6 +3,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <meshoptimizer/src/meshoptimizer.h>
+#include <StringUtils.hpp>
 
 namespace Mesh
 {
@@ -50,7 +51,7 @@ namespace Mesh
 		geometry.box_max = maxp;
 	}
 
-	bool LoadVerticesIndicesSSBOs(void* context, std::vector<std::string> geometry_path_list, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer)
+	bool LoadVerticesIndicesSSBOs(void* context, GeometryConfiguration config, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer)
 	{
 		if (!pVerticesSSBO || !pIndicesBuffer)
 			return false;
@@ -58,8 +59,9 @@ namespace Mesh
 		std::vector<GeometryVertex> vertices;
 		std::vector<uint32> indices;
 		int meshIndex = 0;
-		for (auto& path : geometry_path_list)
+		for (auto& _path : config.mList)
 		{
+			std::string &path = _path.second;
 			const aiScene* scene = imp.ReadFile(path, aiProcessPreset_TargetRealtime_MaxQuality);
 			if (!scene) {
 				std::string errmsg = "Error parsing '" + std::string(path) + "', because: " + std::string(imp.GetErrorString());
@@ -156,6 +158,27 @@ namespace Mesh
 			Buffer2_UploadData(*pOutIndices, (char8_t*)skinnedMesh.mIndices.data(), indicesOffset, indicesSize);
 		}
 	
+	}
+
+	void GeometryConfiguration::Load(const std::string& configPath)
+	{
+		std::string config = Utils::LoadTextFile(configPath);
+		std::vector<std::string> config_split = Utils::StringSplitter("\n", config);
+		int line = -1;
+		for (auto& geo : config_split) {
+			line++;
+			geo = Utils::StrTrim(geo);
+			if (geo[0] == '#')
+				continue;
+			std::vector<std::string> geo_split = Utils::StringSplitter(" ", geo);
+			if (geo_split.size() != 2) {
+				char log[150];
+				sprintf(log, "Syntax error in Geometry Configuration file [%s] at line %i", configPath.c_str(), line);
+				log_error(log, __FILE__, __LINE__);
+				throw std::runtime_error(log);
+			}
+			mList.insert(std::make_pair(std::stoi(geo_split[1]), geo_split[0]));
+		}
 	}
 
 }

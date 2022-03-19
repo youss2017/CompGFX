@@ -21,7 +21,7 @@ IBuffer2 Buffer2_Create(GraphicsContext _context, BufferType type, size_t size, 
 		desc.m_usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	if (type & BUFER_TYPE_TRANSFER_SRC)
 		desc.m_usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	if (type & BUFER_TYPE_TRANSFER_DST)
+	if (type & BUFFER_TYPE_TRANSFER_DST)
 		desc.m_usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	if (pointerUsage)
 		desc.m_usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;

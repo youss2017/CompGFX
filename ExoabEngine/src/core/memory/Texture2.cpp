@@ -18,8 +18,8 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	desc.m_mipLevels = specification.m_GenerateMipMapLevels ? std::floor(std::log2(std::max(specification.m_Width, specification.m_Height))) + 1 : 1;
 	desc.m_arrayLayers = specification.mLayers;;
 	desc.m_samples = (VkSampleCountFlagBits)specification.m_Samples;
-	desc.m_tiling = VK_IMAGE_TILING_OPTIMAL;
 	desc.m_usage = specification.mUsage;
+	desc.m_tiling = specification.mTiling;
 	switch (specification.m_TextureUsage)
 	{
 		case TextureUsage::TEXTURE:
@@ -40,6 +40,7 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	texture->m_vk_description = desc;
 	texture->m_context = context;
 	texture->m_specification = specification;
+	texture->mMipCount = desc.m_mipLevels;
 	desc.m_lazyAllocate = specification.m_LazilyAllocate;
 	VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, 1, &desc, &texture->m_vk_image);
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };

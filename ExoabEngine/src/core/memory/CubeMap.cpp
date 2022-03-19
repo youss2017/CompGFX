@@ -7,6 +7,10 @@
 
 extern vk::VkContext gContext;
 
+/*
+	There are more efficent ways of doing this but this only used in loading and its fast enough.
+*/
+
 ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 {
 	int width, height, channels;
@@ -83,7 +87,7 @@ ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = cubeMap->m_vk_image->m_image;
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -98,7 +102,7 @@ ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
 		barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.image = cubeFaces[i]->m_vk_image->m_image;
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -120,13 +124,13 @@ ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 			region.dstSubresource.layerCount = 1;
 			region.dstOffset = {};
 			region.extent = {uint32_t(face_size >> j), uint32_t(face_size >> j), 1};
-			vkCmdCopyImage(cmd.cmd, cubeFaces[i]->m_vk_image->m_image, VK_IMAGE_LAYOUT_GENERAL, cubeMap->m_vk_image->m_image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
+			vkCmdCopyImage(cmd.cmd, cubeFaces[i]->m_vk_image->m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, cubeMap->m_vk_image->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		}
 	}
 	barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = cubeMap->m_vk_image->m_image;

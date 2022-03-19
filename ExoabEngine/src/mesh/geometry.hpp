@@ -7,6 +7,7 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include "SkinnedMesh.hpp"
+#include <map>
 
 namespace Mesh {
 
@@ -48,12 +49,17 @@ namespace Mesh {
 		glm::vec3 m_bounding_sphere_center;
 		float m_bounding_sphere_radius;
 	};
+
+	struct GeometryConfiguration {
+		std::map<int, std::string> mList;
+		void Load(const std::string& config);
+	};
 	
 	// geometry_path_list - path to every mesh path (e.g. .obj, .fbx, etc)
 	// out_geometry_vertices_indices_positions - an output std::vector used to provide information about where vertices and indices start
 	// Note: indices will be loaded or generated for all models!
 	// Indices are not SSBOs and they are 16bit
-	bool LoadVerticesIndicesSSBOs(void* context, std::vector<std::string> geometry_path_list, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer);
+	bool LoadVerticesIndicesSSBOs(void* context, GeometryConfiguration config, std::vector<Geometry>& out_geometry_vertices_indices_positions, IBuffer2* pVerticesSSBO, IBuffer2* pIndicesBuffer);
 
 	void LoadVerticesIndicesBONE(void* context, std::vector<std::string> path, std::vector<Mesh::SkinnedMesh>& OutSkinnedMesh, IBuffer2* pOutVertices, IBuffer2* pOutIndices);
 

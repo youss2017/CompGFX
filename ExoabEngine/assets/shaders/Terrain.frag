@@ -9,10 +9,9 @@ layout (location = 2) in vec3 TextureWeights;
 layout (location = 3) in vec2 TexCoord;
 
 // The first texture is the base texture
-layout (set = 1, binding = 0) uniform sampler2D TerrainTextures[];
+layout (binding = 1) uniform sampler2D TerrainTextures[];
 
-layout (push_constant) uniform pushblock
-{
+layout (scalar, binding = 2) uniform light {
     vec3 u_LightDirection;
 };
 

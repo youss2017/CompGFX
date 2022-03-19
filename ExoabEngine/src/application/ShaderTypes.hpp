@@ -16,6 +16,7 @@ namespace ShaderTypes {
 			mat4 u_View;
 			mat4 u_Projection;
 			mat4 u_ProjView;
+			mat4 u_LightSpace;
 		};
 
 		struct InstanceData {

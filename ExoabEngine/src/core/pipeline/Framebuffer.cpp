@@ -1,10 +1,10 @@
 #include "Framebuffer.hpp"
 
-FramebufferAttachment FramebufferAttachment::Create(vk::VkContext context, int width, int height, VkFormat format, VkClearColorValue clearColor, VkPipelineColorBlendAttachmentState* pBlendState)
+FramebufferAttachment FramebufferAttachment::Create(vk::VkContext context, int width, int height, VkFormat format, VkClearValue clear, VkPipelineColorBlendAttachmentState* pBlendState)
 {
 	FramebufferAttachment attachment;
 	attachment.m_format = format;
-	attachment.m_clear_color = clearColor;
+	attachment.mClear = clear;
 	attachment.m_width = width;
 	attachment.m_height = height;
 	if (!pBlendState) {

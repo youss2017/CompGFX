@@ -23,7 +23,11 @@ namespace UI
     unsigned long long FrustrumInvocations = 0;
     double InputDrawCount = 0.0;
     double OutputDrawCount = 0.0;
-    double GPUPassTime = 0.0;
+    double GeometryPassTime = 0;
+    unsigned long long VertexInvocations = 0;
+    unsigned long long FragmentInvocations = 0;
+    int CubemapLOD = 0;
+    int CubemapLODMax = 0;
     float C_x, C_y, C_z;
 }
 
@@ -84,10 +88,14 @@ void UI::RenderUI()
     ImGui::Separator();
     ImGui::Text("%.2f FPS", FrameRate);
     ImGui::Text("%.2f ms -- Frame Time", FrameTime);
-    ImGui::Text("%.2f ms -- CPU Time", FrameTime - GPUPassTime);
-    ImGui::Text("%.2f ms -- GPU Time", GPUPassTime);
+    //ImGui::Text("%.2f ms -- CPU Time", FrameTime - (VertexTime + FragmentTime));
+    //ImGui::Text("%.2f ms -- GPU Time", (VertexTime + FragmentTime));
+    ImGui::Text("%llu / %llu -- Vertex/Fragment Invocations", VertexInvocations, FragmentInvocations);
+    ImGui::Text("%.2f ms -- Geometry Pass", GeometryPassTime);
     ImGui::Text("%.2f ms / %llu -- (Geo) Frustrum Pass", FrustrumCullingTime, FrustrumInvocations);
     ImGui::Text("InDraws %d, OutDraws %d -> %.2f%%", int(InputDrawCount), int(OutputDrawCount), 100.0 * (OutputDrawCount / InputDrawCount));
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
+    ImGui::SliderInt("Cubemap LOD", &UI::CubemapLOD, 0, UI::CubemapLODMax);
     ImGui::End();
+    //ImGui::ShowDemoWindow();
 }

@@ -49,8 +49,7 @@ void main()
     mat4 model = instancePtr.v[instanceIndex].mModel;
 
     vec4 center = model * vec4(u_GeoData[draw.mGeometryDataIndex].bounding_sphere_center, 1.0);
-    vec3 radius3 = (u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius) * vec3(model[0][0], model[1][1], model[2][2]);
-    float radius = max(max(radius3.x, radius3.y), radius3.z);
+    float radius = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius * 2.0;
     
     // Is this instance visible?
     bool visible = true;

@@ -15,10 +15,14 @@ namespace Application {
 		SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera);
 		~SkyboxPass();
 
+		void SetLOD(int lod) { mLod = glm::clamp(lod, 0, (int)mCubeMap->mMipCount); }
+		int GetMaxLOD() { return mCubeMap->mMipCount; }
+
 		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		VkCommandBuffer Frame(uint32_t FrameIndex);
 
 	private:
+		int mLod = 0;
 		Camera* mCamera;
 		GeometryPass* mGeoPass;
 		VkSampler mSampler;

@@ -4,27 +4,21 @@
 #extension GL_EXT_shader_8bit_storage : require
 #extension GL_EXT_scalar_block_layout : require
 
-struct Vertex
-{
-    vec4 inPosition;
-    vec4 inNormal;
-    ivec4 inTextureIDs;
-    vec4 inTextureWeights;
-    vec2 inTexCoords;
-    int padding[2];
-};
+layout (location = 0) in vec4 inPosition;
+layout (location = 1) in vec4 inNormal;
+layout (location = 2) in ivec4 inTextureIDs;
+layout (location = 3) in vec4 inTextureWeights;
+layout (location = 4) in vec2 inTexCoords;
 
-layout (set = 0, binding = 0) readonly buffer Vertices
+layout (scalar, binding = 0) uniform GlobalDataUBO
 {
-    Vertex u_Vertices[];
-};
-
-layout (set = 0, binding = 1) uniform transform
-{
+    float u_DeltaTime;
+    float u_TimeFromStart;
+    vec4 u_CameraForward;
     mat4 u_View;
-    mat4 u_Model;
-    mat4 u_NormalModel;
     mat4 u_Projection;
+    mat4 u_ProjView;
+    mat4 u_LightSpace;
 };
 
 layout (location = 0) out vec3 Normal;
@@ -32,12 +26,11 @@ layout (location = 1) out ivec3 TextureIDs;
 layout (location = 2) out vec3 TextureWeights;
 layout (location = 3) out vec2 TexCoord;
 
-#define vertex u_Vertices[gl_VertexIndex]
 void main()
 {
-    Normal = normalize(mat3(u_NormalModel) * vertex.inNormal.xyz);
-    TextureIDs = vertex.inTextureIDs.xyz;
-    TextureWeights = vertex.inTextureWeights.xyz;
-    TexCoord = vertex.inTexCoords.xy;
-    gl_Position = u_Projection * u_View * u_Model * vertex.inPosition;
+    Normal = normalize(inNormal.xyz);
+    TextureIDs = inTextureIDs.xyz;
+    TextureWeights = inTextureWeights.xyz;
+    TexCoord = inTexCoords.xy;
+    gl_Position = u_ProjView * inPosition;
 }

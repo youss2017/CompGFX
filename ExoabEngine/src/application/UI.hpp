@@ -12,7 +12,11 @@ namespace UI
 	extern unsigned long long  FrustrumInvocations;
 	extern double InputDrawCount;
 	extern double OutputDrawCount;
-	extern double GPUPassTime;
+	extern double GeometryPassTime;
+	extern unsigned long long VertexInvocations;
+	extern unsigned long long FragmentInvocations;
+	extern int CubemapLOD;
+	extern int CubemapLODMax;
 	extern float C_x, C_y, C_z;
 	void Initalize(void* context, void* gfx);
 	void RenderUI();

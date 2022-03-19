@@ -8,7 +8,7 @@
 
 class FramebufferAttachment {
 public:
-	static FramebufferAttachment Create(vk::VkContext context, int width, int height, VkFormat format, VkClearColorValue clearColor, VkPipelineColorBlendAttachmentState* pBlendState = nullptr);
+	static FramebufferAttachment Create(vk::VkContext context, int width, int height, VkFormat format, VkClearValue clear, VkPipelineColorBlendAttachmentState* pBlendState = nullptr);
 	
 	void Destroy() {
 		Texture2_Destroy(m_attachment);
@@ -36,7 +36,7 @@ public:
 	inline const VkImageView GetView(uint32_t FrameIndex) { return m_attachment->m_vk_views_per_frame[FrameIndex]; }
 
 public:
-	VkClearColorValue m_clear_color;
+	VkClearValue mClear;
 	uint32_t m_width, m_height;
 
 private:
@@ -84,16 +84,16 @@ void Framebuffer_TransistionAttachment(VkCommandBuffer cmd, FramebufferAttachmen
 	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 	VkAccessFlags srcAccess = VK_ACCESS_NONE,
 	VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
 void Framebuffer_TransistionImage(VkCommandBuffer cmd, ITexture2 attachment, VkImageAspectFlags aspect, uint32_t frameIndex, VkAccessFlags dstAccess, VkImageLayout newLayout,
 	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 	VkAccessFlags srcAccess = VK_ACCESS_NONE,
 	VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 
 void Framebuffer_TransistionImage(VkCommandBuffer cmd, FramebufferAttachment* attachment, uint32_t frameIndex, VkAccessFlags dstAccess, VkImageLayout newLayout,
 	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 	VkAccessFlags srcAccess = VK_ACCESS_NONE,
 	VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);

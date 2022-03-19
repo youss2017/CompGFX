@@ -24,7 +24,7 @@ Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, Geome
 	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &bindings);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount, poolSizes);
 	mSet = ShaderBinding_Create(gContext, mPool, 0, &bindings);
-	mLayout = ShaderBinding_CreatePipelineLayout(gContext, { mSet }, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)} });
+	mLayout = ShaderBinding_CreatePipelineLayout(gContext, { mSet }, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4} });
 
 	Shader skyboxVert = Shader(gContext, "assets/shaders/skybox.vert");
 	Shader skyboxFrag = Shader(gContext, "assets/shaders/skybox.frag");
@@ -86,7 +86,7 @@ VkCommandBuffer Application::SkyboxPass::Frame(uint32_t FrameIndex)
 	colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.clearValue.color = mGeoPass->mFBO.m_color_attachments[0].m_clear_color;
+	colorAttachment.clearValue = mGeoPass->mFBO.m_color_attachments[0].mClear;
 	VkRenderingAttachmentInfo depthAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	depthAttachment.imageView = mGeoPass->mFBO.m_depth_attachment->GetAttachment()->m_vk_views_per_frame[FrameIndex];
 	depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -108,6 +108,7 @@ VkCommandBuffer Application::SkyboxPass::Frame(uint32_t FrameIndex)
 	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
 	glm::mat4 u_ProjView = proj * glm::mat4(glm::mat3(view));
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &u_ProjView);
+	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4, &mLod);
 	vkCmdDraw(cmd, 36, 1, 0, 0);
 
 	vkCmdEndRenderingKHR(cmd);

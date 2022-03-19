@@ -198,6 +198,12 @@
     <ClInclude Include="src\application\scene\SkyboxPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\application\scene\ShadowPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\scene\postprocess\BloomPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -393,6 +399,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\application\scene\SkyboxPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\application\scene\ShadowPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\application\scene\postprocess\BloomPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
