@@ -5,6 +5,13 @@
 #include "../../mesh/geometry.hpp"
 #include "../../window/PlatformWindow.hpp"
 
+// Specialization Constants
+// TODO: Use 32 for Nvidia Graphics cards
+#define KernalSizeX 64
+#define KernalSizeY 8
+#define DisableCulling (false)
+#define RadiusEpsillion (2.5f)
+
 extern vk::VkContext gContext;
 
 namespace Application {
@@ -62,6 +69,10 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 
 	mFrustrumLayout = ShaderBinding_CreatePipelineLayout(gContext, { mSet }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
 	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
+	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
+	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
+	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
+	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
 	mFrustrum = Pipeline_CreateCompute(gContext, &computeShader, mFrustrumLayout, 0);
 
 	mOutputGeometryDataArray = mSet->m_bindings[1].m_ssbo;
@@ -97,7 +108,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 		int drawCount = mECS->GetDrawCount();
 		int instanceCount = mECS->GetInstanceCount();
 
-		vkCmdDispatch(cmd, (instanceCount + 63) / 64, (drawCount + 7) / 8, 1);
+		vkCmdDispatch(cmd, (instanceCount + (KernalSizeX - 1)) / KernalSizeX, (drawCount + (KernalSizeY - 1)) / KernalSizeY, 1);
 
 		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 1);
 		vkCmdEndQuery(cmd, mInvocationQuery, i);

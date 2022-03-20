@@ -2,11 +2,14 @@
 #include "types.h"
 #extension GL_EXT_debug_printf : disable
 
+layout (constant_id = 2) const bool DisableCulling = false;
+layout (constant_id = 3) const float RadiusEpsillion = 2.5;
+
 /*
     the x group is for instance culling
     the y group is for the draw data
 */
-layout (local_size_x = 64, local_size_y = 8, local_size_z = 1) in;
+layout (local_size_x_id = 0, local_size_y_id = 1, local_size_z = 1) in;
 // Both ObjectData arrays MUST be the same size!
 // The instancePtr will be copied from binding0 to binding1
 layout (scalar, binding = 0) readonly buffer InputGeometryDataSSBO {
@@ -49,13 +52,15 @@ void main()
     mat4 model = instancePtr.v[instanceIndex].mModel;
 
     vec4 center = model * vec4(u_GeoData[draw.mGeometryDataIndex].bounding_sphere_center, 1.0);
-    float radius = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius * 2.0;
+    float radius = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius * RadiusEpsillion;
     
     // Is this instance visible?
     bool visible = true;
     for(int i = 0; i < 5; i++) {
         visible = visible && dot(u_CullPlanes[i], center) > -radius;
     }
+    if(DisableCulling)
+        visible = true;
     if(visible) {
         InstanceData_T culledInstancePtr = InstanceData_T(u_GeoData[draw.mGeometryDataIndex].mCulledInstancePtr);
         uint culledInstanceIndex = atomicAdd(u_OutDraws[drawIndex].instanceCount, 1);

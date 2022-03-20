@@ -26,6 +26,30 @@ public:
     inline VkShaderModule GetShader() { return m_ShaderHandle; }
     inline const std::string& GetEntryPoint() { return m_EntryPointFunction; }
 
+    // Starting at constant_id = 0
+    template<typename T>
+    void SetSpecializationConstant(int id, T data) {
+        VkSpecializationMapEntry entry;
+        entry.constantID = id;
+        entry.offset = mSpecializationOffset;
+        entry.size = sizeof(T);
+        char* data8 = (char*)&data;
+        mSpecializationOffset += sizeof(T);
+        for(int i = 0; i < sizeof(T); i++) {
+            mSpecializationData.push_back(data8[i]);
+        }
+        mSpecializationConstants.push_back(entry);
+    }
+
+    VkSpecializationInfo GetSpecializationInfo() {
+        VkSpecializationInfo info;
+        info.mapEntryCount = mSpecializationConstants.size();
+        info.pMapEntries = mSpecializationConstants.data();
+        info.dataSize = mSpecializationData.size();
+        info.pData = mSpecializationData.data();
+        return info;
+    }
+
     // Call delete[] on byecode pointer when your done with it.
     static void CompileVulkanSPIRVText(const char *source_code, const char *filename, shaderc_shader_kind shader_type, uint32_t **pOutCode, uint32_t *pOutSize, const char *EntryPointFunction = "main");
 
@@ -37,6 +61,9 @@ private:
     bool m_CompileStatus = false;
     shaderc_shader_kind m_ShaderKind;
     VkShaderModule m_ShaderHandle = NULL;
+    unsigned int mSpecializationOffset = 0;
+    std::vector<VkSpecializationMapEntry> mSpecializationConstants;
+    std::vector<char> mSpecializationData;
 
     static std::string s_CacheDirectory;
 

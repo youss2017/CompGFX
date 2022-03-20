@@ -150,10 +150,14 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     Stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     Stages[0].module = (VkShaderModule)vertex->GetShader();
     Stages[0].pName = vertex->GetEntryPoint().c_str();
+    VkSpecializationInfo vertexConstants = vertex->GetSpecializationInfo();
+    VkSpecializationInfo fragmentConstants = fragment->GetSpecializationInfo();
+    Stages[0].pSpecializationInfo = &vertexConstants;
 
     Stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     Stages[1].module = (VkShaderModule)fragment->GetShader();
     Stages[1].pName = fragment->GetEntryPoint().c_str();
+    Stages[1].pSpecializationInfo = &fragmentConstants;
 
     VulkanPipelineVertexInput VertexInputState = Vulkan_Internal_PipelineState_InitalizeVertexInput(input_description);
 
@@ -330,7 +334,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     createInfo.pDynamicState = nullptr;
     createInfo.layout = layout;
     createInfo.renderPass = nullptr;
-    createInfo.subpass = 0; // No subpass support
+    createInfo.subpass = 0;
     createInfo.basePipelineHandle = 0;
     createInfo.basePipelineIndex = 0;
 

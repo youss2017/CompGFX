@@ -16,7 +16,8 @@ VkPipeline Pipeline_CreateCompute(GraphicsContext _context, Shader* computeShade
     createInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     createInfo.stage.module = computeShader->GetShader();
     createInfo.stage.pName = computeShader->GetEntryPoint().c_str();
-    createInfo.stage.pSpecializationInfo = nullptr;
+    VkSpecializationInfo info = computeShader->GetSpecializationInfo();
+    createInfo.stage.pSpecializationInfo = &info;
     createInfo.layout = layout;
     createInfo.basePipelineHandle = nullptr;
     createInfo.basePipelineIndex = 0;
