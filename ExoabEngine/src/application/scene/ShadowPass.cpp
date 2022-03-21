@@ -6,9 +6,16 @@
 
 extern vk::VkContext gContext;
 
+constexpr float OFFSET = 10;
+constexpr glm::vec4 UP = glm::vec4(0, 1, 0, 0);
+constexpr glm::vec4 FORWARD = glm::vec4(0, 0, -1, 0);
+constexpr float SHADOW_DISTANCE = 100;
+
 namespace Application {
 	extern PlatformWindow* gWindow;
 }
+
+
 // TODO: Perform frustrm culling.
 Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, EntityController* ecs, Camera* camera, int size) : Scene(gContext->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
 	VkClearValue clear{};
@@ -24,7 +31,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	Shader vertex = Shader(gContext, "assets/shaders/shadow/shadow.vert");
 	Shader fragment = Shader(gContext, "assets/shaders/shadow/shadow.frag");
 
-	std::vector<ShaderBinding> bindings(3);
+	std::vector<ShaderBinding> bindings(4);
 	bindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	bindings[0].m_bindingID = 0;
 	bindings[0].m_hostvisible = false;
@@ -52,6 +59,15 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	bindings[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[2].m_ssbo = ecs->GetDrawDataArray();
 
+	bindings[3].m_type = SHADER_BINDING_UNIFORM_BUFFER;
+	bindings[3].m_bindingID = 3;
+	bindings[3].m_hostvisible = true;
+	bindings[3].m_useclientbuffer = false;
+	bindings[3].m_preinitalized = false;
+	bindings[3].m_additional_buffer_flags = (BufferType)0;
+	bindings[3].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[3].m_size = sizeof(glm::mat4);
+
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, &bindings);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount, poolSize);
@@ -63,13 +79,16 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	spec.m_CullMode = CullMode::CULL_BACK;
 	spec.m_DepthEnabled = true;
 	spec.m_DepthWriteEnable = true;
-	spec.m_DepthFunc = DepthFunction::ALWAYS;
+	spec.m_DepthFunc = DepthFunction::LESS;
 	spec.m_PolygonMode = PolygonMode::FILL;
 	spec.m_FrontFaceCCW = true;
 	spec.m_Topology = PolygonTopology::TRIANGLE_LIST;
 	spec.m_NearField = 0.0f;
 	spec.m_FarField = 1.0f;
 	mState = PipelineState_Create(gContext, spec, input, mFBO, mLayout, &vertex, &fragment);
+
+	for (int i = 0; i < gFrameOverlapCount; i++)
+		RecordCommands(i);
 }
 
 Application::ShadowPass::~ShadowPass()
@@ -81,23 +100,39 @@ Application::ShadowPass::~ShadowPass()
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
 }
-static float stime;
+
 void Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
 {
-	stime = dTimeFromStart;
+	glm::mat4 u_LightSpace = GetLightSpace();
+	IBuffer2 uniform = mSet->GetBuffer2(3, FrameIndex);
+	char8_t* mapped_ptr = Buffer2_Map(uniform);
+	memcpy(mapped_ptr, &u_LightSpace, sizeof(glm::mat4));
+	Buffer2_Flush(uniform, 0, VK_WHOLE_SIZE);
 }
 
 VkCommandBuffer Application::ShadowPass::Frame(uint32_t FrameIndex)
 {
+	return mCmds[FrameIndex];
+}
+
+glm::mat4 Application::ShadowPass::GetLightSpace()
+{
+	glm::vec3 pos = mLightPosition;
+	float size = 100.0f;
+	glm::mat4 lightSpace = glm::ortho(size, -size, size, -size, 1.0f, 25.0f) * glm::lookAt(pos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
+	return lightSpace;
+}
+
+void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
+{
 	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
 	VkCommandBuffer cmd = mCmds[FrameIndex];
-
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	
+
 	auto depth = mFBO.m_depth_attachment.value();
 
-	VkRenderingAttachmentInfoKHR attachmentInfo{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR};
+	VkRenderingAttachmentInfoKHR attachmentInfo{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
 	attachmentInfo.imageView = depth.GetView(FrameIndex);
 	attachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	attachmentInfo.resolveMode = VK_RESOLVE_MODE_NONE_KHR;
@@ -107,7 +142,7 @@ VkCommandBuffer Application::ShadowPass::Frame(uint32_t FrameIndex)
 	attachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	attachmentInfo.clearValue = depth.mClear;
 
-	VkRenderingInfoKHR renderingInfo{VK_STRUCTURE_TYPE_RENDERING_INFO_KHR};
+	VkRenderingInfoKHR renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO_KHR };
 	renderingInfo.flags = 0;
 	renderingInfo.renderArea = { {0, 0}, { mSize, mSize } };
 	renderingInfo.layerCount = 1;
@@ -118,7 +153,7 @@ VkCommandBuffer Application::ShadowPass::Frame(uint32_t FrameIndex)
 	renderingInfo.pStencilAttachment = nullptr;
 	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
 
-	VkImageMemoryBarrier barrier0{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+	VkImageMemoryBarrier barrier0{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier0.srcAccessMask = VK_ACCESS_NONE;
 	barrier0.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	barrier0.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -131,12 +166,10 @@ VkCommandBuffer Application::ShadowPass::Frame(uint32_t FrameIndex)
 	barrier0.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier0);
 
-	glm::mat4 u_LightSpace = glm::perspective(90.0f, 0.8f, 0.1f, 1000.0f) * mCamera->GetViewMatrix();
 	VkDescriptorSet set[1] = { mSet->m_set[FrameIndex] };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, set, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, mIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &u_LightSpace);
 	vkCmdDrawIndexedIndirect(cmd, mSet->GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
 
 	barrier0.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;
@@ -147,5 +180,4 @@ VkCommandBuffer Application::ShadowPass::Frame(uint32_t FrameIndex)
 
 	vkCmdEndRenderingKHR(cmd);
 	vkEndCommandBuffer(cmd);
-	return cmd;
 }

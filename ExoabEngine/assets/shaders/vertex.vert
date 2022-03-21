@@ -68,6 +68,7 @@ void main()
 	Normal = vertex.normal;
 	TexCoord = vertex.texcoord;
 	TexIndex = uint(instance.TexIndex[0]);
-	LightSpacePos = u_LightSpace * vec4(vec3(instance.mModel * vec4(vertex.position, 1.0)), 1.0);
-	gl_Position = u_ProjView * instance.mModel * vec4(vertex.position, 1.0);
+	vec4 FragPos = instance.mModel * vec4(vertex.position,1.0);
+	LightSpacePos = u_LightSpace * FragPos;
+	gl_Position = u_ProjView * FragPos;
 }

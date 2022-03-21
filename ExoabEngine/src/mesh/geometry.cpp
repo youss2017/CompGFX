@@ -173,7 +173,7 @@ namespace Mesh
 			std::vector<std::string> geo_split = Utils::StringSplitter(" ", geo);
 			if (geo_split.size() != 2) {
 				char log[150];
-				sprintf(log, "Syntax error in Geometry Configuration file [%s] at line %i", configPath.c_str(), line);
+				sprintf(log, "Syntax error in Geometry Configuration file [%s] at line %i", configPath.c_str(), line + 1);
 				log_error(log, __FILE__, __LINE__);
 				throw std::runtime_error(log);
 			}

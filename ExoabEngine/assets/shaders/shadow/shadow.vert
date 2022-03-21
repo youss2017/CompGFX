@@ -17,8 +17,8 @@ layout (scalar, binding = 2) readonly buffer DrawSSBO
 	DrawData u_Draws[];
 };
 
-layout (push_constant) uniform pushblock {
-    mat4 u_ProjView;
+layout (scalar, binding = 3) uniform MVBuffer {
+	mat4 u_ProjView;
 };
 
 void main() {

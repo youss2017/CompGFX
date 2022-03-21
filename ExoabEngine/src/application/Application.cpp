@@ -97,7 +97,7 @@ bool Application::LoadAssets()
 	gECS = new EntityController(gGeomtry);
 
 	srand(140);
-	uint32_t instanceCount = 100;
+	uint32_t instanceCount = 5;
 	uint32_t instanceSize = instanceCount * sizeof(ShaderTypes::InstanceData);
 	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
 	for (unsigned int i = 0; i < instanceCount; i++) {
@@ -106,14 +106,14 @@ bool Application::LoadAssets()
 		float z = (rand() % 10) * 5;
 		glm::vec3 offset = glm::vec3(x, y, z + 2);
 		offset = offset - (offset / glm::vec3(2.0));
-		instance[i].mModel = glm::translate(glm::scale(glm::mat4(1.0), glm::vec3(1)), offset);
+		instance[i].mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
 		instance[i].mTextureID[0] = 0;
 	}
 
 	IEntity cube = gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE);
 	cube->m_geometryID = EntityGeometryID::ENTITY_GEOMETRY_CUBE;
 	cube->mInstanceCount = instanceCount;
-	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(gContext, BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::GPU_ONLY, true);
+	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(gContext, BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::CPU_TO_CPU, true);
 	cube->mCulledInstanceBuffer = Buffer2_Create(gContext, BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true);
 	
 	return true;
@@ -133,7 +133,7 @@ bool Application::CreateResources()
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, gECS, &gCamera, 1024);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
-	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, geometryPassConfig, gFBO0, cullPass, &gCamera, gECS, shadow);
+	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, geometryPassConfig, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
 	skybox = new SkyboxPass("assets/textures/cubemap4.png", geoPass, &gCamera);
 	UI::CubemapLODMax = skybox->GetMaxLOD();
 
@@ -203,6 +203,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	{
 		UI::StateChanged = false;
 		geoPass->SetWireframeMode(UI::ShowWireframe);
+		//Graphics3D_SetSyncInterval(gGfx, UI::VSync);
 	}
 	if (!UI::LockFrustrum) {
 		memcpy(&gLockedCamera, &gCamera, sizeof(Camera));
@@ -215,7 +216,16 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		cullPass->GetComputeShaderStatistics(false, frame.m_FrameIndex, UI::FrustrumCullingTime, UI::FrustrumInvocations);
 		geoPass->GetStatistics(false, frame.m_FrameIndex, UI::GeometryPassTime, UI::VertexInvocations, UI::FragmentInvocations);
 	}
+	auto e = gECS->GetEntity(EntityGeometryID(0));
+	ShaderTypes::InstanceData* cube0 = (ShaderTypes::InstanceData*)Buffer2_Map(e->mInstanceBuffer);
+	glm::vec3 pos = glm::vec3(UI::L_x, UI::L_y, UI::L_z);
+	cube0->mModel = glm::translate(glm::mat4(1.0), pos);
+
 	skybox->SetLOD(UI::CubemapLOD);
+
+	shadow->SetShadowLightPosition(pos);
+	geoPass->SetLightDirection(glm::vec3(0.0) - glm::normalize(pos));
+	geoPass->SetLightSpace(shadow->GetLightSpace());
 
 	cullPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 	geoPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
@@ -229,7 +239,7 @@ void Application::Render()
 {
 	PROFILE_FUNCTION();
 	VkDevice device = gContext->defaultDevice;
-	const auto& frame = Graphics3D_GetFrame(gGfx);
+	auto& frame = Graphics3D_GetFrame(gGfx);
 	uint32_t FrameIndex = frame.m_FrameIndex;
 	
 	if (gSwapchain.PrepareNextFrame(UINT64_MAX, frame.m_RenderSemaphore, nullptr, nullptr) != VK_SUCCESS) {
@@ -257,12 +267,14 @@ void Application::Render()
 
 	if (s_EnableImGui)
 		UI::RenderUI();
-	if (UI::ShowDepthBuffer) {
-		//gSwapchain.Present(gFBO0.m_depth_attachment.value().GetImage(FrameIndex), gFBO0.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
-		gSwapchain.Present(shadow->mFBO.m_depth_attachment.value().GetImage(FrameIndex), shadow->mFBO.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+	if (UI::CurrentOutputBuffer == 0) {
+		gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
 	}
-	else {
-		gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, UI::ShowDepthBuffer);
+	else if(UI::CurrentOutputBuffer == 1) {
+		gSwapchain.Present(gFBO0.m_depth_attachment.value().GetImage(FrameIndex), gFBO0.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, true);
+	}
+	else if (UI::CurrentOutputBuffer == 2) {
+		gSwapchain.Present(shadow->GetDepthImage(FrameIndex), shadow->GetDepthView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &frame.m_PresentSemaphore, true);
 	}
 	Graphics3D_NextFrame(gGfx);
 }

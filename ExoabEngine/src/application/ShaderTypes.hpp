@@ -12,7 +12,7 @@ namespace ShaderTypes {
 		struct GlobalData {
 			float u_DeltaTime;
 			float u_TimeFromStart;
-			vec4 u_CameraForward;
+			vec4 u_LightDirection;
 			mat4 u_View;
 			mat4 u_Projection;
 			mat4 u_ProjView;

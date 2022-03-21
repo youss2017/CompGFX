@@ -7,30 +7,41 @@
 
 namespace Application {
 
-	struct ShadowLight {
-		glm::vec3 mPosition;
-		glm::vec3 mDirection;
-	};
-
 	class ShadowPass : public Scene {
 
 	public:
 		ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, EntityController* ecs, Camera* camera, int size);
 		~ShadowPass();
 
-		inline void SetShadowLight(const ShadowLight& light) { mLight = light; }
-		inline void SetShadowLight(glm::vec3 position, glm::vec3 direction) { mLight.mPosition = position; mLight.mDirection = glm::normalize(direction); }
+		inline void SetShadowLightPosition(glm::vec3 position) { mLightPosition = position; }
 
 		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		VkCommandBuffer Frame(uint32_t FrameIndex);
 
-		Framebuffer mFBO;
+		ITexture2 GetDepthAttachment() {
+			return mFBO.m_depth_attachment.value().GetAttachment();
+		}
+
+		VkImage GetDepthImage(uint32_t frameIndex) {
+			return mFBO.m_depth_attachment.value().GetImage(frameIndex);
+		}
+
+		VkImageView GetDepthView(uint32_t frameIndex) {
+			return mFBO.m_depth_attachment.value().GetView(frameIndex);
+		}
+
+		glm::mat4 GetLightSpace();
+
 	private:
+		void RecordCommands(uint32_t FrameIndex);
+
+	private:
+		Framebuffer mFBO;
 		VkDescriptorPool mPool;
 		ShaderSet mSet;
 		VkPipelineLayout mLayout;
 		IPipelineState mState;
-		ShadowLight mLight;
+		glm::vec3 mLightPosition;
 	private:
 		Camera* mCamera;
 		EntityController* mECS;

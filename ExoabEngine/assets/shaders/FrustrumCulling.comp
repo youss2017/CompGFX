@@ -52,8 +52,12 @@ void main()
     mat4 model = instancePtr.v[instanceIndex].mModel;
 
     vec4 center = model * vec4(u_GeoData[draw.mGeometryDataIndex].bounding_sphere_center, 1.0);
-    float radius = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius * RadiusEpsillion;
-    
+    // The Object may have been rescaled therefore we must alsos scale the radius
+    //float radius = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius * RadiusEpsillion;
+    vec3 radiusxyz = u_GeoData[draw.mGeometryDataIndex].bounding_sphere_radius * vec3(model[0][0], model[1][1], model[2][2]);
+    // choose the biggest radius in any direction
+    float radius = max(max(radiusxyz.x, radiusxyz.y), radiusxyz.z) * RadiusEpsillion;
+
     // Is this instance visible?
     bool visible = true;
     for(int i = 0; i < 5; i++) {

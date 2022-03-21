@@ -9,11 +9,15 @@ namespace Application {
 	extern PlatformWindow* gWindow;
 }
 
-Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ShadowPass* shadowPass) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext);
+	mShadowSampler = vk::Gfx_CreateSampler(gContext, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, 
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
 	mWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
 	mStatueTex = Texture2_CreateFromFile(gContext, "assets/textures/statue.jpg", true);
-
+	mLightDirection = glm::vec4(0.0);
 	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT);
 	
@@ -74,25 +78,65 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	geometryPassFragment[1].m_preinitalized = false;
 	geometryPassFragment[1].m_additional_buffer_flags = (BufferType)0;
 	geometryPassFragment[1].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	geometryPassFragment[1].m_sampler.push_back(mSampler);
-	geometryPassFragment[1].m_textures.push_back(shadowPass->mFBO.m_depth_attachment.value().GetAttachment());
+	geometryPassFragment[1].m_sampler.push_back(mShadowSampler);
+	geometryPassFragment[1].m_textures.push_back(shadowMap);
 	geometryPassFragment[1].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	mGeoMaterial = Material_Create(gContext, fbo, &geoConfig, nullptr, { {0, &geometryPass}, {1, &geometryPassFragment } }, {});
 	Map map = Map_Create(100, 2, 100, 2, 1);
 	mMapVertices = Buffer2_CreatePreInitalized(gContext, BufferType::BUFFER_TYPE_VERTEX, map.m_vertices.data(), map.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY, false);
 	mMapIndices = Buffer2_CreatePreInitalized(gContext, BufferType::BUFFER_TYPE_INDEX, map.m_indices.data(), map.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false);
-	mIndicesCount = map.m_totalIndicesCount;
+	mMapIndicesCount = map.m_totalIndicesCount;
 
-	std::vector<ShaderBinding> mapBindings(3);
-	mapBindings[0].m_type = SHADER_BINDING_UNIFORM_BUFFER;
-	mapBindings[0].m_bindingID = 0;
-	mapBindings[0].m_hostvisible = true;
-	mapBindings[0].m_useclientbuffer = false;
-	mapBindings[0].m_preinitalized = true;
-	mapBindings[0].m_additional_buffer_flags = (BufferType)0;
-	mapBindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	mapBindings[0].m_buffer = mGeoMaterial->m_sets[0]->GetBuffer2Array(1);
+	std::vector<ShaderBinding> terrainBindings(3);
+	terrainBindings[0].m_type = SHADER_BINDING_UNIFORM_BUFFER;
+	terrainBindings[0].m_bindingID = 0;
+	terrainBindings[0].m_hostvisible = true;
+	terrainBindings[0].m_useclientbuffer = false;
+	terrainBindings[0].m_preinitalized = true;
+	terrainBindings[0].m_additional_buffer_flags = (BufferType)0;
+	terrainBindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainBindings[0].m_buffer = mGeoMaterial->m_sets[0]->GetBuffer2Array(1);
+
+	terrainBindings[1].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
+	terrainBindings[1].m_bindingID = 1;
+	terrainBindings[1].m_hostvisible = false;
+	terrainBindings[1].m_useclientbuffer = false;
+	terrainBindings[1].m_preinitalized = false;
+	terrainBindings[1].m_additional_buffer_flags = (BufferType)0;
+	terrainBindings[1].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainBindings[1].m_sampler.push_back(mSampler);
+	terrainBindings[1].m_textures.push_back(mWoodTex);
+	terrainBindings[1].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	terrainBindings[2].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
+	terrainBindings[2].m_bindingID = 2;
+	terrainBindings[2].m_hostvisible = false;
+	terrainBindings[2].m_useclientbuffer = false;
+	terrainBindings[2].m_preinitalized = false;
+	terrainBindings[2].m_additional_buffer_flags = (BufferType)0;
+	terrainBindings[2].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainBindings[2].m_sampler.push_back(mShadowSampler);
+	terrainBindings[2].m_textures.push_back(shadowMap);
+	terrainBindings[2].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	std::vector<VkDescriptorPoolSize> poolSizes;
+	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &terrainBindings);
+	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount, poolSizes);
+	mMapSet = ShaderBinding_Create(gContext, mPool, 0, &terrainBindings);
+	mMapLayout = ShaderBinding_CreatePipelineLayout(gContext, { mMapSet }, {});
+	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
+	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
+	mapVertex.SetSpecializationConstant<float>(0, 1.0f);
+	mapVertex.SetSpecializationConstant<float>(1, 1.0f);
+	mapVertex.SetSpecializationConstant<float>(2, 1.0f);
+	PipelineVertexInputDescription input;
+	input.AddInputElement("inPosition", 0, 0, 4, true, false, false);
+	input.AddInputElement("inNormal", 1, 0, 4, true, false, false);
+	input.AddInputElement("inTextureIDs", 2, 0, 4, false, false, false);
+	input.AddInputElement("inTextureWeights", 3, 0, 4, true, false, false);
+	input.AddInputElement("inTexCoords", 4, 0, 2, true, false, false);
+	mMapState = PipelineState_Create(gContext, mGeoMaterial->m_pipeline_state->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
@@ -102,9 +146,14 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 
 Application::GeometryPass::~GeometryPass() {
 	Super_Scene();
+	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
+	ShaderBinding_DestroySets(gContext, { mMapSet });
+	vkDestroyPipelineLayout(mDevice, mMapLayout, nullptr);
+	PipelineState_Destroy(mMapState);
 	Buffer2_Destroy(mMapVertices);
 	Buffer2_Destroy(mMapIndices);
 	vkDestroySampler(mDevice, mSampler, nullptr);
+	vkDestroySampler(mDevice, mShadowSampler, nullptr);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyQueryPool(mDevice, mInvocationQuery, nullptr);
 	Texture2_Destroy(mWoodTex);
@@ -121,15 +170,14 @@ void Application::GeometryPass::Prepare(uint32_t FrameIndex, float dTime, float 
 	void* ptr = Buffer2_Map(globalDataBuffer);
 	ShaderTypes::GlobalData data;
 	glm::mat4 view = mCamera->GetViewMatrix();
-	glm::mat4 inverted = glm::inverse(view);
-	data.u_CameraForward = glm::vec4(-glm::normalize(glm::vec3(inverted[2])), 1.0);
+	data.u_LightDirection = mLightDirection;
 
 	data.u_DeltaTime = dTime;
 	data.u_TimeFromStart = dTimeFromStart;
 	data.u_View = view;
 	data.u_Projection = proj;
 	data.u_ProjView = proj * view;
-	data.u_LightSpace = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 1000.0f) * mCamera->GetViewMatrix();
+	data.u_LightSpace = mLightSpace;
 	memcpy(ptr, &data, sizeof(data));
 	Buffer2_Flush(globalDataBuffer, 0, VK_WHOLE_SIZE);
 }
@@ -144,6 +192,19 @@ void Application::GeometryPass::SetWireframeMode(bool mode)
 	PipelineSpecification specification = mGeoMaterial->m_pipeline_state->m_spec;
 	specification.m_PolygonMode = mode ? PolygonMode::LINE : PolygonMode::FILL;
 	Material_RecreatePipeline(mGeoMaterial, specification);
+	PipelineState_Destroy(mMapState);
+	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
+	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
+	PipelineVertexInputDescription input;
+	input.AddInputElement("inPosition", 0, 0, 4, true, false, false);
+	input.AddInputElement("inNormal", 1, 0, 4, true, false, false);
+	input.AddInputElement("inTextureIDs", 2, 0, 4, false, false, false);
+	input.AddInputElement("inTextureWeights", 3, 0, 4, true, false, false);
+	input.AddInputElement("inTexCoords", 4, 0, 2, true, false, false);
+	mapVertex.SetSpecializationConstant<float>(0, 5.0f);
+	mapVertex.SetSpecializationConstant<float>(1, 5.0f);
+	mapVertex.SetSpecializationConstant<float>(2, 5.0f);
+	mMapState = PipelineState_Create(gContext, mGeoMaterial->m_pipeline_state->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		vkResetCommandPool(mDevice, mPools[i], 0);
 		this->RecordCommands(i);
@@ -239,6 +300,14 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mGeoMaterial->m_layout, 0, 2, geometrySets, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, mIndicsSSBO->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray[i]->m_vk_buffer->m_buffer, 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
+
+	VkDescriptorSet mapSet[1] = { mMapSet->m_set[FrameIndex] };
+	VkDeviceSize offset[1] = { 0 };
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapState->m_pipeline);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &mMapVertices->m_vk_buffer->m_buffer, offset);
+	vkCmdBindIndexBuffer(cmd, mMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexed(cmd, mMapIndicesCount, 1, 0, 0, 0);
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;

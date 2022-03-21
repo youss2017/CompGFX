@@ -10,6 +10,8 @@
 #define KernalSizeX 64
 #define KernalSizeY 8
 #define DisableCulling (false)
+// Big objects may be completely outside one frustrum plane, however they may be partialy inside another frustrum plane
+// the radius epsillion multiples the radius to reduce incorrect culling results, this is a hotfix.
 #define RadiusEpsillion (2.5f)
 
 extern vk::VkContext gContext;

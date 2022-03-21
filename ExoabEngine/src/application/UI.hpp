@@ -3,7 +3,6 @@
 namespace UI
 {
 	extern bool StateChanged;
-	extern bool ShowDepthBuffer;
 	extern bool ShowWireframe;
 	extern bool LockFrustrum;
 	extern double FrameRate;
@@ -18,6 +17,9 @@ namespace UI
 	extern int CubemapLOD;
 	extern int CubemapLODMax;
 	extern float C_x, C_y, C_z;
+	extern int CurrentOutputBuffer;
+	extern bool VSync;
+	extern float L_x, L_y, L_z;
 	void Initalize(void* context, void* gfx);
 	void RenderUI();
 }

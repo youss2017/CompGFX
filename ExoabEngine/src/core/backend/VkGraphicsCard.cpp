@@ -574,7 +574,7 @@ namespace vk
 		createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 		createInfo.minLod = minLod;
 		createInfo.maxLod = maxLod;
-		createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		createInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 		VkSampler sampler;
 		vkCreateSampler(context->defaultDevice, &createInfo, nullptr, &sampler);

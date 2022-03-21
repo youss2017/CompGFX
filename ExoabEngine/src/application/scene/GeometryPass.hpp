@@ -1,7 +1,6 @@
 #pragma once
 #include "Scene.hpp"
 #include "FrustrumCullPass.hpp"
-#include "ShadowPass.hpp"
 #include "../Camera.hpp"
 #include "../ecs/EntityController.hpp"
 #include <backend/VkGraphicsCard.hpp>
@@ -15,12 +14,14 @@ namespace Application {
 
 	class GeometryPass : public Scene {
 	public:
-		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ShadowPass* shadowPass);
+		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
 		~GeometryPass();
 		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		VkCommandBuffer Frame(uint32_t FrameIndex);
 		void SetWireframeMode(bool mode);
 		void GetStatistics(bool wait, uint32_t frameIndex, double& passTime, uint64_t& vertexInvocations, uint64_t& fragmentInvocations);
+		void SetLightDirection(glm::vec3 lightDirection) { mLightDirection = glm::vec4(glm::normalize(lightDirection), 1.0); }
+		void SetLightSpace(glm::mat4 lightSpace) { mLightSpace = lightSpace; }
 	private:
 		void RecordCommands(uint32_t FrameIndex);
 		IBuffer2 mIndicsSSBO;
@@ -28,13 +29,20 @@ namespace Application {
 	private:
 		Camera* mCamera;
 		EntityController* mECS;
+		glm::vec4 mLightDirection;
+		glm::mat4 mLightSpace;
 	private:
+		VkDescriptorPool mPool;
+		ShaderSet mMapSet;
+		VkPipelineLayout mMapLayout;
+		IPipelineState mMapState;
 		IBuffer2 mMapVertices;
 		IBuffer2 mMapIndices;
-		int mIndicesCount;
+		int mMapIndicesCount;
 		VkQueryPool mQuery;
 		VkQueryPool mInvocationQuery;
 		VkSampler mSampler;
+		VkSampler mShadowSampler;
 		ITexture2 mWoodTex, mStatueTex;
 		Material* mGeoMaterial;
 		Framebuffer mFBO;
