@@ -12,7 +12,7 @@ namespace Application {
 	class SkyboxPass : public Scene {
 
 	public:
-		SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera);
+		SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera, bool UsingDebugPass);
 		~SkyboxPass();
 
 		void SetLOD(int lod) { mLod = glm::clamp(lod, 0, (int)mCubeMap->mMipCount); }
@@ -22,6 +22,7 @@ namespace Application {
 		VkCommandBuffer Frame(uint32_t FrameIndex);
 
 	private:
+		bool mUsingDebugPass;
 		int mLod = 0;
 		Camera* mCamera;
 		GeometryPass* mGeoPass;

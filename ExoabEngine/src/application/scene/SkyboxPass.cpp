@@ -10,8 +10,7 @@ namespace Application {
 }
 
 
-Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera) : Scene(gContext->defaultDevice, true), mCubeMap(CubeMap_Create(environmentMapPath, VK_FORMAT_R8G8B8A8_UNORM)), mCamera(camera), mGeoPass(geoPass) {
-
+Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera, bool UsingDebugPass) : Scene(gContext->defaultDevice, true), mCubeMap(CubeMap_Create(environmentMapPath, VK_FORMAT_R8G8B8A8_UNORM)), mCamera(camera), mGeoPass(geoPass), mUsingDebugPass(UsingDebugPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 	std::vector<ShaderBinding> bindings(1);
 	bindings[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
@@ -45,7 +44,7 @@ Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, Geome
 
 Application::SkyboxPass::~SkyboxPass()
 {
-	Super_Scene();
+	Super_Scene_Destroy();
 	Texture2_Destroy(mCubeMap);
 	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
@@ -72,7 +71,7 @@ VkCommandBuffer Application::SkyboxPass::Frame(uint32_t FrameIndex)
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
-	renderingInfo.flags = VK_RENDERING_RESUMING_BIT;
+	renderingInfo.flags = mUsingDebugPass ? (VK_RENDERING_RESUMING_BIT | VK_RENDERING_SUSPENDING_BIT) : VK_RENDERING_RESUMING_BIT;
 	renderingInfo.renderArea = { {0, 0}, { mGeoPass->mFBO.m_width, mGeoPass->mFBO.m_height } };
 	renderingInfo.layerCount = 1;
 	renderingInfo.viewMask = 0;

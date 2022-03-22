@@ -11,7 +11,10 @@ namespace Application {
 
 Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext);
-	mShadowSampler = vk::Gfx_CreateSampler(gContext, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+	mShadowSampler = vk::Gfx_CreateSampler(gContext,
+		VK_FILTER_NEAREST,
+		VK_FILTER_NEAREST,
+		VK_SAMPLER_MIPMAP_MODE_LINEAR,
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, 
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
@@ -145,7 +148,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 }
 
 Application::GeometryPass::~GeometryPass() {
-	Super_Scene();
+	Super_Scene_Destroy();
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderBinding_DestroySets(gContext, { mMapSet });
 	vkDestroyPipelineLayout(mDevice, mMapLayout, nullptr);

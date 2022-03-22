@@ -7,6 +7,7 @@
 #include "material_system/Material.hpp"
 #include <backend/GUI.h>
 #include <GLFW/glfw3.h>
+#define DEBUG_PRINTF 0
 
 // [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
 // [NOTE]: there will be a mismatch of format between pipeline state objects and render pass
@@ -109,7 +110,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
                                                 VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                                                 VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-#if defined(_DEBUG)
+#if DEBUG_PRINTF
                                                 VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
 #endif
                                                 },

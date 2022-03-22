@@ -203,5 +203,5 @@ struct PipelineState
 typedef PipelineState *IPipelineState;
 
 IPipelineState PipelineState_Create(GraphicsContext context, const PipelineSpecification &spec, PipelineVertexInputDescription& input_description, 
-    Framebuffer fbo, VkPipelineLayout layout, Shader *vertex, Shader *fragment);
+    Framebuffer fbo, VkPipelineLayout layout, Shader* vertex, Shader* fragment, const std::vector<VkDynamicState>& dynamicStates = {});
 void PipelineState_Destroy(IPipelineState state);

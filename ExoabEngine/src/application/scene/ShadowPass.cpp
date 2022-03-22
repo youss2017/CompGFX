@@ -76,7 +76,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec;
-	spec.m_CullMode = CullMode::CULL_BACK;
+	spec.m_CullMode = CullMode::CULL_NONE;
 	spec.m_DepthEnabled = true;
 	spec.m_DepthWriteEnable = true;
 	spec.m_DepthFunc = DepthFunction::LESS;
@@ -93,7 +93,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 
 Application::ShadowPass::~ShadowPass()
 {
-	Super_Scene();
+	Super_Scene_Destroy();
 	mFBO.DestroyAllBoundAttachments();
 	PipelineState_Destroy(mState);
 	ShaderBinding_DestroySets(gContext, { mSet });
@@ -118,8 +118,9 @@ VkCommandBuffer Application::ShadowPass::Frame(uint32_t FrameIndex)
 glm::mat4 Application::ShadowPass::GetLightSpace()
 {
 	glm::vec3 pos = mLightPosition;
-	float size = 100.0f;
-	glm::mat4 lightSpace = glm::ortho(size, -size, size, -size, 1.0f, 25.0f) * glm::lookAt(pos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
+	float size = 500.0;
+	//glm::perspective(90.0f, 1.0f, 0.1f, 1000.0f)
+	glm::mat4 lightSpace = glm::ortho(size, -size, size, -size, 1.0f, 8.0f) * glm::lookAt(pos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
 	return lightSpace;
 }
 

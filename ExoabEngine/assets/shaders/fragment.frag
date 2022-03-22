@@ -32,7 +32,7 @@ float ShadowCalculation()
     if(pos.z > 1.0) {
         pos.z = 1.0;
     }
-    float depth = texture(shadowMap, pos.xy).r + 0.05;
+    float depth = texture(shadowMap, pos.xy).r + 0.1;
     return depth < pos.z ? 1.0 : 0.0;
 }
 

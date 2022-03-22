@@ -121,7 +121,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 
 Application::FrustumCullPass::~FrustumCullPass()
 {
-	Super_Scene();
+	Super_Scene_Destroy();
 	vkDestroyPipelineLayout(mDevice, mFrustrumLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderBinding_DestroySets(gContext, { mSet });

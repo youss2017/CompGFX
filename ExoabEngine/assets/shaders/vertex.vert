@@ -42,25 +42,6 @@ layout (location = 3) out vec4 LightSpacePos;
 #define vertex u_Vertices[gl_VertexIndex]
 #define draw u_Draws[gl_DrawIDARB]
 
-vec4 InvertQuat(vec4 quat)
-{
-	return vec4(quat.x, quat.yzw * -1.0);
-}
-
-vec4 MulQuat(vec4 q1, vec4 q2)
-{
-	float a = q1.x; float e = q2.x;
-	float b = q1.y; float f = q2.y;
-	float c = q1.z; float g = q2.z;
-	float d = q1.w; float h = q2.w;
-
-	float r = (a*e) - (b*f) - (c*g) - (d*h);
-	float i = (a*f) + (b*e) + (c*h) - (d*g);
-	float j = (a*g) - (b*h) + (c*e) + (d*f);
-	float k = (a*h) + (b*g) - (c*f) + (d*e);
-	return vec4(r, i, j, k);
-}
-
 void main()
 {
 	GeometryData geoData = u_ModelData[draw.mGeometryDataIndex];
@@ -68,7 +49,7 @@ void main()
 	Normal = vertex.normal;
 	TexCoord = vertex.texcoord;
 	TexIndex = uint(instance.TexIndex[0]);
-	vec4 FragPos = instance.mModel * vec4(vertex.position,1.0);
-	LightSpacePos = u_LightSpace * FragPos;
+	vec4 FragPos = instance.mModel * vec4(vertex.position, 1.0);
+	LightSpacePos = u_LightSpace * vec4(FragPos.xyz, 1.0);
 	gl_Position = u_ProjView * FragPos;
 }

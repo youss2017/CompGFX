@@ -236,10 +236,9 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	shadow->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 	debugPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
 
-	//srand(0x42 + (int)time);
-	srand((int)time);
+	glm::vec3 color = { rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX };
 	for (int i = 0; i < 100; i++) {
-		debugPass->DrawCube(pos, { 1.0, 1.0, 1.0 }, { rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX });
+		debugPass->DrawCube(pos, { 1.0, 1.0, 1.0 }, color);
 		pos += glm::vec3(3.0, 0.0, 0.0);
 	}
 

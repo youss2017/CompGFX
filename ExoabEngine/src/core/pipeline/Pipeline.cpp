@@ -139,7 +139,7 @@ static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexIn
 }
 
 IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpecification &spec, PipelineVertexInputDescription& input_description,
-    Framebuffer fbo, VkPipelineLayout layout, Shader *vertex, Shader *fragment)
+    Framebuffer fbo, VkPipelineLayout layout, Shader *vertex, Shader *fragment, const std::vector<VkDynamicState>& dynamicStates)
 {
     vk::VkContext context = ToVKContext(_context);
     std::array<VkPipelineShaderStageCreateInfo, 2> Stages;
@@ -293,14 +293,11 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     ColorBlendState.blendConstants[3] = 0.0;
 
     VkPipelineDynamicStateCreateInfo DynamicState;
-    std::array<VkDynamicState, 0> DynamicStates;
-    //DynamicStates[0] = VK_DYNAMIC_STATE_VIEWPORT;
-    //DynamicStates[1] = VK_DYNAMIC_STATE_SCISSOR;
     DynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     DynamicState.pNext = nullptr;
     DynamicState.flags = 0;
-    DynamicState.dynamicStateCount = DynamicStates.size();
-    DynamicState.pDynamicStates = DynamicStates.data();
+    DynamicState.dynamicStateCount = dynamicStates.size();
+    DynamicState.pDynamicStates = dynamicStates.data();
 
     VkPipelineRenderingCreateInfo dynamicCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
     dynamicCreateInfo.viewMask = 0;

@@ -27,7 +27,7 @@ namespace Application {
 		virtual VkCommandBuffer Frame(uint32_t FrameIndex) = 0;
 
 	protected:
-		void Super_Scene() {
+		void Super_Scene_Destroy() {
 			for (int i = 0; i < gFrameOverlapCount; i++) {
 				vkDestroyCommandPool(mDevice, mPools[i], nullptr);
 			}
