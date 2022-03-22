@@ -38,5 +38,5 @@ float ShadowCalculation()
 
 void main() {
 	float dp = clamp(dot(u_LightDirection.xyz, Normal), 0.2, 1.0);
-	FragColor = texture(textures[TexIndex], TexCoord) * dp * clamp((1.0 - ShadowCalculation()), 0.5, 1.0);
+	FragColor = texture(textures[TexIndex], TexCoord) * dp; //* clamp((1.0 - ShadowCalculation()), 0.5, 1.0);
 }	

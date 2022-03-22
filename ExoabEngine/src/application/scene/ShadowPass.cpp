@@ -76,12 +76,12 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec;
-	spec.m_CullMode = CullMode::CULL_NONE;
+	spec.m_CullMode = CullMode::CULL_BACK;
 	spec.m_DepthEnabled = true;
 	spec.m_DepthWriteEnable = true;
 	spec.m_DepthFunc = DepthFunction::LESS;
 	spec.m_PolygonMode = PolygonMode::FILL;
-	spec.m_FrontFaceCCW = true;
+	spec.m_FrontFaceCCW = false;
 	spec.m_Topology = PolygonTopology::TRIANGLE_LIST;
 	spec.m_NearField = 0.0f;
 	spec.m_FarField = 1.0f;
@@ -119,8 +119,9 @@ glm::mat4 Application::ShadowPass::GetLightSpace()
 {
 	glm::vec3 pos = mLightPosition;
 	float size = 500.0;
+	// 
 	//glm::perspective(90.0f, 1.0f, 0.1f, 1000.0f)
-	glm::mat4 lightSpace = glm::ortho(size, -size, size, -size, 1.0f, 8.0f) * glm::lookAt(pos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 lightSpace = glm::ortho(-100.0f, +100.0f, -100.0f, +100.0f, -100.0f, +100.0f) * glm::lookAt(pos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
 	return lightSpace;
 }
 

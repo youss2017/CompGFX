@@ -76,7 +76,7 @@ void UI::RenderUI()
     ImGui::Text("%.2f ms / %llu -- (Geo) Frustrum Pass", FrustrumCullingTime, FrustrumInvocations);
     ImGui::Text("InDraws %d, OutDraws %d -> %.2f%%", int(InputDrawCount), int(OutputDrawCount), 100.0 * (OutputDrawCount / InputDrawCount));
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
-    ImGui::SliderFloat3("Light", &L_x, -100.0, 100.0f);
+    ImGui::SliderFloat3("Light", &L_x, -35.0, 35.0f);
     ImGui::SameLine();
     if (ImGui::Button("Reset")) {
         L_x = L_y = L_z = 0.0f;
