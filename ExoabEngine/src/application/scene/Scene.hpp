@@ -23,10 +23,12 @@ namespace Application {
 		Scene(const Scene& other) = delete;
 		Scene(const Scene&& other) = delete;
 
-		virtual void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) = 0;
-		virtual VkCommandBuffer Frame(uint32_t FrameIndex) = 0;
+		virtual void ReloadShaders() = 0;
+		virtual VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) = 0;
 
 	protected:
+		virtual void RecordCommands(uint32_t FrameIndex) = 0;
+
 		void Super_Scene_Destroy() {
 			for (int i = 0; i < gFrameOverlapCount; i++) {
 				vkDestroyCommandPool(mDevice, mPools[i], nullptr);

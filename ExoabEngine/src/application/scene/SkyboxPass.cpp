@@ -53,21 +53,31 @@ Application::SkyboxPass::~SkyboxPass()
 	PipelineState_Destroy(mState);
 }
 
-void Application::SkyboxPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
-{
+void Application::SkyboxPass::ReloadShaders() {
+	Shader skyboxVert = Shader(gContext, "assets/shaders/skybox.vert");
+	Shader skyboxFrag = Shader(gContext, "assets/shaders/skybox.frag");
+	PipelineSpecification spec = mState->m_spec;
+	PipelineVertexInputDescription input;
+	PipelineState_Destroy(mState);
+	mState = PipelineState_Create(gContext, spec, input, mGeoPass->mFBO, mLayout, &skyboxVert, &skyboxFrag);
 }
 
-VkCommandBuffer Application::SkyboxPass::Frame(uint32_t FrameIndex)
+VkCommandBuffer Application::SkyboxPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
+	RecordCommands(FrameIndex);
+	return mCmds[FrameIndex];
+}
+
+void Application::SkyboxPass::RecordCommands(uint32_t FrameIndex)
 {
 	// We have to reset command pool to update push constants
 	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
 	VkFormat colorFormat = mGeoPass->mFBO.m_color_attachments[0].GetFormat();
 	VkFormat depthFormat = mGeoPass->mFBO.m_depth_attachment.value().GetFormat();
-	
+
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	
+
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
@@ -113,5 +123,4 @@ VkCommandBuffer Application::SkyboxPass::Frame(uint32_t FrameIndex)
 	vkCmdEndRenderingKHR(cmd);
 
 	vkEndCommandBuffer(cmd);
-	return cmd;
 }

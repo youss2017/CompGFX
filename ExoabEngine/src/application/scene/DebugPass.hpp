@@ -20,13 +20,15 @@ namespace Application {
 		DebugPass(const Framebuffer& fbo);
 		~DebugPass();
 
+		void ReloadShaders();
 		void SetProjectionView(const glm::mat4& proj, const glm::mat4& view) { mProjView = proj * view; }
 		// Call prepare before doing anything else
-		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
+		void NewFrame() { mCubes.clear(); }
+		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		void DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color);
 
-		// Call this when you are done rendering debug objects
-		VkCommandBuffer Frame(uint32_t FrameIndex);
+	private:
+		void RecordCommands(uint32_t FrameIndex);
 
 	private:
 		Framebuffer mFBO;

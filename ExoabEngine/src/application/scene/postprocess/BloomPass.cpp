@@ -1,18 +1,24 @@
 #include "BloomPass.hpp"
+#include <backend/VkGraphicsCard.hpp>
 
-Application::BloomPass::BloomPass() : Scene(nullptr, true)
-{
+extern vk::VkContext gContext;
+
+Application::BloomPass::BloomPass(const Framebuffer& fbo) : Scene(gContext->defaultDevice, true) {
+
 }
 
-Application::BloomPass::~BloomPass()
-{
+Application::BloomPass::~BloomPass() {
+	Super_Scene_Destroy();
 }
 
-void Application::BloomPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
-{
+void Application::BloomPass::ReloadShaders() {
+
 }
 
-VkCommandBuffer Application::BloomPass::Frame(uint32_t FrameIndex)
-{
-	return VkCommandBuffer();
+VkCommandBuffer  Application::BloomPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
+	return mCmds[FrameIndex];
+}
+
+void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
+
 }

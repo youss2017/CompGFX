@@ -14,9 +14,13 @@ namespace Application {
 		// This camera will be used as a pointer, make sure to allocate camera on heap
 		FrustumCullPass(EntityController *ecs, Camera* camera);
 		~FrustumCullPass();
-		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
-		VkCommandBuffer Frame(uint32_t FrameIndex);
+
+		void ReloadShaders();
+		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		VkResult GetComputeShaderStatistics(bool Wait, uint32_t FrameIndex, double& duration, uint64_t& invocations);
+
+	private:
+		void RecordCommands(uint32_t FrameIndex);
 
 	private:
 		Camera* mCamera;

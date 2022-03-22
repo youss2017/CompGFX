@@ -76,12 +76,12 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec;
-	spec.m_CullMode = CullMode::CULL_BACK;
+	spec.m_CullMode = CullMode::CULL_FRONT;
 	spec.m_DepthEnabled = true;
 	spec.m_DepthWriteEnable = true;
 	spec.m_DepthFunc = DepthFunction::LESS;
 	spec.m_PolygonMode = PolygonMode::FILL;
-	spec.m_FrontFaceCCW = false;
+	spec.m_FrontFaceCCW = true;
 	spec.m_Topology = PolygonTopology::TRIANGLE_LIST;
 	spec.m_NearField = 0.0f;
 	spec.m_FarField = 1.0f;
@@ -101,17 +101,25 @@ Application::ShadowPass::~ShadowPass()
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
 }
 
-void Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
+void Application::ShadowPass::ReloadShaders()
+{
+	Shader vertex = Shader(gContext, "assets/shaders/shadow/shadow.vert");
+	Shader fragment = Shader(gContext, "assets/shaders/shadow/shadow.frag");
+	PipelineVertexInputDescription input;
+	PipelineSpecification spec = mState->m_spec;
+	PipelineState_Destroy(mState);
+	mState = PipelineState_Create(gContext, spec, input, mFBO, mLayout, &vertex, &fragment);
+	for (int i = 0; i < gFrameOverlapCount; i++)
+		RecordCommands(i);
+}
+
+VkCommandBuffer Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
 {
 	glm::mat4 u_LightSpace = GetLightSpace();
 	IBuffer2 uniform = mSet->GetBuffer2(3, FrameIndex);
 	char8_t* mapped_ptr = Buffer2_Map(uniform);
 	memcpy(mapped_ptr, &u_LightSpace, sizeof(glm::mat4));
 	Buffer2_Flush(uniform, 0, VK_WHOLE_SIZE);
-}
-
-VkCommandBuffer Application::ShadowPass::Frame(uint32_t FrameIndex)
-{
 	return mCmds[FrameIndex];
 }
 

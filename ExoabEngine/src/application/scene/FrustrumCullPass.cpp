@@ -84,38 +84,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT);
 	
 	for (int i = 0; i < gFrameOverlapCount; i++) {
-		mFrustrumPlanesMapped[i] = Buffer2_Map(mSet->GetBuffer2(4, i));
-		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		VkCommandBuffer cmd = mCmds[i];
-		vkBeginCommandBuffer(cmd, &beginInfo);
-		vkCmdResetQueryPool(cmd, mQuery, (i * 2), 2);
-		vkCmdResetQueryPool(cmd, mInvocationQuery, i, 1);
-
-		vkCmdBeginQuery(cmd, mInvocationQuery, i, 0);
-		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 0);
-
-		VkBuffer outputDrawDataBuffer = mOutputDrawDataArray[i]->m_vk_buffer->m_buffer;
-		vkCmdFillBuffer(cmd, outputDrawDataBuffer, 0, VK_WHOLE_SIZE, 0);
-		VkBufferMemoryBarrier drawBufferBarrier = vk::Gfx_BufferMemoryBarrier(VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, outputDrawDataBuffer);
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &drawBufferBarrier, 0, nullptr);
-		VkBufferMemoryBarrier computeVertexShaderBarrier[2] = {
-			vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputGeometryDataArray[i]->m_vk_buffer->m_buffer),
-			vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputDrawDataArray[i]->m_vk_buffer->m_buffer)
-		};
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 2, computeVertexShaderBarrier, 0, nullptr);
-
-		VkDescriptorSet computeSets[1] = { mSet->m_set[i] };
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mFrustrum);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mFrustrumLayout, 0, 1, computeSets, 0, nullptr);
-		int drawCount = mECS->GetDrawCount();
-		int instanceCount = mECS->GetInstanceCount();
-
-		vkCmdDispatch(cmd, (instanceCount + (KernalSizeX - 1)) / KernalSizeX, (drawCount + (KernalSizeY - 1)) / KernalSizeY, 1);
-
-		vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 1);
-		vkCmdEndQuery(cmd, mInvocationQuery, i);
-
-		vkEndCommandBuffer(cmd);
+		RecordCommands(i);
 	}
 }
 
@@ -130,7 +99,20 @@ Application::FrustumCullPass::~FrustumCullPass()
 	vkDestroyQueryPool(mDevice, mInvocationQuery, nullptr);
 }
 
-void Application::FrustumCullPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
+void Application::FrustumCullPass::ReloadShaders() {
+	vkDestroyPipeline(mDevice, mFrustrum, nullptr);
+	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
+	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
+	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
+	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
+	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
+	mFrustrum = Pipeline_CreateCompute(gContext, &computeShader, mFrustrumLayout, 0);
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		RecordCommands(i);
+	}
+}
+
+VkCommandBuffer Application::FrustumCullPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
 {
 	glm::mat4 view = mCamera->GetViewMatrix();
 	glm::mat4 projT = glm::transpose(glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->m_width, float(gWindow->m_height), 0.1f, 1000.0f) * view);
@@ -147,10 +129,6 @@ void Application::FrustumCullPass::Prepare(uint32_t FrameIndex, float dTime, flo
 	planes.u_CullPlanes[4] = normalizePlane(projT[3] - projT[2]);
 	memcpy(mFrustrumPlanesMapped[FrameIndex], &planes, sizeof(planes));
 	Buffer2_Flush(mSet->GetBuffer2(4, FrameIndex), 0, VK_WHOLE_SIZE);
-}
-
-VkCommandBuffer Application::FrustumCullPass::Frame(uint32_t FrameIndex)
-{
 	return mCmds[FrameIndex];
 }
 
@@ -166,5 +144,43 @@ VkResult Application::FrustumCullPass::GetComputeShaderStatistics(bool Wait, uin
 		return VK_SUCCESS;
 	}
 	return VK_TIMEOUT;
+}
+
+void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
+{
+	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
+	uint32_t i = FrameIndex;
+	mFrustrumPlanesMapped[i] = Buffer2_Map(mSet->GetBuffer2(4, i));
+	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	VkCommandBuffer cmd = mCmds[i];
+	vkBeginCommandBuffer(cmd, &beginInfo);
+	vkCmdResetQueryPool(cmd, mQuery, (i * 2), 2);
+	vkCmdResetQueryPool(cmd, mInvocationQuery, i, 1);
+
+	vkCmdBeginQuery(cmd, mInvocationQuery, i, 0);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 0);
+
+	VkBuffer outputDrawDataBuffer = mOutputDrawDataArray[i]->m_vk_buffer->m_buffer;
+	vkCmdFillBuffer(cmd, outputDrawDataBuffer, 0, VK_WHOLE_SIZE, 0);
+	VkBufferMemoryBarrier drawBufferBarrier = vk::Gfx_BufferMemoryBarrier(VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, outputDrawDataBuffer);
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &drawBufferBarrier, 0, nullptr);
+	VkBufferMemoryBarrier computeVertexShaderBarrier[2] = {
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputGeometryDataArray[i]->m_vk_buffer->m_buffer),
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputDrawDataArray[i]->m_vk_buffer->m_buffer)
+	};
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 2, computeVertexShaderBarrier, 0, nullptr);
+
+	VkDescriptorSet computeSets[1] = { mSet->m_set[i] };
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mFrustrum);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mFrustrumLayout, 0, 1, computeSets, 0, nullptr);
+	int drawCount = mECS->GetDrawCount();
+	int instanceCount = mECS->GetInstanceCount();
+
+	vkCmdDispatch(cmd, (instanceCount + (KernalSizeX - 1)) / KernalSizeX, (drawCount + (KernalSizeY - 1)) / KernalSizeY, 1);
+
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 1);
+	vkCmdEndQuery(cmd, mInvocationQuery, i);
+
+	vkEndCommandBuffer(cmd);
 }
 

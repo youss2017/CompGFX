@@ -13,10 +13,10 @@ namespace Application {
 		ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, EntityController* ecs, Camera* camera, int size);
 		~ShadowPass();
 
+		void ReloadShaders();
 		inline void SetShadowLightPosition(glm::vec3 position) { mLightPosition = position; }
 
-		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
-		VkCommandBuffer Frame(uint32_t FrameIndex);
+		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 
 		ITexture2 GetDepthAttachment() {
 			return mFBO.m_depth_attachment.value().GetAttachment();

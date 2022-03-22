@@ -6,7 +6,7 @@
 #include <backend/VkGraphicsCard.hpp>
 #include <memory/Texture2.hpp>
 #include <memory/Buffer2.hpp>
-#include <material_system/Material.hpp>
+#include <pipeline/Pipeline.hpp>
 
 extern vk::VkContext gContext;
 
@@ -14,10 +14,11 @@ namespace Application {
 
 	class GeometryPass : public Scene {
 	public:
-		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, MaterialConfiguration& geoConfig, Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
+		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
 		~GeometryPass();
-		void Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
-		VkCommandBuffer Frame(uint32_t FrameIndex);
+		
+		void ReloadShaders();
+		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		void SetWireframeMode(bool mode);
 		void GetStatistics(bool wait, uint32_t frameIndex, double& passTime, uint64_t& vertexInvocations, uint64_t& fragmentInvocations);
 		void SetLightDirection(glm::vec3 lightDirection) { mLightDirection = glm::vec4(glm::normalize(lightDirection), 1.0); }
@@ -44,7 +45,10 @@ namespace Application {
 		VkSampler mSampler;
 		VkSampler mShadowSampler;
 		ITexture2 mWoodTex, mStatueTex;
-		Material* mGeoMaterial;
+		ShaderSet mGeoSet0;
+		ShaderSet mGeoSet1;
+		VkPipelineLayout mGeoLayout;
+		IPipelineState mGeoState;
 		Framebuffer mFBO;
 		friend class SkyboxPass;
 	};

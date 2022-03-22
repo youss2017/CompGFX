@@ -29,8 +29,19 @@ Application::DebugPass::~DebugPass() {
 	PipelineState_Destroy(mState);
 }
 
-void Application::DebugPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
-	mCubes.clear();
+void Application::DebugPass::ReloadShaders() {
+	Shader vertexShader = Shader(gContext, "assets/shaders/debug/debugVertex.vert");
+	Shader fragmentShader = Shader(gContext, "assets/shaders/debug/debugFragment.frag");
+	PipelineSpecification specification = mState->m_spec;
+	PipelineVertexInputDescription input;
+	PipelineState_Destroy(mState);
+	mState = PipelineState_Create(gContext, specification, input, mFBO, mLayout, &vertexShader, &fragmentShader, {});
+
+}
+
+VkCommandBuffer Application::DebugPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
+	RecordCommands(FrameIndex);
+	return mCmds[FrameIndex];
 }
 
 void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color) {
@@ -42,14 +53,13 @@ void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3
 	mCubes.push_back(obj);
 }
 
-VkCommandBuffer Application::DebugPass::Frame(uint32_t FrameIndex)
-{
+void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	VkCommandBuffer cmd = mCmds[FrameIndex];
 	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
 
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	
+
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
@@ -82,7 +92,7 @@ VkCommandBuffer Application::DebugPass::Frame(uint32_t FrameIndex)
 	renderingInfo.pDepthAttachment = &depthAttachment;
 	renderingInfo.pStencilAttachment = nullptr;
 	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
-	
+
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
 
 	for (const auto& cube : mCubes) {
@@ -93,5 +103,4 @@ VkCommandBuffer Application::DebugPass::Frame(uint32_t FrameIndex)
 	vkCmdEndRenderingKHR(cmd);
 
 	vkEndCommandBuffer(cmd);
-	return cmd;
 }

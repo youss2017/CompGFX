@@ -31,7 +31,6 @@ float ShadowCalculation()
     if(pos.z > 1.0) {
         pos.z = 1.0;
     }
-    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
     float depth = texture(shadowMap, pos.xy).r;
     return depth < pos.z ? 1.0 : 0.0;
 }

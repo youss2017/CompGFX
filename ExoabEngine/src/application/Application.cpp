@@ -4,7 +4,6 @@
 #include "UI.hpp"
 #include "Camera.hpp"
 #include "ecs/EntityController.hpp"
-#include <material_system/Material.hpp>
 #include <pipeline/PipelineCS.hpp>
 #include <Logger.hpp>
 #include <vector>
@@ -131,11 +130,9 @@ bool Application::CreateResources()
 	gFBO0.AddColorAttachment(0, colorAttachment);
 	gFBO0.SetDepthAttachment(depthAttachment);
 
-	MaterialConfiguration geometryPassConfig = MaterialConfiguration("assets/materials/geometryPass.mc");
-
-	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, gECS, &gCamera, 1024);
+	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, gECS, &gCamera, 2048);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
-	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, geometryPassConfig, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
+	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
 	skybox = new SkyboxPass("assets/textures/cubemap4.png", geoPass, &gCamera, true);
 	debugPass = new DebugPass(gFBO0);
 	UI::CubemapLODMax = skybox->GetMaxLOD();
@@ -230,19 +227,14 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	geoPass->SetLightDirection(glm::vec3(0.0) - glm::normalize(pos));
 	geoPass->SetLightSpace(shadow->GetLightSpace());
 
-	cullPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
-	geoPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
-	skybox->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
-	shadow->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
-	debugPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart);
-
-	srand(0x42 + (int)time);
+	debugPass->NewFrame();
+	srand(unsigned long long(vkCmdPushDescriptorSetKHR));
 	debugPass->DrawCube(pos, { 1.0, 1.0, 1.0 }, { rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX });
 
 	return true;
 }
 
-void Application::Render()
+void Application::Render(double dTimeFromStart, double dTime)
 {
 	PROFILE_FUNCTION();
 	VkDevice device = gContext->defaultDevice;
@@ -255,10 +247,11 @@ void Application::Render()
 	vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 	vkResetFences(device, 1, &frame.m_RenderFence);
 	
-	VkCommandBuffer cmds[2] = { cullPass->Frame(FrameIndex), shadow->Frame(FrameIndex) };
+	VkCommandBuffer cmds[2] = { cullPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart), shadow->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart) };
 	vk::Gfx_SubmitCmdBuffers(gContext->defaultQueue, { cmds[0], cmds[1] }, { frame.m_RenderSemaphore }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { shadowPassSemaphore[FrameIndex] }, nullptr);
 
-	VkCommandBuffer cmds2[3] = { geoPass->Frame(FrameIndex), skybox->Frame(FrameIndex), debugPass->Frame(FrameIndex)};
+	VkCommandBuffer cmds2[3] = { geoPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart), skybox->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart),
+		debugPass->Prepare(frame.m_FrameIndex, dTime, dTimeFromStart) };
 
 	VkSemaphore waitSemaphores[1] = { shadowPassSemaphore[FrameIndex] };
 	VkPipelineStageFlags stage[1] = { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };

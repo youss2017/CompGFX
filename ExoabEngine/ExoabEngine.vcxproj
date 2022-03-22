@@ -141,11 +141,8 @@
     <ClInclude Include="src\core\shaders\Shader.hpp" />
     <ClInclude Include="src\core\shaders\ShaderBinding.hpp" />
     <ClInclude Include="src\core\shaders\ShaderReflection.hpp" />
-    <ClInclude Include="src\graphics\CommandDefines.hpp" />
     <ClInclude Include="src\graphics\Font.hpp" />
     <ClInclude Include="src\graphics\Graphics.hpp" />
-    <ClInclude Include="src\graphics\material_system\Material.hpp" />
-    <ClInclude Include="src\graphics\material_system\MaterialConfiguration.hpp" />
     <ClInclude Include="src\mesh\entity.hpp" />
     <ClInclude Include="src\mesh\geometry.hpp" />
     <ClInclude Include="src\mesh\SkinnedMesh.hpp" />
@@ -215,8 +212,6 @@
     <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
     <ClCompile Include="src\graphics\Font.cpp" />
     <ClCompile Include="src\graphics\Graphics.cpp" />
-    <ClCompile Include="src\graphics\material_system\Material.cpp" />
-    <ClCompile Include="src\graphics\material_system\MaterialConfiguration.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
     <ClCompile Include="src\mesh\SkinnedMesh.cpp" />
@@ -232,7 +227,6 @@
     <ClCompile Include="src\window\PlatformWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\materials\geometryPass.mc" />
     <None Include="imgui.ini" />
     <None Include="src\application\ecs\Entity.hpp" />
     <None Include="src\utils\common.inl" />
