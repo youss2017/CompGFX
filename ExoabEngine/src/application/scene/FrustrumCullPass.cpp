@@ -38,7 +38,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeBindings[1].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	computeBindings[1].m_bindingID = 1;
 	computeBindings[1].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[1].m_size = ecs->GetGeometryDataArray()[0]->size;
+	computeBindings[1].m_size = ecs->GetGeometryDataArray()[0]->mSize;
 
 	computeBindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
 	computeBindings[2].m_bindingID = 2;
@@ -53,7 +53,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeBindings[3].m_preinitalized = false;
 	computeBindings[3].m_additional_buffer_flags = BufferType(BUFFER_TYPE_INDIRECT | BUFER_TYPE_TRANSFER_SRC);
 	computeBindings[3].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[3].m_size = ecs->GetDrawDataArray()[0]->size;
+	computeBindings[3].m_size = ecs->GetDrawDataArray()[0]->mSize;
 
 	computeBindings[4].m_type = SHADER_BINDING_UNIFORM_BUFFER;
 	computeBindings[4].m_bindingID = 4;
@@ -160,13 +160,13 @@ void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBeginQuery(cmd, mInvocationQuery, i, 0);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 0);
 
-	VkBuffer outputDrawDataBuffer = mOutputDrawDataArray[i]->m_vk_buffer->m_buffer;
+	VkBuffer outputDrawDataBuffer = mOutputDrawDataArray[i]->mBuffer;
 	vkCmdFillBuffer(cmd, outputDrawDataBuffer, 0, VK_WHOLE_SIZE, 0);
 	VkBufferMemoryBarrier drawBufferBarrier = vk::Gfx_BufferMemoryBarrier(VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, outputDrawDataBuffer);
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &drawBufferBarrier, 0, nullptr);
 	VkBufferMemoryBarrier computeVertexShaderBarrier[2] = {
-		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputGeometryDataArray[i]->m_vk_buffer->m_buffer),
-		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputDrawDataArray[i]->m_vk_buffer->m_buffer)
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputGeometryDataArray[i]->mBuffer),
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputDrawDataArray[i]->mBuffer)
 	};
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 2, computeVertexShaderBarrier, 0, nullptr);
 

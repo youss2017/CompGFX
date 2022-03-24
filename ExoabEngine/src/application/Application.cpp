@@ -117,8 +117,8 @@ bool Application::LoadAssets()
 	IEntity cube = gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE);
 	cube->m_geometryID = EntityGeometryID::ENTITY_GEOMETRY_CUBE;
 	cube->mInstanceCount = instanceCount;
-	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(gContext, BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::CPU_TO_CPU, true);
-	cube->mCulledInstanceBuffer = Buffer2_Create(gContext, BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true);
+	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::CPU_TO_CPU, true, false, false);
+	cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false, false);
 	
 	return true;
 }

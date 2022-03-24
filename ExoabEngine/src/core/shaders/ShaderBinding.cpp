@@ -21,7 +21,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BUFFER_TYPE_UNIFORM | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create((BufferType)(BUFFER_TYPE_UNIFORM | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY, true, false, false);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 break;
@@ -30,7 +30,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BUFFER_TYPE_UNIFORM| bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create((BufferType)(BUFFER_TYPE_UNIFORM| bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY, true, false, false);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                 break;
@@ -39,7 +39,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BUFFER_TYPE_STORAGE | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create((BufferType)(BUFFER_TYPE_STORAGE | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY, true, false, false);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 break;
@@ -48,7 +48,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 if (!bind.m_useclientbuffer && !bind.m_preinitalized) {
                     bind.m_buffer = new IBuffer2[framecount];
                     for (int32_t i = 0; i < framecount; i++)
-                        bind.m_buffer[i] = Buffer2_Create(context, (BufferType)(BUFFER_TYPE_STORAGE | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY);
+                        bind.m_buffer[i] = Buffer2_Create((BufferType)(BUFFER_TYPE_STORAGE | bind.m_additional_buffer_flags), bind.m_size, bind.m_hostvisible ? BufferMemoryType::CPU_TO_CPU : BufferMemoryType::GPU_ONLY, true, false, false);
                 }
                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
                 break;
@@ -113,7 +113,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
             write.descriptorType = bind.m_vk_type;
             if (bind.m_type != SHADER_BINDING_COMBINED_TEXTURE_SAMPLER && bind.m_type != SHADER_BINDING_TEXTURE && bind.m_type != SHADER_BINDING_SAMPLER && bind.m_type != SHADER_BINDING_STORAGE_IMAGE) {
                 VkDescriptorBufferInfo bufferInfo;
-                bufferInfo.buffer = (bind.m_useclientbuffer) ? bind.m_client_buffer->m_vk_buffer->m_buffer : bind.m_buffer[i]->m_vk_buffer->m_buffer;
+                bufferInfo.buffer = (bind.m_useclientbuffer) ? bind.m_client_buffer->mBuffer : bind.m_buffer[i]->mBuffer;
                 bufferInfo.offset = 0;
                 bufferInfo.range = VK_WHOLE_SIZE;
                 write.pBufferInfo = &bufferInfo;

@@ -32,8 +32,8 @@ EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
 	}
 
 	for (int i = 0; i < gFrameOverlapCount; i++) {
-		mInputDrawData[i] = Buffer2_CreatePreInitalized(gContext, BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mDraws.data(), mDraws.size() * sizeof(ShaderTypes::DrawData), BufferMemoryType::CPU_TO_CPU, true);
-		mInputGeometryData[i] = Buffer2_CreatePreInitalized(gContext, BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mGeoData.data(), mGeoData.size() * sizeof(ShaderTypes::GeometryData), BufferMemoryType::CPU_TO_CPU, true);
+		mInputDrawData[i] = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mDraws.data(), mDraws.size() * sizeof(ShaderTypes::DrawData), BufferMemoryType::CPU_TO_CPU, true, true, false);
+		mInputGeometryData[i] = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mGeoData.data(), mGeoData.size() * sizeof(ShaderTypes::GeometryData), BufferMemoryType::CPU_TO_CPU, true, true, false);
 	}
 
 	for (auto& e : mEntites) {
@@ -85,7 +85,7 @@ void EntityController::PrepareDataForFrame(uint32_t frameIndex)
 uint32_t EntityController::GetInstanceCount()
 {
 	uint32_t count = 0;
-	for (auto e : mEntites)
+	for (auto& e : mEntites)
 		count += e.second->mInstanceCount;
 	return count;
 }

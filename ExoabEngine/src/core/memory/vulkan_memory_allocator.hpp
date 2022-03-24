@@ -34,6 +34,7 @@ namespace VkAlloc
 		DEVICE_MEMORY_PROPERTY m_properties;
 		VkBufferUsageFlags m_usage;
 		uint32_t m_size;
+		bool mRequireCoherent;
 		float m_priority = 0.5f;
 	};
 

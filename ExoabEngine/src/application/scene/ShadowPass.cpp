@@ -117,7 +117,7 @@ VkCommandBuffer Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTim
 {
 	glm::mat4 u_LightSpace = GetLightSpace();
 	IBuffer2 uniform = mSet->GetBuffer2(3, FrameIndex);
-	char8_t* mapped_ptr = Buffer2_Map(uniform);
+	void* mapped_ptr = Buffer2_Map(uniform);
 	memcpy(mapped_ptr, &u_LightSpace, sizeof(glm::mat4));
 	Buffer2_Flush(uniform, 0, VK_WHOLE_SIZE);
 	return mCmds[FrameIndex];
@@ -140,7 +140,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
 
-	auto depth = mFBO.m_depth_attachment.value();
+	auto& depth = mFBO.m_depth_attachment.value();
 
 	VkRenderingAttachmentInfoKHR attachmentInfo{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
 	attachmentInfo.imageView = depth.GetView(FrameIndex);
@@ -179,7 +179,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	VkDescriptorSet set[1] = { mSet->m_set[FrameIndex] };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, set, 0, nullptr);
-	vkCmdBindIndexBuffer(cmd, mIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(cmd, mIndices->mBuffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, mSet->GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
 
 	barrier0.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;

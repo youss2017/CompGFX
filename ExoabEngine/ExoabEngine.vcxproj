@@ -124,6 +124,7 @@
     <ClInclude Include="src\application\scene\ShadowPass.hpp" />
     <ClInclude Include="src\application\scene\SkyboxPass.hpp" />
     <ClInclude Include="src\core\memory\CubeMap.hpp" />
+    <ClInclude Include="src\core\shaders\ShaderConnection.hpp" />
     <ClInclude Include="src\utils\atomic.h" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />

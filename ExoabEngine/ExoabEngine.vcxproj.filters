@@ -195,6 +195,9 @@
     <ClInclude Include="src\application\scene\DebugPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\shaders\ShaderConnection.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">

@@ -150,8 +150,8 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	terrainBindings[0].m_buffer = mGeoSet0->GetBuffer2Array(1);
 	
 	Map map = Map_Create(100, 2, 100, 2, 1);
-	mMapVertices = Buffer2_CreatePreInitalized(gContext, BufferType::BUFFER_TYPE_VERTEX, map.m_vertices.data(), map.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY, false);
-	mMapIndices = Buffer2_CreatePreInitalized(gContext, BufferType::BUFFER_TYPE_INDEX, map.m_indices.data(), map.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false);
+	mMapVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, map.m_vertices.data(), map.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY, false, false, false);
+	mMapIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, map.m_indices.data(), map.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false, false);
 	mMapIndicesCount = map.m_totalIndicesCount;
 
 	mMapSet = ShaderBinding_Create(gContext, mPool, 0, &terrainBindings);
@@ -356,15 +356,15 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	VkDescriptorSet geometrySets[2] = { mGeoSet0->m_set[i], mGeoSet1->m_set[i] };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mGeoState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mGeoLayout, 0, 2, geometrySets, 0, nullptr);
-	vkCmdBindIndexBuffer(cmd, mIndicsSSBO->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray[i]->m_vk_buffer->m_buffer, 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
+	vkCmdBindIndexBuffer(cmd, mIndicsSSBO->mBuffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray[i]->mBuffer, 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
 	VkDescriptorSet mapSet[1] = { mMapSet->m_set[FrameIndex] };
 	VkDeviceSize offset[1] = { 0 };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
-	vkCmdBindVertexBuffers(cmd, 0, 1, &mMapVertices->m_vk_buffer->m_buffer, offset);
-	vkCmdBindIndexBuffer(cmd, mMapIndices->m_vk_buffer->m_buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &mMapVertices->mBuffer, offset);
+	vkCmdBindIndexBuffer(cmd, mMapIndices->mBuffer, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(cmd, mMapIndicesCount, 1, 0, 0, 0);
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };

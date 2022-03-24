@@ -78,8 +78,8 @@ namespace VkAlloc
 			createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			createInfo.queueFamilyIndexCount = 0;
 			createInfo.pQueueFamilyIndices = nullptr;
-			VmaAllocationCreateInfo vmaCreateInfo{};
 			createInfo.flags = 0;
+			VmaAllocationCreateInfo vmaCreateInfo{};
 			vmaCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 			// TODO: Look into VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT 
 			switch (desc.m_properties) {
@@ -87,10 +87,11 @@ namespace VkAlloc
 				case DEVICE_MEMORY_PROPERTY::CPU_TO_GPU:
 					vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+					vmaCreateInfo.requiredFlags = desc.mRequireCoherent ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 					buffer->m_suballocation.m_host_visible = true;
 					break;
 				case DEVICE_MEMORY_PROPERTY::GPU_ONLY:
+					assert(!desc.mRequireCoherent);
 					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 					buffer->m_suballocation.m_host_visible = false;

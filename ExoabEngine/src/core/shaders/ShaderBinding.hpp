@@ -54,7 +54,7 @@ struct _ShaderSet
 	VkDescriptorSet* m_set;
 
 	inline VkBuffer GetBuffer(uint32_t bindingID, uint32_t frameIndex) {
-		return m_bindings[bindingID].m_buffer[frameIndex]->m_vk_buffer->m_buffer;
+		return m_bindings[bindingID].m_buffer[frameIndex]->mBuffer;
 	}
 	inline IBuffer2 GetBuffer2(uint32_t bindingID, uint32_t frameIndex) {
 		return m_bindings[bindingID].m_buffer[frameIndex];

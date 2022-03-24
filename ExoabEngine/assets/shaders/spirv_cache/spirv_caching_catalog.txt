@@ -10,3 +10,4 @@ D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\shadow::13361521652593641517:
 D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\debug::2881842904357813273::debugVertex::.vert::132923727598254936
 D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\debug::12432282569714646515::debugFragment::.frag::132923708995593399
 D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\bloom::16161315477896644022::threshold::.comp::132924822409993687
+D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\bloom::3300234851347163111::downsample::.comp::132925791854292251
