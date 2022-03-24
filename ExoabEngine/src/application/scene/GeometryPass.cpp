@@ -241,6 +241,9 @@ void Application::GeometryPass::ReloadShaders() {
 
 void Application::GeometryPass::SetWireframeMode(bool mode)
 {
+	if (mWireframeMode == mode)
+		return;
+	mWireframeMode = mode;
 	PipelineSpecification specification = mGeoState->m_spec;
 	specification.m_PolygonMode = mode ? PolygonMode::LINE : PolygonMode::FILL;
 	PipelineState_Destroy(mGeoState);

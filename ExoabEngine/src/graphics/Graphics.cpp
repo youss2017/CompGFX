@@ -1,10 +1,8 @@
 #include "Graphics.hpp"
-#include "CommandDefines.hpp"
 #include "../utils/MBox.hpp"
 #include "../utils/common.hpp"
 #include "../utils/StringUtils.hpp"
 #include "../utils/MBox.hpp"
-#include "material_system/Material.hpp"
 #include <backend/GUI.h>
 #include <GLFW/glfw3.h>
 #define DEBUG_PRINTF 0

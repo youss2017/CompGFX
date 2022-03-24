@@ -3,6 +3,10 @@
 #include <backend/backend_base.h>
 #include <memory/vulkan_memory_allocator.hpp>
 
+struct TextureMipmap {
+	std::vector<std::vector<VkImageView>> mMipmapViewsPerFrame;
+};
+
 struct GPUTexture2D_2
 {
 	GraphicsContext m_context;
@@ -16,6 +20,7 @@ struct GPUTexture2D_2
 	VkImageLayout m_vk_current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout m_vk_current_layout_mipmap = VK_IMAGE_LAYOUT_UNDEFINED;
 	uint32_t mMipCount;
+	TextureMipmap mMipmapViews;
 };
 
 typedef GPUTexture2D_2* ITexture2;

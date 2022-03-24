@@ -20,6 +20,9 @@ namespace UI
 	extern int CurrentOutputBuffer;
 	extern bool VSync;
 	extern float L_x, L_y, L_z;
+	extern bool ReloadShaders;
+	extern bool ClearShaderCache;
+
 	void Initalize(void* context, void* gfx);
 	void RenderUI();
 }

@@ -11,7 +11,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
     {
         VkDescriptorSetLayoutBinding binding;
         binding.binding = bind.m_bindingID;
-        binding.descriptorCount = (bind.m_type == SHADER_BINDING_TEXTURE) ? bind.m_textures.size() : 1;
+        binding.descriptorCount = (bind.m_type > SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC) ? bind.m_textures.size() : 1;
         binding.stageFlags = bind.m_shaderStages;
         binding.pImmutableSamplers = nullptr;
         switch (bind.m_type)
@@ -64,6 +64,12 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                  binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
                  bind.m_vk_type = VK_DESCRIPTOR_TYPE_SAMPLER;
                  break;
+             case SHADER_BINDING_STORAGE_IMAGE:
+                 // Cannot have both mipview chain and chain of texture views in same binding.
+                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                 binding.descriptorCount = bind.mUseViewPerMip ? bind.m_textures[0]->mMipCount : binding.descriptorCount;
+                 bind.m_vk_type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                 break;
             default:
                 assert(0);
         }
@@ -105,7 +111,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
         for (auto& bind : set->m_bindings) {
             write.dstBinding = bind.m_bindingID;
             write.descriptorType = bind.m_vk_type;
-            if (bind.m_type != SHADER_BINDING_COMBINED_TEXTURE_SAMPLER && bind.m_type != SHADER_BINDING_TEXTURE && bind.m_type != SHADER_BINDING_SAMPLER) {
+            if (bind.m_type != SHADER_BINDING_COMBINED_TEXTURE_SAMPLER && bind.m_type != SHADER_BINDING_TEXTURE && bind.m_type != SHADER_BINDING_SAMPLER && bind.m_type != SHADER_BINDING_STORAGE_IMAGE) {
                 VkDescriptorBufferInfo bufferInfo;
                 bufferInfo.buffer = (bind.m_useclientbuffer) ? bind.m_client_buffer->m_vk_buffer->m_buffer : bind.m_buffer[i]->m_vk_buffer->m_buffer;
                 bufferInfo.offset = 0;
@@ -114,23 +120,40 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                 vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
             }
             else {
-                if (bind.m_type == SHADER_BINDING_COMBINED_TEXTURE_SAMPLER) {
+                if (bind.m_type == SHADER_BINDING_COMBINED_TEXTURE_SAMPLER || bind.m_type == SHADER_BINDING_STORAGE_IMAGE) {
                     write.dstArrayElement = 0;
                     write.descriptorCount = bind.m_textures.size();
-                    std::vector<VkDescriptorImageInfo> imageInfos(bind.m_textures.size());
+                    std::vector<VkDescriptorImageInfo> imageInfos;
                     assert(bind.m_textures.size() == bind.m_textures_layouts.size());
                     for (int w = 0; w < bind.m_textures.size(); w++)
                     {
-                        imageInfos[w].sampler = bind.m_sampler[w];
-                        if(bind.m_textures[w]->m_vk_views_per_frame.size() > 0)
-                            imageInfos[w].imageView = bind.m_textures[w]->m_vk_views_per_frame[i];
-                        else
-                            imageInfos[w].imageView = bind.m_textures[w]->m_vk_view;
-                        imageInfos[w].imageLayout = bind.m_textures_layouts[w];
+                        VkDescriptorImageInfo imageInfo;
+                        imageInfo.sampler = bind.m_sampler[w];
+                        ITexture2 texture = bind.m_textures[w];
+                        imageInfo.imageLayout = bind.m_textures_layouts[w];
+                        if (!bind.mUseViewPerMip) {
+                            if (bind.m_textures[w]->m_vk_views_per_frame.size() > 0)
+                                imageInfo.imageView = texture->m_vk_views_per_frame[i];
+                            else
+                                imageInfo.imageView = texture->m_vk_view;
+                            imageInfos.push_back(imageInfo);
+                            write.pImageInfo = imageInfos.data();
+                            vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+                        }
+                        else {
+                            write.descriptorCount = 1;
+                            int arrayElement = 0;
+                            auto& views = texture->mMipmapViews.mMipmapViewsPerFrame[i];
+                            for (auto& view : views) {
+                                imageInfo.imageView = view;
+                                write.dstArrayElement = arrayElement++;
+                                write.pImageInfo = &imageInfo;
+                                vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
+                            }
+                        }
                     }
-                    write.pImageInfo = imageInfos.data();
-                    vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
                 } else if (bind.m_type == SHADER_BINDING_SAMPLER) {
+                    assert(!bind.mUseViewPerMip);
                     write.dstArrayElement = 0;
                     write.descriptorCount = bind.m_sampler.size();
                     std::vector<VkDescriptorImageInfo> imageInfos(bind.m_sampler.size());
@@ -144,6 +167,7 @@ ShaderSet ShaderBinding_Create(vk::VkContext context, VkDescriptorPool pool, uin
                     vkUpdateDescriptorSets(context->defaultDevice, 1, &write, 0, nullptr);
                 }
                 else if (bind.m_type == SHADER_BINDING_TEXTURE) {
+                    assert(!bind.mUseViewPerMip);
                     assert(bind.m_sampler.size() == 0 && "Combined samplers cannot have samplers!");
                     write.dstArrayElement = 0;
                     write.descriptorCount = bind.m_textures.size();
@@ -225,6 +249,9 @@ void ShaderBinding_CalculatePoolSizes(uint32_t framecount, std::vector<VkDescrip
             break;
         case SHADER_BINDING_SAMPLER:
             poolSizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, framecount });
+            break;
+        case SHADER_BINDING_STORAGE_IMAGE:
+            poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, uint32_t(framecount * bind.m_textures[0]->mMipmapViews.mMipmapViewsPerFrame[0].size()) });
             break;
         default:
             assert(0);

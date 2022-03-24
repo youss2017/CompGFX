@@ -7,7 +7,7 @@
 ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification& specification)
 {
 	using namespace VkAlloc;
-	IMAGE_DESCRIPITION desc;
+	IMAGE_DESCRIPITION desc{};
 	desc.m_properties = DEVICE_MEMORY_PROPERTY::GPU_ONLY;
 	desc.m_flags = specification.mFlags;
 	desc.m_imageType = VK_IMAGE_TYPE_2D;
@@ -15,7 +15,7 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	desc.m_extent.width = specification.m_Width;
 	desc.m_extent.height = specification.m_Height;
 	desc.m_extent.depth = 1;
-	desc.m_mipLevels = specification.m_GenerateMipMapLevels ? std::floor(std::log2(std::max(specification.m_Width, specification.m_Height))) + 1 : 1;
+	desc.m_mipLevels = specification.m_GenerateMipMapLevels ? std::min(std::log2(specification.m_Width), std::log2(specification.m_Height)) : 1;
 	desc.m_arrayLayers = specification.mLayers;;
 	desc.m_samples = (VkSampleCountFlagBits)specification.m_Samples;
 	desc.m_usage = specification.mUsage;
@@ -23,17 +23,17 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	switch (specification.m_TextureUsage)
 	{
 		case TextureUsage::TEXTURE:
-			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			desc.m_usage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			break;
 		case TextureUsage::COLOR:
-			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			desc.m_usage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			break;
 		case TextureUsage::DEPTH_STENCIL:
 		case TextureUsage::DEPTH_ONLY:
-			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			desc.m_usage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			break;
 		default:
-			desc.m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			desc.m_usage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			assert(0);
 	}
 	ITexture2 texture = new GPUTexture2D_2();
@@ -76,7 +76,7 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	viewInfo.subresourceRange.baseMipLevel = 0;
 	viewInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;;
+	viewInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 	texture->m_vk_aspectmask = viewInfo.subresourceRange.aspectMask;
 	vkcheck(vkCreateImageView(ToVKContext(context)->defaultDevice, &viewInfo, nullptr, &texture->m_vk_view));
 	vk::VkContext cont = ToVKContext(context);
@@ -113,6 +113,21 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 		}
 	}
 
+	if (specification.mCreateViewPerMip) {
+		assert(specification.m_CreatePerFrame);
+		for (uint32_t i = 0; i < gFrameOverlapCount; i++) {
+			std::vector<VkImageView> views;
+			for (uint32_t i = 0; i < desc.m_mipLevels; i++) {
+				viewInfo.subresourceRange.baseMipLevel = i;
+				viewInfo.subresourceRange.levelCount = 1;
+				VkImageView view;
+				vkCreateImageView(cont->defaultDevice, &viewInfo, nullptr, &view);
+				views.push_back(view);
+			}
+			texture->mMipmapViews.mMipmapViewsPerFrame.push_back(views);
+		}
+	}
+
 	return texture;
 }
 
@@ -144,7 +159,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	barrier.image = texture->m_vk_image->m_image;
 	barrier.subresourceRange.aspectMask = texture->m_vk_aspectmask;
 	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = (texture->m_specification.m_GenerateMipMapLevels) ? (std::floor(std::log2(std::max(texture->m_specification.m_Width, texture->m_specification.m_Height))) + 1) : 1;;
+	barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.subresourceRange.layerCount = 1;
@@ -172,7 +187,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	barrier_readable.oldLayout = texture->m_vk_current_layout;
 	barrier_readable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier_readable.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier_readable.subresourceRange.levelCount = (texture->m_specification.m_GenerateMipMapLevels) ? (std::floor(std::log2(std::max(texture->m_specification.m_Width, texture->m_specification.m_Height))) + 1) : 1;
+	barrier_readable.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 	texture->m_vk_current_layout = barrier_readable.newLayout;
 	CurrentAccessFlag = barrier_readable.dstAccessMask;
 	vkCmdPipelineBarrier(cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, 0, 0, 0, 1, &barrier_readable);
@@ -193,7 +208,7 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 {
 	using namespace vk;
 
-	uint32_t miplevels = std::floor(std::log2(std::max(texture->m_specification.m_Width, texture->m_specification.m_Height))) + 1;
+	uint32_t miplevels = std::floor(std::log2(std::max(texture->m_specification.m_Width, texture->m_specification.m_Height)));
 	VkContext context = (VkContext)texture->m_context;
 	VkCommandPool pool = Gfx_CreateCommandPool(context, true, false);
 	VkCommandBuffer cmd = Gfx_AllocCommandBuffer(context, pool, true);
@@ -300,6 +315,11 @@ void Texture2_Destroy(ITexture2 texture)
 	}
 	else	
 		vkDestroyImageView(device, texture->m_vk_view, nullptr);
+	for (auto& list : texture->mMipmapViews.mMipmapViewsPerFrame) {
+		for (auto& view : list) {
+			vkDestroyImageView(device, view, nullptr);
+		}
+	}
 	delete texture;
 }
 

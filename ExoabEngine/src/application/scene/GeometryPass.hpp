@@ -33,6 +33,7 @@ namespace Application {
 		glm::vec4 mLightDirection;
 		glm::mat4 mLightSpace;
 	private:
+		bool mWireframeMode = false;
 		VkDescriptorPool mPool;
 		ShaderSet mMapSet;
 		VkPipelineLayout mMapLayout;

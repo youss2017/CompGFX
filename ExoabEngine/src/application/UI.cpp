@@ -32,6 +32,8 @@ namespace UI
     float L_x = 0.0, L_y = 0.0, L_z = 0.0;
     static bool UIInDebugMode = false;
     bool VSync = true;
+    bool ReloadShaders = false;
+    bool ClearShaderCache = false;
 }
 
 void UI::Initalize(void* _context, void* _gfx)
@@ -100,6 +102,15 @@ void UI::RenderUI()
     }
     ImGui::SameLine();
     ImGui::Checkbox("Debug", &UIInDebugMode);
+    if (ImGui::Button("Reload Shaders")) {
+        StateChanged = true;
+        ReloadShaders = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear Shader Cache")) {
+        StateChanged = true;
+        ClearShaderCache = true;
+    }
     ImGui::End();
     //ImGui::ShowDemoWindow();
 }

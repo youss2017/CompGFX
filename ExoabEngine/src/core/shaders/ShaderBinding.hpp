@@ -11,8 +11,9 @@ enum ShaderBindingFlags : int
 	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT         = 0x00000100,
 	SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT_DYNAMIC = 0x00001000,
 	SHADER_BINDING_COMBINED_TEXTURE_SAMPLER             = 0x00010000,
-	SHADER_BINDING_TEXTURE                              = 0x01000000,
-	SHADER_BINDING_SAMPLER                              = 0x10000000,
+	SHADER_BINDING_TEXTURE                              = 0x00100000,
+	SHADER_BINDING_SAMPLER                              = 0x01000000,
+	SHADER_BINDING_STORAGE_IMAGE						= 0x10000000,
 };
 
 struct ShaderBinding
@@ -31,6 +32,7 @@ struct ShaderBinding
 	std::vector<VkSampler> m_sampler;
 	std::vector<ITexture2> m_textures;
 	std::vector<VkImageLayout> m_textures_layouts;
+	bool mUseViewPerMip = false;
 	// Do not touch anything beyond this point
 	// these are arrays with size of framecount 
 	VkDescriptorType m_vk_type;

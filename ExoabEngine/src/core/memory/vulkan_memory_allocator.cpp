@@ -139,7 +139,6 @@ namespace VkAlloc
 			createInfo.pQueueFamilyIndices = nullptr;
 			createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VmaAllocationCreateInfo vmaCreateInfo{};
-			createInfo.flags = 0;
 			vmaCreateInfo.usage = desc.m_properties == DEVICE_MEMORY_PROPERTY::CPU_ONLY ? VMA_MEMORY_USAGE_AUTO_PREFER_HOST : VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 			// TODO: Look into VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT 
 			switch (desc.m_properties) {

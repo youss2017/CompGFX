@@ -132,6 +132,7 @@ struct Texture2DSpecification
 	bool m_GenerateMipMapLevels;
 	bool m_CreatePerFrame = false;
 	bool m_LazilyAllocate = false;
+	bool mCreateViewPerMip = false;
 };
 
 namespace vk
