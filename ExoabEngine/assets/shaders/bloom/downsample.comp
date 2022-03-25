@@ -2,7 +2,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-layout (local_size_x_id = 0, local_size_y_id = 1, local_size_z = 1) in;
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 // TODO: Use sampler2D instead of image2D for input because
 // then we can use texture() which applies a linear sampling
@@ -22,17 +22,10 @@ layout (scalar, push_constant) uniform pushblock {
 
 vec4 texture_bilinear(in vec2 uv, in vec2 textureSize, in vec2 texelSize)
 {
-#if 0
-    vec4 tl = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2(uv * textureSize));
-    vec4 tr = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2( (uv + vec2(texelSize.x, 0.0)) * textureSize ));
-    vec4 bl = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2( (uv + vec2(0.0, texelSize.y)) * textureSize ));
-    vec4 br = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2( (uv + vec2(texelSize.x, texelSize.y)) * textureSize ));
-#else
     vec4 tl = texture(CombinedDownsampleMip[u_SourceMiplevel], uv);
     vec4 tr = texture(CombinedDownsampleMip[u_SourceMiplevel], uv + vec2(texelSize.x, 0.0));
     vec4 bl = texture(CombinedDownsampleMip[u_SourceMiplevel], uv + vec2(0.0, texelSize.y));
     vec4 br = texture(CombinedDownsampleMip[u_SourceMiplevel], uv + vec2(texelSize.x, texelSize.y));
-#endif
     vec2 f = fract( uv * textureSize );
     vec4 tA = mix( tl, tr, f.x );
     vec4 tB = mix( bl, br, f.x );

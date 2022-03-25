@@ -22,7 +22,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	clear.depthStencil.depth = 1.0;
 	mFBO.m_width = size;
 	mFBO.m_height = size;
-	FramebufferAttachment depthAtachment = FramebufferAttachment::Create(gContext, size, size, VK_FORMAT_D32_SFLOAT, clear);
+	FramebufferAttachment depthAtachment = FramebufferAttachment::Create(gContext, 0, size, size, VK_FORMAT_D32_SFLOAT, clear);
 	mFBO.SetDepthAttachment(depthAtachment);
 	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
 	Framebuffer_TransistionAttachment(cmd.cmd, &depthAtachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

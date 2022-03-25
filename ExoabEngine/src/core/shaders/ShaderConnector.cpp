@@ -83,7 +83,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
         if ((type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)) {
             setLayoutDesc.descriptorCount = 0;
             for (auto& texture : binding.mTextures) {
-                if (texture->m_specification.mCreateViewPerMip) {
+                if (texture->m_specification.mCreateViewPerMip && !(binding.mFlags & BINDING_FLAG_USING_ONLY_FIRST_MIP)) {
                     setLayoutDesc.descriptorCount += texture->mMipCount;
                 }
                 else {
@@ -133,7 +133,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
                     if (binding.mCustomImageLayouts.find(textureID) != binding.mCustomImageLayouts.end()) {
                         imageInfo.imageLayout = binding.mCustomImageLayouts[textureID];
                     }
-                    if (texture->m_specification.mCreateViewPerMip) {
+                    if (texture->m_specification.mCreateViewPerMip && !(binding.mFlags & BINDING_FLAG_USING_ONLY_FIRST_MIP)) {
                         for (uint32_t mipIndex = 0; mipIndex < texture->mMipCount; mipIndex++) {
                             imageInfo.imageView = texture->mMipmapViews.mMipmapViewsPerFrame[frameIndex][mipIndex];
                             write.pImageInfo = &imageInfo;

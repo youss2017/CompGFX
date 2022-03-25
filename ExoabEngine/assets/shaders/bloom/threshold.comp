@@ -9,7 +9,7 @@ layout (constant_id = 1) const int SourceHeight = 720;
 layout (constant_id = 2) const int OutputWidth = 1280 >> 1;
 layout (constant_id = 3) const int OutputHeight = 720 >> 1;
 
-layout (local_size_x_id = 4, local_size_y_id = 5, local_size_z = 1) in;
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout (push_constant) uniform pushblock {
     float u_Threshold;

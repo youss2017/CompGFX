@@ -8,7 +8,7 @@
 
 class FramebufferAttachment {
 public:
-	static FramebufferAttachment Create(vk::VkContext context, int width, int height, VkFormat format, VkClearValue clear, VkPipelineColorBlendAttachmentState* pBlendState = nullptr);
+	static FramebufferAttachment Create(vk::VkContext context, VkImageUsageFlags usage, int width, int height, VkFormat format, VkClearValue clear, VkPipelineColorBlendAttachmentState* pBlendState = nullptr);
 	
 	void Destroy() {
 		Texture2_Destroy(m_attachment);

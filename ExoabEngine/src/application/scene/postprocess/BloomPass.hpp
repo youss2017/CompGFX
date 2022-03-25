@@ -24,6 +24,7 @@ namespace Application {
 		void RecordCommands(uint32_t FrameIndex);
 
 	private:
+		uint32_t mColorAttachmentIndex;
 		float mThresholdValue;
 		VkQueryPool mQuery;
 		VkSampler mSampler;
@@ -33,13 +34,21 @@ namespace Application {
 		uint32_t mKernalSizeX;
 		uint32_t mKernalSizeY;
 		ITexture2 mDownsampleTexture;
-		ITexture2 mUpsampleTexture;
 		VkPipelineLayout mThresholdLayout;
 		VkPipeline mThreshold;
 		DescriptorSet mThresholdSet;
 		VkPipelineLayout mDownsampleLayout;
+		VkPipelineLayout mDownsampleVerticalLayout;
+		VkPipelineLayout mUpsampleLayout;
 		VkPipeline mDownsample;
+		VkPipeline mDownsampleVertical;
+		VkPipeline mUpsample;
 		DescriptorSet mDownsampleSet;
+
+		DescriptorSet mCombineSet;
+		VkPipelineLayout mCombineLayout;
+		VkPipeline mCombine;
+
 	private:
 		Framebuffer mFBO;
 	};

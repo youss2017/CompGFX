@@ -128,8 +128,8 @@ bool Application::CreateResources()
 	PROFILE_FUNCTION();
 	gFBO0.m_width = 1280;
 	gFBO0.m_height = 720;
-	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, 1280, 720, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
-	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 1280, 720, VK_FORMAT_D32_SFLOAT, { 1.0f, 1.0f, 1.0f, 1.0f });
+	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, VK_IMAGE_USAGE_STORAGE_BIT, 1280, 720, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
+	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 0, 1280, 720, VK_FORMAT_D32_SFLOAT, { 1.0f, 1.0f, 1.0f, 1.0f });
 	gFBO0.AddColorAttachment(0, colorAttachment);
 	gFBO0.SetDepthAttachment(depthAttachment);
 
