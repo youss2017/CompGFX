@@ -12,18 +12,19 @@ namespace Application {
 
 Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera, bool UsingDebugPass) : Scene(gContext->defaultDevice, true), mCubeMap(CubeMap_Create(environmentMapPath, VK_FORMAT_R8G8B8A8_UNORM)), mCamera(camera), mGeoPass(geoPass), mUsingDebugPass(UsingDebugPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-	std::vector<ShaderBinding> bindings(1);
-	bindings[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	bindings[0].m_bindingID = 0;
-	bindings[0].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	bindings[0].m_sampler.push_back(mSampler);
-	bindings[0].m_textures.push_back(mCubeMap);
-	bindings[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	BindingDescription bindings[1];
+	bindings[0].mBindingID = 0;
+	bindings[0].mFlags = 0;
+	bindings[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	bindings[0].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	bindings[0].mTextures.push_back(mCubeMap);
+	bindings[0].mSampler = mSampler;
+	
 	std::vector<VkDescriptorPoolSize> poolSizes;
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &bindings);
+	ShaderConnector_CalculateDescriptorPool(1, bindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount, poolSizes);
-	mSet = ShaderBinding_Create(gContext, mPool, 0, &bindings);
-	mLayout = ShaderBinding_CreatePipelineLayout(gContext, { mSet }, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4} });
+	mSet = ShaderConnector_CreateSet(0, mPool, 1, bindings, 0, nullptr);
+	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4} });
 
 	Shader skyboxVert = Shader(gContext, "assets/shaders/skybox.vert");
 	Shader skyboxFrag = Shader(gContext, "assets/shaders/skybox.frag");
@@ -49,7 +50,7 @@ Application::SkyboxPass::~SkyboxPass()
 	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
-	ShaderBinding_DestroySets(gContext, { mSet });
+	ShaderConnector_DestroySet(mSet);
 	PipelineState_Destroy(mState);
 }
 
@@ -112,7 +113,7 @@ void Application::SkyboxPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, &mSet->m_set[FrameIndex], 0, nullptr);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, &mSet[FrameIndex], 0, nullptr);
 	glm::mat4 view = mCamera->GetViewMatrix();
 	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
 	glm::mat4 u_ProjView = proj * glm::mat4(glm::mat3(view));

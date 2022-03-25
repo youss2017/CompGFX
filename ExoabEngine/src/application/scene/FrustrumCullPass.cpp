@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "../../mesh/geometry.hpp"
 #include "../../window/PlatformWindow.hpp"
+#include <backend/VkGraphicsCard.hpp>
 
 // Specialization Constants
 // TODO: Use 32 for Nvidia Graphics cards
@@ -28,48 +29,51 @@ namespace Application {
 
 Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* camera) : Scene(gContext->defaultDevice, true), mECS(ecs), mCamera(camera)
 {
-	std::vector<ShaderBinding> computeBindings(5);
-	computeBindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[0].m_bindingID = 0;
-	computeBindings[0].m_preinitalized = true;
-	computeBindings[0].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[0].m_ssbo = ecs->GetGeometryDataArray();
+	BindingDescription computeBindings[5];
+	computeBindings[0].mBindingID = 0;
+	computeBindings[0].mFlags = 0;
+	computeBindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	computeBindings[0].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeBindings[0].mBufferSize = 0;
+	computeBindings[0].mBuffer = ecs->GetGeometryDataBuffer();
+	computeBindings[0].mInternalSharedResources = true;
 
-	computeBindings[1].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[1].m_bindingID = 1;
-	computeBindings[1].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[1].m_size = ecs->GetGeometryDataArray()[0]->mSize;
+	computeBindings[1].mBindingID = 1;
+	computeBindings[1].mFlags = BINDING_FLAG_CREATE_BUFFERS_POINTER;
+	computeBindings[1].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	computeBindings[1].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeBindings[1].mBufferSize = ecs->GetGeometryDataBuffer()->mSize;
+	computeBindings[1].mBuffer = nullptr;
 
-	computeBindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[2].m_bindingID = 2;
-	computeBindings[2].m_preinitalized = true;
-	computeBindings[2].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[2].m_ssbo = ecs->GetDrawDataArray();
+	computeBindings[2].mBindingID = 2;
+	computeBindings[2].mFlags = 0;
+	computeBindings[2].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	computeBindings[2].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeBindings[2].mBufferSize = 0;
+	computeBindings[2].mBuffer = ecs->GetDrawDataBuffer();
+	computeBindings[2].mInternalSharedResources = true;
 
-	computeBindings[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	computeBindings[3].m_bindingID = 3;
-	computeBindings[3].m_hostvisible = true;
-	computeBindings[3].m_useclientbuffer = false;
-	computeBindings[3].m_preinitalized = false;
-	computeBindings[3].m_additional_buffer_flags = BufferType(BUFFER_TYPE_INDIRECT | BUFER_TYPE_TRANSFER_SRC);
-	computeBindings[3].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[3].m_size = ecs->GetDrawDataArray()[0]->mSize;
+	computeBindings[3].mBindingID = 3;
+	computeBindings[3].mFlags = BINDING_FLAG_BUFFER_USAGE_INDIRECT | BINDING_FLAG_CREATE_BUFFERS_POINTER;
+	computeBindings[3].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	computeBindings[3].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeBindings[3].mBufferSize = ecs->GetDrawDataBuffer()->mSize;
+	computeBindings[3].mBuffer = nullptr;
+	computeBindings[3].mInternalSharedResources = true;
 
-	computeBindings[4].m_type = SHADER_BINDING_UNIFORM_BUFFER;
-	computeBindings[4].m_bindingID = 4;
-	computeBindings[4].m_hostvisible = true;
-	computeBindings[4].m_useclientbuffer = false;
-	computeBindings[4].m_preinitalized = false;
-	computeBindings[4].m_additional_buffer_flags = BufferType(0);
-	computeBindings[4].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	computeBindings[4].m_size = sizeof(FrustrumPlanes);
+	computeBindings[4].mBindingID = 4;
+	computeBindings[4].mFlags = BINDING_FLAG_CPU_VISIBLE;
+	computeBindings[4].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	computeBindings[4].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	computeBindings[4].mBufferSize = sizeof(FrustrumPlanes);
+	computeBindings[4].mBuffer = nullptr;
 
 	std::vector<VkDescriptorPoolSize> poolSize;
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, &computeBindings);
+	ShaderConnector_CalculateDescriptorPool(5, computeBindings, poolSize);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, 1 * gFrameOverlapCount, poolSize);
-	mSet = ShaderBinding_Create(gContext, mPool, 0, &computeBindings);
+	mSet = ShaderConnector_CreateSet(0, mPool, 5, computeBindings, 0, nullptr);
 
-	mFrustrumLayout = ShaderBinding_CreatePipelineLayout(gContext, { mSet }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
+	mFrustrumLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
 	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
 	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
@@ -77,8 +81,8 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
 	mFrustrum = Pipeline_CreateCompute(gContext, &computeShader, mFrustrumLayout, 0);
 
-	mOutputGeometryDataArray = mSet->m_bindings[1].m_ssbo;
-	mOutputDrawDataArray = mSet->m_bindings[3].m_ssbo;
+	mOutputGeometryDataArray = mSet.GetBuffer2(1);
+	mOutputDrawDataArray = mSet.GetBuffer2(3);
 
 	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT);
@@ -93,7 +97,7 @@ Application::FrustumCullPass::~FrustumCullPass()
 	Super_Scene_Destroy();
 	vkDestroyPipelineLayout(mDevice, mFrustrumLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
-	ShaderBinding_DestroySets(gContext, { mSet });
+	ShaderConnector_DestroySet(mSet);
 	vkDestroyPipeline(mDevice, mFrustrum, nullptr);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyQueryPool(mDevice, mInvocationQuery, nullptr);
@@ -128,7 +132,7 @@ VkCommandBuffer Application::FrustumCullPass::Prepare(uint32_t FrameIndex, float
 	planes.u_CullPlanes[3] = normalizePlane(projT[3] - projT[1]);
 	planes.u_CullPlanes[4] = normalizePlane(projT[3] - projT[2]);
 	memcpy(mFrustrumPlanesMapped[FrameIndex], &planes, sizeof(planes));
-	Buffer2_Flush(mSet->GetBuffer2(4, FrameIndex), 0, VK_WHOLE_SIZE);
+	Buffer2_Flush(mSet.GetBuffer2(4), 0, VK_WHOLE_SIZE);
 	return mCmds[FrameIndex];
 }
 
@@ -150,7 +154,7 @@ void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 {
 	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
 	uint32_t i = FrameIndex;
-	mFrustrumPlanesMapped[i] = Buffer2_Map(mSet->GetBuffer2(4, i));
+	mFrustrumPlanesMapped[i] = Buffer2_Map(mSet.GetBuffer2(4));
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmds[i];
 	vkBeginCommandBuffer(cmd, &beginInfo);
@@ -160,17 +164,17 @@ void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBeginQuery(cmd, mInvocationQuery, i, 0);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 0);
 
-	VkBuffer outputDrawDataBuffer = mOutputDrawDataArray[i]->mBuffer;
+	VkBuffer outputDrawDataBuffer = mOutputDrawDataArray->mBuffers[FrameIndex];
 	vkCmdFillBuffer(cmd, outputDrawDataBuffer, 0, VK_WHOLE_SIZE, 0);
 	VkBufferMemoryBarrier drawBufferBarrier = vk::Gfx_BufferMemoryBarrier(VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, outputDrawDataBuffer);
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &drawBufferBarrier, 0, nullptr);
 	VkBufferMemoryBarrier computeVertexShaderBarrier[2] = {
-		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputGeometryDataArray[i]->mBuffer),
-		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputDrawDataArray[i]->mBuffer)
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputGeometryDataArray->mBuffers[FrameIndex]),
+		vk::Gfx_BufferMemoryBarrier(VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, mOutputDrawDataArray->mBuffers[FrameIndex])
 	};
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 2, computeVertexShaderBarrier, 0, nullptr);
 
-	VkDescriptorSet computeSets[1] = { mSet->m_set[i] };
+	VkDescriptorSet computeSets[1] = { mSet[i] };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mFrustrum);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mFrustrumLayout, 0, 1, computeSets, 0, nullptr);
 	int drawCount = mECS->GetDrawCount();

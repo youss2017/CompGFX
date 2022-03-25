@@ -135,7 +135,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 {
 	vk::VkContext context = (vk::VkContext)texture->m_context;
 	// create staging buffer
-	IBuffer2 staging_buffer = Buffer2_Create(BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false, false);
+	IBuffer2 staging_buffer = Buffer2_Create(BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false);
 	// load data to buffer
 	void* staging_buffer_ptr = Buffer2_Map(staging_buffer);
 	memcpy(staging_buffer_ptr, pixels, size);
@@ -178,7 +178,7 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	buffer_copy_region.imageExtent.width = texture->m_specification.m_Width;
 	buffer_copy_region.imageExtent.height = texture->m_specification.m_Height;
 	buffer_copy_region.imageExtent.depth = 1;
-	vkCmdCopyBufferToImage(cmd_buffer, staging_buffer->mBuffer, texture->m_vk_image->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_copy_region);
+	vkCmdCopyBufferToImage(cmd_buffer, staging_buffer->mBuffers[0], texture->m_vk_image->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_copy_region);
 
 	// transfer image back to readable format
 	VkImageMemoryBarrier barrier_readable = barrier;

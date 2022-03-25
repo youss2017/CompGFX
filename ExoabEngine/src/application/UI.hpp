@@ -8,9 +8,11 @@ namespace UI
 	extern double FrameRate;
 	extern double FrameTime;
 	extern double FrustrumCullingTime;
+	extern double BloomPassTime;
+	extern double ShadowPassTime;
+	extern double DebugPassTime;
+	extern double NextFrameTime;
 	extern unsigned long long  FrustrumInvocations;
-	extern double InputDrawCount;
-	extern double OutputDrawCount;
 	extern double GeometryPassTime;
 	extern unsigned long long VertexInvocations;
 	extern unsigned long long FragmentInvocations;
@@ -22,6 +24,7 @@ namespace UI
 	extern float L_x, L_y, L_z;
 	extern bool ReloadShaders;
 	extern bool ClearShaderCache;
+	extern int BloomDownsampleMip;
 
 	void Initalize(void* context, void* gfx);
 	void RenderUI();

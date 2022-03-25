@@ -117,8 +117,8 @@ bool Application::LoadAssets()
 	IEntity cube = gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE);
 	cube->m_geometryID = EntityGeometryID::ENTITY_GEOMETRY_CUBE;
 	cube->mInstanceCount = instanceCount;
-	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::CPU_TO_CPU, true, false, false);
-	cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false, false);
+	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::CPU_TO_GPU, true, false);
+	cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
 	
 	return true;
 }
@@ -138,7 +138,7 @@ bool Application::CreateResources()
 	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
 	skybox = new SkyboxPass("assets/textures/cubemap4.png", geoPass, &gCamera, true);
 	debugPass = new DebugPass(gFBO0);
-	bloom = new BloomPass(gFBO0, 0, 0.76);
+	bloom = new BloomPass(gFBO0, 0, 1.0);
 	UI::CubemapLODMax = skybox->GetMaxLOD();
 
 	for (int i = 0; i < gFrameOverlapCount; i++) {
@@ -221,6 +221,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 			skybox->ReloadShaders();
 			shadow->ReloadShaders();
 			debugPass->ReloadShaders();
+			bloom->ReloadShaders();
 		}
 		geoPass->SetWireframeMode(UI::ShowWireframe);
 		//Graphics3D_SetSyncInterval(gGfx, UI::VSync);
@@ -233,8 +234,11 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	if (UpdateUIInfo) {
 		UI::FrameRate = FrameRate;
 		UI::FrameTime = dTime * 1e3;
+		shadow->GetStatistics(false, frame.m_FrameIndex, UI::ShadowPassTime);
 		cullPass->GetComputeShaderStatistics(false, frame.m_FrameIndex, UI::FrustrumCullingTime, UI::FrustrumInvocations);
 		geoPass->GetStatistics(false, frame.m_FrameIndex, UI::GeometryPassTime, UI::VertexInvocations, UI::FragmentInvocations);
+		bloom->GetStatistics(false, frame.m_FrameIndex, UI::BloomPassTime);
+		debugPass->GetStatistics(false, frame.m_FrameIndex, UI::DebugPassTime);
 	}
 	
 	glm::vec3 pos = glm::vec3(UI::L_x, UI::L_y, UI::L_z);
@@ -256,16 +260,21 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	return true;
 }
 
-void Application::Render(double dTimeFromStart, double dTime)
+void Application::Render(double dTimeFromStart, double dTime, bool UpdateUITime)
 {
 	PROFILE_FUNCTION();
 	VkDevice device = gContext->defaultDevice;
 	auto& frame = Graphics3D_GetFrame(gGfx);
 	uint32_t FrameIndex = frame.m_FrameIndex;
 	
+	auto NextFrameStart = std::chrono::high_resolution_clock::now();
 	if (gSwapchain.PrepareNextFrame(UINT64_MAX, frame.m_RenderSemaphore, nullptr, nullptr) != VK_SUCCESS) {
 		return;
 	}
+	auto NextFrameEnd = std::chrono::high_resolution_clock::now();
+	if(UpdateUITime)
+		UI::NextFrameTime = double((NextFrameEnd - NextFrameStart).count()) * 1e-6;
+
 	vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 	vkResetFences(device, 1, &frame.m_RenderFence);
 	
@@ -289,14 +298,16 @@ void Application::Render(double dTimeFromStart, double dTime)
 	if (s_EnableImGui)
 		UI::RenderUI();
 	if (UI::CurrentOutputBuffer == 0) {
-		//gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
-		gSwapchain.Present(bloom->mDownsampleTexture->m_vk_images_per_frame[FrameIndex], bloom->mDownsampleTexture->mMipmapViews.mMipmapViewsPerFrame[FrameIndex][2], VK_IMAGE_LAYOUT_GENERAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
+		gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
 	}
 	else if(UI::CurrentOutputBuffer == 1) {
 		gSwapchain.Present(gFBO0.m_depth_attachment.value().GetImage(FrameIndex), gFBO0.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, true);
 	}
 	else if (UI::CurrentOutputBuffer == 2) {
 		gSwapchain.Present(shadow->GetDepthImage(FrameIndex), shadow->GetDepthView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &frame.m_PresentSemaphore, true);
+	}
+	else if (UI::CurrentOutputBuffer == 3) {
+		gSwapchain.Present(bloom->GetDownsampleTexture()->m_vk_images_per_frame[FrameIndex], bloom->GetDownsampleTexture()->mMipmapViews.mMipmapViewsPerFrame[FrameIndex][UI::BloomDownsampleMip], VK_IMAGE_LAYOUT_GENERAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
 	}
 	Graphics3D_NextFrame(gGfx);
 }

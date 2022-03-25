@@ -1,10 +1,10 @@
 #include "DebugPass.hpp"
-#include <shaders/ShaderBinding.hpp>
+#include <shaders/ShaderConnector.hpp>
 
 extern vk::VkContext gContext;
 
 Application::DebugPass::DebugPass(const Framebuffer& fbo) : Scene(gContext->defaultDevice, true), mFBO(fbo), mProjView(glm::mat4(1.0)) {
-	mLayout = ShaderBinding_CreatePipelineLayout(gContext, {}, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject)}});
+	mLayout = ShaderConnector_CreatePipelineLayout(0, nullptr, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject)}});
 	Shader vertexShader = Shader(gContext, "assets/shaders/debug/debugVertex.vert");
 	Shader fragmentShader = Shader(gContext, "assets/shaders/debug/debugFragment.frag");
 	PipelineSpecification specification;
@@ -21,11 +21,13 @@ Application::DebugPass::DebugPass(const Framebuffer& fbo) : Scene(gContext->defa
 	specification.m_FarField = 1.0f;
 	PipelineVertexInputDescription input;
 	mState = PipelineState_Create(gContext, specification, input, fbo, mLayout, &vertexShader, &fragmentShader, {} );
+	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 }
 
 Application::DebugPass::~DebugPass() {
 	Super_Scene_Destroy();
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
+	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	PipelineState_Destroy(mState);
 }
 
@@ -53,12 +55,22 @@ void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3
 	mCubes.push_back(obj);
 }
 
+void Application::DebugPass::GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime) {
+	uint64_t data[2];
+	VkResult q = vkGetQueryPoolResults(mDevice, mQuery, FrameIndex * 2, 2, sizeof(data), data, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
+	if (q == VK_SUCCESS) {
+		dTime = (double(data[1] - data[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+	}
+}
+
 void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	VkCommandBuffer cmd = mCmds[FrameIndex];
 	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
 
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
+	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2));
 
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -100,6 +112,8 @@ void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 		vkCmdDraw(cmd, 36, 1, 0, 0);
 	}
 
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
+	vkCmdEndRenderingKHR(cmd);
 	vkCmdEndRenderingKHR(cmd);
 
 	vkEndCommandBuffer(cmd);

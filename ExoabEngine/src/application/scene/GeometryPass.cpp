@@ -1,5 +1,4 @@
 #include "GeometryPass.hpp"
-#include <shaders/ShaderBinding.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "../../window/PlatformWindow.hpp"
 #include "../../mesh/Map.hpp"
@@ -28,108 +27,86 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT);
 	
-	std::vector<ShaderBinding> geometryPass(4);
-	geometryPass[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	geometryPass[0].m_bindingID = 0;
-	geometryPass[0].m_hostvisible = false;
-	geometryPass[0].m_useclientbuffer = true;
-	geometryPass[0].m_preinitalized = false;
-	geometryPass[0].m_additional_buffer_flags = (BufferType)0;
-	geometryPass[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	geometryPass[0].m_size = 0;
-	geometryPass[0].m_client_buffer = verticesSSBO;
+	BindingDescription geometryPass[4];
+	geometryPass[0].mBindingID = 0;
+	geometryPass[0].mFlags = 0;
+	geometryPass[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	geometryPass[0].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	geometryPass[0].mBufferSize = 0;
+	geometryPass[0].mBuffer = verticesSSBO;
+	geometryPass[0].mInternalSharedResources = true;
 
-	geometryPass[1].m_type = SHADER_BINDING_UNIFORM_BUFFER;
-	geometryPass[1].m_bindingID = 1;
-	geometryPass[1].m_hostvisible = true;
-	geometryPass[1].m_useclientbuffer = false;
-	geometryPass[1].m_preinitalized = false;
-	geometryPass[1].m_additional_buffer_flags = (BufferType)0;
-	geometryPass[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	geometryPass[1].m_size = sizeof(ShaderTypes::GlobalData);
+	geometryPass[1].mBindingID = 1;
+	geometryPass[1].mFlags = BINDING_FLAG_CPU_VISIBLE;
+	geometryPass[1].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	geometryPass[1].mStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	geometryPass[1].mBufferSize = sizeof(ShaderTypes::GlobalData);
+	geometryPass[1].mBuffer = nullptr;
 
-	geometryPass[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	geometryPass[2].m_bindingID = 2;
-	geometryPass[2].m_hostvisible = false;
-	geometryPass[2].m_useclientbuffer = false;
-	geometryPass[2].m_preinitalized = true;
-	geometryPass[2].m_additional_buffer_flags = (BufferType)0;
-	geometryPass[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	geometryPass[2].m_ssbo = cullPass->mOutputGeometryDataArray;
+	geometryPass[2].mBindingID = 2;
+	geometryPass[2].mFlags = 0;
+	geometryPass[2].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	geometryPass[2].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	geometryPass[2].mBufferSize = 0;
+	geometryPass[2].mBuffer = cullPass->mOutputGeometryDataArray;
+	geometryPass[2].mInternalSharedResources = true;
 
-	geometryPass[3].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	geometryPass[3].m_bindingID = 3;
-	geometryPass[3].m_hostvisible = false;
-	geometryPass[3].m_useclientbuffer = false;
-	geometryPass[3].m_preinitalized = true;
-	geometryPass[3].m_additional_buffer_flags = (BufferType)0;
-	geometryPass[3].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	geometryPass[3].m_ssbo = cullPass->mOutputDrawDataArray;
+	geometryPass[3].mBindingID = 3;
+	geometryPass[3].mFlags = 0;
+	geometryPass[3].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	geometryPass[3].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	geometryPass[3].mBufferSize = 0;
+	geometryPass[3].mBuffer = cullPass->mOutputDrawDataArray;
+	geometryPass[3].mInternalSharedResources = true;
 
-	std::vector<ShaderBinding> geometryPassFragment(2);
-	geometryPassFragment[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	geometryPassFragment[0].m_bindingID = 0;
-	geometryPassFragment[0].m_hostvisible = false;
-	geometryPassFragment[0].m_useclientbuffer = false;
-	geometryPassFragment[0].m_preinitalized = false;
-	geometryPassFragment[0].m_additional_buffer_flags = (BufferType)0;
-	geometryPassFragment[0].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	geometryPassFragment[0].m_sampler.push_back(mSampler);
-	geometryPassFragment[0].m_textures.push_back(mWoodTex);
-	geometryPassFragment[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	BindingDescription geometryPassFragment[2];
+	geometryPassFragment[0].mBindingID = 0;
+	geometryPassFragment[0].mFlags = 0;
+	geometryPassFragment[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	geometryPassFragment[0].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	geometryPassFragment[0].mTextures.push_back(mWoodTex);
+	geometryPassFragment[0].mSampler = mSampler;
 
-	geometryPassFragment[1].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	geometryPassFragment[1].m_bindingID = 1;
-	geometryPassFragment[1].m_hostvisible = false;
-	geometryPassFragment[1].m_useclientbuffer = false;
-	geometryPassFragment[1].m_preinitalized = false;
-	geometryPassFragment[1].m_additional_buffer_flags = (BufferType)0;
-	geometryPassFragment[1].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	geometryPassFragment[1].m_sampler.push_back(mShadowSampler);
-	geometryPassFragment[1].m_textures.push_back(shadowMap);
-	geometryPassFragment[1].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	geometryPassFragment[1].mBindingID = 1;
+	geometryPassFragment[1].mFlags = 0;
+	geometryPassFragment[1].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	geometryPassFragment[1].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	geometryPassFragment[1].mTextures.push_back(shadowMap);
+	geometryPassFragment[1].mSampler = mShadowSampler;
 
-	std::vector<ShaderBinding> terrainBindings(3);
-	terrainBindings[0].m_type = SHADER_BINDING_UNIFORM_BUFFER;
-	terrainBindings[0].m_bindingID = 0;
-	terrainBindings[0].m_hostvisible = true;
-	terrainBindings[0].m_useclientbuffer = false;
-	terrainBindings[0].m_preinitalized = true;
-	terrainBindings[0].m_additional_buffer_flags = (BufferType)0;
-	terrainBindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	terrainBindings[0].m_buffer = nullptr;
+	BindingDescription terrainBindings[3];
+	terrainBindings[0].mBindingID = 0;
+	terrainBindings[0].mFlags = 0;
+	terrainBindings[0].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	terrainBindings[0].mStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainBindings[0].mBufferSize = 0;
+	terrainBindings[0].mBuffer = nullptr;
+	terrainBindings[0].mInternalSharedResources = true;
 
-	terrainBindings[1].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	terrainBindings[1].m_bindingID = 1;
-	terrainBindings[1].m_hostvisible = false;
-	terrainBindings[1].m_useclientbuffer = false;
-	terrainBindings[1].m_preinitalized = false;
-	terrainBindings[1].m_additional_buffer_flags = (BufferType)0;
-	terrainBindings[1].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	terrainBindings[1].m_sampler.push_back(mSampler);
-	terrainBindings[1].m_textures.push_back(mWoodTex);
-	terrainBindings[1].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	terrainBindings[1].mBindingID = 1;
+	terrainBindings[1].mFlags = 0;
+	terrainBindings[1].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	terrainBindings[1].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainBindings[1].mTextures.push_back(mWoodTex);
+	terrainBindings[1].mSampler = mSampler;
 
-	terrainBindings[2].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	terrainBindings[2].m_bindingID = 2;
-	terrainBindings[2].m_hostvisible = false;
-	terrainBindings[2].m_useclientbuffer = false;
-	terrainBindings[2].m_preinitalized = false;
-	terrainBindings[2].m_additional_buffer_flags = (BufferType)0;
-	terrainBindings[2].m_shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	terrainBindings[2].m_sampler.push_back(mShadowSampler);
-	terrainBindings[2].m_textures.push_back(shadowMap);
-	terrainBindings[2].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	terrainBindings[2].mBindingID = 2;
+	terrainBindings[2].mFlags = 0;
+	terrainBindings[2].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	terrainBindings[2].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainBindings[2].mTextures.push_back(shadowMap);
+	terrainBindings[2].mSampler = mShadowSampler;
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &geometryPass);
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &geometryPassFragment);
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &terrainBindings);
+	ShaderConnector_CalculateDescriptorPool(4, geometryPass, poolSizes);
+	ShaderConnector_CalculateDescriptorPool(2, geometryPassFragment, poolSizes);
+	ShaderConnector_CalculateDescriptorPool(3, terrainBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2 + (gFrameOverlapCount * 1), poolSizes);
 	
-	mGeoSet0 = ShaderBinding_Create(gContext, mPool, 0, &geometryPass);
-	mGeoSet1 = ShaderBinding_Create(gContext, mPool, 0, &geometryPassFragment);
-	mGeoLayout = ShaderBinding_CreatePipelineLayout(gContext, { mGeoSet0, mGeoSet1 }, {});
+	mGeoSet0 = ShaderConnector_CreateSet(0, mPool, 4, geometryPass, 0, nullptr);
+	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 2, geometryPassFragment, 0, nullptr);
+	DescriptorSet GeoSets[2] = { mGeoSet0, mGeoSet1 };
+	mGeoLayout = ShaderConnector_CreatePipelineLayout(2, GeoSets, {});
 	Shader geoVertex = Shader(gContext, "assets/shaders/vertex.vert");
 	Shader geoFragment = Shader(gContext, "assets/shaders/fragment.frag");
 	PipelineSpecification spec;
@@ -147,15 +124,15 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	PipelineVertexInputDescription input;
 	mGeoState = PipelineState_Create(gContext, spec, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
 
-	terrainBindings[0].m_buffer = mGeoSet0->GetBuffer2Array(1);
+	terrainBindings[0].mBuffer = mGeoSet0.GetBuffer2(1);
 	
 	Map map = Map_Create(100, 2, 100, 2, 1);
-	mMapVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, map.m_vertices.data(), map.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY, false, false, false);
-	mMapIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, map.m_indices.data(), map.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false, false);
+	mMapVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, map.m_vertices.data(), map.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY, false, false);
+	mMapIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, map.m_indices.data(), map.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false);
 	mMapIndicesCount = map.m_totalIndicesCount;
 
-	mMapSet = ShaderBinding_Create(gContext, mPool, 0, &terrainBindings);
-	mMapLayout = ShaderBinding_CreatePipelineLayout(gContext, { mMapSet }, {});
+	mMapSet = ShaderConnector_CreateSet(0, mPool, 3, terrainBindings, 0, nullptr);
+	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, {});
 	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
 	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
 	mapVertex.SetSpecializationConstant<float>(0, MAP_SCALE_X);
@@ -178,7 +155,9 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 Application::GeometryPass::~GeometryPass() {
 	Super_Scene_Destroy();
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
-	ShaderBinding_DestroySets(gContext, { mGeoSet0, mGeoSet1, mMapSet });
+	ShaderConnector_DestroySet(mGeoSet0);
+	ShaderConnector_DestroySet(mGeoSet1);
+	ShaderConnector_DestroySet(mMapSet);
 	vkDestroyPipelineLayout(mDevice, mGeoLayout, nullptr);
 	vkDestroyPipelineLayout(mDevice, mMapLayout, nullptr);
 	PipelineState_Destroy(mGeoState);
@@ -198,7 +177,7 @@ VkCommandBuffer Application::GeometryPass::Prepare(uint32_t FrameIndex, float dT
 
 	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
 
-	auto globalDataBuffer = mGeoSet0->GetBuffer2(1, FrameIndex);
+	auto globalDataBuffer = mGeoSet0.GetBuffer2(1);
 	void* ptr = Buffer2_Map(globalDataBuffer);
 	ShaderTypes::GlobalData data;
 	glm::mat4 view = mCamera->GetViewMatrix();
@@ -353,18 +332,18 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBeginQuery(cmd, mInvocationQuery, FrameIndex, 0);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 0);
 
-	VkDescriptorSet geometrySets[2] = { mGeoSet0->m_set[i], mGeoSet1->m_set[i] };
+	VkDescriptorSet geometrySets[2] = { mGeoSet0[i], mGeoSet1[i] };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mGeoState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mGeoLayout, 0, 2, geometrySets, 0, nullptr);
-	vkCmdBindIndexBuffer(cmd, mIndicsSSBO->mBuffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray[i]->mBuffer, 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
+	vkCmdBindIndexBuffer(cmd, mIndicsSSBO->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray->mBuffers[FrameIndex], 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
-	VkDescriptorSet mapSet[1] = { mMapSet->m_set[FrameIndex] };
+	VkDescriptorSet mapSet[1] = { mMapSet[FrameIndex] };
 	VkDeviceSize offset[1] = { 0 };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
-	vkCmdBindVertexBuffers(cmd, 0, 1, &mMapVertices->mBuffer, offset);
-	vkCmdBindIndexBuffer(cmd, mMapIndices->mBuffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &mMapVertices->mBuffers[FrameIndex], offset);
+	vkCmdBindIndexBuffer(cmd, mMapIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(cmd, mMapIndicesCount, 1, 0, 0, 0);
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };

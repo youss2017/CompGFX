@@ -3,7 +3,7 @@
 #include "../Camera.hpp"
 #include "../ecs/EntityController.hpp"
 #include <memory/Buffer2.hpp>
-#include <shaders/ShaderBinding.hpp>
+#include <shaders/ShaderConnector.hpp>
 
 namespace Application {
 
@@ -27,9 +27,9 @@ namespace Application {
 		EntityController* mECS;
 	private:
 		VkDescriptorPool mPool;
-		ShaderSet mSet;
-		IBuffer2* mOutputGeometryDataArray;
-		IBuffer2* mOutputDrawDataArray;
+		DescriptorSet mSet;
+		IBuffer2 mOutputGeometryDataArray;
+		IBuffer2 mOutputDrawDataArray;
 		VkPipelineLayout mFrustrumLayout;
 		VkPipeline mFrustrum;
 		VkQueryPool mQuery;

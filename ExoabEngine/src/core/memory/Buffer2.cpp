@@ -3,11 +3,11 @@
 
 extern vk::VkContext gContext;
 
-IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool createPerFrame)
+IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent)
 {
 	using namespace VkAlloc;
 	BUFFER_DESCRIPTION desc;
-	desc.m_properties = memoryType == BufferMemoryType::GPU_ONLY ? DEVICE_MEMORY_PROPERTY::GPU_ONLY : ((memoryType == BufferMemoryType::CPU_TO_CPU) ? DEVICE_MEMORY_PROPERTY::CPU_TO_GPU : DEVICE_MEMORY_PROPERTY::CPU_ONLY);
+	desc.m_properties = memoryType == BufferMemoryType::GPU_ONLY ? DEVICE_MEMORY_PROPERTY::GPU_ONLY : ((memoryType == BufferMemoryType::CPU_TO_GPU) ? DEVICE_MEMORY_PROPERTY::CPU_TO_GPU : DEVICE_MEMORY_PROPERTY::CPU_ONLY);
 	desc.m_size = size;
 	desc.m_usage = memoryType == BufferMemoryType::GPU_ONLY ? VK_BUFFER_USAGE_TRANSFER_DST_BIT : 0;
 	if (type & BUFFER_TYPE_VERTEX)
@@ -33,30 +33,28 @@ IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryTyp
 	buffer->mSize = size;
 	buffer->mType = type;
 	VkAlloc::CreateBuffers(gContext->m_future_memory_context, 1, &desc, &buffer->mVkAllocBuffer);
-	buffer->mBuffer = buffer->mVkAllocBuffer->m_buffer;
-	if (createPerFrame) {
-		for (int i = 1; i < gFrameOverlapCount; i++) {
-			VkBufferCreateInfo createInfo;
-			createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			createInfo.pNext = nullptr;
-			createInfo.flags = 0;
-			createInfo.size = desc.m_size;
-			createInfo.usage = desc.m_usage;
-			createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			createInfo.queueFamilyIndexCount = 0;
-			createInfo.pQueueFamilyIndices = nullptr;
-			createInfo.flags = 0;
-			vkCreateBuffer(gContext->defaultDevice, &createInfo, nullptr, &buffer->mPerFrameBuffers[i]);
-			auto& suballoc = buffer->mVkAllocBuffer->m_suballocation;
-			vkBindBufferMemory(gContext->defaultDevice, buffer->mPerFrameBuffers[i], suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
-		}
+	buffer->mBuffers[0] = buffer->mVkAllocBuffer->m_buffer;
+	for (int i = 1; i < gFrameOverlapCount; i++) {
+		VkBufferCreateInfo createInfo;
+		createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		createInfo.pNext = nullptr;
+		createInfo.flags = 0;
+		createInfo.size = desc.m_size;
+		createInfo.usage = desc.m_usage;
+		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		createInfo.queueFamilyIndexCount = 0;
+		createInfo.pQueueFamilyIndices = nullptr;
+		createInfo.flags = 0;
+		vkCreateBuffer(gContext->defaultDevice, &createInfo, nullptr, &buffer->mBuffers[i]);
+		auto& suballoc = buffer->mVkAllocBuffer->m_suballocation;
+		vkBindBufferMemory(gContext->defaultDevice, buffer->mBuffers[i], suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
 	}
 	return buffer;
 }
 
-IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool createPerFrame)
+IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent)
 {
-	IBuffer2 buffer = Buffer2_Create(type, size, memoryType, pointerUsage, requireCoherent, createPerFrame);
+	IBuffer2 buffer = Buffer2_Create(type, size, memoryType, pointerUsage, requireCoherent);
 	Buffer2_UploadData(buffer, (char8_t*)pData, 0, VK_WHOLE_SIZE);
 	return buffer;
 }
@@ -73,7 +71,7 @@ void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset, size_t size
 		Buffer2_Unmap(buffer);
 		return;
 	}
-	IBuffer2 intermediate = Buffer2_Create(BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false, false);
+	IBuffer2 intermediate = Buffer2_Create(BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false);
 	Buffer2_UploadData(intermediate, pData, 0, size);
 	VkFence fence = vk::Gfx_CreateFence(gContext, false);
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(gContext, true, false);
@@ -83,7 +81,7 @@ void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset, size_t size
 	region.srcOffset = 0;
 	region.size = size;
 	region.dstOffset = offset;
-	vkCmdCopyBuffer(cmd, intermediate->mBuffer, buffer->mBuffer, 1, &region);
+	vkCmdCopyBuffer(cmd, intermediate->mBuffers[0], buffer->mBuffers[0], 1, &region);
 	vkEndCommandBuffer(cmd);
 	vk::Gfx_SubmitCmdBuffers(gContext->defaultQueue, {cmd}, {}, {}, {}, fence);
 	vkWaitForFences(gContext->defaultDevice, 1, &fence, true, 5e9);
@@ -135,7 +133,7 @@ uint64_t Buffer2_GetGPUPointer(IBuffer2 buffer)
 	if (buffer->mGPUPointer != 0)
 		return buffer->mGPUPointer;
 	VkBufferDeviceAddressInfo info{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-	info.buffer = buffer->mBuffer;
+	info.buffer = buffer->mBuffers[0];
 	uint64_t ptr = vkGetBufferDeviceAddress(gContext->defaultDevice, &info);
 	if (ptr == uint64_t(NULL)) {
 		logerror("Could not get GPU buffer pointer!");
@@ -149,17 +147,15 @@ void Buffer2_Destroy(IBuffer2 buffer)
 	if (buffer->mIsMapped)
 		Buffer2_Unmap(buffer);
 	VkAlloc::DestroyBuffers(gContext->m_future_memory_context, 1, &buffer->mVkAllocBuffer);
-	if (buffer->mPerFrame) {
-		for (int i = 1; i < gFrameOverlapCount; i++)
-			vkDestroyBuffer(gContext->defaultDevice, buffer->mPerFrameBuffers[i], nullptr);
-	}
+	for (int i = 1; i < gFrameOverlapCount; i++)
+		vkDestroyBuffer(gContext->defaultDevice, buffer->mBuffers[i], nullptr);
 	delete buffer;
 }
 
 static std::map<uint64_t, IBuffer2> GmallocBuffers;
 
 void* Gmalloc(uint32_t size, BufferType type) {
-	IBuffer2 buffer = Buffer2_Create(type, size, BufferMemoryType::CPU_TO_CPU, true, true, false);
+	IBuffer2 buffer = Buffer2_Create(type, size, BufferMemoryType::CPU_TO_GPU, true, true);
 	void* ptr = Buffer2_Map(buffer);
 	GmallocBuffers.insert(std::make_pair(uint64_t(ptr), buffer));
 	return ptr;

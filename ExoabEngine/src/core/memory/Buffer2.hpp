@@ -9,18 +9,19 @@ struct GPUBuffer2
 	size_t mSize;
 	BufferMemoryType mMemoryType;
 	VkAlloc::BUFFER mVkAllocBuffer;
-	bool mPerFrame;
-	union {
-		VkBuffer mBuffer;
-		VkBuffer mPerFrameBuffers[gFrameOverlapCount];
-	};
+	VkBuffer mBuffers[gFrameOverlapCount];
 	bool mIsMapped = false;
 	void* mMappedPtr = nullptr;
 	uint64_t mGPUPointer = 0;
+
+	const VkBuffer& operator[](uint32_t frameIndex) {
+		return mBuffers[frameIndex];
+	}
+
 } typedef* IBuffer2;
 
-IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool createPerFrame);
-IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool createPerFrame);
+IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent);
+IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent);
 void Buffer2_UploadData(IBuffer2 buffer, void* pData, size_t offset, size_t size);
 void* Buffer2_Map(IBuffer2 buffer);
 // Makes host writes (CPU) visible to device (GPU)

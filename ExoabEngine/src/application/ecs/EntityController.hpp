@@ -21,13 +21,13 @@ public:
 	void PrepareDataForFrame(uint32_t frameIndex);
 	uint32_t GetInstanceCount();
 	inline uint32_t GetDrawCount() { return mDraws.size(); }
-	inline IBuffer2* GetDrawDataArray() { return mInputDrawData; }
-	inline IBuffer2* GetGeometryDataArray() { return mInputGeometryData; }
+	inline IBuffer2 GetDrawDataBuffer() { return mInputDrawData; }
+	inline IBuffer2 GetGeometryDataBuffer() { return mInputGeometryData; }
 private:
 	std::vector<Mesh::Geometry> mGeometry;
 	std::vector<ShaderTypes::DrawData> mDraws;
 	std::vector<ShaderTypes::GeometryData> mGeoData;
 	std::map<EntityGeometryID, IEntity> mEntites;
-	IBuffer2 mInputDrawData[gFrameOverlapCount];
-	IBuffer2 mInputGeometryData[gFrameOverlapCount];
+	IBuffer2 mInputDrawData;
+	IBuffer2 mInputGeometryData;
 };

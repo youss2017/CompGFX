@@ -31,10 +31,8 @@ EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
 		mGeoData.push_back(geoData);
 	}
 
-	for (int i = 0; i < gFrameOverlapCount; i++) {
-		mInputDrawData[i] = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mDraws.data(), mDraws.size() * sizeof(ShaderTypes::DrawData), BufferMemoryType::CPU_TO_CPU, true, true, false);
-		mInputGeometryData[i] = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mGeoData.data(), mGeoData.size() * sizeof(ShaderTypes::GeometryData), BufferMemoryType::CPU_TO_CPU, true, true, false);
-	}
+	mInputDrawData = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mDraws.data(), mDraws.size() * sizeof(ShaderTypes::DrawData), BufferMemoryType::CPU_TO_GPU, true, true);
+	mInputGeometryData = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mGeoData.data(), mGeoData.size() * sizeof(ShaderTypes::GeometryData), BufferMemoryType::CPU_TO_GPU, true, true);
 
 	for (auto& e : mEntites) {
 		e.second->mInstanceCount = 0;
@@ -45,16 +43,14 @@ EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
 
 EntityController::~EntityController()
 {
-	for (int i = 0; i < gFrameOverlapCount; i++) {
-		Buffer2_Destroy(mInputDrawData[i]);
-		Buffer2_Destroy(mInputGeometryData[i]);
-	}
+	Buffer2_Destroy(mInputDrawData);
+	Buffer2_Destroy(mInputGeometryData);
 }
 
 void EntityController::PrepareDataForFrame(uint32_t frameIndex)
 {
-	ShaderTypes::DrawData* draws = (ShaderTypes::DrawData*)Buffer2_Map(mInputDrawData[frameIndex]);
-	ShaderTypes::GeometryData* geoData = (ShaderTypes::GeometryData*)Buffer2_Map(mInputGeometryData[frameIndex]);
+	ShaderTypes::DrawData* draws = (ShaderTypes::DrawData*)Buffer2_Map(mInputDrawData);
+	ShaderTypes::GeometryData* geoData = (ShaderTypes::GeometryData*)Buffer2_Map(mInputGeometryData);
 
 	for (auto& entitymap : mEntites) {
 		IEntity entity = entitymap.second;
@@ -78,8 +74,8 @@ void EntityController::PrepareDataForFrame(uint32_t frameIndex)
 			memcpy(&(geoData + entity->m_reserved_geometrydata_index)->mCulledInstancePtr, &CulledGPUpointer, 8);
 		}
 	}
-	Buffer2_Flush(mInputDrawData[frameIndex], 0, VK_WHOLE_SIZE);
-	Buffer2_Flush(mInputGeometryData[frameIndex], 0, VK_WHOLE_SIZE);
+	Buffer2_Flush(mInputDrawData, 0, VK_WHOLE_SIZE);
+	Buffer2_Flush(mInputGeometryData, 0, VK_WHOLE_SIZE);
 }
 
 uint32_t EntityController::GetInstanceCount()

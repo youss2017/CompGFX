@@ -555,7 +555,8 @@ namespace vk
 		VkBool32 anisotropyEnable,
 		float maxAnisotropy,
 		float minLod,
-		float maxLod)
+		float maxLod,
+		VkBorderColor borderColor)
 	{
 		VkSamplerCreateInfo createInfo;
 		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -574,7 +575,7 @@ namespace vk
 		createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 		createInfo.minLod = minLod;
 		createInfo.maxLod = maxLod;
-		createInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+		createInfo.borderColor = borderColor;
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 		VkSampler sampler;
 		vkCreateSampler(context->defaultDevice, &createInfo, nullptr, &sampler);

@@ -1,7 +1,7 @@
 #pragma once
 #include "../core/pipeline/Pipeline.hpp"
 #include <memory/Buffer2.hpp>
-#include <shaders/ShaderBinding.hpp>
+#include <shaders/ShaderConnector.hpp>
 #include <vector>
 #include <glm/glm.hpp>
 

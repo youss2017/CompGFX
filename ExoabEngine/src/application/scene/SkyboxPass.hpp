@@ -4,7 +4,7 @@
 #include <string>
 #include <memory/CubeMap.hpp>
 #include <pipeline/Pipeline.hpp>
-#include <shaders/ShaderBinding.hpp>
+#include <shaders/ShaderConnector.hpp>
 #include "GeometryPass.hpp"
 
 namespace Application {
@@ -34,7 +34,7 @@ namespace Application {
 		VkPipelineLayout mLayout;
 		IPipelineState mState;
 		VkDescriptorPool mPool;
-		ShaderSet mSet;
+		DescriptorSet mSet;
 	};
 
 }

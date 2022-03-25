@@ -26,11 +26,13 @@ namespace Application {
 		void NewFrame() { mCubes.clear(); }
 		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 		void DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color);
+		void GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime);
 
 	private:
 		void RecordCommands(uint32_t FrameIndex);
 
 	private:
+		VkQueryPool mQuery;
 		Framebuffer mFBO;
 		glm::mat4 mProjView;
 		std::vector<DebugObject> mCubes;

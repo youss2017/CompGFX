@@ -143,7 +143,8 @@ namespace vk {
 		VkBool32 anisotropyEnable = VK_TRUE,
 		float maxAnisotropy = 16.0,
 		float minLod = 0.0,
-		float maxLod = 1000.0);
+		float maxLod = 1000.0, 
+		VkBorderColor borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE);
 
 	// https://harrylovescode.gitbooks.io/vulkan-api/content/chap07/chap07.html with some modifications
 	void Gfx_SetImageLayout(VkCommandBuffer cmdBuffer, VkImage image,

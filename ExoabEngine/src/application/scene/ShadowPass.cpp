@@ -31,48 +31,43 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	Shader vertex = Shader(gContext, "assets/shaders/shadow/shadow.vert");
 	Shader fragment = Shader(gContext, "assets/shaders/shadow/shadow.frag");
 
-	std::vector<ShaderBinding> bindings(4);
-	bindings[0].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings[0].m_bindingID = 0;
-	bindings[0].m_hostvisible = false;
-	bindings[0].m_useclientbuffer = true;
-	bindings[0].m_preinitalized = false;
-	bindings[0].m_additional_buffer_flags = (BufferType)0;
-	bindings[0].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[0].m_client_buffer = verticesSSBO;
+	BindingDescription bindings[4];
+	bindings[0].mBindingID = 0;
+	bindings[0].mFlags = 0;
+	bindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[0].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[0].mBufferSize = 0;
+	bindings[0].mBuffer = verticesSSBO;
+	bindings[0].mInternalSharedResources = true;
 
-	bindings[1].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings[1].m_bindingID = 1;
-	bindings[1].m_hostvisible = false;
-	bindings[1].m_useclientbuffer = false;
-	bindings[1].m_preinitalized = true;
-	bindings[1].m_additional_buffer_flags = (BufferType)0;
-	bindings[1].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[1].m_ssbo = ecs->GetGeometryDataArray();
+	bindings[1].mBindingID = 1;
+	bindings[1].mFlags = 0;
+	bindings[1].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[1].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[1].mBufferSize = 0;
+	bindings[1].mBuffer = ecs->GetGeometryDataBuffer();
+	bindings[1].mInternalSharedResources = true;
 
-	bindings[2].m_type = SHADER_BINDING_SHADER_STORAGE_BUFFER_OBJECT;
-	bindings[2].m_bindingID = 2;
-	bindings[2].m_hostvisible = false;
-	bindings[2].m_useclientbuffer = false;
-	bindings[2].m_preinitalized = true;
-	bindings[2].m_additional_buffer_flags = (BufferType)0;
-	bindings[2].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[2].m_ssbo = ecs->GetDrawDataArray();
+	bindings[2].mBindingID = 2;
+	bindings[2].mFlags = 0;
+	bindings[2].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[2].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[2].mBufferSize = 0;
+	bindings[2].mBuffer = ecs->GetDrawDataBuffer();
+	bindings[2].mInternalSharedResources = true;
 
-	bindings[3].m_type = SHADER_BINDING_UNIFORM_BUFFER;
-	bindings[3].m_bindingID = 3;
-	bindings[3].m_hostvisible = true;
-	bindings[3].m_useclientbuffer = false;
-	bindings[3].m_preinitalized = false;
-	bindings[3].m_additional_buffer_flags = (BufferType)0;
-	bindings[3].m_shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[3].m_size = sizeof(glm::mat4);
+	bindings[3].mBindingID = 3;
+	bindings[3].mFlags = BINDING_FLAG_CPU_VISIBLE;
+	bindings[3].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	bindings[3].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[3].mBufferSize = sizeof(glm::mat4);
+	bindings[3].mBuffer = nullptr;
 
 	std::vector<VkDescriptorPoolSize> poolSize;
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSize, &bindings);
+	ShaderConnector_CalculateDescriptorPool(4, bindings, poolSize);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount, poolSize);
-	mSet = ShaderBinding_Create(gContext, mPool, 0, &bindings);
-	mLayout = ShaderBinding_CreatePipelineLayout(gContext, { mSet }, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)} });
+	mSet = ShaderConnector_CreateSet(0, mPool, 4, bindings, 0, nullptr);
+	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {});
 
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec;
@@ -87,22 +82,23 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	spec.m_FarField = 1.0f;
 	mState = PipelineState_Create(gContext, spec, input, mFBO, mLayout, &vertex, &fragment);
 
+	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+
 	for (int i = 0; i < gFrameOverlapCount; i++)
 		RecordCommands(i);
 }
 
-Application::ShadowPass::~ShadowPass()
-{
+Application::ShadowPass::~ShadowPass() {
 	Super_Scene_Destroy();
 	mFBO.DestroyAllBoundAttachments();
 	PipelineState_Destroy(mState);
-	ShaderBinding_DestroySets(gContext, { mSet });
+	ShaderConnector_DestroySet(mSet);
+	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
 }
 
-void Application::ShadowPass::ReloadShaders()
-{
+void Application::ShadowPass::ReloadShaders() {
 	Shader vertex = Shader(gContext, "assets/shaders/shadow/shadow.vert");
 	Shader fragment = Shader(gContext, "assets/shaders/shadow/shadow.frag");
 	PipelineVertexInputDescription input;
@@ -113,21 +109,27 @@ void Application::ShadowPass::ReloadShaders()
 		RecordCommands(i);
 }
 
-VkCommandBuffer Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
-{
+VkCommandBuffer Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
 	glm::mat4 u_LightSpace = GetLightSpace();
-	IBuffer2 uniform = mSet->GetBuffer2(3, FrameIndex);
+	IBuffer2 uniform = mSet.GetBuffer2(3);
 	void* mapped_ptr = Buffer2_Map(uniform);
 	memcpy(mapped_ptr, &u_LightSpace, sizeof(glm::mat4));
 	Buffer2_Flush(uniform, 0, VK_WHOLE_SIZE);
 	return mCmds[FrameIndex];
 }
 
+void Application::ShadowPass::GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime) {
+	uint64_t data[2];
+	VkResult q = vkGetQueryPoolResults(mDevice, mQuery, FrameIndex * 2, 2, sizeof(data), data, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
+	if (q == VK_SUCCESS) {
+		dTime = (double(data[1] - data[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+	}
+}
+
 glm::mat4 Application::ShadowPass::GetLightSpace()
 {
 	glm::vec3 pos = mLightPosition;
 	float size = 500.0;
-	// 
 	//glm::perspective(90.0f, 1.0f, 0.1f, 1000.0f)
 	glm::mat4 lightSpace = glm::ortho(-100.0f, +100.0f, -100.0f, +100.0f, -100.0f, +100.0f) * glm::lookAt(pos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
 	return lightSpace;
@@ -139,6 +141,8 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBuffer cmd = mCmds[FrameIndex];
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
+	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2));
 
 	auto& depth = mFBO.m_depth_attachment.value();
 
@@ -176,11 +180,11 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	barrier0.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier0);
 
-	VkDescriptorSet set[1] = { mSet->m_set[FrameIndex] };
+	VkDescriptorSet set[1] = { mSet[FrameIndex] };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, set, 0, nullptr);
-	vkCmdBindIndexBuffer(cmd, mIndices->mBuffer, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexedIndirect(cmd, mSet->GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
+	vkCmdBindIndexBuffer(cmd, mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexedIndirect(cmd, mSet.GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
 
 	barrier0.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;
 	barrier0.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -188,6 +192,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	barrier0.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier0);
 
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
 	vkCmdEndRenderingKHR(cmd);
 	vkEndCommandBuffer(cmd);
 }

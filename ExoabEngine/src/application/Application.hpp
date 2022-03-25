@@ -15,7 +15,7 @@ namespace Application {
 		True/False determine whether to render or not.
 	*/
 	bool Update(double dTimeFromStart, double dTime, double FrameRate, bool UpdateUIInfo);
-	void Render(double dTimeFromStart, double dTime);
+	void Render(double dTimeFromStart, double dTime, bool UpdateUITime);
 	void Destroy();
 
 }

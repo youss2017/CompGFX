@@ -17,6 +17,7 @@ namespace Application {
 		inline void SetShadowLightPosition(glm::vec3 position) { mLightPosition = position; }
 
 		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
+		void GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime);
 
 		ITexture2 GetDepthAttachment() {
 			return mFBO.m_depth_attachment.value().GetAttachment();
@@ -36,9 +37,10 @@ namespace Application {
 		void RecordCommands(uint32_t FrameIndex);
 
 	private:
+		VkQueryPool mQuery;
 		Framebuffer mFBO;
 		VkDescriptorPool mPool;
-		ShaderSet mSet;
+		DescriptorSet mSet;
 		VkPipelineLayout mLayout;
 		IPipelineState mState;
 		glm::vec3 mLightPosition;

@@ -44,45 +44,63 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	downsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
 
-	mSampler = vk::Gfx_CreateSampler(gContext);
+	mSampler = vk::Gfx_CreateSampler(gContext,
+		VK_FILTER_LINEAR,
+		VK_FILTER_LINEAR,
+		VK_SAMPLER_MIPMAP_MODE_LINEAR,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		0.0,
+		VK_TRUE,
+		16.0,
+		0.0,
+		1000.0,
+		VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
-	std::vector<ShaderBinding> thresholdBindings(2);
-	thresholdBindings[0].m_type = SHADER_BINDING_COMBINED_TEXTURE_SAMPLER;
-	thresholdBindings[0].m_bindingID = 0;
-	thresholdBindings[0].m_preinitalized = false;
-	thresholdBindings[0].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	thresholdBindings[0].m_sampler.push_back(mSampler);
-	thresholdBindings[0].m_textures.push_back(fbo.m_color_attachments[colorAttachmentIndex].GetAttachment());
-	thresholdBindings[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	BindingDescription thresholdBindings[2];
+	thresholdBindings[0].mBindingID = 0;
+	thresholdBindings[0].mFlags = 0;
+	thresholdBindings[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	thresholdBindings[0].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	thresholdBindings[0].mTextures.push_back(fbo.m_color_attachments[colorAttachmentIndex].GetAttachment());
+	thresholdBindings[0].mSampler = mSampler;
+
+	thresholdBindings[1].mBindingID = 1;
+	thresholdBindings[1].mFlags = 0;
+	thresholdBindings[1].mType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	thresholdBindings[1].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	thresholdBindings[1].mTextures.push_back(mDownsampleTexture);
+	thresholdBindings[1].mSampler = mSampler;
 	
-	thresholdBindings[1].m_type = SHADER_BINDING_STORAGE_IMAGE;
-	thresholdBindings[1].m_bindingID = 1;
-	thresholdBindings[1].m_preinitalized = false;
-	thresholdBindings[1].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	thresholdBindings[1].m_sampler.push_back(mSampler);
-	thresholdBindings[1].m_textures.push_back(mDownsampleTexture);
-	thresholdBindings[1].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_GENERAL);
+	BindingDescription downsampleBindings[2];
+	downsampleBindings[0].mBindingID = 0;
+	downsampleBindings[0].mFlags = 0;
+	downsampleBindings[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	downsampleBindings[0].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	downsampleBindings[0].mTextures.push_back(mDownsampleTexture);
+	downsampleBindings[0].mSampler = mSampler;
+	downsampleBindings[0].mCustomImageLayouts.insert(std::make_pair(0u, VK_IMAGE_LAYOUT_GENERAL));
 
-	std::vector<ShaderBinding> downsampleBindings(1);
-	downsampleBindings[0].m_type = SHADER_BINDING_STORAGE_IMAGE;
-	downsampleBindings[0].m_bindingID = 0;
-	downsampleBindings[0].m_preinitalized = false;
-	downsampleBindings[0].m_shaderStages = VK_SHADER_STAGE_COMPUTE_BIT;
-	downsampleBindings[0].m_sampler.push_back(mSampler);
-	downsampleBindings[0].m_textures.push_back(mDownsampleTexture);
-	downsampleBindings[0].m_textures_layouts.push_back(VK_IMAGE_LAYOUT_GENERAL);
-	downsampleBindings[0].mUseViewPerMip = true;
+	downsampleBindings[1].mBindingID = 1;
+	downsampleBindings[1].mFlags = 0;
+	downsampleBindings[1].mType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	downsampleBindings[1].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	downsampleBindings[1].mTextures.push_back(mDownsampleTexture);
+	downsampleBindings[1].mSampler = mSampler;
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &thresholdBindings);
-	ShaderBinding_CalculatePoolSizes(gFrameOverlapCount, poolSizes, &downsampleBindings);
+	ShaderConnector_CalculateDescriptorPool(2, thresholdBindings, poolSizes);
+	ShaderConnector_CalculateDescriptorPool(2, downsampleBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2, poolSizes);
-	mThresholdSet = ShaderBinding_Create(gContext, mPool, 0, &thresholdBindings);
-	mThresholdLayout = ShaderBinding_CreatePipelineLayout(gContext, { mThresholdSet }, {{VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float)}});
+	mThresholdSet = ShaderConnector_CreateSet(0, mPool, 2, thresholdBindings, 0, nullptr);
+	mThresholdLayout = ShaderConnector_CreatePipelineLayout(1, &mThresholdSet, {{VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float)}});
 	mThreshold = Pipeline_CreateCompute(gContext, &thresholdShader, mThresholdLayout, 0);
-	mDownsampleSet = ShaderBinding_Create(gContext, mPool, 0, &downsampleBindings);
-	mDownsampleLayout = ShaderBinding_CreatePipelineLayout(gContext, { mDownsampleSet }, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DownsamplePushblock)} });
+	mDownsampleSet = ShaderConnector_CreateSet(0, mPool, 2, downsampleBindings, 0, nullptr);
+	mDownsampleLayout = ShaderConnector_CreatePipelineLayout(1, &mDownsampleSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DownsamplePushblock)} });
 	mDownsample = Pipeline_CreateCompute(gContext, &downsampleShader, mDownsampleLayout, 0);
+
+	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 
 	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
@@ -100,17 +118,44 @@ Application::BloomPass::~BloomPass() {
 	vkDestroyPipelineLayout(mDevice, mDownsampleLayout, nullptr);
 	vkDestroyPipeline(mDevice, mThreshold, nullptr);
 	vkDestroyPipeline(mDevice, mDownsample, nullptr);
+	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	Texture2_Destroy(mDownsampleTexture);
 	Texture2_Destroy(mUpsampleTexture);
-	ShaderBinding_DestroySets(gContext, { mThresholdSet, mDownsampleSet });
+	ShaderConnector_DestroySet(mThresholdSet);
+	ShaderConnector_DestroySet(mDownsampleSet);
 }
 
 void Application::BloomPass::ReloadShaders() {
+	Shader thresholdShader = Shader(gContext, "assets/shaders/bloom/threshold.comp");
+	thresholdShader.SetSpecializationConstant<int>(0, mFBO.m_width);
+	thresholdShader.SetSpecializationConstant<int>(1, mFBO.m_height);
+	thresholdShader.SetSpecializationConstant<int>(2, mTextureWidth);
+	thresholdShader.SetSpecializationConstant<int>(3, mTextureHeight);
+	thresholdShader.SetSpecializationConstant<int>(4, mKernalSizeX);
+	thresholdShader.SetSpecializationConstant<int>(5, mKernalSizeY);
+	Shader downsampleShader = Shader(gContext, "assets/shaders/bloom/downsample.comp");
+	downsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
+	downsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
+	vkDestroyPipeline(mDevice, mThreshold, nullptr);
+	vkDestroyPipeline(mDevice, mDownsample, nullptr);
+	mThreshold = Pipeline_CreateCompute(gContext, &thresholdShader, mThresholdLayout, 0);
+	mDownsample = Pipeline_CreateCompute(gContext, &downsampleShader, mDownsampleLayout, 0);
 
+	for (int i = 0; i < gFrameOverlapCount; i++) {
+		RecordCommands(i);
+	}
 }
 
 VkCommandBuffer  Application::BloomPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
 	return mCmds[FrameIndex];
+}
+
+void Application::BloomPass::GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime) {
+	uint64_t data[2];
+	VkResult q = vkGetQueryPoolResults(mDevice, mQuery, FrameIndex * 2, 2, sizeof(data), data, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
+	if (q == VK_SUCCESS) {
+		dTime = (double(data[1] - data[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+	}
 }
 
 void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
@@ -118,10 +163,12 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
+	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2));
 
 	// 1) Threshold Compute
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mThreshold);
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mThresholdLayout, 0, 1, &mThresholdSet->m_set[FrameIndex], 0, nullptr);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mThresholdLayout, 0, 1, &mThresholdSet[FrameIndex], 0, nullptr);
 	vkCmdPushConstants(cmd, mThresholdLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &mThresholdValue);
 	vkCmdDispatch(cmd, (mTextureWidth + (mKernalSizeX - 1)) / mKernalSizeX, (mTextureHeight + (mKernalSizeY - 1)) / mKernalSizeY, 1);
 
@@ -136,8 +183,8 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	pushblock.u_DestMipSize = glm::vec2(width >> 1, height >> 1);
 	pushblock.u_DestTexelSize = 1.0f / pushblock.u_DestMipSize;
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDownsample);
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDownsampleLayout, 0, 1, &mDownsampleSet->m_set[FrameIndex], 0, nullptr);
-	for (int i = 0; i < mDownsampleTexture->mMipCount; i++) {
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDownsampleLayout, 0, 1, &mDownsampleSet[FrameIndex], 0, nullptr);
+	for (uint32_t i = 0; i < mDownsampleTexture->mMipCount; i++) {
 		pushblock.u_SourceMiplevel = i;
 		pushblock.u_SourceMipSize = glm::vec2(width >> i, height >> i);
 		pushblock.u_SourceTexelSize = 1.0f / pushblock.u_SourceMipSize;
@@ -146,8 +193,22 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		vkCmdPushConstants(cmd, mDownsampleLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pushblock), &pushblock);
 		uint32_t groupSizeX = (pushblock.u_DestMipSize[0] + (mKernalSizeX - 1)) / mKernalSizeX;
 		uint32_t groupSizeY = (pushblock.u_DestMipSize[1] + (mKernalSizeY - 1)) / mKernalSizeY;
+		VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = mDownsampleTexture->m_vk_images_per_frame[FrameIndex];
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.subresourceRange.baseMipLevel = i;
+		barrier.subresourceRange.levelCount = 1;
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	}
 
+	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
 	vkEndCommandBuffer(cmd);
 }

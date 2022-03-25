@@ -35,7 +35,7 @@ namespace Application {
 	private:
 		bool mWireframeMode = false;
 		VkDescriptorPool mPool;
-		ShaderSet mMapSet;
+		DescriptorSet mMapSet;
 		VkPipelineLayout mMapLayout;
 		IPipelineState mMapState;
 		IBuffer2 mMapVertices;
@@ -46,8 +46,8 @@ namespace Application {
 		VkSampler mSampler;
 		VkSampler mShadowSampler;
 		ITexture2 mWoodTex, mStatueTex;
-		ShaderSet mGeoSet0;
-		ShaderSet mGeoSet1;
+		DescriptorSet mGeoSet0;
+		DescriptorSet mGeoSet1;
 		VkPipelineLayout mGeoLayout;
 		IPipelineState mGeoState;
 		Framebuffer mFBO;

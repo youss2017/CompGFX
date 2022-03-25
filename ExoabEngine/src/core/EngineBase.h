@@ -12,7 +12,7 @@ enum class BufferMemoryType
 	// GPU_ONLY
 	GPU_ONLY = 0x0, // written once, read a lot
 	// CPU_TO_GPU
-	CPU_TO_CPU = 0x1, // written a somtimes, read a lot
+	CPU_TO_GPU = 0x1, // written a somtimes, read a lot
 	// CPU_ONLY
 	CPU_ONLY = 0x2 // written every frame
 };

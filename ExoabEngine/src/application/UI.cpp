@@ -19,9 +19,11 @@ namespace UI
     double FrameRate = 0.0;
     double FrameTime = 0.0;
     double FrustrumCullingTime = 0.0;
+    double BloomPassTime = 0.0;
+    double ShadowPassTime = 0.0;
+    double DebugPassTime = 0.0;
+    double NextFrameTime = 0.0;
     unsigned long long FrustrumInvocations = 0;
-    double InputDrawCount = 0.0;
-    double OutputDrawCount = 0.0;
     double GeometryPassTime = 0;
     unsigned long long VertexInvocations = 0;
     unsigned long long FragmentInvocations = 0;
@@ -34,6 +36,7 @@ namespace UI
     bool VSync = true;
     bool ReloadShaders = false;
     bool ClearShaderCache = false;
+    int BloomDownsampleMip = 0;
 }
 
 void UI::Initalize(void* _context, void* _gfx)
@@ -73,10 +76,14 @@ void UI::RenderUI()
     if (ImGui::Checkbox("V-Sync", &VSync)) {
         StateChanged = true;
     }
+    double cpuTime = FrameTime - ShadowPassTime - FrustrumCullingTime - GeometryPassTime - DebugPassTime - BloomPassTime - NextFrameTime;
+    ImGui::Text("%.2f ms -- CPU Time", cpuTime);
     ImGui::Text("%llu / %llu -- Vertex/Fragment Invocations", VertexInvocations, FragmentInvocations);
-    ImGui::Text("%.2f ms -- Geometry Pass", GeometryPassTime);
+    ImGui::Text("%.2f ms -- Shadow Map", ShadowPassTime);
     ImGui::Text("%.2f ms / %llu -- (Geo) Frustrum Pass", FrustrumCullingTime, FrustrumInvocations);
-    ImGui::Text("InDraws %d, OutDraws %d -> %.2f%%", int(InputDrawCount), int(OutputDrawCount), 100.0 * (OutputDrawCount / InputDrawCount));
+    ImGui::Text("%.2f ms -- Geometry Pass", GeometryPassTime);
+    ImGui::Text("%.2f ms -- Debug Pass", DebugPassTime);
+    ImGui::Text("%.2f ms -- Bloom Pass", BloomPassTime);
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
     ImGui::SliderFloat3("Light", &L_x, -100.0, 100.0f);
     ImGui::SameLine();
@@ -84,7 +91,8 @@ void UI::RenderUI()
         L_x = L_y = L_z = 0.0f;
     }
     ImGui::SliderInt("Cubemap LOD", &UI::CubemapLOD, 0, UI::CubemapLODMax);
-    const char* items[] = { "Color Buffer", "Depth Buffer", "Shadow Buffer" };
+    ImGui::SliderInt("Bloom Downsample", &UI::BloomDownsampleMip, 0, 7);
+    const char* items[] = { "Color Buffer", "Depth Buffer", "Shadow Buffer", "Bloom Buffer"};
     ImGui::Combo("Output Buffer", &CurrentOutputBuffer, items, IM_ARRAYSIZE(items));
     if (ImGui::Button("Toggle Wireframe View"))
     {

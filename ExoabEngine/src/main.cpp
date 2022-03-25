@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     {
         UpdateUIInfo = dTimeFromStart - Checkpoint >= 5.4e-1;
         if(Application::Update(dTimeFromStart, dElapsedTime, FrameRate, UpdateUIInfo))
-            Application::Render(dTimeFromStart, dElapsedTime);
+            Application::Render(dTimeFromStart, dElapsedTime, UpdateUIInfo);
         auto end = std::chrono::high_resolution_clock::now();
         dElapsedTime = (end - start).count();
         start = end;

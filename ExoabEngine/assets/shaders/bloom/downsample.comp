@@ -4,8 +4,12 @@
 
 layout (local_size_x_id = 0, local_size_y_id = 1, local_size_z = 1) in;
 
-//layout (binding = 0) uniform sampler2D CombinedDownsampleMip[];
-layout (binding = 0, r11f_g11f_b10f) uniform image2D DownsampleMip[9];
+// TODO: Use sampler2D instead of image2D for input because
+// then we can use texture() which applies a linear sampling
+// improving the quailty of the blur.
+
+uniform layout (binding = 0) sampler2D CombinedDownsampleMip[];
+uniform layout (binding = 1, r11f_g11f_b10f) image2D DownsampleMip[];
 
 //uint u_DestMiplevel = u_SourceMiplevel + 1;
 layout (scalar, push_constant) uniform pushblock {
@@ -18,11 +22,11 @@ layout (scalar, push_constant) uniform pushblock {
 
 vec4 texture_bilinear(in vec2 uv, in vec2 textureSize, in vec2 texelSize)
 {
-#if 1
-    vec4 tl = imageLoad(DownsampleMip[0], ivec2(uv * textureSize));
-    vec4 tr = imageLoad(DownsampleMip[0], ivec2( (uv + vec2(texelSize.x, 0.0)) * textureSize ));
-    vec4 bl = imageLoad(DownsampleMip[0], ivec2( (uv + vec2(0.0, texelSize.y)) * textureSize ));
-    vec4 br = imageLoad(DownsampleMip[0], ivec2( (uv + vec2(texelSize.x, texelSize.y)) * textureSize ));
+#if 0
+    vec4 tl = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2(uv * textureSize));
+    vec4 tr = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2( (uv + vec2(texelSize.x, 0.0)) * textureSize ));
+    vec4 bl = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2( (uv + vec2(0.0, texelSize.y)) * textureSize ));
+    vec4 br = imageLoad(DownsampleMip[u_SourceMiplevel], ivec2( (uv + vec2(texelSize.x, texelSize.y)) * textureSize ));
 #else
     vec4 tl = texture(CombinedDownsampleMip[u_SourceMiplevel], uv);
     vec4 tr = texture(CombinedDownsampleMip[u_SourceMiplevel], uv + vec2(texelSize.x, 0.0));
@@ -50,15 +54,19 @@ void main() {
     if (pos.x >= u_DestMipSize.x || pos.y >= u_DestMipSize.y)
         return;
     // horizontal gaussian blur
-    vec2 texcoord0 = pos / u_DestMipSize;
-    vec2 texcoord1 = (pos / u_DestMipSize) + u_DestTexelSize.x;
-    vec2 texcoord2 = (pos / u_DestMipSize) -  + u_DestTexelSize.x;
+    vec2 texcoord0 = (pos / u_DestMipSize) + vec2(-u_DestTexelSize.x * 2.0, 0.0);
+    vec2 texcoord1 = (pos / u_DestMipSize) + vec2(-u_DestTexelSize.x, 0.0);
+    vec2 texcoord2 = (pos / u_DestMipSize);
+    vec2 texcoord3 = (pos / u_DestMipSize) + vec2(u_DestTexelSize.x, 0.0);
+    vec2 texcoord4 = (pos / u_DestMipSize) + vec2(u_DestTexelSize.x * 2.0, 0.0);
 
-    const float guassianWeights[3] = {0.27901, 0.44198, 0.27901};
-    vec4 color0 = texture_bilinear(texcoord0, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[0];
-    vec4 color1 = texture_bilinear(texcoord1, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[1];
-    vec4 color2 = texture_bilinear(texcoord2, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[2];
+    const float guassianWeights[5] = {0.06136, 0.24477, 0.38774, 0.24477, 0.06136};
+    vec4 color0 = texture_bilinear36(texcoord0, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[0];
+    vec4 color1 = texture_bilinear36(texcoord1, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[1];
+    vec4 color2 = texture_bilinear36(texcoord2, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[2];
+    vec4 color3 = texture_bilinear36(texcoord3, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[3];
+    vec4 color4 = texture_bilinear36(texcoord4, u_SourceMipSize, u_SourceTexelSize) * guassianWeights[4];
 
-    vec4 color = color0 + color1 + color2;
+    vec4 color = color0 + color1 + color2 + color3 + color4;
     imageStore(DownsampleMip[u_SourceMiplevel + 1], pos, color);
 }
