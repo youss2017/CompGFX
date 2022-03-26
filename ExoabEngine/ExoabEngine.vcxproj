@@ -154,6 +154,7 @@
     <ClInclude Include="src\utils\defines.h" />
     <ClInclude Include="src\utils\Logger.hpp" />
     <ClInclude Include="src\utils\MBox.hpp" />
+    <ClInclude Include="src\utils\perlin_noise.hpp" />
     <ClInclude Include="src\utils\Profiling.hpp" />
     <ClInclude Include="src\utils\StringUtils.hpp" />
     <ClInclude Include="src\window\NMB.h" />
@@ -222,6 +223,7 @@
     <ClCompile Include="src\utils\common.cpp" />
     <ClCompile Include="src\utils\Logger.cpp" />
     <ClCompile Include="src\utils\MBox.cpp" />
+    <ClCompile Include="src\utils\perlin_noise.cpp" />
     <ClCompile Include="src\utils\Profiling.cpp" />
     <ClCompile Include="src\utils\StringUtils.cpp" />
     <ClCompile Include="src\window\PlatformWindow.cpp" />

@@ -239,6 +239,8 @@ namespace Utils
     std::vector<uint8_t> LoadBinaryFile(const char *file_path)
     {
         FILE *handle = fopen(file_path, "rb");
+        if (!handle)
+            return {};
         fseek(handle, 0, SEEK_END);
         long bsize = ftell(handle); // this is this the max size, and is probably bigger than the file itself
         char *buffer = new char[bsize];

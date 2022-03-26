@@ -34,4 +34,4 @@ struct Terrain
 };
 
 Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, int divide_count);
-//TODO: void Map_ApplyHeightMap(Map* map, ...);
+void Terrain_ApplyHeightMap(Terrain* terrain, int width, int height, uint32_t* heightmap);

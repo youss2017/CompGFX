@@ -2,6 +2,28 @@
 #include <iostream>
 #include <meshoptimizer/src/meshoptimizer.h>
 
+static void Terrain_CalculateTangents(Terrain* terrain) {
+	auto& vertices = terrain->m_vertices;
+	auto& indices = terrain->m_indices;
+	for (int i = 0; i < indices.size() / 3;) {
+		auto& T0 = vertices[indices[i++]];
+		auto& T1 = vertices[indices[i++]];
+		auto& T2 = vertices[indices[i++]];
+		auto deltaPos1 = T1.inPosition - T0.inPosition;
+		auto deltaPos2 = T2.inPosition - T0.inPosition;
+		auto deltaUV1 = T1.inTexCoords - T0.inTexCoords;
+		auto deltaUV2 = T2.inTexCoords - T0.inTexCoords;
+		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+		auto tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+		glm::vec3 bitangent;
+		bitangent.x = r * (-deltaUV2.x * deltaPos1.x + deltaUV1.x * deltaPos2.x);
+		bitangent.y = r * (-deltaUV2.x * deltaPos1.y + deltaUV1.x * deltaPos2.y);
+		bitangent.z = r * (-deltaUV2.x * deltaPos1.z + deltaUV1.x * deltaPos2.z);
+		T0.inTangent = T1.inTangent = T2.inTangent = -1.0f * tangent;
+		T0.inBiTangent = T1.inBiTangent = T2.inBiTangent = bitangent;
+	}
+}
+
 Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, int divide_count)
 {
 	Terrain terrain;
@@ -85,30 +107,25 @@ Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, 
 		}
 	}
 
-	// calculate tangent and bitangent
-	for (int i = 0; i < indices.size() / 3;) {
-		auto& T0 = vertices[indices[i++]];
-		auto& T1 = vertices[indices[i++]];
-		auto& T2 = vertices[indices[i++]];
-		auto deltaPos1 = T1.inPosition - T0.inPosition;
-		auto deltaPos2 = T2.inPosition - T0.inPosition;
-		auto deltaUV1 = T1.inTexCoords - T0.inTexCoords;
-		auto deltaUV2 = T2.inTexCoords - T0.inTexCoords;
-		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-		auto tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
-		glm::vec3 bitangent;
-		bitangent.x = r * (-deltaUV2.x * deltaPos1.x + deltaUV1.x * deltaPos2.x);
-		bitangent.y = r * (-deltaUV2.x * deltaPos1.y + deltaUV1.x * deltaPos2.y);
-		bitangent.z = r * (-deltaUV2.x * deltaPos1.z + deltaUV1.x * deltaPos2.z);
-		T0.inTangent = T1.inTangent = T2.inTangent = -1.0f * tangent;
-		T0.inBiTangent = T1.inBiTangent = T2.inBiTangent = bitangent;
-	}
-
 	terrain.m_vertices = vertices;
 	terrain.m_indices = indices;
 	terrain.m_totalVerticesCount = terrain.m_vertices.size();
 	terrain.m_totalIndicesCount = terrain.m_indices.size();
 
+	Terrain_CalculateTangents(&terrain);
+
 	return terrain;
+}
+
+void Terrain_ApplyHeightMap(Terrain* terrain, int width, int height, uint32_t* heightmap)
+{
+	for (int y = 0; y < height; y++) {
+		float yratio = y / float(height);
+		for (int x = 0; x < width; x++) {
+			float xratio = x / float(width);
+			uint8_t rawHeightValue = heightmap[y * width + x] >> 24;
+		}
+	}
+	Terrain_CalculateTangents(terrain);
 }
 

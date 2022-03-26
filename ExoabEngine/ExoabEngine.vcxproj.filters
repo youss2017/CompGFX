@@ -195,6 +195,9 @@
     <ClInclude Include="src\core\shaders\ShaderConnector.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\perlin_noise.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -390,6 +393,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\shaders\ShaderConnector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\perlin_noise.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
