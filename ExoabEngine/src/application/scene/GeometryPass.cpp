@@ -1,7 +1,6 @@
 #include "GeometryPass.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include "../../window/PlatformWindow.hpp"
-#include "../../mesh/Map.hpp"
 
 #define MAP_SCALE_X (5.0f)
 #define MAP_SCALE_Y (5.0f)
@@ -126,10 +125,10 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 
 	terrainBindings[0].mBuffer = mGeoSet0.GetBuffer2(1);
 	
-	Map map = Map_Create(100, 2, 100, 2, 1);
-	mMapVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, map.m_vertices.data(), map.m_totalVerticesCount * sizeof(MapVertex), BufferMemoryType::GPU_ONLY, false, false);
-	mMapIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, map.m_indices.data(), map.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false);
-	mMapIndicesCount = map.m_totalIndicesCount;
+	mTerrain = Terrain_Create(100, 2, 100, 2, 1);
+	mMapVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, mTerrain.m_vertices.data(), mTerrain.m_totalVerticesCount * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY, false, false);
+	mMapIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, mTerrain.m_indices.data(), mTerrain.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false);
+	mMapIndicesCount = mTerrain.m_totalIndicesCount;
 
 	mMapSet = ShaderConnector_CreateSet(0, mPool, 3, terrainBindings, 0, nullptr);
 	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, {});

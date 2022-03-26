@@ -16,7 +16,7 @@ void main() {
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
     if (pos.x >= u_UpsampleMipSize.x || pos.y >= u_UpsampleMipSize.y)
         return;
-    vec2 ss = textureSize(SamplerUpsampledMips[u_MipLevel], 0);
+    vec2 ss = textureSize(SamplerUpsampledMips[u_MipLevel + 1], 0);
     vec2 texcoord = vec2(pos) / ss;
     vec4 prevColor = texture(SamplerUpsampledMips[u_MipLevel + 1], texcoord);
     vec4 color = imageLoad(UpsampledMips[u_MipLevel], pos);

@@ -1,10 +1,10 @@
-#include "Map.hpp"
+#include "Terrain.hpp"
 #include <iostream>
 #include <meshoptimizer/src/meshoptimizer.h>
 
-Map Map_Create(int width, int xresolution, int height, int yresolution, int divide_count)
+Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, int divide_count)
 {
-	Map terrain;
+	Terrain terrain;
 	width = (width % 2 == 0) ? width : width + 1;
 	height = (height % 2 == 0) ? height : height + 1;
 	xresolution = std::max(xresolution, 1);
@@ -13,7 +13,7 @@ Map Map_Create(int width, int xresolution, int height, int yresolution, int divi
 	terrain.m_height = height;
 	using namespace std;
 	using namespace glm;
-	vector<MapVertex> vertices;
+	vector<TerrainVertex> vertices;
 	vector<uint32_t> indices;
 	// Generate flat terrain
 	int indice = 0;
@@ -40,7 +40,7 @@ Map Map_Create(int width, int xresolution, int height, int yresolution, int divi
 				for (int xr = 0; xr < xresolution; xr++)
 				{
 					float x = base_x + (xr * step_x);
-					MapVertex vertex;
+					TerrainVertex vertex;
 					vertex.inPosition[0] = x;
 					vertex.inPosition[1] = 0;
 					vertex.inPosition[2] = y;

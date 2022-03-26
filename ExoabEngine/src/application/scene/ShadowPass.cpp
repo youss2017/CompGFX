@@ -3,6 +3,7 @@
 #include "../../window/PlatformWindow.hpp"
 #include <shaders/Shader.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/glm.hpp>
 
 extern vk::VkContext gContext;
 
@@ -13,6 +14,73 @@ constexpr float SHADOW_DISTANCE = 100;
 
 namespace Application {
 	extern PlatformWindow* gWindow;
+}
+
+std::vector<float> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view, const glm::mat4& lightView)
+{
+	const auto inv = glm::inverse(proj * view);
+
+	std::vector<glm::vec4> frustumCorners;
+	for (unsigned int x = 0; x < 2; ++x)
+	{
+		for (unsigned int y = 0; y < 2; ++y)
+		{
+			for (unsigned int z = 0; z < 2; ++z)
+			{
+				const glm::vec4 pt =
+					inv * glm::vec4(
+						2.0f * x - 1.0f,
+						2.0f * y - 1.0f,
+						2.0f * z - 1.0f,
+						1.0f);
+				frustumCorners.push_back(pt / pt.w);
+			}
+		}
+	}
+
+	float minX = std::numeric_limits<float>::max();
+	float maxX = std::numeric_limits<float>::min();
+	float minY = std::numeric_limits<float>::max();
+	float maxY = std::numeric_limits<float>::min();
+	float minZ = std::numeric_limits<float>::max();
+	float maxZ = std::numeric_limits<float>::min();
+	for (const auto& v : frustumCorners)
+	{
+		const auto trf = lightView * v;
+		minX = glm::min(minX, trf.x);
+		maxX = glm::max(maxX, trf.x);
+		minY = glm::min(minY, trf.y);
+		maxY = glm::max(maxY, trf.y);
+		minZ = glm::min(minZ, trf.z);
+		maxZ = glm::max(maxZ, trf.z);
+	}		   
+	constexpr float zMult = 10.0f;
+	if (minZ < 0)
+	{
+		minZ *= zMult;
+	}
+	else
+	{
+		minZ /= zMult;
+	}
+	if (maxZ < 0)
+	{
+		maxZ /= zMult;
+	}
+	else
+	{
+		maxZ *= zMult;
+	}
+
+	std::vector<float> frustrumCornersFloat;
+	frustrumCornersFloat.push_back(minX);
+	frustrumCornersFloat.push_back(maxX);
+	frustrumCornersFloat.push_back(minY);
+	frustrumCornersFloat.push_back(maxY);
+	frustrumCornersFloat.push_back(minZ);
+	frustrumCornersFloat.push_back(maxZ);
+
+	return frustrumCornersFloat;
 }
 
 
@@ -128,10 +196,16 @@ void Application::ShadowPass::GetStatistics(bool Wait, uint32_t FrameIndex, doub
 
 glm::mat4 Application::ShadowPass::GetLightSpace()
 {
-	glm::vec3 pos = mLightPosition;
-	float size = 500.0;
-	//glm::perspective(90.0f, 1.0f, 0.1f, 1000.0f)
-	glm::mat4 lightSpace = glm::ortho(-100.0f, +100.0f, -100.0f, +100.0f, -100.0f, +100.0f) * glm::lookAt(pos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
+	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
+	glm::mat4 view = mCamera->GetViewMatrix();
+	glm::mat4 ip = glm::inverse(proj * view);
+	glm::mat4 lightView = glm::lookAt(mLightPosition, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
+
+	auto corners = getFrustumCornersWorldSpace(proj, view, lightView);
+
+	glm::mat4 offset = glm::translate(glm::mat4(1.0), mCamera->GetPosition());
+	float size = 250.0f;
+	glm::mat4 lightSpace = glm::ortho(corners[0], corners[1], corners[2], corners[3], corners[4], corners[5]) * lightView;
 	return lightSpace;
 }
 

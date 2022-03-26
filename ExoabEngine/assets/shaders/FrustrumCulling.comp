@@ -2,6 +2,8 @@
 #include "types.h"
 #extension GL_EXT_debug_printf : disable
 
+// TODO: try this https://stackoverflow.com/questions/5348163/checking-for-bounding-box-intersections-collisions-with-a-view-frustum
+
 layout (constant_id = 2) const bool DisableCulling = false;
 layout (constant_id = 3) const float RadiusEpsillion = 2.5;
 

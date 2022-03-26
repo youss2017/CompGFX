@@ -3,6 +3,7 @@
 #include "FrustrumCullPass.hpp"
 #include "../Camera.hpp"
 #include "../ecs/EntityController.hpp"
+#include "../../mesh/Terrain.hpp"
 #include <backend/VkGraphicsCard.hpp>
 #include <memory/Texture2.hpp>
 #include <memory/Buffer2.hpp>
@@ -34,6 +35,7 @@ namespace Application {
 		glm::mat4 mLightSpace;
 	private:
 		bool mWireframeMode = false;
+		Terrain mTerrain;
 		VkDescriptorPool mPool;
 		DescriptorSet mMapSet;
 		VkPipelineLayout mMapLayout;

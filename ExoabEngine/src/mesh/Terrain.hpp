@@ -12,7 +12,7 @@
     the application.
 */
 
-struct MapVertex
+struct TerrainVertex
 {
     glm::vec4 inPosition;
     glm::vec4 inNormal;
@@ -22,14 +22,14 @@ struct MapVertex
 };
 
 // TODO: Split map into smaller squares so we can do frustrum culling on the map.
-struct Map
+struct Terrain
 {
     uint32_t m_width, m_height;
-    std::vector<MapVertex> m_vertices;
+    std::vector<TerrainVertex> m_vertices;
     std::vector<uint32_t> m_indices;
     uint32_t m_totalVerticesCount = 0;
     uint32_t m_totalIndicesCount = 0;
 };
 
-Map Map_Create(int width, int xresolution, int height, int yresolution, int divide_count);
+Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, int divide_count);
 //TODO: void Map_ApplyHeightMap(Map* map, ...);

@@ -3,6 +3,7 @@
 #include "../../utils/defines.h"
 #include <stdint.h>
 #include <vulkan/vulkan.h>
+#include <common.hpp>
 
 typedef void* APIHandle;
 typedef void *GraphicsContext, *GraphicsSwapchain, *OpaqueIdentifier;

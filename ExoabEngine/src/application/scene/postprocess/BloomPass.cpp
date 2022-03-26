@@ -121,10 +121,6 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	combineBindings[1].mTextures.push_back(mDownsampleTexture);
 	combineBindings[1].mSampler = mSampler;
 
-	DescriptorSet mCombineSet;
-	VkPipelineLayout mCombineLayout;
-	VkPipeline mCombine;
-
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(2, thresholdBindings, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(2, downsampleBindings, poolSizes);
@@ -269,8 +265,8 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mDownsampleVerticalLayout, 0, 1, &mDownsampleSet[FrameIndex], 0, nullptr);
 	for (uint32_t i = 0; i < mDownsampleTexture->mMipCount; i++) {
 		DownsampleVerticalPushblock verticalPushblock;
-		verticalPushblock.u_MipLevel = i;
-		verticalPushblock.u_MipSize = glm::vec2(width >> i, height >> i);
+		verticalPushblock.u_MipLevel = i - 1;
+		verticalPushblock.u_MipSize = glm::vec2(width >> (i - 1), height >> (i - 1));
 		verticalPushblock.u_MipTexelSize = 1.0f / verticalPushblock.u_MipSize;
 		vkCmdPushConstants(cmd, mDownsampleVerticalLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(verticalPushblock), &verticalPushblock);
 		uint32_t groupSizeX = (verticalPushblock.u_MipSize[0] + (mKernalSizeX - 1)) / mKernalSizeX;
@@ -284,8 +280,8 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mUpsampleLayout, 0, 1, &mDownsampleSet[FrameIndex], 0, nullptr);
 	for (uint32_t i = mDownsampleTexture->mMipCount; i > 0; i--) {
 		UpsamplePushblock verticalPushblock;
-		verticalPushblock.u_MipLevel = (i - 1);
-		verticalPushblock.u_UpsampleMipSize = glm::vec2(width >> (i - 1), height >> (i - 1));
+		verticalPushblock.u_MipLevel = i;
+		verticalPushblock.u_UpsampleMipSize = glm::vec2(width >> (i ), height >> (i));
 		uint32_t groupSizeX = (verticalPushblock.u_UpsampleMipSize[0] + (mKernalSizeX - 1)) / mKernalSizeX;
 		uint32_t groupSizeY = (verticalPushblock.u_UpsampleMipSize[1] + (mKernalSizeY - 1)) / mKernalSizeY;
 		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);

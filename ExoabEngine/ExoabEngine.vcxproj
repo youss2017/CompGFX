@@ -149,7 +149,7 @@
     <ClInclude Include="src\physics\Physics.hpp" />
     <ClInclude Include="src\application\ShaderTypes.hpp" />
     <ClInclude Include="src\application\UI.hpp" />
-    <ClInclude Include="src\mesh\Map.hpp" />
+    <ClInclude Include="src\mesh\Terrain.hpp" />
     <ClInclude Include="src\utils\common.hpp" />
     <ClInclude Include="src\utils\defines.h" />
     <ClInclude Include="src\utils\Logger.hpp" />
@@ -218,7 +218,7 @@
     <ClCompile Include="src\physics\Physics.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />
     <ClCompile Include="src\application\UI.cpp" />
-    <ClCompile Include="src\mesh\Map.cpp" />
+    <ClCompile Include="src\mesh\Terrain.cpp" />
     <ClCompile Include="src\utils\common.cpp" />
     <ClCompile Include="src\utils\Logger.cpp" />
     <ClCompile Include="src\utils\MBox.cpp" />

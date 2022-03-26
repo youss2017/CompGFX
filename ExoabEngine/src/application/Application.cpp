@@ -1,6 +1,5 @@
 #include "Application.hpp"
 #include "../physics/Physics.hpp"
-#include "../mesh/Map.hpp"
 #include "UI.hpp"
 #include "Camera.hpp"
 #include "ecs/EntityController.hpp"
@@ -26,7 +25,6 @@ static constexpr const char* s_ShaderCache = "assets/shaders/spirv_cache/";
 static constexpr bool s_DebugMode = false;
 static constexpr const char* s_ShaderCache = "assets/shaders/spirv_cacheoptimized/";
 #endif
-static constexpr const char* s_FramebufferReserve = "assets/materials/framebuffer_reserve.cfg";
 static constexpr bool s_EnableImGui = true;
 static constexpr uint32_t s_MaxObjects = 1;
 static constexpr uint32_t s_Range = 10;
@@ -101,13 +99,13 @@ bool Application::LoadAssets()
 	gECS = new EntityController(gGeomtry);
 
 	srand(140);
-	uint32_t instanceCount = 5;
+	uint32_t instanceCount = 500;
 	uint32_t instanceSize = instanceCount * sizeof(ShaderTypes::InstanceData);
 	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
 	for (unsigned int i = 0; i < instanceCount; i++) {
-		float x = (rand() % 10) * 5;
-		float y = (rand() % 10) * 5;
-		float z = (rand() % 10) * 5;
+		float x = (rand() % 25) * 5;
+		float y = (rand() % 25) * 5;
+		float z = (rand() % 25) * 5;
 		glm::vec3 offset = glm::vec3(x, y, z + 2);
 		offset = offset - (offset / glm::vec3(2.0));
 		instance[i].mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
@@ -133,7 +131,7 @@ bool Application::CreateResources()
 	gFBO0.AddColorAttachment(0, colorAttachment);
 	gFBO0.SetDepthAttachment(depthAttachment);
 
-	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, gECS, &gCamera, 2048);
+	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, gECS, &gCamera, 1024);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
 	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
 	skybox = new SkyboxPass("assets/textures/cubemap4.png", geoPass, &gCamera, true);

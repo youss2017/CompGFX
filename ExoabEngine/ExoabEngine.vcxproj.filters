@@ -57,7 +57,7 @@
     <ClInclude Include="src\physics\Physics.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\mesh\Map.hpp">
+    <ClInclude Include="src\mesh\Terrain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\common.hpp">
@@ -236,7 +236,7 @@
     <ClCompile Include="src\physics\Physics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\mesh\Map.cpp">
+    <ClCompile Include="src\mesh\Terrain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\common.cpp">
