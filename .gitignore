@@ -6,3 +6,5 @@ ExoabEngine/assets/materials/shaders/spirv_cache/*
 *.dll
 *.lib
 *.spv
+*.png
+*.jpg

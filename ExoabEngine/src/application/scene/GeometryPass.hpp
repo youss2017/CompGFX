@@ -47,7 +47,9 @@ namespace Application {
 		VkQueryPool mInvocationQuery;
 		VkSampler mSampler;
 		VkSampler mShadowSampler;
-		ITexture2 mWoodTex, mStatueTex;
+		ITexture2 mWoodTex;
+		ITexture2 mStatueTex;
+		ITexture2 mNormalMap;
 		DescriptorSet mGeoSet0;
 		DescriptorSet mGeoSet1;
 		VkPipelineLayout mGeoLayout;

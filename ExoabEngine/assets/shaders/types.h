@@ -15,8 +15,9 @@ struct Vertex
 };
 
 struct InstanceData {
-	uint TexIndex[4];
+	uint mTextureIndex;
     mat4 mModel;
+    mat3 mNormalModel;
 };
 
 #define INSTANCE_SIZE 80

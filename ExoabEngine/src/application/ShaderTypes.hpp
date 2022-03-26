@@ -20,8 +20,9 @@ namespace ShaderTypes {
 		};
 
 		struct InstanceData {
-			uint mTextureID[4];
+			uint mTextureIndex;
 			mat4 mModel;
+			mat3 mNormalModel;
 		};
 
 		struct GeometryData
@@ -58,5 +59,9 @@ namespace ShaderTypes {
 		};
 
 	};
+
+	inline glm::mat3 CalculateNormalModel(const glm::mat4& model) {
+		return glm::mat3(glm::transpose(glm::inverse(model)));
+	}
 
 }

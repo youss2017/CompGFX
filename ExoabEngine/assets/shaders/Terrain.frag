@@ -4,11 +4,11 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_debug_printf : disable
 
-layout (location = 0) in vec3 Normal;
-layout (location = 1) in flat ivec3 TextureIDs;
-layout (location = 2) in vec3 TextureWeights;
-layout (location = 3) in vec2 TexCoord;
-layout (location = 4) in vec4 LightSpacePos;
+layout (location = 0) in flat ivec3 TextureIDs;
+layout (location = 1) in vec3 TextureWeights;
+layout (location = 2) in vec2 TexCoord;
+layout (location = 3) in vec4 LightSpacePos;
+layout (location = 4) in mat3 TBN;
 
 layout (scalar, binding = 0) uniform GlobalDataUBO
 {
@@ -24,14 +24,9 @@ layout (scalar, binding = 0) uniform GlobalDataUBO
 // The first texture is the base texture
 layout (binding = 1) uniform sampler2D TerrainTextures[];
 layout (binding = 2) uniform sampler2D shadowMap;
+layout (binding = 3) uniform sampler2D normalMap;
 
-// works for both positive and negative numbers and no problem when a == b,  purple
-float smin(float a, float b, float k)
-{
-    float x = exp(-k * a);
-    float y = exp(-k * b);
-    return (a * x + b * y) / (x + y);
-}
+layout (constant_id = 0) const int pcfCount = 2;
 
 float ShadowCalculation()
 {
@@ -42,7 +37,6 @@ float ShadowCalculation()
     vec2 shadowSize = textureSize(shadowMap, 0);
     vec2 shadowTexel = 1.0 / shadowSize;
     
-    const int pcfCount = 2;
     const float totalTexels = (pcfCount * 2.0 + 1.0) * (pcfCount * 2.0 + 1.0);
     float total = 0.0;
 
@@ -63,14 +57,18 @@ layout (location = 0) out vec4 FragColor;
 void main()
 {
 	vec2 TiledTexCoord = TexCoord * 40.0;
-    float BaseWeight = 1.0 - TextureWeights[0] + TextureWeights[1] + TextureWeights[2];
-    vec4 BaseTexture = texture(TerrainTextures[0], TexCoord) * BaseWeight;
-    vec4 Texture1 = (TextureIDs.x == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.x], TexCoord) * TextureWeights[TextureIDs.x]);
-    vec4 Texture2 = (TextureIDs.y == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.y], TexCoord) * TextureWeights[TextureIDs.y]);
-    vec4 Texture3 = (TextureIDs.z == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.z], TexCoord) * TextureWeights[TextureIDs.z]);
-    vec4 FinalTexture = BaseTexture + Texture1 + Texture2 + Texture3;
-    float diffuse = dot(Normal, u_LightDirection.xyz);
+    vec3 normal = texture(normalMap, TiledTexCoord).rgb;
+    normal = normal * 2.0 - 1.0;
+    normal = normalize(TBN * normal);
 
-    // TODO: Support Normal Map and Specular Map
+    float BaseWeight = 1.0 - TextureWeights[0] + TextureWeights[1] + TextureWeights[2];
+    vec4 BaseTexture = texture(TerrainTextures[0], TiledTexCoord) * BaseWeight;
+    vec4 Texture1 = (TextureIDs.x == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.x], TiledTexCoord) * TextureWeights[TextureIDs.x]);
+    vec4 Texture2 = (TextureIDs.y == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.y], TiledTexCoord) * TextureWeights[TextureIDs.y]);
+    vec4 Texture3 = (TextureIDs.z == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.z], TiledTexCoord) * TextureWeights[TextureIDs.z]);
+    vec4 FinalTexture = BaseTexture + Texture1 + Texture2 + Texture3;
+    float diffuse = dot(normal, u_LightDirection.xyz);
+
+    // TODO: Support Specular Map
     FragColor = FinalTexture * diffuse * clamp((1.0 - ShadowCalculation()), 0.4, 1.0);
 }

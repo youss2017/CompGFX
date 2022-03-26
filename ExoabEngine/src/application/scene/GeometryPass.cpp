@@ -2,14 +2,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "../../window/PlatformWindow.hpp"
 
-#define MAP_SCALE_X (5.0f)
-#define MAP_SCALE_Y (5.0f)
-#define MAP_SCALE_Z (5.0f)
-
 extern vk::VkContext gContext;
 namespace Application {
 	extern PlatformWindow* gWindow;
 }
+
+struct TerrainPushblock {
+	glm::mat4 u_Model;
+	glm::mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
+};
 
 Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext);
@@ -22,6 +23,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
 	mWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
 	mStatueTex = Texture2_CreateFromFile(gContext, "assets/textures/statue.jpg", true);
+	mNormalMap = Texture2_CreateFromFile(gContext, "assets/textures/normal.jpg", true);
 	mLightDirection = glm::vec4(0.0);
 	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT);
@@ -73,7 +75,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	geometryPassFragment[1].mTextures.push_back(shadowMap);
 	geometryPassFragment[1].mSampler = mShadowSampler;
 
-	BindingDescription terrainBindings[3];
+	BindingDescription terrainBindings[4];
 	terrainBindings[0].mBindingID = 0;
 	terrainBindings[0].mFlags = 0;
 	terrainBindings[0].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -96,10 +98,17 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	terrainBindings[2].mTextures.push_back(shadowMap);
 	terrainBindings[2].mSampler = mShadowSampler;
 
+	terrainBindings[3].mBindingID = 3;
+	terrainBindings[3].mFlags = 0;
+	terrainBindings[3].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	terrainBindings[3].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	terrainBindings[3].mTextures.push_back(mNormalMap);
+	terrainBindings[3].mSampler = mSampler;
+
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(4, geometryPass, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(2, geometryPassFragment, poolSizes);
-	ShaderConnector_CalculateDescriptorPool(3, terrainBindings, poolSizes);
+	ShaderConnector_CalculateDescriptorPool(4, terrainBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2 + (gFrameOverlapCount * 1), poolSizes);
 	
 	mGeoSet0 = ShaderConnector_CreateSet(0, mPool, 4, geometryPass, 0, nullptr);
@@ -130,19 +139,18 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	mMapIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, mTerrain.m_indices.data(), mTerrain.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false);
 	mMapIndicesCount = mTerrain.m_totalIndicesCount;
 
-	mMapSet = ShaderConnector_CreateSet(0, mPool, 3, terrainBindings, 0, nullptr);
-	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, {});
+	mMapSet = ShaderConnector_CreateSet(0, mPool, 4, terrainBindings, 0, nullptr);
+	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock)} });
 	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
 	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
-	mapVertex.SetSpecializationConstant<float>(0, MAP_SCALE_X);
-	mapVertex.SetSpecializationConstant<float>(1, MAP_SCALE_Y);
-	mapVertex.SetSpecializationConstant<float>(2, MAP_SCALE_Z);
 	input = {};
-	input.AddInputElement("inPosition", 0, 0, 4, true, false, false);
-	input.AddInputElement("inNormal", 1, 0, 4, true, false, false);
-	input.AddInputElement("inTextureIDs", 2, 0, 4, false, false, false);
-	input.AddInputElement("inTextureWeights", 3, 0, 4, true, false, false);
-	input.AddInputElement("inTexCoords", 4, 0, 2, true, false, false);
+	input.AddInputElement("inPosition", 0, 0, 3, true, false, false);
+	input.AddInputElement("inNormal", 1, 0, 3, true, false, false);
+	input.AddInputElement("inTangent", 2, 0, 3, true, false, false);
+	input.AddInputElement("inBiTangent", 3, 0, 3, true, false, false);
+	input.AddInputElement("inTextureIDs", 4, 0, 3, false, false, false);
+	input.AddInputElement("inTextureWeights", 5, 0, 3, true, false, false);
+	input.AddInputElement("inTexCoords", 6, 0, 2, true, false, false);
 	mMapState = PipelineState_Create(gContext, mGeoState->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 
 	for (int i = 0; i < gFrameOverlapCount; i++) {
@@ -169,6 +177,7 @@ Application::GeometryPass::~GeometryPass() {
 	vkDestroyQueryPool(mDevice, mInvocationQuery, nullptr);
 	Texture2_Destroy(mWoodTex);
 	Texture2_Destroy(mStatueTex);
+	Texture2_Destroy(mNormalMap);
 }
 
 VkCommandBuffer Application::GeometryPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
@@ -203,14 +212,13 @@ void Application::GeometryPass::ReloadShaders() {
 	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
 	PipelineVertexInputDescription input;
 	mGeoState = PipelineState_Create(gContext, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
-	input.AddInputElement("inPosition", 0, 0, 4, true, false, false);
-	input.AddInputElement("inNormal", 1, 0, 4, true, false, false);
-	input.AddInputElement("inTextureIDs", 2, 0, 4, false, false, false);
-	input.AddInputElement("inTextureWeights", 3, 0, 4, true, false, false);
-	input.AddInputElement("inTexCoords", 4, 0, 2, true, false, false);
-	mapVertex.SetSpecializationConstant<float>(0, MAP_SCALE_X);
-	mapVertex.SetSpecializationConstant<float>(1, MAP_SCALE_Y);
-	mapVertex.SetSpecializationConstant<float>(2, MAP_SCALE_Z);
+	input.AddInputElement("inPosition", 0, 0, 3, true, false, false);
+	input.AddInputElement("inNormal", 1, 0, 3, true, false, false);
+	input.AddInputElement("inTangent", 2, 0, 3, true, false, false);
+	input.AddInputElement("inBiTangent", 3, 0, 3, true, false, false);
+	input.AddInputElement("inTextureIDs", 4, 0, 3, false, false, false);
+	input.AddInputElement("inTextureWeights", 5, 0, 3, true, false, false);
+	input.AddInputElement("inTexCoords", 6, 0, 2, true, false, false);
 	mMapState = PipelineState_Create(gContext, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
@@ -232,14 +240,13 @@ void Application::GeometryPass::SetWireframeMode(bool mode)
 	PipelineState_Destroy(mMapState);
 	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
 	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
-	input.AddInputElement("inPosition", 0, 0, 4, true, false, false);
-	input.AddInputElement("inNormal", 1, 0, 4, true, false, false);
-	input.AddInputElement("inTextureIDs", 2, 0, 4, false, false, false);
-	input.AddInputElement("inTextureWeights", 3, 0, 4, true, false, false);
-	input.AddInputElement("inTexCoords", 4, 0, 2, true, false, false);
-	mapVertex.SetSpecializationConstant<float>(0, MAP_SCALE_X);
-	mapVertex.SetSpecializationConstant<float>(1, MAP_SCALE_Y);
-	mapVertex.SetSpecializationConstant<float>(2, MAP_SCALE_Z);
+	input.AddInputElement("inPosition", 0, 0, 3, true, false, false);
+	input.AddInputElement("inNormal", 1, 0, 3, true, false, false);
+	input.AddInputElement("inTangent", 2, 0, 3, true, false, false);
+	input.AddInputElement("inBiTangent", 3, 0, 3, true, false, false);
+	input.AddInputElement("inTextureIDs", 4, 0, 3, false, false, false);
+	input.AddInputElement("inTextureWeights", 5, 0, 3, true, false, false);
+	input.AddInputElement("inTexCoords", 6, 0, 2, true, false, false);
 	mMapState = PipelineState_Create(gContext, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		this->RecordCommands(i);
@@ -337,10 +344,15 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindIndexBuffer(cmd, mIndicsSSBO->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray->mBuffers[FrameIndex], 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
+	TerrainPushblock pushblock;
+	pushblock.u_Model = glm::scale(glm::mat4(1.0), glm::vec3(15.0));
+	pushblock.u_NormalModel = glm::mat3(glm::transpose(glm::inverse(pushblock.u_Model)));
+
 	VkDescriptorSet mapSet[1] = { mMapSet[FrameIndex] };
 	VkDeviceSize offset[1] = { 0 };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
+	vkCmdPushConstants(cmd, mMapLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock), &pushblock);
 	vkCmdBindVertexBuffers(cmd, 0, 1, &mMapVertices->mBuffers[FrameIndex], offset);
 	vkCmdBindIndexBuffer(cmd, mMapIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(cmd, mMapIndicesCount, 1, 0, 0, 0);

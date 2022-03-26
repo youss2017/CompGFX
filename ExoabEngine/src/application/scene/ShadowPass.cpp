@@ -7,11 +7,6 @@
 
 extern vk::VkContext gContext;
 
-constexpr float OFFSET = 10;
-constexpr glm::vec4 UP = glm::vec4(0, 1, 0, 0);
-constexpr glm::vec4 FORWARD = glm::vec4(0, 0, -1, 0);
-constexpr float SHADOW_DISTANCE = 100;
-
 namespace Application {
 	extern PlatformWindow* gWindow;
 }
@@ -204,8 +199,8 @@ glm::mat4 Application::ShadowPass::GetLightSpace()
 	auto corners = getFrustumCornersWorldSpace(proj, view, lightView);
 
 	glm::mat4 offset = glm::translate(glm::mat4(1.0), mCamera->GetPosition());
-	float size = 250.0f;
-	glm::mat4 lightSpace = glm::ortho(corners[0], corners[1], corners[2], corners[3], corners[4], corners[5]) * lightView;
+	float size = 125.0f;
+	glm::mat4 lightSpace = glm::ortho(-size, size, -size, size, -size, size) * lightView;
 	return lightSpace;
 }
 

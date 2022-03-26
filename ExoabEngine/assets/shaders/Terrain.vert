@@ -1,15 +1,13 @@
 #version 450 core
 #extension GL_EXT_scalar_block_layout : require
 
-layout (location = 0) in vec4 inPosition;
-layout (location = 1) in vec4 inNormal;
-layout (location = 2) in ivec4 inTextureIDs;
-layout (location = 3) in vec4 inTextureWeights;
-layout (location = 4) in vec2 inTexCoords;
-
-layout (constant_id = 0) const float scale_x = 1.0;
-layout (constant_id = 1) const float scale_y = 1.0;
-layout (constant_id = 2) const float scale_z = 1.0;
+layout (location = 0) in vec3 inPosition;
+layout (location = 1) in vec3 inNormal;
+layout (location = 2) in vec3 inTangent;
+layout (location = 3) in vec3 inBiTangent;
+layout (location = 4) in ivec3 inTextureIDs;
+layout (location = 5) in vec3 inTextureWeights;
+layout (location = 6) in vec2 inTexCoords;
 
 layout (scalar, binding = 0) uniform GlobalDataUBO
 {
@@ -22,19 +20,30 @@ layout (scalar, binding = 0) uniform GlobalDataUBO
     mat4 u_LightSpace;
 };
 
-layout (location = 0) out vec3 Normal;
-layout (location = 1) out ivec3 TextureIDs;
-layout (location = 2) out vec3 TextureWeights;
-layout (location = 3) out vec2 TexCoord;
-layout (location = 4) out vec4 LightSpacePos;
+layout (scalar, push_constant) uniform pushblock {
+    mat4 u_Model;
+    mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
+};
+
+layout (location = 0) out ivec3 TextureIDs;
+layout (location = 1) out vec3 TextureWeights;
+layout (location = 2) out vec2 TexCoord;
+layout (location = 3) out vec4 LightSpacePos;
+layout (location = 4) out mat3 TBN;
 
 void main()
 {
-    Normal = normalize(inNormal.xyz);
-    TextureIDs = inTextureIDs.xyz;
-    TextureWeights = inTextureWeights.xyz;
-    vec4 scale = vec4(scale_x, scale_y, scale_z, 1.0);
-    TexCoord = inTexCoords.xy * scale.xy;
-    LightSpacePos = u_LightSpace * (inPosition * scale);
-    gl_Position = u_ProjView * (scale * inPosition);
+    vec3 T = normalize(u_NormalModel * inTangent);
+    vec3 B = normalize(u_NormalModel * inBiTangent);
+    vec3 N = normalize(u_NormalModel * inNormal);
+    TBN = mat3(T, B, N);
+
+    TextureIDs = inTextureIDs;
+    TextureWeights = inTextureWeights;
+
+    TexCoord = inTexCoords;
+    vec4 position = u_Model * vec4(inPosition, 1.0);
+    
+    LightSpacePos = u_LightSpace * position;
+    gl_Position = u_ProjView * position;
 }

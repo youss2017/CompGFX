@@ -109,7 +109,8 @@ bool Application::LoadAssets()
 		glm::vec3 offset = glm::vec3(x, y, z + 2);
 		offset = offset - (offset / glm::vec3(2.0));
 		instance[i].mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
-		instance[i].mTextureID[0] = 0;
+		instance[i].mNormalModel = ShaderTypes::CalculateNormalModel(instance[i].mModel);
+		instance[i].mTextureIndex = 0;
 	}
 
 	IEntity cube = gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE);
@@ -246,7 +247,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	skybox->SetLOD(UI::CubemapLOD);
 
 	shadow->SetShadowLightPosition(pos);
-	geoPass->SetLightDirection(glm::normalize(pos));
+	geoPass->SetLightDirection(-1.0f * glm::normalize(pos));
 	geoPass->SetLightSpace(shadow->GetLightSpace());
 
 	debugPass->NewFrame();

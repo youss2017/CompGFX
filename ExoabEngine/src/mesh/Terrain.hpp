@@ -14,10 +14,12 @@
 
 struct TerrainVertex
 {
-    glm::vec4 inPosition;
-    glm::vec4 inNormal;
-    glm::ivec4 inTextureIDs;
-    glm::vec4 inTextureWeights;
+    glm::vec3 inPosition;
+    glm::vec3 inNormal;
+    glm::vec3 inTangent;
+    glm::vec3 inBiTangent;
+    glm::ivec3 inTextureIDs;
+    glm::vec3 inTextureWeights;
     glm::vec2 inTexCoords;
 };
 

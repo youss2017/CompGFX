@@ -45,9 +45,9 @@ void main()
 {
 	GeometryData geoData = u_ModelData[draw.mGeometryDataIndex];
 	InstanceData instance = InstanceData_T(geoData.mCulledInstancePtr).v[gl_InstanceIndex];
-	Normal = vertex.normal;
+	Normal = normalize(instance.mNormalModel * vertex.normal);
 	TexCoord = vertex.texcoord;
-	TexIndex = uint(instance.TexIndex[0]);
+	TexIndex = instance.mTextureIndex;
 	vec4 FragPos = instance.mModel * vec4(vertex.position, 1.0);
 	gl_Position = u_ProjView * FragPos;
 }

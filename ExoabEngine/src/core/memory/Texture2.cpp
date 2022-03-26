@@ -208,7 +208,7 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 {
 	using namespace vk;
 
-	uint32_t miplevels = std::floor(std::log2(std::max(texture->m_specification.m_Width, texture->m_specification.m_Height)));
+	uint32_t miplevels = std::floor(std::log2(std::min(texture->m_specification.m_Width, texture->m_specification.m_Height)));
 	VkContext context = (VkContext)texture->m_context;
 	VkCommandPool pool = Gfx_CreateCommandPool(context, true, false);
 	VkCommandBuffer cmd = Gfx_AllocCommandBuffer(context, pool, true);
