@@ -136,18 +136,12 @@ bool Application::CreateResources()
 	gFBO0.AddColorAttachment(0, colorAttachment);
 	gFBO0.SetDepthAttachment(depthAttachment);
 
-	int w = 400;
-	int h = w;
-	TerrainInfo t0i = Terrain_Create(w, h);
-	std::vector<uint8_t> perlinBuffer(w * h);
-	Utils::perlin(w, h, 0xCaf, 6.0, 3, perlinBuffer.data());
-	Terrain_ApplyHeightMap(&t0i, w, h, 0.0, 10.2, perlinBuffer.data());
-
-	Terrain t0;
-	t0.mVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, t0i.m_vertices.data(), t0i.m_totalVerticesCount * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY, false, false);
-	t0.mIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, t0i.m_indices.data(), t0i.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false);
-	t0.mIndicesCount = t0i.m_totalIndicesCount;
-	t0.mModelTransform = glm::scale(glm::mat4(1.0), glm::vec3(2.0, 2.0, 2.0));
+	int w = 100;
+	Terrain* t0 = new Terrain(w, 100);
+	std::vector<uint8_t> perlinBuffer(w * w);
+	Utils::perlin(w, w, 0xCaf, 6.0, 3, perlinBuffer.data());
+	t0->ApplyHeightmap(w, w, -1.0, 10.0f, perlinBuffer.data());
+	t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0, 2.0, 2.0)));
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);

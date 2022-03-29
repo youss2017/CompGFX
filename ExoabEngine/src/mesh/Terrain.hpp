@@ -12,6 +12,7 @@
     the application.
 */
 
+#pragma pack(1)
 struct TerrainVertex
 {
     glm::vec3 inPosition;
@@ -24,21 +25,51 @@ struct TerrainVertex
 };
 
 // TODO: Split map into smaller squares so we can do frustrum culling on the map.
-struct TerrainInfo
-{
-    uint32_t m_width, m_height;
-    std::vector<TerrainVertex> m_vertices;
-    std::vector<uint32_t> m_indices;
-    uint32_t m_totalVerticesCount = 0;
-    uint32_t m_totalIndicesCount = 0;
-};
+class Terrain {
 
-struct Terrain {
-    IBuffer2 mVertices;
-    IBuffer2 mIndices;
-    uint32_t mIndicesCount;
+public:
+    Terrain(uint32_t resolution, uint32_t splitEveryAmountOfVerts);
+    ~Terrain();
+
+    Terrain(const Terrain& other) = delete;
+    Terrain(const Terrain&& other) = delete;
+
+    void ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, uint8_t* heightmap);
+    void SetTransform(const glm::mat4& transform) { mModelTransform = transform; }
+    glm::mat4 GetTransform() { return mModelTransform; }
+    uint32_t GetSubmeshCount() {
+        return mVerticesIndicesOffset.size();
+    }
+
+    uint32_t GetVerticesOffset(uint32_t submeshIndex) {
+        return mVerticesIndicesOffset[submeshIndex].first;
+    }
+
+    uint32_t GetIndicesOffset(uint32_t submeshIndex) {
+        return mVerticesIndicesOffset[submeshIndex].second;
+    }
+
+    uint32_t GetVerticesCount(uint32_t submeshIndex) {
+        return mVerticesIndicesCount[submeshIndex].first;
+    }
+
+    uint32_t GetIndicesCount(uint32_t submeshIndex) {
+        return mVerticesIndicesCount[submeshIndex].second;
+    }
+
+    IBuffer2 GetVerticesBuffer() { return mVerticesBuffer; }
+    IBuffer2 GetIndicesBuffer() { return mIndicesBuffer; }
+
+private:
+    void CalculateTangentBitangent();
+
+private:
+    uint32_t mResolution;
+    std::vector<TerrainVertex> mVertices;
+    std::vector<uint32_t> mIndices;
+    IBuffer2 mVerticesBuffer;
+    IBuffer2 mIndicesBuffer;
+    std::vector<std::pair<uint32_t, uint32_t>> mVerticesIndicesOffset;
+    std::vector<std::pair<uint32_t, uint32_t>> mVerticesIndicesCount;
     glm::mat4 mModelTransform;
 };
-
-TerrainInfo Terrain_Create(int width, int height);
-void Terrain_ApplyHeightMap(TerrainInfo* terrain, int width, int height, float minHeight, float maxHeight, uint8_t* heightmap);

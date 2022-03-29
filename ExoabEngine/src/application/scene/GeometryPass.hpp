@@ -15,7 +15,7 @@ namespace Application {
 
 	class GeometryPass : public Scene {
 	public:
-		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain& terrain, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
+		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
 		~GeometryPass();
 		
 		void ReloadShaders();
@@ -35,12 +35,11 @@ namespace Application {
 		glm::mat4 mLightSpace;
 	private:
 		bool mWireframeMode = false;
-		TerrainInfo mTerrain;
+		Terrain* mT0;
 		VkDescriptorPool mPool;
 		DescriptorSet mMapSet;
 		VkPipelineLayout mMapLayout;
 		IPipelineState mMapState;
-		Terrain mT0;
 		VkQueryPool mQuery;
 		VkQueryPool mInvocationQuery;
 		VkSampler mSampler;

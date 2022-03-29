@@ -3,7 +3,7 @@
 
 extern vk::VkContext gContext;
 
-IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent)
+IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
 {
 	using namespace VkAlloc;
 	BUFFER_DESCRIPTION desc;
@@ -36,27 +36,29 @@ IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryTyp
 	std::string userData = "BUFFEr";
 	vmaSetAllocationUserData(gContext->m_future_memory_context->m_allocator, buffer->mVkAllocBuffer->m_suballocation.m_allocation, userData.data());
 	buffer->mBuffers[0] = buffer->mVkAllocBuffer->m_buffer;
-	for (int i = 1; i < gFrameOverlapCount; i++) {
-		VkBufferCreateInfo createInfo;
-		createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		createInfo.pNext = nullptr;
-		createInfo.flags = 0;
-		createInfo.size = desc.m_size;
-		createInfo.usage = desc.m_usage;
-		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		createInfo.queueFamilyIndexCount = 0;
-		createInfo.pQueueFamilyIndices = nullptr;
-		createInfo.flags = 0;
-		vkCreateBuffer(gContext->defaultDevice, &createInfo, nullptr, &buffer->mBuffers[i]);
-		auto& suballoc = buffer->mVkAllocBuffer->m_suballocation;
-		vkBindBufferMemory(gContext->defaultDevice, buffer->mBuffers[i], suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
+	if (!intermediateBuffer) {
+		for (int i = 1; i < gFrameOverlapCount; i++) {
+			VkBufferCreateInfo createInfo;
+			createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			createInfo.pNext = nullptr;
+			createInfo.flags = 0;
+			createInfo.size = desc.m_size;
+			createInfo.usage = desc.m_usage;
+			createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			createInfo.queueFamilyIndexCount = 0;
+			createInfo.pQueueFamilyIndices = nullptr;
+			createInfo.flags = 0;
+			vkCreateBuffer(gContext->defaultDevice, &createInfo, nullptr, &buffer->mBuffers[i]);
+			auto& suballoc = buffer->mVkAllocBuffer->m_suballocation;
+			vkBindBufferMemory(gContext->defaultDevice, buffer->mBuffers[i], suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
+		}
 	}
 	return buffer;
 }
 
-IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent)
+IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
 {
-	IBuffer2 buffer = Buffer2_Create(type, size, memoryType, pointerUsage, requireCoherent);
+	IBuffer2 buffer = Buffer2_Create(type, size, memoryType, pointerUsage, requireCoherent, intermediateBuffer);
 	Buffer2_UploadData(buffer, (char8_t*)pData, 0, VK_WHOLE_SIZE);
 	return buffer;
 }
@@ -73,7 +75,7 @@ void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset, size_t size
 		Buffer2_Unmap(buffer);
 		return;
 	}
-	IBuffer2 intermediate = Buffer2_Create(BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false);
+	IBuffer2 intermediate = Buffer2_Create(BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false, true);
 	Buffer2_UploadData(intermediate, pData, 0, size);
 	VkFence fence = vk::Gfx_CreateFence(gContext, false);
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(gContext, true, false);

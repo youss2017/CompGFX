@@ -2,112 +2,103 @@
 #include <iostream>
 #include <meshoptimizer/src/meshoptimizer.h>
 
-static void Terrain_CalculateTangents(TerrainInfo* terrain) {
-	auto& vertices = terrain->m_vertices;
-	auto& indices = terrain->m_indices;
-	for (int i = 0; i < indices.size() / 3;) {
-		auto& T0 = vertices[indices[i++]];
-		auto& T1 = vertices[indices[i++]];
-		auto& T2 = vertices[indices[i++]];
-		auto deltaPos1 = T1.inPosition - T0.inPosition;
-		auto deltaPos2 = T2.inPosition - T0.inPosition;
-		auto deltaUV1 = T1.inTexCoords - T0.inTexCoords;
-		auto deltaUV2 = T2.inTexCoords - T0.inTexCoords;
-		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-		auto tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
-		glm::vec3 bitangent;
-		bitangent.x = r * (-deltaUV2.x * deltaPos1.x + deltaUV1.x * deltaPos2.x);
-		bitangent.y = r * (-deltaUV2.x * deltaPos1.y + deltaUV1.x * deltaPos2.y);
-		bitangent.z = r * (-deltaUV2.x * deltaPos1.z + deltaUV1.x * deltaPos2.z);
-		tangent = glm::normalize(tangent);
-		bitangent = glm::normalize(bitangent);
-		T0.inNormal = T1.inNormal = T2.inNormal = glm::cross(deltaPos1, deltaPos2);
-		T0.inTangent = T1.inTangent = T2.inTangent = -1.0f * tangent;
-		T0.inBiTangent = T1.inBiTangent = T2.inBiTangent = bitangent;
-	}
-}
-
-TerrainInfo Terrain_Create(int width, int height)
-{
-	TerrainInfo terrain;
-	width = (width % 2 == 0) ? width : width + 1;
-	height = (height % 2 == 0) ? height : height + 1;
-	terrain.m_width = width;
-	terrain.m_height = height;
-	using namespace std;
+Terrain::Terrain(uint32_t resolution, uint32_t splitEveryAmountOfVerts) : mModelTransform(glm::mat4(1.0)), mResolution(resolution) {
+	assert(resolution > 0);
 	using namespace glm;
-	vector<TerrainVertex> vertices;
-	vector<uint32_t> indices;
-	// Generate flat terrain
-	for (int h = 0; h < height; h++)
-	{
-		for (int w = 0; w < width; w++)
-		{
-				TerrainVertex vertex;
-				vertex.inPosition[0] = w;
-				vertex.inPosition[1] = 1.0f;
-				vertex.inPosition[2] = h;
-				vertex.inNormal[0] = 0;
-				vertex.inNormal[1] = -1;
-				vertex.inNormal[2] = 0;
-				vertex.inTextureIDs[0] = 0;
-				vertex.inTextureIDs[1] = -1;
-				vertex.inTextureIDs[2] = -1;
-				vertex.inTextureWeights[0] = 1.0;
-				vertex.inTextureWeights[1] = 0.0;
-				vertex.inTextureWeights[2] = 0.0;
-				float u = (w + ((float)width / 2.0)) / (float)(width);
-				float v = (h + ((float)height / 2.0)) / (float)(height);
-				vertex.inTexCoords[0] = u;
-				vertex.inTexCoords[1] = v;
-				vertices.push_back(vertex);
+	uint32_t splitCount = splitCount = resolution / splitEveryAmountOfVerts;
+	splitCount = max(splitCount, 1u);
+	uint32_t maxVerticesX = resolution / splitCount;
+	uint32_t maxVerticesY = resolution / splitCount;
+	uint32_t verticesOffset = 0;
+	uint32_t indicesOffset = 0;
+	for (uint32_t blockIDy = 0; blockIDy < (resolution / maxVerticesY); blockIDy++) {
+		for (uint32_t blockIDx = 0; blockIDx < (resolution / maxVerticesX); blockIDx++) {
+			mVerticesIndicesOffset.push_back(std::make_pair(verticesOffset, indicesOffset));
+			uint32_t startVCount = mVertices.size();
+			uint32_t startICount = mIndices.size();
+			for (uint32_t y = 0; y < maxVerticesY; y++) {
+				for (uint32_t x = 0; x < maxVerticesX; x++) {
+					TerrainVertex v{};
+					v.inPosition = glm::vec3(x + (blockIDx * (maxVerticesX - 1)), 1.0f, y + (blockIDy * (maxVerticesY - 1)));
+					v.inNormal = glm::vec3(0.0, -1.0, 0.0);
+					v.inTexCoords = glm::vec2(v.inPosition.x / float(resolution), v.inPosition.z / float(resolution));
+					verticesOffset++;
+					mVertices.push_back(v);
+				}
+			}
+			for(uint32_t y = 0; y < maxVerticesY; y++) {
+				for(uint32_t x = 0; x < maxVerticesX; x++) {
+					// generate indices
+					if (x != maxVerticesX - 1 && y != maxVerticesY - 1) {
+						uint32_t indexA = y * maxVerticesX + x;
+						uint32_t indexB = indexA + 1;
+						uint32_t indexC = (y + 1) * maxVerticesY + x;
+						uint32_t indexD = indexC + 1;
+						mIndices.push_back(indexA);
+						mIndices.push_back(indexB);
+						mIndices.push_back(indexC);
+
+						mIndices.push_back(indexB);
+						mIndices.push_back(indexD);
+						mIndices.push_back(indexC);
+						indicesOffset += 6;
+						//printf("{[%d %d %d], [%d, %d, %d]}\n", indexA, indexB, indexC, indexB, indexD, indexC);
+					}
+				}
+			}
+			mVerticesIndicesCount.push_back(std::make_pair(mVertices.size() - startVCount, mIndices.size() - startICount));
 		}
 	}
-	// Generate Indices
-	for (int y = 0; y < height; y++)
-	{
-		for (int x = 0; x < width; x++)
-		{
-			if (x == (width - 1))
-				continue;
-			uint32_t indexA = y * width + x;
-			uint32_t indexB = indexA + 1;
-			uint32_t indexC = (y + 1) * width + x;
-			uint32_t indexD = indexC + 1;
-			indices.push_back(indexA);
-			indices.push_back(indexB);
-			indices.push_back(indexC);
-
-			indices.push_back(indexB);
-			indices.push_back(indexD);
-			indices.push_back(indexC);
-		}
-	}
-
-	terrain.m_vertices = vertices;
-	terrain.m_indices = indices;
-	terrain.m_totalVerticesCount = terrain.m_vertices.size();
-	terrain.m_totalIndicesCount = terrain.m_indices.size();
-	terrain.m_width = width;
-	terrain.m_height = height;
-
-	Terrain_CalculateTangents(&terrain);
-
-	return terrain;
+	printf("Total Vertices %llu Indices %llu\n", mVertices.size(), mIndices.size());
+	CalculateTangentBitangent();
+	mVertices.shrink_to_fit();
+	mIndices.shrink_to_fit();
+	mVerticesBuffer = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, mVertices.data(), mVertices.size() * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY, true, false);
+	mIndicesBuffer = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, mIndices.data(), mIndices.size() * 4, BufferMemoryType::GPU_ONLY, true, false);
 }
 
-void Terrain_ApplyHeightMap(TerrainInfo* terrain, int MapWidth, int MapHeight, float minHeight, float maxHeight, uint8_t* heightmap)
-{
+Terrain::~Terrain() {
+	Buffer2_Destroy(mVerticesBuffer);
+	Buffer2_Destroy(mIndicesBuffer);
+}
+
+void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, uint8_t* heightmap) {
 	using namespace glm;
-	auto& vertices = terrain->m_vertices;
-		
-	for (int y = 0; y < terrain->m_height; y++) {
-		float yratio = y / float(terrain->m_height);
-		for (int x = 0; x < terrain->m_width; x++) {
-			float xratio = x / float(terrain->m_width);
-			vertices[y * terrain->m_width + x].inPosition.y = glm::clamp(maxHeight * float(heightmap[int((yratio * MapHeight) * MapWidth + (xratio * MapWidth))]) / 255.0f, minHeight, maxHeight);
+	for (int mapY = 0; mapY < heightMapHeight; mapY++) {
+		float yratio = float(mapY) / float(heightMapHeight);
+		for (int mapX = 0; mapX < heightMapWidth; mapX++) {
+			float height = clamp(float(heightmap[mapY * heightMapWidth + mapX]) / 255.0f, minHeight, maxHeight);
+			float xratio = float(mapX) / float(heightMapWidth);
+			mVertices[int(float(mResolution) * yratio + (float(mResolution) * xratio))].inPosition.y = height;
 		}
 	}
-	Terrain_CalculateTangents(terrain);
+	CalculateTangentBitangent();
+	Buffer2_UploadData(mVerticesBuffer, mVertices.data(), 0, VK_WHOLE_SIZE);
 }
 
+void Terrain::CalculateTangentBitangent() {
+	for (int j = 0; j < this->GetSubmeshCount(); j++) {
+		auto vertices = mVertices.data() + this->GetVerticesOffset(j);
+		auto indices = mIndices.data() + this->GetIndicesOffset(j);
+		for (int i = 0; i < this->GetIndicesCount(j) / 3; i++) {
+			auto T0 = &vertices[indices[i++]];
+			auto T1 = &vertices[indices[i++]];
+			auto T2 = &vertices[indices[i++]];
+			auto deltaPos1 = T1->inPosition - T0->inPosition;
+			auto deltaPos2 = T2->inPosition - T0->inPosition;
+			auto deltaUV1  = T1->inTexCoords - T0->inTexCoords;
+			auto deltaUV2  = T2->inTexCoords - T0->inTexCoords;
+			float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+			auto tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+			glm::vec3 bitangent;
+			bitangent.x = r * (-deltaUV2.x * deltaPos1.x + deltaUV1.x * deltaPos2.x);
+			bitangent.y = r * (-deltaUV2.x * deltaPos1.y + deltaUV1.x * deltaPos2.y);
+			bitangent.z = r * (-deltaUV2.x * deltaPos1.z + deltaUV1.x * deltaPos2.z);
+			tangent = glm::normalize(tangent);
+			bitangent = glm::normalize(bitangent);
+			T0->inNormal = T1->inNormal = T2->inNormal = glm::cross(deltaPos1, deltaPos2);
+			T0->inTangent = T1->inTangent = T2->inTangent = -1.0f * tangent;
+			T0->inBiTangent = T1->inBiTangent = T2->inBiTangent = bitangent;
+		}
+	}
+}

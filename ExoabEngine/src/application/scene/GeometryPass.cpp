@@ -14,7 +14,7 @@ struct TerrainPushblock {
 	glm::mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
 };
 
-Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain& terrain, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext);
 	mT0 = terrain;
 	mShadowSampler = vk::Gfx_CreateSampler(gContext,
@@ -353,9 +353,12 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
 	vkCmdPushConstants(cmd, mMapLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock), &pushblock);
-	vkCmdBindVertexBuffers(cmd, 0, 1, &mT0.mVertices->mBuffers[FrameIndex], offset);
-	vkCmdBindIndexBuffer(cmd, mT0.mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(cmd, mT0.mIndicesCount, 1, 0, 0, 0);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &mT0->GetVerticesBuffer()->mBuffers[FrameIndex], offset);
+	vkCmdBindIndexBuffer(cmd, mT0->GetIndicesBuffer()->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
+	for (int i = 0; i < mT0->GetSubmeshCount(); i++) {
+		vkCmdDrawIndexed(cmd, mT0->GetIndicesCount(i), 1, mT0->GetIndicesOffset(i), mT0->GetVerticesOffset(i), 0);
+		//vkCmdDraw(cmd, mT0->GetVerticesCount(i), 1, mT0->GetVerticesOffset(i), 0);
+	}
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;

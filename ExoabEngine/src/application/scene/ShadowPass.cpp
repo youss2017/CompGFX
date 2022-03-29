@@ -80,7 +80,7 @@ std::vector<float> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm:
 
 
 // TODO: Perform frustrm culling.
-Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain& terrain, EntityController* ecs, Camera* camera, int size) : Scene(gContext->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
+Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, EntityController* ecs, Camera* camera, int size) : Scene(gContext->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
 	mT0 = terrain;
 	VkClearValue clear{};
 	clear.depthStencil.depth = 0.0;
@@ -205,7 +205,7 @@ VkCommandBuffer Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTim
 		glm::mat4 ShadowTModel;
 		glm::mat4 ProjView;
 	} MVPBinding;
-	MVPBinding.ShadowTModel = mT0.mModelTransform;
+	MVPBinding.ShadowTModel = mT0->GetTransform();
 	MVPBinding.ProjView = u_LightSpace;
 	IBuffer2 uniform = mSet.GetBuffer2(3);
 	void* mapped_ptr = Buffer2_Map(uniform);
@@ -288,14 +288,16 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindIndexBuffer(cmd, mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, mSet.GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
 
-	VkBuffer vertices = mT0.mVertices->mBuffers[FrameIndex];
-	VkBuffer indices = mT0.mIndices->mBuffers[FrameIndex];
+	VkBuffer vertices = mT0->GetVerticesBuffer()->mBuffers[FrameIndex];
+	VkBuffer indices = mT0->GetIndicesBuffer()->mBuffers[FrameIndex];
 	VkDeviceSize offset[1] = { 0 };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainLayout, 0, 1, &mTerrainSet[FrameIndex], 0, nullptr);
 	vkCmdBindVertexBuffers(cmd, 0, 1, &vertices, offset);
 	vkCmdBindIndexBuffer(cmd, indices, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(cmd, mT0.mIndicesCount, 1, 0, 0, 0);
+	for (int i = 0; i < mT0->GetSubmeshCount(); i++) {
+		vkCmdDrawIndexed(cmd, mT0->GetIndicesCount(i), 1, mT0->GetIndicesOffset(i), mT0->GetVerticesOffset(i), 0);
+	}
 
 	barrier0.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;
 	barrier0.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
