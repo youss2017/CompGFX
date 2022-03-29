@@ -17,7 +17,8 @@ layout (scalar, binding = 2) readonly buffer DrawSSBO
 	DrawData u_Draws[];
 };
 
-layout (scalar, binding = 3) uniform MVBuffer {
+layout (binding = 3) uniform MVBuffer {
+	mat4 u_ShadowTOffset;
 	mat4 u_ProjView;
 };
 

@@ -43,6 +43,8 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	texture->mMipCount = desc.m_mipLevels;
 	desc.m_lazyAllocate = specification.m_LazilyAllocate;
 	VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, 1, &desc, &texture->m_vk_image);
+	std::string userData = "IMAGE";
+	vmaSetAllocationUserData(ToVKContext(context)->m_future_memory_context->m_allocator, texture->m_vk_image->m_suballocation.m_allocation, userData.data());
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	viewInfo.viewType = (desc.m_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
 	viewInfo.format = (VkFormat)specification.m_Format;

@@ -145,7 +145,7 @@ ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 
 	for (int i = 0; i < 6; i++) {
 		Texture2_Destroy(cubeFaces[i]);
-		delete[] faces[i];
+		delete faces[i];
 	}
 
 	free(pixels);

@@ -1,8 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
 
-// TODO: Replace this with glm
-
 class Camera {
 
 private:

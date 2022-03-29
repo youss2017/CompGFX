@@ -24,7 +24,7 @@ struct TerrainVertex
 };
 
 // TODO: Split map into smaller squares so we can do frustrum culling on the map.
-struct Terrain
+struct TerrainInfo
 {
     uint32_t m_width, m_height;
     std::vector<TerrainVertex> m_vertices;
@@ -33,5 +33,12 @@ struct Terrain
     uint32_t m_totalIndicesCount = 0;
 };
 
-Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, int divide_count);
-void Terrain_ApplyHeightMap(Terrain* terrain, int width, int height, uint32_t* heightmap);
+struct Terrain {
+    IBuffer2 mVertices;
+    IBuffer2 mIndices;
+    uint32_t mIndicesCount;
+    glm::mat4 mModelTransform;
+};
+
+TerrainInfo Terrain_Create(int width, int height);
+void Terrain_ApplyHeightMap(TerrainInfo* terrain, int width, int height, float minHeight, float maxHeight, uint8_t* heightmap);

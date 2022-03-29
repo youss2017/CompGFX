@@ -39,7 +39,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
     for (uint32_t i = 0; i < sharedResourceCount; i++) {
         DescriptorSetSharedResources& shared = pSharedResources[i];
         for (auto bindingID : shared.mSharedBindings) {
-            auto binding = shared.mPartner->mBindings[bindingID];
+            auto& binding = shared.mPartner->mBindings[bindingID];
             binding.mInternalSharedResources = true;
             set.mBindings.insert(std::make_pair(bindingID, binding));
         }

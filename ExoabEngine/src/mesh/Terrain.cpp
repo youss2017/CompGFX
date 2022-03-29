@@ -2,7 +2,7 @@
 #include <iostream>
 #include <meshoptimizer/src/meshoptimizer.h>
 
-static void Terrain_CalculateTangents(Terrain* terrain) {
+static void Terrain_CalculateTangents(TerrainInfo* terrain) {
 	auto& vertices = terrain->m_vertices;
 	auto& indices = terrain->m_indices;
 	for (int i = 0; i < indices.size() / 3;) {
@@ -19,18 +19,19 @@ static void Terrain_CalculateTangents(Terrain* terrain) {
 		bitangent.x = r * (-deltaUV2.x * deltaPos1.x + deltaUV1.x * deltaPos2.x);
 		bitangent.y = r * (-deltaUV2.x * deltaPos1.y + deltaUV1.x * deltaPos2.y);
 		bitangent.z = r * (-deltaUV2.x * deltaPos1.z + deltaUV1.x * deltaPos2.z);
+		tangent = glm::normalize(tangent);
+		bitangent = glm::normalize(bitangent);
+		T0.inNormal = T1.inNormal = T2.inNormal = glm::cross(deltaPos1, deltaPos2);
 		T0.inTangent = T1.inTangent = T2.inTangent = -1.0f * tangent;
 		T0.inBiTangent = T1.inBiTangent = T2.inBiTangent = bitangent;
 	}
 }
 
-Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, int divide_count)
+TerrainInfo Terrain_Create(int width, int height)
 {
-	Terrain terrain;
+	TerrainInfo terrain;
 	width = (width % 2 == 0) ? width : width + 1;
 	height = (height % 2 == 0) ? height : height + 1;
-	xresolution = std::max(xresolution, 1);
-	yresolution = std::max(yresolution, 1);
 	terrain.m_width = width;
 	terrain.m_height = height;
 	using namespace std;
@@ -38,60 +39,36 @@ Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, 
 	vector<TerrainVertex> vertices;
 	vector<uint32_t> indices;
 	// Generate flat terrain
-	int indice = 0;
-	int number_width = 0;
-	int max = (width * xresolution + 1) * (height * yresolution + 1);
-	while (max >= 1)
+	for (int h = 0; h < height; h++)
 	{
-		max /= 10;
-		number_width++;
-	}
-	int step_y = int(1.0 / (float)yresolution);
-	int step_x = int(1.0 / (float)xresolution);
-	for (int h = -height / 2; h <= height / 2; h++)
-	{
-		float base_y = h;
-		for (int yr = 0; yr < yresolution; yr++)
+		for (int w = 0; w < width; w++)
 		{
-			float y = base_y + (yr * step_y);
-	
-			for (int w = -width / 2; w <= width / 2; w++)
-			{
-				float base_x = w;
-				for (int xr = 0; xr < xresolution; xr++)
-				{
-					float x = base_x + (xr * step_x);
-					TerrainVertex vertex;
-					vertex.inPosition[0] = x;
-					vertex.inPosition[1] = 1.0f;
-					vertex.inPosition[2] = y;
-					vertex.inNormal[0] = 0;
-					vertex.inNormal[1] = -1;
-					vertex.inNormal[2] = 0;
-					vertex.inTextureIDs[0] = 0;
-					vertex.inTextureIDs[1] = -1;
-					vertex.inTextureIDs[2] = -1;
-					vertex.inTextureWeights[0] = 1.0;
-					vertex.inTextureWeights[1] = 0.0;
-					vertex.inTextureWeights[2] = 0.0;
-					float u = (base_x + (xr * step_x) + ((float)width / 2.0)) / (float)(width);
-					float v = (base_y + (yr * step_y) + ((float)height / 2.0)) / (float)(height);
-					vertex.inTexCoords[0] = u;
-					vertex.inTexCoords[1] = v;
-					vertices.push_back(vertex);
-				}
-			}
+				TerrainVertex vertex;
+				vertex.inPosition[0] = w;
+				vertex.inPosition[1] = 1.0f;
+				vertex.inPosition[2] = h;
+				vertex.inNormal[0] = 0;
+				vertex.inNormal[1] = -1;
+				vertex.inNormal[2] = 0;
+				vertex.inTextureIDs[0] = 0;
+				vertex.inTextureIDs[1] = -1;
+				vertex.inTextureIDs[2] = -1;
+				vertex.inTextureWeights[0] = 1.0;
+				vertex.inTextureWeights[1] = 0.0;
+				vertex.inTextureWeights[2] = 0.0;
+				float u = (w + ((float)width / 2.0)) / (float)(width);
+				float v = (h + ((float)height / 2.0)) / (float)(height);
+				vertex.inTexCoords[0] = u;
+				vertex.inTexCoords[1] = v;
+				vertices.push_back(vertex);
 		}
 	}
 	// Generate Indices
-	width++;
-	width *= xresolution;
-	height *= yresolution;
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
 		{
-			if (x == width - 1)
+			if (x == (width - 1))
 				continue;
 			uint32_t indexA = y * width + x;
 			uint32_t indexB = indexA + 1;
@@ -111,19 +88,24 @@ Terrain Terrain_Create(int width, int xresolution, int height, int yresolution, 
 	terrain.m_indices = indices;
 	terrain.m_totalVerticesCount = terrain.m_vertices.size();
 	terrain.m_totalIndicesCount = terrain.m_indices.size();
+	terrain.m_width = width;
+	terrain.m_height = height;
 
 	Terrain_CalculateTangents(&terrain);
 
 	return terrain;
 }
 
-void Terrain_ApplyHeightMap(Terrain* terrain, int width, int height, uint32_t* heightmap)
+void Terrain_ApplyHeightMap(TerrainInfo* terrain, int MapWidth, int MapHeight, float minHeight, float maxHeight, uint8_t* heightmap)
 {
-	for (int y = 0; y < height; y++) {
-		float yratio = y / float(height);
-		for (int x = 0; x < width; x++) {
-			float xratio = x / float(width);
-			uint8_t rawHeightValue = heightmap[y * width + x] >> 24;
+	using namespace glm;
+	auto& vertices = terrain->m_vertices;
+		
+	for (int y = 0; y < terrain->m_height; y++) {
+		float yratio = y / float(terrain->m_height);
+		for (int x = 0; x < terrain->m_width; x++) {
+			float xratio = x / float(terrain->m_width);
+			vertices[y * terrain->m_width + x].inPosition.y = glm::clamp(maxHeight * float(heightmap[int((yratio * MapHeight) * MapWidth + (xratio * MapWidth))]) / 255.0f, minHeight, maxHeight);
 		}
 	}
 	Terrain_CalculateTangents(terrain);

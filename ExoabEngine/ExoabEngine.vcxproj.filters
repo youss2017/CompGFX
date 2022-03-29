@@ -54,9 +54,6 @@
     <ClInclude Include="src\graphics\Graphics.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\physics\Physics.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\mesh\Terrain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -198,6 +195,15 @@
     <ClInclude Include="src\utils\perlin_noise.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\application\scene\postprocess\FXAAPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\scene\postprocess\SSAOPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\audio\Audio.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -236,13 +242,10 @@
     <ClCompile Include="src\graphics\Graphics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\physics\Physics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\mesh\Terrain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\utils\common.cpp">
+    <ClCompile Include="src\utils\commonn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\Logger.cpp">
@@ -396,6 +399,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\perlin_noise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\Win32Audio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\Audio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -5,7 +5,6 @@
 #include <iostream>
 #include <vector>
 #include <cassert>
-#include "../memory/vulkan_memory.h"
 #ifndef _WIN32
 #include <alloca.h>
 #endif

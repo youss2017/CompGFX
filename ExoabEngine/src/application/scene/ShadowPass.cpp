@@ -80,9 +80,10 @@ std::vector<float> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm:
 
 
 // TODO: Perform frustrm culling.
-Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, EntityController* ecs, Camera* camera, int size) : Scene(gContext->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
+Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain& terrain, EntityController* ecs, Camera* camera, int size) : Scene(gContext->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
+	mT0 = terrain;
 	VkClearValue clear{};
-	clear.depthStencil.depth = 1.0;
+	clear.depthStencil.depth = 0.0;
 	mFBO.m_width = size;
 	mFBO.m_height = size;
 	FramebufferAttachment depthAtachment = FramebufferAttachment::Create(gContext, 0, size, size, VK_FORMAT_D32_SFLOAT, clear);
@@ -123,12 +124,20 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	bindings[3].mFlags = BINDING_FLAG_CPU_VISIBLE;
 	bindings[3].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	bindings[3].mStages = VK_SHADER_STAGE_VERTEX_BIT;
-	bindings[3].mBufferSize = sizeof(glm::mat4);
+	bindings[3].mBufferSize = sizeof(glm::mat4) * 2;
 	bindings[3].mBuffer = nullptr;
+
+	BindingDescription shadowTBindings[1];
+	shadowTBindings[0].mBindingID = 0;
+	shadowTBindings[0].mFlags = BINDING_FLAG_CPU_VISIBLE;
+	shadowTBindings[0].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	shadowTBindings[0].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	shadowTBindings[0].mBufferSize = sizeof(glm::mat4);
 
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderConnector_CalculateDescriptorPool(4, bindings, poolSize);
-	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount, poolSize);
+	ShaderConnector_CalculateDescriptorPool(1, shadowTBindings, poolSize);
+	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2, poolSize);
 	mSet = ShaderConnector_CreateSet(0, mPool, 4, bindings, 0, nullptr);
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {});
 
@@ -137,13 +146,29 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ent
 	spec.m_CullMode = CullMode::CULL_FRONT;
 	spec.m_DepthEnabled = true;
 	spec.m_DepthWriteEnable = true;
-	spec.m_DepthFunc = DepthFunction::LESS;
+	spec.m_DepthFunc = DepthFunction::GREATER;
 	spec.m_PolygonMode = PolygonMode::FILL;
 	spec.m_FrontFaceCCW = true;
 	spec.m_Topology = PolygonTopology::TRIANGLE_LIST;
 	spec.m_NearField = 0.0f;
 	spec.m_FarField = 1.0f;
 	mState = PipelineState_Create(gContext, spec, input, mFBO, mLayout, &vertex, &fragment);
+
+	Shader shadowT = Shader(gContext, "assets/shaders/shadow/shadowT.vert");
+	shadowTBindings[0].mBuffer = mSet.GetBuffer2(3);
+	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 1, shadowTBindings, 0, nullptr);
+	mTerrainLayout = ShaderConnector_CreatePipelineLayout(1, &mTerrainSet, { });
+
+	input = {};
+	input.AddInputElement("inPosition", 0, 0, 3, true, false, false);
+	input.AddInputElement("inNormal", 1, 0, 3, true, false, false);
+	input.AddInputElement("inTangent", 2, 0, 3, true, false, false);
+	input.AddInputElement("inBiTangent", 3, 0, 3, true, false, false);
+	input.AddInputElement("inTextureIDs", 4, 0, 3, false, false, false);
+	input.AddInputElement("inTextureWeights", 5, 0, 3, true, false, false);
+	input.AddInputElement("inTexCoords", 6, 0, 2, true, false, false);
+	spec.m_CullMode = CullMode::CULL_FRONT;
+	mTerrainState = PipelineState_Create(gContext, spec, input, mFBO, mTerrainLayout, &shadowT, &fragment);
 
 	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 
@@ -155,10 +180,12 @@ Application::ShadowPass::~ShadowPass() {
 	Super_Scene_Destroy();
 	mFBO.DestroyAllBoundAttachments();
 	PipelineState_Destroy(mState);
+	PipelineState_Destroy(mTerrainState);
 	ShaderConnector_DestroySet(mSet);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
+	vkDestroyPipelineLayout(mDevice, mTerrainLayout, nullptr);
 }
 
 void Application::ShadowPass::ReloadShaders() {
@@ -174,9 +201,15 @@ void Application::ShadowPass::ReloadShaders() {
 
 VkCommandBuffer Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
 	glm::mat4 u_LightSpace = GetLightSpace();
+	struct {
+		glm::mat4 ShadowTModel;
+		glm::mat4 ProjView;
+	} MVPBinding;
+	MVPBinding.ShadowTModel = mT0.mModelTransform;
+	MVPBinding.ProjView = u_LightSpace;
 	IBuffer2 uniform = mSet.GetBuffer2(3);
 	void* mapped_ptr = Buffer2_Map(uniform);
-	memcpy(mapped_ptr, &u_LightSpace, sizeof(glm::mat4));
+	memcpy(mapped_ptr, &MVPBinding, sizeof(MVPBinding));
 	Buffer2_Flush(uniform, 0, VK_WHOLE_SIZE);
 	return mCmds[FrameIndex];
 }
@@ -254,6 +287,15 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, set, 0, nullptr);
 	vkCmdBindIndexBuffer(cmd, mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, mSet.GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
+
+	VkBuffer vertices = mT0.mVertices->mBuffers[FrameIndex];
+	VkBuffer indices = mT0.mIndices->mBuffers[FrameIndex];
+	VkDeviceSize offset[1] = { 0 };
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainState->m_pipeline);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainLayout, 0, 1, &mTerrainSet[FrameIndex], 0, nullptr);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &vertices, offset);
+	vkCmdBindIndexBuffer(cmd, indices, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexed(cmd, mT0.mIndicesCount, 1, 0, 0, 0);
 
 	barrier0.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;
 	barrier0.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;

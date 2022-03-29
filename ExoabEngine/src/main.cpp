@@ -167,8 +167,8 @@ void PrepareDLLs();
 static void PrepareWin32(int argc, char** argv)
 {
     PrepareDLLs();
-#if 0
     CoInitializeEx(NULL, COINIT_MULTITHREADED);
+#if 0
     if(timeBeginPeriod(1) == TIMERR_NOERROR)
         log_info("Succesfully increased windows timer resolution to 1 ms");
     else {

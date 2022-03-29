@@ -1,5 +1,4 @@
 #include "Application.hpp"
-#include "../physics/Physics.hpp"
 #include "UI.hpp"
 #include "Camera.hpp"
 #include "ecs/EntityController.hpp"
@@ -15,6 +14,8 @@
 #include "scene/ShadowPass.hpp"
 #include "scene/DebugPass.hpp"
 #include "scene/postprocess/BloomPass.hpp"
+#include "perlin_noise.hpp"
+#include "../audio/Audio.hpp"
 
 bool Application::Quit = false;
 
@@ -56,6 +57,14 @@ namespace Application
 bool Application::Initalize(ConfigurationSettings* configuration, bool RenderDoc)
 {
 	PROFILE_FUNCTION();
+	Audio* audio = new Audio();
+	AudioBuffer* buffer = new AudioBuffer(audio, 44100, 15.0);
+	//float* fbuf = buffer->GetBuffer();
+	//float step = 1.0 / (44100 * 2);
+	//for (int i = 0; i < (44100 * 2 * 15); i++) {
+	//	fbuf[i] = sinf(step * i * 50.0 * 2.0 * 3.14);
+	//}
+	buffer->Play();
 	log_configure(true, true);
 	if (!glfwInit())
 	{
@@ -65,11 +74,6 @@ bool Application::Initalize(ConfigurationSettings* configuration, bool RenderDoc
 	if (!Graphics3D_CheckVulkanSupport())
 	{
 		log_error("Vulkan is not supported, try updating your graphics driver.");
-		return false;
-	}
-
-	if (!Physx_Initalize()) {
-		log_error("Could not initalize physx! Are PhysX DLLs in the folder?");
 		return false;
 	}
 
@@ -125,16 +129,29 @@ bool Application::LoadAssets()
 bool Application::CreateResources()
 {
 	PROFILE_FUNCTION();
-	gFBO0.m_width = 1280;
-	gFBO0.m_height = 720;
-	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, VK_IMAGE_USAGE_STORAGE_BIT, 1280, 720, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
-	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 0, 1280, 720, VK_FORMAT_D32_SFLOAT, { 1.0f, 1.0f, 1.0f, 1.0f });
+	gFBO0.m_width = 1920;
+	gFBO0.m_height = 1080;
+	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, VK_IMAGE_USAGE_STORAGE_BIT, 1920, 1080, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
+	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 0, 1920, 1080, VK_FORMAT_D32_SFLOAT, { 1.0f });
 	gFBO0.AddColorAttachment(0, colorAttachment);
 	gFBO0.SetDepthAttachment(depthAttachment);
 
-	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, gECS, &gCamera, 1024);
+	int w = 400;
+	int h = w;
+	TerrainInfo t0i = Terrain_Create(w, h);
+	std::vector<uint8_t> perlinBuffer(w * h);
+	Utils::perlin(w, h, 0xCaf, 6.0, 3, perlinBuffer.data());
+	Terrain_ApplyHeightMap(&t0i, w, h, 0.0, 10.2, perlinBuffer.data());
+
+	Terrain t0;
+	t0.mVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, t0i.m_vertices.data(), t0i.m_totalVerticesCount * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY, false, false);
+	t0.mIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, t0i.m_indices.data(), t0i.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false);
+	t0.mIndicesCount = t0i.m_totalIndicesCount;
+	t0.mModelTransform = glm::scale(glm::mat4(1.0), glm::vec3(2.0, 2.0, 2.0));
+
+	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
-	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
+	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, t0, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
 	skybox = new SkyboxPass("assets/textures/cubemap4.png", geoPass, &gCamera, true);
 	debugPass = new DebugPass(gFBO0);
 	bloom = new BloomPass(gFBO0, 0, 1.0);
@@ -330,7 +347,6 @@ void Application::Destroy()
 	gFBO0.DestroyAllBoundAttachments();
 	Buffer2_Destroy(gVerticesSSBO);
 	Buffer2_Destroy(gIndicesBuffer);
-	Physx_Destroy();
 	delete gECS;
 	Graphics3D_Destroy(gGfx);
 }

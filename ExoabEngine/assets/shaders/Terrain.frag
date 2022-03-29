@@ -31,6 +31,7 @@ layout (constant_id = 0) const int pcfCount = 2;
 float ShadowCalculation()
 {
     vec3 pos = (LightSpacePos.xyz / LightSpacePos.w) * 0.5 + 0.5;
+    pos.z = 1.0 - pos.z;
     if(pos.z > 1.0) {
         pos.z = 1.0;
     }
@@ -42,7 +43,7 @@ float ShadowCalculation()
 
     for(int x = -pcfCount; x <= pcfCount; x++) {
         for(int y = -pcfCount; y <= pcfCount; y++) {
-            float depth = texture(shadowMap, pos.xy + (vec2(x, y) * shadowTexel * 0.88)).r;
+            float depth = textureGather(shadowMap, pos.xy + (vec2(x, y) * shadowTexel) * 0.5).r;
             if(pos.z > depth) {
                 total += 1.0;
             }
@@ -67,8 +68,9 @@ void main()
     vec4 Texture2 = (TextureIDs.y == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.y], TiledTexCoord) * TextureWeights[TextureIDs.y]);
     vec4 Texture3 = (TextureIDs.z == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.z], TiledTexCoord) * TextureWeights[TextureIDs.z]);
     vec4 FinalTexture = BaseTexture + Texture1 + Texture2 + Texture3;
+    float ambient = 0.01;
     float diffuse = dot(normal, u_LightDirection.xyz);
 
     // TODO: Support Specular Map
-    FragColor = FinalTexture * diffuse * clamp((1.0 - ShadowCalculation()), 0.4, 1.0);
+    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), 0.4, 1.0) + ambient;
 }

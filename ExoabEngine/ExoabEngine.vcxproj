@@ -120,9 +120,12 @@
     <ClInclude Include="src\application\scene\FrustrumCullPass.hpp" />
     <ClInclude Include="src\application\scene\GeometryPass.hpp" />
     <ClInclude Include="src\application\scene\postprocess\BloomPass.hpp" />
+    <ClInclude Include="src\application\scene\postprocess\FXAAPass.hpp" />
+    <ClInclude Include="src\application\scene\postprocess\SSAOPass.hpp" />
     <ClInclude Include="src\application\scene\Scene.hpp" />
     <ClInclude Include="src\application\scene\ShadowPass.hpp" />
     <ClInclude Include="src\application\scene\SkyboxPass.hpp" />
+    <ClInclude Include="src\audio\Audio.hpp" />
     <ClInclude Include="src\core\memory\CubeMap.hpp" />
     <ClInclude Include="src\core\shaders\ShaderConnector.hpp" />
     <ClInclude Include="src\utils\atomic.h" />
@@ -146,7 +149,6 @@
     <ClInclude Include="src\mesh\entity.hpp" />
     <ClInclude Include="src\mesh\geometry.hpp" />
     <ClInclude Include="src\mesh\SkinnedMesh.hpp" />
-    <ClInclude Include="src\physics\Physics.hpp" />
     <ClInclude Include="src\application\ShaderTypes.hpp" />
     <ClInclude Include="src\application\UI.hpp" />
     <ClInclude Include="src\mesh\Terrain.hpp" />
@@ -197,6 +199,8 @@
     <ClCompile Include="src\application\scene\postprocess\BloomPass.cpp" />
     <ClCompile Include="src\application\scene\ShadowPass.cpp" />
     <ClCompile Include="src\application\scene\SkyboxPass.cpp" />
+    <ClCompile Include="src\audio\Audio.cpp" />
+    <ClCompile Include="src\audio\Win32Audio.cpp" />
     <ClCompile Include="src\core\backend\Swapchain.cpp" />
     <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
     <ClCompile Include="src\core\backend\VulkanLoader.c" />
@@ -216,11 +220,10 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
     <ClCompile Include="src\mesh\SkinnedMesh.cpp" />
-    <ClCompile Include="src\physics\Physics.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />
     <ClCompile Include="src\application\UI.cpp" />
     <ClCompile Include="src\mesh\Terrain.cpp" />
-    <ClCompile Include="src\utils\common.cpp" />
+    <ClCompile Include="src\utils\commonn.cpp" />
     <ClCompile Include="src\utils\Logger.cpp" />
     <ClCompile Include="src\utils\MBox.cpp" />
     <ClCompile Include="src\utils\perlin_noise.cpp" />

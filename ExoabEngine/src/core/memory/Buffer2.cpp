@@ -33,6 +33,8 @@ IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryTyp
 	buffer->mSize = size;
 	buffer->mType = type;
 	VkAlloc::CreateBuffers(gContext->m_future_memory_context, 1, &desc, &buffer->mVkAllocBuffer);
+	std::string userData = "BUFFEr";
+	vmaSetAllocationUserData(gContext->m_future_memory_context->m_allocator, buffer->mVkAllocBuffer->m_suballocation.m_allocation, userData.data());
 	buffer->mBuffers[0] = buffer->mVkAllocBuffer->m_buffer;
 	for (int i = 1; i < gFrameOverlapCount; i++) {
 		VkBufferCreateInfo createInfo;

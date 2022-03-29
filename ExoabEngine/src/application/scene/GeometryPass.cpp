@@ -1,6 +1,8 @@
 #include "GeometryPass.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include "../../window/PlatformWindow.hpp"
+#include "perlin_noise.hpp"
+#include <stb/stb_image_write.h>
 
 extern vk::VkContext gContext;
 namespace Application {
@@ -12,16 +14,20 @@ struct TerrainPushblock {
 	glm::mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
 };
 
-Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain& terrain, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	mSampler = vk::Gfx_CreateSampler(gContext);
+	mT0 = terrain;
 	mShadowSampler = vk::Gfx_CreateSampler(gContext,
 		VK_FILTER_LINEAR,
 		VK_FILTER_LINEAR,
 		VK_SAMPLER_MIPMAP_MODE_LINEAR,
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, 
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+		0.0f, VK_TRUE, 16.0f, 0.01f, 1000.0f,
+		VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 	mWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
+	mSandTex = Texture2_CreateFromFile(gContext, "assets/textures/sand.jpg", true);
 	mStatueTex = Texture2_CreateFromFile(gContext, "assets/textures/statue.jpg", true);
 	mNormalMap = Texture2_CreateFromFile(gContext, "assets/textures/normal.jpg", true);
 	mLightDirection = glm::vec4(0.0);
@@ -88,7 +94,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	terrainBindings[1].mFlags = 0;
 	terrainBindings[1].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	terrainBindings[1].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-	terrainBindings[1].mTextures.push_back(mWoodTex);
+	terrainBindings[1].mTextures.push_back(mSandTex);
 	terrainBindings[1].mSampler = mSampler;
 
 	terrainBindings[2].mBindingID = 2;
@@ -134,11 +140,6 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 
 	terrainBindings[0].mBuffer = mGeoSet0.GetBuffer2(1);
 	
-	mTerrain = Terrain_Create(100, 2, 100, 2, 1);
-	mMapVertices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_VERTEX, mTerrain.m_vertices.data(), mTerrain.m_totalVerticesCount * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY, false, false);
-	mMapIndices = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, mTerrain.m_indices.data(), mTerrain.m_totalIndicesCount * 4, BufferMemoryType::GPU_ONLY, false, false);
-	mMapIndicesCount = mTerrain.m_totalIndicesCount;
-
 	mMapSet = ShaderConnector_CreateSet(0, mPool, 4, terrainBindings, 0, nullptr);
 	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock)} });
 	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
@@ -169,8 +170,6 @@ Application::GeometryPass::~GeometryPass() {
 	vkDestroyPipelineLayout(mDevice, mMapLayout, nullptr);
 	PipelineState_Destroy(mGeoState);
 	PipelineState_Destroy(mMapState);
-	Buffer2_Destroy(mMapVertices);
-	Buffer2_Destroy(mMapIndices);
 	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroySampler(mDevice, mShadowSampler, nullptr);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
@@ -178,6 +177,7 @@ Application::GeometryPass::~GeometryPass() {
 	Texture2_Destroy(mWoodTex);
 	Texture2_Destroy(mStatueTex);
 	Texture2_Destroy(mNormalMap);
+	Texture2_Destroy(mSandTex);
 }
 
 VkCommandBuffer Application::GeometryPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
@@ -302,7 +302,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	depthAttachment.clearValue.depthStencil.depth = 1.0f;
+	depthAttachment.clearValue = mFBO.m_depth_attachment.value().mClear;
 
 	renderingInfo.pColorAttachments = &colorAttachment;
 	renderingInfo.pDepthAttachment = &depthAttachment;
@@ -345,7 +345,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray->mBuffers[FrameIndex], 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
 	TerrainPushblock pushblock;
-	pushblock.u_Model = glm::scale(glm::mat4(1.0), glm::vec3(15.0));
+	pushblock.u_Model = glm::scale(glm::mat4(1.0), glm::vec3(2.0));
 	pushblock.u_NormalModel = glm::mat3(glm::transpose(glm::inverse(pushblock.u_Model)));
 
 	VkDescriptorSet mapSet[1] = { mMapSet[FrameIndex] };
@@ -353,9 +353,9 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
 	vkCmdPushConstants(cmd, mMapLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock), &pushblock);
-	vkCmdBindVertexBuffers(cmd, 0, 1, &mMapVertices->mBuffers[FrameIndex], offset);
-	vkCmdBindIndexBuffer(cmd, mMapIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(cmd, mMapIndicesCount, 1, 0, 0, 0);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &mT0.mVertices->mBuffers[FrameIndex], offset);
+	vkCmdBindIndexBuffer(cmd, mT0.mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexed(cmd, mT0.mIndicesCount, 1, 0, 0, 0);
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;

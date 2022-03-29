@@ -1,4 +1,6 @@
 #include "vulkan_memory_allocator.hpp"
+#define VMA_DEBUG_LOG
+#include <vk_mem_alloc.h>
 #include <backend/VulkanLoader.h>
 #include <Logger.hpp>
 #include <functional>

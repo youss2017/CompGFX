@@ -4,13 +4,16 @@
 #include <pipeline/Framebuffer.hpp>
 #include <pipeline/Pipeline.hpp>
 #include "../ecs/EntityController.hpp"
+#include "../../mesh/Terrain.hpp"
+#include "../Camera.hpp"
+#include <stdint.h>
 
 namespace Application {
 
 	class ShadowPass : public Scene {
 
 	public:
-		ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, EntityController* ecs, Camera* camera, int size);
+		ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain& terrain, EntityController* ecs, Camera* camera, int size);
 		~ShadowPass();
 
 		void ReloadShaders();
@@ -43,8 +46,14 @@ namespace Application {
 		DescriptorSet mSet;
 		VkPipelineLayout mLayout;
 		IPipelineState mState;
+
+		DescriptorSet mTerrainSet;
+		VkPipelineLayout mTerrainLayout;
+		IPipelineState mTerrainState;
+
 		glm::vec3 mLightPosition;
 	private:
+		Terrain mT0;
 		Camera* mCamera;
 		EntityController* mECS;
 		IBuffer2 mVerticesSSBO;
