@@ -41,7 +41,6 @@ namespace Application
 	IBuffer2 gVerticesSSBO, gIndicesBuffer;
 	Camera gCamera({ 0,0,0 });
 	Camera gLockedCamera({ 0,0,0 });
-	Framebuffer gFBO0;
 	
 	EntityController* gECS;
 	static FrustumCullPass* cullPass;
@@ -129,13 +128,7 @@ bool Application::LoadAssets()
 bool Application::CreateResources()
 {
 	PROFILE_FUNCTION();
-	gFBO0.m_width = 1920;
-	gFBO0.m_height = 1080;
-	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, VK_IMAGE_USAGE_STORAGE_BIT, 1920, 1080, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
-	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 0, 1920, 1080, VK_FORMAT_D32_SFLOAT, { 1.0f });
-	gFBO0.AddColorAttachment(0, colorAttachment);
-	gFBO0.SetDepthAttachment(depthAttachment);
-
+	
 	int w = 100;
 	Terrain* t0 = new Terrain(w, 100);
 	std::vector<uint8_t> perlinBuffer(w * w);
@@ -145,10 +138,10 @@ bool Application::CreateResources()
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
-	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, t0, gFBO0, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
+	geoPass = new GeometryPass(gVerticesSSBO, gIndicesBuffer, t0, 1920, 1080, cullPass, &gCamera, gECS, shadow->GetDepthAttachment());
 	skybox = new SkyboxPass("assets/textures/cubemap4.png", geoPass, &gCamera, true);
-	debugPass = new DebugPass(gFBO0);
-	bloom = new BloomPass(gFBO0, 0, 1.0);
+	debugPass = new DebugPass(geoPass->GetFramebuffer());
+	bloom = new BloomPass(geoPass->GetFramebuffer(), 0, 1.0);
 	UI::CubemapLODMax = skybox->GetMaxLOD();
 
 	for (int i = 0; i < gFrameOverlapCount; i++) {
@@ -156,25 +149,6 @@ bool Application::CreateResources()
 		bloomPassSemaphore[i] = vk::Gfx_CreateSemaphore(gContext, false);
 	}
 
-	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
-	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
-	VkImageMemoryBarrier shaderReadBarrier[gFrameOverlapCount]{};
-	for (int i = 0; i < gFrameOverlapCount; i++) {
-		shaderReadBarrier[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		shaderReadBarrier[i].srcAccessMask = VK_ACCESS_NONE;
-		shaderReadBarrier[i].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		shaderReadBarrier[i].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		shaderReadBarrier[i].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		shaderReadBarrier[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		shaderReadBarrier[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		shaderReadBarrier[i].image = gFBO0.m_color_attachments[0].GetAttachment()->m_vk_images_per_frame[i];
-		shaderReadBarrier[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		shaderReadBarrier[i].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-		shaderReadBarrier[i].subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-		Framebuffer_TransistionAttachment(transitionCmd.cmd, &gFBO0.m_depth_attachment.value(), VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-	}
-	vkCmdPipelineBarrier(transitionCmd.cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, gFrameOverlapCount, shaderReadBarrier);
-	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
 	return true;
 }
 
@@ -308,10 +282,10 @@ void Application::Render(double dTimeFromStart, double dTime, bool UpdateUITime)
 	if (s_EnableImGui)
 		UI::RenderUI();
 	if (UI::CurrentOutputBuffer == 0) {
-		gSwapchain.Present(gFBO0.m_color_attachments[0].GetImage(FrameIndex), gFBO0.m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
+		gSwapchain.Present(geoPass->GetFramebuffer().m_color_attachments[0].GetImage(FrameIndex), geoPass->GetFramebuffer().m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
 	}
 	else if(UI::CurrentOutputBuffer == 1) {
-		gSwapchain.Present(gFBO0.m_depth_attachment.value().GetImage(FrameIndex), gFBO0.m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, true);
+		gSwapchain.Present(geoPass->GetFramebuffer().m_depth_attachment.value().GetImage(FrameIndex), geoPass->GetFramebuffer().m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, true);
 	}
 	else if (UI::CurrentOutputBuffer == 2) {
 		gSwapchain.Present(shadow->GetDepthImage(FrameIndex), shadow->GetDepthView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &frame.m_PresentSemaphore, true);
@@ -338,7 +312,6 @@ void Application::Destroy()
 	}
 	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mInstanceBuffer);
 	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
-	gFBO0.DestroyAllBoundAttachments();
 	Buffer2_Destroy(gVerticesSSBO);
 	Buffer2_Destroy(gIndicesBuffer);
 	delete gECS;

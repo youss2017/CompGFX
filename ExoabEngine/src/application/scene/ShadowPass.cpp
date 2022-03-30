@@ -295,7 +295,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainLayout, 0, 1, &mTerrainSet[FrameIndex], 0, nullptr);
 	vkCmdBindVertexBuffers(cmd, 0, 1, &vertices, offset);
 	vkCmdBindIndexBuffer(cmd, indices, 0, VK_INDEX_TYPE_UINT32);
-	for (int i = 0; i < mT0->GetSubmeshCount(); i++) {
+	for (uint32_t i = 0; i < mT0->GetSubmeshCount(); i++) {
 		vkCmdDrawIndexed(cmd, mT0->GetIndicesCount(i), 1, mT0->GetIndicesOffset(i), mT0->GetVerticesOffset(i), 0);
 	}
 
