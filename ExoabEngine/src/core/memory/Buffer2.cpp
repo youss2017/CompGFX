@@ -1,5 +1,6 @@
 #include "Buffer2.hpp"
 #include <backend/VkGraphicsCard.hpp>
+#include <unordered_map>
 
 extern vk::VkContext gContext;
 
@@ -154,7 +155,7 @@ void Buffer2_Destroy(IBuffer2 buffer)
 	delete buffer;
 }
 
-static std::map<uint64_t, IBuffer2> GmallocBuffers;
+static std::unordered_map<uint64_t, IBuffer2> GmallocBuffers;
 
 void* Gmalloc(uint32_t size, BufferType type) {
 	IBuffer2 buffer = Buffer2_Create(type, size, BufferMemoryType::CPU_TO_GPU, true, true);
