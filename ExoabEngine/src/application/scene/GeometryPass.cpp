@@ -370,8 +370,9 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdPushConstants(cmd, mMapLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock), &pushblock);
 	vkCmdBindVertexBuffers(cmd, 0, 1, &mT0->GetVerticesBuffer()->mBuffers[FrameIndex], offset);
 	vkCmdBindIndexBuffer(cmd, mT0->GetIndicesBuffer()->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
-	for (int i = 0; i < mT0->GetSubmeshCount(); i++) {
-		vkCmdDrawIndexed(cmd, mT0->GetIndicesCount(i), 1, mT0->GetIndicesOffset(i), mT0->GetVerticesOffset(i), 0);
+	for (uint32_t i = 0; i < mT0->GetSubmeshCount(); i++) {
+		auto& submesh = mT0->GetSubmesh(i);
+		vkCmdDrawIndexed(cmd, submesh.mIndicesCount, 1, submesh.mFirstIndex, submesh.mFirstVertex, 0);
 	}
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };

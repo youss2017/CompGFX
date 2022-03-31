@@ -12,7 +12,6 @@
     the application.
 */
 
-#pragma pack(1)
 struct TerrainVertex
 {
     glm::vec3 inPosition;
@@ -25,6 +24,14 @@ struct TerrainVertex
 };
 
 // TODO: Split map into smaller squares so we can do frustrum culling on the map.
+struct TerrainSubmesh {
+    uint32_t mFirstVertex;
+    uint32_t mFirstIndex;
+    uint32_t mIndicesCount;
+    glm::f64vec3 mCenter;
+    glm::f64 mRadius;
+};
+
 class Terrain {
 
 public:
@@ -37,28 +44,13 @@ public:
     void ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, uint8_t* heightmap);
     void SetTransform(const glm::mat4& transform) { mModelTransform = transform; }
     glm::mat4 GetTransform() { return mModelTransform; }
-    uint32_t GetSubmeshCount() {
-        return mVerticesIndicesOffset.size();
-    }
-
-    uint32_t GetVerticesOffset(uint32_t submeshIndex) {
-        return mVerticesIndicesOffset[submeshIndex].first;
-    }
-
-    uint32_t GetIndicesOffset(uint32_t submeshIndex) {
-        return mVerticesIndicesOffset[submeshIndex].second;
-    }
-
-    uint32_t GetVerticesCount(uint32_t submeshIndex) {
-        return mVerticesIndicesCount[submeshIndex].first;
-    }
-
-    uint32_t GetIndicesCount(uint32_t submeshIndex) {
-        return mVerticesIndicesCount[submeshIndex].second;
-    }
-
+   
     IBuffer2 GetVerticesBuffer() { return mVerticesBuffer; }
     IBuffer2 GetIndicesBuffer() { return mIndicesBuffer; }
+
+    inline uint32_t GetSubmeshCount() { return mSubmeshes.size(); }
+    inline TerrainSubmesh& GetSubmesh(uint32_t i) { return mSubmeshes[i]; }
+    //inline uint32_t GetIndicesCount() { return mIndices.size(); }
 
 private:
     void CalculateTangentBitangent();
@@ -67,9 +59,8 @@ private:
     uint32_t mResolution;
     std::vector<TerrainVertex> mVertices;
     std::vector<uint32_t> mIndices;
+    std::vector<TerrainSubmesh> mSubmeshes;
     IBuffer2 mVerticesBuffer;
     IBuffer2 mIndicesBuffer;
-    std::vector<std::pair<uint32_t, uint32_t>> mVerticesIndicesOffset;
-    std::vector<std::pair<uint32_t, uint32_t>> mVerticesIndicesCount;
     glm::mat4 mModelTransform;
 };

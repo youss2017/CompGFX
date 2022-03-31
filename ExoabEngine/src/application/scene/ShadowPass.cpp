@@ -296,7 +296,8 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindVertexBuffers(cmd, 0, 1, &vertices, offset);
 	vkCmdBindIndexBuffer(cmd, indices, 0, VK_INDEX_TYPE_UINT32);
 	for (uint32_t i = 0; i < mT0->GetSubmeshCount(); i++) {
-		vkCmdDrawIndexed(cmd, mT0->GetIndicesCount(i), 1, mT0->GetIndicesOffset(i), mT0->GetVerticesOffset(i), 0);
+		auto& submesh = mT0->GetSubmesh(i);
+		vkCmdDrawIndexed(cmd, submesh.mIndicesCount, 1, submesh.mFirstIndex, submesh.mFirstVertex, 0);
 	}
 
 	barrier0.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;

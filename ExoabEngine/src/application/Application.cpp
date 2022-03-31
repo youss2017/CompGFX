@@ -129,11 +129,11 @@ bool Application::CreateResources()
 {
 	PROFILE_FUNCTION();
 	
-	int w = 100;
-	Terrain* t0 = new Terrain(w, 100);
+	int w = 10;
+	Terrain* t0 = new Terrain(w, 2);
 	std::vector<uint8_t> perlinBuffer(w * w);
 	Utils::perlin(w, w, 0xCaf, 6.0, 3, perlinBuffer.data());
-	t0->ApplyHeightmap(w, w, -1.0, 10.0f, perlinBuffer.data());
+	//t0->ApplyHeightmap(w, w, -1.0, 10.0f, perlinBuffer.data());
 	t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0, 2.0, 2.0)));
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);

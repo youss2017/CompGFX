@@ -10,3 +10,7 @@ D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\bloom::8567315179181209398::t
 D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\bloom::15648929048619723188::downsample::.comp::132926752126523085
 D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\bloom::13681826882765554541::downsampleVertical::.comp::132926754118273896
 D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\bloom::16655587075308822728::upsample::.comp::132926759557919683
+D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\shadow::17743960566225447387::shadow::.vert::132929798791363436
+D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\shadow::10032327108287040093::shadow::.frag::132921905198415773
+D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders\shadow::4808306686796712710::shadowT::.vert::132929787543221961
+D:\GFX Apis\ExoabEngine\ExoabEngine\assets\shaders::12260481846623803837::Terrain::.vert::132931267498228760

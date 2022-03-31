@@ -3,36 +3,32 @@
 #include <meshoptimizer/src/meshoptimizer.h>
 
 Terrain::Terrain(uint32_t resolution, uint32_t splitEveryAmountOfVerts) : mModelTransform(glm::mat4(1.0)), mResolution(resolution) {
-	assert(resolution > 0);
+	assert(resolution > 1);
 	using namespace glm;
-	uint32_t splitCount = splitCount = resolution / splitEveryAmountOfVerts;
-	splitCount = max(splitCount, 1u);
-	uint32_t maxVerticesX = resolution / splitCount;
-	uint32_t maxVerticesY = resolution / splitCount;
-	uint32_t verticesOffset = 0;
-	uint32_t indicesOffset = 0;
-	for (uint32_t blockIDy = 0; blockIDy < (resolution / maxVerticesY); blockIDy++) {
-		for (uint32_t blockIDx = 0; blockIDx < (resolution / maxVerticesX); blockIDx++) {
-			mVerticesIndicesOffset.push_back(std::make_pair(verticesOffset, indicesOffset));
-			uint32_t startVCount = mVertices.size();
-			uint32_t startICount = mIndices.size();
-			for (uint32_t y = 0; y < maxVerticesY; y++) {
-				for (uint32_t x = 0; x < maxVerticesX; x++) {
+
+	uint32_t firstVertex = 0;
+	uint32_t firstIndex = 0;
+	for (int yBlock = 0; yBlock < resolution; yBlock += resolution / 2) {
+		for (int xBlock = 0; xBlock < resolution; xBlock += resolution / 2) {
+			uint32_t resolutionStep = resolution / 2 + 1;
+			for (uint32_t y = 0; y < resolutionStep; y++) {
+				for (uint32_t x = 0; x < resolutionStep; x++) {
 					TerrainVertex v{};
-					v.inPosition = glm::vec3(x + (blockIDx * (maxVerticesX - 1)), 1.0f, y + (blockIDy * (maxVerticesY - 1)));
+					v.inPosition = glm::vec3(x + xBlock, 1.0f, y + yBlock);
 					v.inNormal = glm::vec3(0.0, -1.0, 0.0);
-					v.inTexCoords = glm::vec2(v.inPosition.x / float(resolution), v.inPosition.z / float(resolution));
-					verticesOffset++;
+					v.inTexCoords = glm::vec2(v.inPosition.x / float(resolutionStep), v.inPosition.z / float(resolutionStep));
 					mVertices.push_back(v);
 				}
 			}
-			for(uint32_t y = 0; y < maxVerticesY; y++) {
-				for(uint32_t x = 0; x < maxVerticesX; x++) {
+
+			for (uint32_t y = 0; y < resolutionStep; y++) {
+				for (uint32_t x = 0; x < resolutionStep; x++) {
+					printf("%d\n", x);
 					// generate indices
-					if (x != maxVerticesX - 1 && y != maxVerticesY - 1) {
-						uint32_t indexA = y * maxVerticesX + x;
+					if (x != resolutionStep - 1 && y != resolutionStep - 1) {
+						uint32_t indexA = y * resolutionStep + x;
 						uint32_t indexB = indexA + 1;
-						uint32_t indexC = (y + 1) * maxVerticesY + x;
+						uint32_t indexC = (y + 1) * resolutionStep + x;
 						uint32_t indexD = indexC + 1;
 						mIndices.push_back(indexA);
 						mIndices.push_back(indexB);
@@ -41,14 +37,22 @@ Terrain::Terrain(uint32_t resolution, uint32_t splitEveryAmountOfVerts) : mModel
 						mIndices.push_back(indexB);
 						mIndices.push_back(indexD);
 						mIndices.push_back(indexC);
-						indicesOffset += 6;
-						//printf("{[%d %d %d], [%d, %d, %d]}\n", indexA, indexB, indexC, indexB, indexD, indexC);
 					}
 				}
 			}
-			mVerticesIndicesCount.push_back(std::make_pair(mVertices.size() - startVCount, mIndices.size() - startICount));
+			TerrainSubmesh submesh;
+			submesh.mFirstVertex = firstVertex;
+			submesh.mFirstIndex = firstIndex;
+			submesh.mIndicesCount = mIndices.size() - firstIndex;
+			mSubmeshes.push_back(submesh);
+			firstIndex = mIndices.size();
+			firstVertex = mVertices.size();
 		}
 	}
+
+
+	// Break up the mesh
+	
 	printf("Total Vertices %llu Indices %llu\n", mVertices.size(), mIndices.size());
 	CalculateTangentBitangent();
 	mVertices.shrink_to_fit();
@@ -77,28 +81,26 @@ void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minH
 }
 
 void Terrain::CalculateTangentBitangent() {
-	for (int j = 0; j < this->GetSubmeshCount(); j++) {
-		auto vertices = mVertices.data() + this->GetVerticesOffset(j);
-		auto indices = mIndices.data() + this->GetIndicesOffset(j);
-		for (int i = 0; i < this->GetIndicesCount(j) / 3; i++) {
-			auto T0 = &vertices[indices[i++]];
-			auto T1 = &vertices[indices[i++]];
-			auto T2 = &vertices[indices[i++]];
-			auto deltaPos1 = T1->inPosition - T0->inPosition;
-			auto deltaPos2 = T2->inPosition - T0->inPosition;
-			auto deltaUV1  = T1->inTexCoords - T0->inTexCoords;
-			auto deltaUV2  = T2->inTexCoords - T0->inTexCoords;
-			float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-			auto tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
-			glm::vec3 bitangent;
-			bitangent.x = r * (-deltaUV2.x * deltaPos1.x + deltaUV1.x * deltaPos2.x);
-			bitangent.y = r * (-deltaUV2.x * deltaPos1.y + deltaUV1.x * deltaPos2.y);
-			bitangent.z = r * (-deltaUV2.x * deltaPos1.z + deltaUV1.x * deltaPos2.z);
-			tangent = glm::normalize(tangent);
-			bitangent = glm::normalize(bitangent);
-			T0->inNormal = T1->inNormal = T2->inNormal = glm::cross(deltaPos1, deltaPos2);
-			T0->inTangent = T1->inTangent = T2->inTangent = -1.0f * tangent;
-			T0->inBiTangent = T1->inBiTangent = T2->inBiTangent = bitangent;
-		}
+	auto vertices = mVertices.data();
+	auto indices = mIndices.data();
+	for (int i = 0; i < mIndices.size() / 3; i++) {
+		auto T0 = &vertices[indices[i++]];
+		auto T1 = &vertices[indices[i++]];
+		auto T2 = &vertices[indices[i++]];
+		auto deltaPos1 = T1->inPosition - T0->inPosition;
+		auto deltaPos2 = T2->inPosition - T0->inPosition;
+		auto deltaUV1  = T1->inTexCoords - T0->inTexCoords;
+		auto deltaUV2  = T2->inTexCoords - T0->inTexCoords;
+		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+		auto tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+		glm::vec3 bitangent;
+		bitangent.x = r * (-deltaUV2.x * deltaPos1.x + deltaUV1.x * deltaPos2.x);
+		bitangent.y = r * (-deltaUV2.x * deltaPos1.y + deltaUV1.x * deltaPos2.y);
+		bitangent.z = r * (-deltaUV2.x * deltaPos1.z + deltaUV1.x * deltaPos2.z);
+		tangent = glm::normalize(tangent);
+		bitangent = glm::normalize(bitangent);
+		T0->inNormal = T1->inNormal = T2->inNormal = glm::cross(deltaPos1, deltaPos2);
+		T0->inTangent = T1->inTangent = T2->inTangent = -1.0f * tangent;
+		T0->inBiTangent = T1->inBiTangent = T2->inBiTangent = bitangent;
 	}
 }
