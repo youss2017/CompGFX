@@ -109,7 +109,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                 VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                                                 VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 #if DEBUG_PRINTF
-                                                VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME
+                                                VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
 #endif
                                                 },
                                                features, VK_API_VERSION_1_2);

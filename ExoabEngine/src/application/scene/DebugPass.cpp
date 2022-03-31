@@ -20,7 +20,10 @@ Application::DebugPass::DebugPass(const Framebuffer& fbo) : Scene(gContext->defa
 	specification.m_NearField = 0.0f;
 	specification.m_FarField = 1.0f;
 	PipelineVertexInputDescription input;
-	mState = PipelineState_Create(gContext, specification, input, fbo, mLayout, &vertexShader, &fragmentShader, {} );
+	mState = PipelineState_Create(gContext, specification, input, fbo, mLayout, &vertexShader, &fragmentShader);
+	specification.m_DepthFunc = DepthFunction::ALWAYS;
+	specification.m_DepthWriteEnable = false;
+	mStateInFront = PipelineState_Create(gContext, specification, input, fbo, mLayout, &vertexShader, &fragmentShader);
 	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 }
 
@@ -29,6 +32,7 @@ Application::DebugPass::~DebugPass() {
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	PipelineState_Destroy(mState);
+	PipelineState_Destroy(mStateInFront);
 }
 
 void Application::DebugPass::ReloadShaders() {
@@ -38,7 +42,7 @@ void Application::DebugPass::ReloadShaders() {
 	PipelineVertexInputDescription input;
 	PipelineState_Destroy(mState);
 	mState = PipelineState_Create(gContext, specification, input, mFBO, mLayout, &vertexShader, &fragmentShader, {});
-
+	mStateInFront = PipelineState_Create(gContext, mStateInFront->m_spec, input, mFBO, mLayout, &vertexShader, &fragmentShader, {});
 }
 
 VkCommandBuffer Application::DebugPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
@@ -46,13 +50,16 @@ VkCommandBuffer Application::DebugPass::Prepare(uint32_t FrameIndex, float dTime
 	return mCmds[FrameIndex];
 }
 
-void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color) {
+void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color, bool inFront) {
 	DebugObject obj;
 	obj.inOffset = position;
 	obj.inScale = scale;
 	obj.inColor = color;
 	obj.u_ProjView = mProjView;
-	mCubes.push_back(obj);
+	if (inFront)
+		mCubesInFront.push_back(obj);
+	else
+		mCubes.push_back(obj);
 }
 
 void Application::DebugPass::GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime) {
@@ -105,11 +112,20 @@ void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	renderingInfo.pStencilAttachment = nullptr;
 	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
 
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
+	if (mCubes.size() > 0) {
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
+		for (const auto& cube : mCubes) {
+			vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject), &cube);
+			vkCmdDraw(cmd, 36, 1, 0, 0);
+		}
+	}
 
-	for (const auto& cube : mCubes) {
-		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject), &cube);
-		vkCmdDraw(cmd, 36, 1, 0, 0);
+	if (mCubesInFront.size() > 0) {
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mStateInFront->m_pipeline);
+		for (const auto& cube : mCubesInFront) {
+			vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject), &cube);
+			vkCmdDraw(cmd, 36, 1, 0, 0);
+		}
 	}
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);

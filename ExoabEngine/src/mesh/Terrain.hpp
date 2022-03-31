@@ -28,14 +28,16 @@ struct TerrainSubmesh {
     uint32_t mFirstVertex;
     uint32_t mFirstIndex;
     uint32_t mIndicesCount;
-    glm::f64vec3 mCenter;
-    glm::f64 mRadius;
+    glm::vec3 mBoundingBoxMin;
+    glm::vec3 mBoundingBoxMax;
 };
 
 class Terrain {
 
 public:
-    Terrain(uint32_t resolution, uint32_t splitEveryAmountOfVerts);
+    // [WARNING] Only splits with even numbers, if its odds it will be rounded to even,
+    // splitX creates horizontal blocks with size (width / splitX) same for splitY
+    Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t splitY);
     ~Terrain();
 
     Terrain(const Terrain& other) = delete;

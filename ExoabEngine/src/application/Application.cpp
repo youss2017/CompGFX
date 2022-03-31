@@ -51,6 +51,10 @@ namespace Application
 	static BloomPass* bloom;
 	static VkSemaphore shadowPassSemaphore[gFrameOverlapCount];
 	static VkSemaphore bloomPassSemaphore[gFrameOverlapCount];
+	static Terrain* t0;
+	uint32_t instanceCount = 500;
+	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
+
 }
 
 bool Application::Initalize(ConfigurationSettings* configuration, bool RenderDoc)
@@ -102,9 +106,7 @@ bool Application::LoadAssets()
 	gECS = new EntityController(gGeomtry);
 
 	srand(140);
-	uint32_t instanceCount = 500;
 	uint32_t instanceSize = instanceCount * sizeof(ShaderTypes::InstanceData);
-	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
 	for (unsigned int i = 0; i < instanceCount; i++) {
 		float x = (rand() % 25) * 5;
 		float y = (rand() % 25) * 5;
@@ -130,7 +132,7 @@ bool Application::CreateResources()
 	PROFILE_FUNCTION();
 	
 	int w = 10;
-	Terrain* t0 = new Terrain(w, 2);
+	t0 = new Terrain(100, 100, 5, 5);
 	std::vector<uint8_t> perlinBuffer(w * w);
 	Utils::perlin(w, w, 0xCaf, 6.0, 3, perlinBuffer.data());
 	//t0->ApplyHeightmap(w, w, -1.0, 10.0f, perlinBuffer.data());
@@ -239,7 +241,22 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	srand(0x42);
 	glm::vec3 color = glm::vec3(rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX);
 	color *= 5.0f;
-	debugPass->DrawCube(pos * glm::vec3(1.0, -1.0, 1.0), {1.0, 1.0, 1.0}, color);
+	debugPass->DrawCube(pos * glm::vec3(1.0, -1.0, 1.0), {1.0, 1.0, 1.0}, color, true);
+
+	for (int i = 0; i < t0->GetSubmeshCount(); i++) {
+		auto& submesh = t0->GetSubmesh(i);
+		debugPass->DrawCube(submesh.mBoundingBoxMin, glm::vec3(0.25), glm::vec3(52, 140, 235) / glm::vec3(255), false);
+		debugPass->DrawCube(submesh.mBoundingBoxMax, glm::vec3(0.25), glm::vec3(227, 18, 60) / glm::vec3(255), false);
+	}
+
+	for (int i = 0; i < instanceCount; i++) {
+		glm::vec3 centerPos = instance[i].mModel * glm::vec4(gGeomtry[0].m_bounding_sphere_center, 1.0);
+		centerPos = centerPos - (glm::vec3(0.25) / 2.0f);
+		glm::vec3 radPos = glm::vec3(instance[i].mModel * glm::vec4(gGeomtry[0].m_bounding_sphere_center, 1.0)) + glm::vec3(gGeomtry[0].m_bounding_sphere_radius, 0, 0);
+		radPos = radPos - (glm::vec3(0.25) / 2.0f);
+		debugPass->DrawCube(centerPos, glm::vec3(0.25), glm::vec3(196, 26, 201) / glm::vec3(255), false);
+		debugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(26, 173, 63) / glm::vec3(255), false);
+	}
 
 	return true;
 }
@@ -300,6 +317,7 @@ void Application::Destroy()
 {
 	PROFILE_FUNCTION();
 	Graphics3D_WaitGPUIdle(gGfx);
+	delete t0;
 	delete cullPass;
 	delete geoPass;
 	delete skybox;
