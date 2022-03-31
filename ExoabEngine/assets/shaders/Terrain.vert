@@ -45,5 +45,6 @@ void main()
     vec4 position = u_Model * vec4(inPosition, 1.0);
     
     LightSpacePos = u_LightSpace * position;
+    
     gl_Position = u_ProjView * position;
 }

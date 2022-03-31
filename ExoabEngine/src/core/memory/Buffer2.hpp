@@ -20,8 +20,8 @@ struct GPUBuffer2
 
 } typedef* IBuffer2;
 
-IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent);
-IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent);
+IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
+IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
 void Buffer2_UploadData(IBuffer2 buffer, void* pData, size_t offset, size_t size);
 void* Buffer2_Map(IBuffer2 buffer);
 // Makes host writes (CPU) visible to device (GPU)

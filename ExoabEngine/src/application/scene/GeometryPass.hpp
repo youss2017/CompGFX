@@ -15,7 +15,7 @@ namespace Application {
 
 	class GeometryPass : public Scene {
 	public:
-		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain& terrain, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
+		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
 		~GeometryPass();
 		
 		void ReloadShaders();
@@ -24,6 +24,8 @@ namespace Application {
 		void GetStatistics(bool wait, uint32_t frameIndex, double& passTime, uint64_t& vertexInvocations, uint64_t& fragmentInvocations);
 		void SetLightDirection(glm::vec3 lightDirection) { mLightDirection = glm::vec4(glm::normalize(lightDirection), 1.0); }
 		void SetLightSpace(glm::mat4 lightSpace) { mLightSpace = lightSpace; }
+		Framebuffer& GetFramebuffer() { return mFBO; }
+
 	private:
 		void RecordCommands(uint32_t FrameIndex);
 		IBuffer2 mIndicsSSBO;
@@ -35,12 +37,11 @@ namespace Application {
 		glm::mat4 mLightSpace;
 	private:
 		bool mWireframeMode = false;
-		TerrainInfo mTerrain;
+		Terrain* mT0;
 		VkDescriptorPool mPool;
 		DescriptorSet mMapSet;
 		VkPipelineLayout mMapLayout;
 		IPipelineState mMapState;
-		Terrain mT0;
 		VkQueryPool mQuery;
 		VkQueryPool mInvocationQuery;
 		VkSampler mSampler;

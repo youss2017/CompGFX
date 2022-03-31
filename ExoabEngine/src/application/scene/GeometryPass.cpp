@@ -14,7 +14,21 @@ struct TerrainPushblock {
 	glm::mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
 };
 
-Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain& terrain, const Framebuffer& fbo, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mFBO(fbo), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+	
+	mFBO.m_width = width;
+	mFBO.m_height = height;
+	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, VK_IMAGE_USAGE_STORAGE_BIT, width, height, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
+	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 0, width, height, VK_FORMAT_D32_SFLOAT, { 1.0f });
+	mFBO.AddColorAttachment(0, colorAttachment);
+	mFBO.SetDepthAttachment(depthAttachment);
+
+	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
+	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	Framebuffer_TransistionAttachment(transitionCmd.cmd, &colorAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+	Framebuffer_TransistionAttachment(transitionCmd.cmd, &depthAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
+	
 	mSampler = vk::Gfx_CreateSampler(gContext);
 	mT0 = terrain;
 	mShadowSampler = vk::Gfx_CreateSampler(gContext,
@@ -162,6 +176,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 
 Application::GeometryPass::~GeometryPass() {
 	Super_Scene_Destroy();
+	mFBO.DestroyAllBoundAttachments();
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderConnector_DestroySet(mGeoSet0);
 	ShaderConnector_DestroySet(mGeoSet1);
@@ -353,9 +368,11 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
 	vkCmdPushConstants(cmd, mMapLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock), &pushblock);
-	vkCmdBindVertexBuffers(cmd, 0, 1, &mT0.mVertices->mBuffers[FrameIndex], offset);
-	vkCmdBindIndexBuffer(cmd, mT0.mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(cmd, mT0.mIndicesCount, 1, 0, 0, 0);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &mT0->GetVerticesBuffer()->mBuffers[FrameIndex], offset);
+	vkCmdBindIndexBuffer(cmd, mT0->GetIndicesBuffer()->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
+	for (int i = 0; i < mT0->GetSubmeshCount(); i++) {
+		vkCmdDrawIndexed(cmd, mT0->GetIndicesCount(i), 1, mT0->GetIndicesOffset(i), mT0->GetVerticesOffset(i), 0);
+	}
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
