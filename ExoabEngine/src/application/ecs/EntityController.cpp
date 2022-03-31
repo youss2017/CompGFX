@@ -21,9 +21,9 @@ EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
 			mDraws.push_back(draw);
 			entity->m_reserved_drawdata_indices.push_back(drawDataIndex++);
 		}
-		entity->m_geometryID = EntityGeometryID(inputGeometryDataSize);
+		entity->m_geometryID = inputGeometryDataSize;
 		entity->m_reserved_geometrydata_index = inputGeometryDataSize;
-		mEntites.insert(std::make_pair(EntityGeometryID(inputGeometryDataSize), entity));
+		mEntites.insert(std::make_pair(inputGeometryDataSize, entity));
 		ShaderTypes::GeometryData geoData;
 		geoData.bounding_sphere_center = g.m_bounding_sphere_center;
 		geoData.bounding_sphere_radius = g.m_bounding_sphere_radius;

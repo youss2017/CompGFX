@@ -10,7 +10,7 @@ layout (location = 2) in vec2 TexCoord;
 layout (location = 3) in vec4 LightSpacePos;
 layout (location = 4) in mat3 TBN;
 
-layout (scalar, binding = 0) uniform GlobalDataUBO
+layout (scalar, binding = 1) uniform GlobalDataUBO
 {
     float u_DeltaTime;
     float u_TimeFromStart;
@@ -22,9 +22,9 @@ layout (scalar, binding = 0) uniform GlobalDataUBO
 };
 
 // The first texture is the base texture
-layout (binding = 1) uniform sampler2D TerrainTextures[];
-layout (binding = 2) uniform sampler2D shadowMap;
-layout (binding = 3) uniform sampler2D normalMap;
+layout (binding = 2) uniform sampler2D TerrainTextures[];
+layout (binding = 3) uniform sampler2D shadowMap;
+layout (binding = 4) uniform sampler2D normalMap;
 
 layout (constant_id = 0) const int pcfCount = 2;
 

@@ -204,6 +204,9 @@
     <ClInclude Include="src\audio\Audio.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\physics\PhysicsCore.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -405,6 +408,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\audio\Audio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\physics\PhysicsCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -9,7 +9,7 @@ class EntityController {
 public:
 	EntityController(const std::vector<Mesh::Geometry>& geometry);
 	~EntityController();
-	IEntity GetEntity(EntityGeometryID id) {
+	IEntity GetEntity(int id) {
 #if defined(_DEBUG)
 		if (mEntites.find(id) == mEntites.end()) {
 			logerror("Could not find EntityGeometryID!");
@@ -27,7 +27,7 @@ private:
 	std::vector<Mesh::Geometry> mGeometry;
 	std::vector<ShaderTypes::DrawData> mDraws;
 	std::vector<ShaderTypes::GeometryData> mGeoData;
-	std::map<EntityGeometryID, IEntity> mEntites;
+	std::map<int, IEntity> mEntites;
 	IBuffer2 mInputDrawData;
 	IBuffer2 mInputGeometryData;
 };

@@ -85,6 +85,8 @@ void UI::RenderUI()
     ImGui::Text("%.2f ms -- Debug Pass", DebugPassTime);
     ImGui::Text("%.2f ms -- Bloom Pass", BloomPassTime);
     ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
+    ImGui::End();
+    ImGui::Begin("Control Panel");
     ImGui::SliderFloat3("Light", &L_x, -100.0, 100.0f);
     ImGui::SameLine();
     if (ImGui::Button("Reset")) {
@@ -92,7 +94,7 @@ void UI::RenderUI()
     }
     ImGui::SliderInt("Cubemap LOD", &UI::CubemapLOD, 0, UI::CubemapLODMax);
     ImGui::SliderInt("Bloom Downsample", &UI::BloomDownsampleMip, 0, 7);
-    const char* items[] = { "Color Buffer", "Depth Buffer", "Shadow Buffer", "Bloom Buffer"};
+    const char* items[] = { "Color Buffer", "Depth Buffer", "Shadow Buffer", "Bloom Buffer" };
     ImGui::Combo("Output Buffer", &CurrentOutputBuffer, items, IM_ARRAYSIZE(items));
     if (ImGui::Button("Toggle Wireframe View"))
     {

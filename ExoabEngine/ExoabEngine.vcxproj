@@ -71,7 +71,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>PhysXCooking_64.dll;glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -94,7 +94,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>PhysXCooking_64.dll;glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;PhysXFoundation_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -128,6 +128,7 @@
     <ClInclude Include="src\audio\Audio.hpp" />
     <ClInclude Include="src\core\memory\CubeMap.hpp" />
     <ClInclude Include="src\core\shaders\ShaderConnector.hpp" />
+    <ClInclude Include="src\physics\PhysicsCore.hpp" />
     <ClInclude Include="src\utils\atomic.h" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />
@@ -220,6 +221,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
     <ClCompile Include="src\mesh\SkinnedMesh.cpp" />
+    <ClCompile Include="src\physics\PhysicsCore.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />
     <ClCompile Include="src\application\UI.cpp" />
     <ClCompile Include="src\mesh\Terrain.cpp" />

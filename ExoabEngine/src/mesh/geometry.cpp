@@ -168,16 +168,18 @@ namespace Mesh
 		for (auto& geo : config_split) {
 			line++;
 			geo = Utils::StrTrim(geo);
-			if (geo[0] == '#')
-				continue;
-			std::vector<std::string> geo_split = Utils::StringSplitter(" ", geo);
-			if (geo_split.size() != 2) {
-				char log[150];
-				sprintf(log, "Syntax error in Geometry Configuration file [%s] at line %i", configPath.c_str(), line + 1);
-				log_error(log, __FILE__, __LINE__);
-				throw std::runtime_error(log);
+			if (Utils::StrStartsWith(geo, "//#")) {
+				std::string geosub = geo.data() + 3;
+				geosub = Utils::StrTrim(geosub);
+				std::vector<std::string> geo_split = Utils::StringSplitter(" ", geosub);
+				if (geo_split.size() != 2) {
+					char log[150];
+					sprintf(log, "Syntax error in Geometry Configuration file [%s] at line %i", configPath.c_str(), line + 1);
+					log_error(log, __FILE__, __LINE__);
+					throw std::runtime_error(log);
+				}
+				mList.insert(std::make_pair(std::stoi(geo_split[1]), geo_split[0]));
 			}
-			mList.insert(std::make_pair(std::stoi(geo_split[1]), geo_split[0]));
 		}
 	}
 

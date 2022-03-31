@@ -4,6 +4,7 @@
 #include <shaders/ShaderConnector.hpp>
 #include <vector>
 #include <glm/glm.hpp>
+#include "../physics/PhysicsCore.hpp"
 
 /*
     This file creates the map vertices
@@ -14,13 +15,13 @@
 
 struct TerrainVertex
 {
-    glm::vec3 inPosition;
-    glm::vec3 inNormal;
-    glm::vec3 inTangent;
-    glm::vec3 inBiTangent;
-    glm::ivec3 inTextureIDs;
-    glm::vec3 inTextureWeights;
-    glm::vec2 inTexCoords;
+    Ph::hvec3 inPosition;
+    Ph::hvec3 inNormal;
+    Ph::hvec3 inTangent;
+    Ph::hvec3 inBiTangent;
+    glm::i16vec3 inTextureIDs;
+    Ph::hvec3 inTextureWeights;
+    Ph::hvec2 inTexCoords;
 };
 
 // TODO: Split map into smaller squares so we can do frustrum culling on the map.
@@ -28,8 +29,7 @@ struct TerrainSubmesh {
     uint32_t mFirstVertex;
     uint32_t mFirstIndex;
     uint32_t mIndicesCount;
-    glm::vec3 mBoundingBoxMin;
-    glm::vec3 mBoundingBoxMax;
+    Ph::BoundingBox mBox;
 };
 
 class Terrain {
@@ -58,7 +58,8 @@ private:
     void CalculateTangentBitangent();
 
 private:
-    uint32_t mResolution;
+    uint32_t mWidth;
+    uint32_t mHeight;
     std::vector<TerrainVertex> mVertices;
     std::vector<uint32_t> mIndices;
     std::vector<TerrainSubmesh> mSubmeshes;

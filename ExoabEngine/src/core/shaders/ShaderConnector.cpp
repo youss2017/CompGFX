@@ -40,7 +40,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
         DescriptorSetSharedResources& shared = pSharedResources[i];
         for (auto bindingID : shared.mSharedBindings) {
             auto& binding = shared.mPartner->mBindings[bindingID];
-            binding.mInternalSharedResources = true;
+            binding.mSharedResources = true;
             set.mBindings.insert(std::make_pair(bindingID, binding));
         }
     }
@@ -48,7 +48,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
     for (uint32_t i = 0; i < bindingsCount; i++) {
         BindingDescription& binding = pBindings[i];
         if (binding.mBuffer)
-            binding.mInternalSharedResources = true;
+            binding.mSharedResources = true;
         auto type = binding.mType;
         if ((type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)) {
             set.mBindings.insert(std::make_pair(binding.mBindingID, binding));
@@ -194,7 +194,7 @@ void ShaderConnector_DestroySet(const DescriptorSet& set) {
     //vkFreeDescriptorSets(gContext->defaultDevice, set.mPool, gFrameOverlapCount, &set.mSets[0]);
     for (auto& bindingPair : set.mBindings) {
         auto& binding = bindingPair.second;
-        if (binding.mInternalSharedResources)
+        if (binding.mSharedResources)
             continue;
         auto type = binding.mType;
         if ((type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE))

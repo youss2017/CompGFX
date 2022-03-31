@@ -52,7 +52,7 @@ VkCommandBuffer Application::DebugPass::Prepare(uint32_t FrameIndex, float dTime
 
 void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color, bool inFront) {
 	DebugObject obj;
-	obj.inOffset = position;
+	obj.inOffset = position - (scale / 2.0f);
 	obj.inScale = scale;
 	obj.inColor = color;
 	obj.u_ProjView = mProjView;

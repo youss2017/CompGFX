@@ -36,7 +36,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeBindings[0].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
 	computeBindings[0].mBufferSize = 0;
 	computeBindings[0].mBuffer = ecs->GetGeometryDataBuffer();
-	computeBindings[0].mInternalSharedResources = true;
+	computeBindings[0].mSharedResources = true;
 
 	computeBindings[1].mBindingID = 1;
 	computeBindings[1].mFlags = BINDING_FLAG_CREATE_BUFFERS_POINTER;
@@ -51,7 +51,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeBindings[2].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
 	computeBindings[2].mBufferSize = 0;
 	computeBindings[2].mBuffer = ecs->GetDrawDataBuffer();
-	computeBindings[2].mInternalSharedResources = true;
+	computeBindings[2].mSharedResources = true;
 
 	computeBindings[3].mBindingID = 3;
 	computeBindings[3].mFlags = BINDING_FLAG_BUFFER_USAGE_INDIRECT | BINDING_FLAG_CREATE_BUFFERS_POINTER;
@@ -59,7 +59,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeBindings[3].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
 	computeBindings[3].mBufferSize = ecs->GetDrawDataBuffer()->mSize;
 	computeBindings[3].mBuffer = nullptr;
-	computeBindings[3].mInternalSharedResources = true;
+	computeBindings[3].mSharedResources = true;
 
 	computeBindings[4].mBindingID = 4;
 	computeBindings[4].mFlags = BINDING_FLAG_CPU_VISIBLE;

@@ -102,7 +102,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	bindings[0].mStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[0].mBufferSize = 0;
 	bindings[0].mBuffer = verticesSSBO;
-	bindings[0].mInternalSharedResources = true;
+	bindings[0].mSharedResources = true;
 
 	bindings[1].mBindingID = 1;
 	bindings[1].mFlags = 0;
@@ -110,7 +110,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	bindings[1].mStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[1].mBufferSize = 0;
 	bindings[1].mBuffer = ecs->GetGeometryDataBuffer();
-	bindings[1].mInternalSharedResources = true;
+	bindings[1].mSharedResources = true;
 
 	bindings[2].mBindingID = 2;
 	bindings[2].mFlags = 0;
@@ -118,7 +118,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	bindings[2].mStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[2].mBufferSize = 0;
 	bindings[2].mBuffer = ecs->GetDrawDataBuffer();
-	bindings[2].mInternalSharedResources = true;
+	bindings[2].mSharedResources = true;
 
 	bindings[3].mBindingID = 3;
 	bindings[3].mFlags = BINDING_FLAG_CPU_VISIBLE;
@@ -127,16 +127,23 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	bindings[3].mBufferSize = sizeof(glm::mat4) * 2;
 	bindings[3].mBuffer = nullptr;
 
-	BindingDescription shadowTBindings[1];
+	BindingDescription shadowTBindings[2]{};
 	shadowTBindings[0].mBindingID = 0;
-	shadowTBindings[0].mFlags = BINDING_FLAG_CPU_VISIBLE;
-	shadowTBindings[0].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	shadowTBindings[0].mFlags = 0;
+	shadowTBindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	shadowTBindings[0].mStages = VK_SHADER_STAGE_VERTEX_BIT;
-	shadowTBindings[0].mBufferSize = sizeof(glm::mat4);
+	shadowTBindings[0].mBuffer= terrain->GetVerticesBuffer();
+	shadowTBindings[0].mSharedResources = true;
+
+	shadowTBindings[1].mBindingID = 1;
+	shadowTBindings[1].mFlags = BINDING_FLAG_CPU_VISIBLE;
+	shadowTBindings[1].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	shadowTBindings[1].mStages = VK_SHADER_STAGE_VERTEX_BIT;
+	shadowTBindings[1].mBufferSize = sizeof(glm::mat4);
 
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderConnector_CalculateDescriptorPool(4, bindings, poolSize);
-	ShaderConnector_CalculateDescriptorPool(1, shadowTBindings, poolSize);
+	ShaderConnector_CalculateDescriptorPool(2, shadowTBindings, poolSize);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2, poolSize);
 	mSet = ShaderConnector_CreateSet(0, mPool, 4, bindings, 0, nullptr);
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {});
@@ -155,18 +162,10 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	mState = PipelineState_Create(gContext, spec, input, mFBO, mLayout, &vertex, &fragment);
 
 	Shader shadowT = Shader(gContext, "assets/shaders/shadow/shadowT.vert");
-	shadowTBindings[0].mBuffer = mSet.GetBuffer2(3);
-	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 1, shadowTBindings, 0, nullptr);
-	mTerrainLayout = ShaderConnector_CreatePipelineLayout(1, &mTerrainSet, { });
+	shadowTBindings[1].mBuffer = mSet.GetBuffer2(3);
+	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 2, shadowTBindings, 0, nullptr);
+	mTerrainLayout = ShaderConnector_CreatePipelineLayout(1, &mTerrainSet, {});
 
-	input = {};
-	input.AddInputElement("inPosition", 0, 0, 3, true, false, false);
-	input.AddInputElement("inNormal", 1, 0, 3, true, false, false);
-	input.AddInputElement("inTangent", 2, 0, 3, true, false, false);
-	input.AddInputElement("inBiTangent", 3, 0, 3, true, false, false);
-	input.AddInputElement("inTextureIDs", 4, 0, 3, false, false, false);
-	input.AddInputElement("inTextureWeights", 5, 0, 3, true, false, false);
-	input.AddInputElement("inTexCoords", 6, 0, 2, true, false, false);
 	spec.m_CullMode = CullMode::CULL_FRONT;
 	mTerrainState = PipelineState_Create(gContext, spec, input, mFBO, mTerrainLayout, &shadowT, &fragment);
 
@@ -288,12 +287,9 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindIndexBuffer(cmd, mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, mSet.GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
 
-	VkBuffer vertices = mT0->GetVerticesBuffer()->mBuffers[FrameIndex];
 	VkBuffer indices = mT0->GetIndicesBuffer()->mBuffers[FrameIndex];
-	VkDeviceSize offset[1] = { 0 };
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainLayout, 0, 1, &mTerrainSet[FrameIndex], 0, nullptr);
-	vkCmdBindVertexBuffers(cmd, 0, 1, &vertices, offset);
 	vkCmdBindIndexBuffer(cmd, indices, 0, VK_INDEX_TYPE_UINT32);
 	for (uint32_t i = 0; i < mT0->GetSubmeshCount(); i++) {
 		auto& submesh = mT0->GetSubmesh(i);

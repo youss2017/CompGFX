@@ -16,6 +16,7 @@
 #include "scene/postprocess/BloomPass.hpp"
 #include "perlin_noise.hpp"
 #include "../audio/Audio.hpp"
+#include "../assets/geometry.cfg"
 
 bool Application::Quit = false;
 
@@ -118,8 +119,8 @@ bool Application::LoadAssets()
 		instance[i].mTextureIndex = 0;
 	}
 
-	IEntity cube = gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE);
-	cube->m_geometryID = EntityGeometryID::ENTITY_GEOMETRY_CUBE;
+	IEntity cube = gECS->GetEntity(ENTITY_GEOMETRY_CUBE);
+	cube->m_geometryID = ENTITY_GEOMETRY_CUBE;
 	cube->mInstanceCount = instanceCount;
 	cube->mInstanceBuffer = Buffer2_CreatePreInitalized(BUFFER_TYPE_STORAGE, &instance[0], instanceSize, BufferMemoryType::CPU_TO_GPU, true, false);
 	cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
@@ -131,11 +132,12 @@ bool Application::CreateResources()
 {
 	PROFILE_FUNCTION();
 	
-	int w = 10;
-	t0 = new Terrain(100, 100, 5, 5);
+	int w = 250;
+	int h = 250;
+	t0 = new Terrain(w, h, 10, 10);
 	std::vector<uint8_t> perlinBuffer(w * w);
-	Utils::perlin(w, w, 0xCaf, 6.0, 3, perlinBuffer.data());
-	//t0->ApplyHeightmap(w, w, -1.0, 10.0f, perlinBuffer.data());
+	Utils::perlin(w, h, 0xCaf, 8.0, 4, perlinBuffer.data());
+	t0->ApplyHeightmap(w, h, -1.0, 10.0f, perlinBuffer.data());
 	t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0, 2.0, 2.0)));
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);
@@ -245,15 +247,13 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 
 	for (int i = 0; i < t0->GetSubmeshCount(); i++) {
 		auto& submesh = t0->GetSubmesh(i);
-		debugPass->DrawCube(submesh.mBoundingBoxMin, glm::vec3(0.25), glm::vec3(52, 140, 235) / glm::vec3(255), false);
-		debugPass->DrawCube(submesh.mBoundingBoxMax, glm::vec3(0.25), glm::vec3(227, 18, 60) / glm::vec3(255), false);
+		debugPass->DrawCube(submesh.mBox.mBoxMin, glm::vec3(0.25), glm::vec3(52, 140, 235) / glm::vec3(255), false);
+		debugPass->DrawCube(submesh.mBox.mBoxMax, glm::vec3(0.25), glm::vec3(227, 18, 60) / glm::vec3(255), false);
 	}
 
 	for (int i = 0; i < instanceCount; i++) {
 		glm::vec3 centerPos = instance[i].mModel * glm::vec4(gGeomtry[0].m_bounding_sphere_center, 1.0);
-		centerPos = centerPos - (glm::vec3(0.25) / 2.0f);
 		glm::vec3 radPos = glm::vec3(instance[i].mModel * glm::vec4(gGeomtry[0].m_bounding_sphere_center, 1.0)) + glm::vec3(gGeomtry[0].m_bounding_sphere_radius, 0, 0);
-		radPos = radPos - (glm::vec3(0.25) / 2.0f);
 		debugPass->DrawCube(centerPos, glm::vec3(0.25), glm::vec3(196, 26, 201) / glm::vec3(255), false);
 		debugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(26, 173, 63) / glm::vec3(255), false);
 	}
@@ -328,8 +328,8 @@ void Application::Destroy()
 		vkDestroySemaphore(gContext->defaultDevice, shadowPassSemaphore[i], nullptr);
 		vkDestroySemaphore(gContext->defaultDevice, bloomPassSemaphore[i], nullptr);
 	}
-	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mInstanceBuffer);
-	Buffer2_Destroy(gECS->GetEntity(EntityGeometryID::ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
+	Buffer2_Destroy(gECS->GetEntity(ENTITY_GEOMETRY_CUBE)->mInstanceBuffer);
+	Buffer2_Destroy(gECS->GetEntity(ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
 	Buffer2_Destroy(gVerticesSSBO);
 	Buffer2_Destroy(gIndicesBuffer);
 	delete gECS;
