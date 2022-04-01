@@ -25,7 +25,7 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 				for (uint32_t x = 0; x < resolutionStepX; x++) {
 					TerrainVertex v{};
 					vec3 position = glm::vec3(x + xBlock, 1.0f, y + yBlock);
-					v.inPosition = HalfVec3(position);
+					v.inPosition = position;
 					v.inNormal = HalfVec3(glm::vec3(0.0, 1.0, 0.0));
 					v.inTexCoords = HalfVec2(glm::vec2(position.x / float(width), position.z / float(height)));
 					mVertices.push_back(v);
@@ -96,8 +96,8 @@ void Terrain::CalculateTangentBitangent() {
 			auto T0 = &vertices[indices[i+0 + submesh.mFirstIndex] + submesh.mFirstVertex];
 			auto T1 = &vertices[indices[i+1 + submesh.mFirstIndex] + submesh.mFirstVertex];
 			auto T2 = &vertices[indices[i+2 + submesh.mFirstIndex] + submesh.mFirstVertex];
-			auto deltaPos1 = FullVec3(T1->inPosition) - FullVec3(T0->inPosition);
-			auto deltaPos2 = FullVec3(T2->inPosition) - FullVec3(T0->inPosition);
+			auto deltaPos1 = T1->inPosition - T0->inPosition;
+			auto deltaPos2 = T2->inPosition - T0->inPosition;
 			auto deltaUV1  = FullVec2(T1->inTexCoords) - FullVec2(T0->inTexCoords);
 			auto deltaUV2  = FullVec2(T2->inTexCoords) - FullVec2(T0->inTexCoords);
 			float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
@@ -112,6 +112,6 @@ void Terrain::CalculateTangentBitangent() {
 			T0->inTangent = T1->inTangent = T2->inTangent = HalfVec3(tangent * -1.0f);
 			T0->inBiTangent = T1->inBiTangent = T2->inBiTangent = HalfVec3(bitangent);
 		}
-		submesh.mBox = Ph::CalculateBoundingBox16(vertices + submesh.mFirstVertex, indices, submesh.mIndicesCount, sizeof(TerrainVertex));
+		submesh.mBox = Ph::CalculateBoundingBox(&mVertices[submesh.mFirstVertex], &mIndices[submesh.mFirstIndex], submesh.mIndicesCount, sizeof(TerrainVertex));
 	}
 }

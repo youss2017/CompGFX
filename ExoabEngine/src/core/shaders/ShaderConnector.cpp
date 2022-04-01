@@ -32,18 +32,10 @@ void ShaderConnector_CalculateDescriptorPool(uint32_t bindingsCount, BindingDesc
     }
 }
 
-DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings, uint32_t sharedResourceCount, DescriptorSetSharedResources* pSharedResources) {
+DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings) {
     DescriptorSet set;
     set.mSetID = setID;
     set.mPool = pool;
-    for (uint32_t i = 0; i < sharedResourceCount; i++) {
-        DescriptorSetSharedResources& shared = pSharedResources[i];
-        for (auto bindingID : shared.mSharedBindings) {
-            auto& binding = shared.mPartner->mBindings[bindingID];
-            binding.mSharedResources = true;
-            set.mBindings.insert(std::make_pair(bindingID, binding));
-        }
-    }
 
     for (uint32_t i = 0; i < bindingsCount; i++) {
         BindingDescription& binding = pBindings[i];

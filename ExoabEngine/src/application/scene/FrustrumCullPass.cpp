@@ -71,7 +71,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderConnector_CalculateDescriptorPool(5, computeBindings, poolSize);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, 1 * gFrameOverlapCount, poolSize);
-	mSet = ShaderConnector_CreateSet(0, mPool, 5, computeBindings, 0, nullptr);
+	mSet = ShaderConnector_CreateSet(0, mPool, 5, computeBindings);
 
 	mFrustrumLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
 	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");

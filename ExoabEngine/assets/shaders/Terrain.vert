@@ -3,7 +3,7 @@
 #extension GL_EXT_shader_16bit_storage : require
 
 struct TerrainVertex {
-    f16vec3 inPosition;
+    vec3 inPosition;
     f16vec3 inNormal;
     f16vec3 inTangent;
     f16vec3 inBiTangent;

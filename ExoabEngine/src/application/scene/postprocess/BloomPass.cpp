@@ -125,10 +125,10 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	ShaderConnector_CalculateDescriptorPool(2, thresholdBindings, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(2, downsampleBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2, poolSizes);
-	mThresholdSet = ShaderConnector_CreateSet(0, mPool, 2, thresholdBindings, 0, nullptr);
+	mThresholdSet = ShaderConnector_CreateSet(0, mPool, 2, thresholdBindings);
 	mThresholdLayout = ShaderConnector_CreatePipelineLayout(1, &mThresholdSet, {{VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float)}});
 	mThreshold = Pipeline_CreateCompute(gContext, &thresholdShader, mThresholdLayout, 0);
-	mDownsampleSet = ShaderConnector_CreateSet(0, mPool, 2, downsampleBindings, 0, nullptr);
+	mDownsampleSet = ShaderConnector_CreateSet(0, mPool, 2, downsampleBindings);
 	mDownsampleLayout = ShaderConnector_CreatePipelineLayout(1, &mDownsampleSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DownsamplePushblock)} });
 	mDownsampleVerticalLayout = ShaderConnector_CreatePipelineLayout(1, &mDownsampleSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DownsampleVerticalPushblock)} });
 	mUpsampleLayout = ShaderConnector_CreatePipelineLayout(1, &mDownsampleSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(UpsamplePushblock)} });

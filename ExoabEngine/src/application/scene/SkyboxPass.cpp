@@ -23,7 +23,7 @@ Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, Geome
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(1, bindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount, poolSizes);
-	mSet = ShaderConnector_CreateSet(0, mPool, 1, bindings, 0, nullptr);
+	mSet = ShaderConnector_CreateSet(0, mPool, 1, bindings);
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4} });
 
 	Shader skyboxVert = Shader(gContext, "assets/shaders/skybox.vert");

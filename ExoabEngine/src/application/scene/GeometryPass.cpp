@@ -139,8 +139,8 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	ShaderConnector_CalculateDescriptorPool(5, terrainBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2 + (gFrameOverlapCount * 1), poolSizes);
 	
-	mGeoSet0 = ShaderConnector_CreateSet(0, mPool, 4, geometryPass, 0, nullptr);
-	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 2, geometryPassFragment, 0, nullptr);
+	mGeoSet0 = ShaderConnector_CreateSet(0, mPool, 4, geometryPass);
+	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 2, geometryPassFragment);
 	DescriptorSet GeoSets[2] = { mGeoSet0, mGeoSet1 };
 	mGeoLayout = ShaderConnector_CreatePipelineLayout(2, GeoSets, {});
 	Shader geoVertex = Shader(gContext, "assets/shaders/vertex.vert");
@@ -162,7 +162,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 
 	terrainBindings[1].mBuffer = mGeoSet0.GetBuffer2(1);
 	
-	mMapSet = ShaderConnector_CreateSet(0, mPool, 5, terrainBindings, 0, nullptr);
+	mMapSet = ShaderConnector_CreateSet(0, mPool, 5, terrainBindings);
 	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock)} });
 	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
 	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");

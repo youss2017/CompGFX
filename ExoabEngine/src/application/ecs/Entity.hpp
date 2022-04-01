@@ -4,11 +4,6 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-struct BoundingBox {
-	glm::vec3 minimum_point;
-	glm::vec3 maximum_point;
-};
-
 struct Entity
 {
 	// The geometryID is used to determine firstVertex/firstIndex/indicesCount

@@ -42,7 +42,6 @@ namespace Ph {
         BoundingBox box;
         box.mBoxMin = vec3(minx, miny, minz);
         box.mBoxMax = vec3(maxx, maxy, maxz);
-        printf("(%.2f, %.2f, %.2f), (%.2f, %.2f, %.2f)\n", minx, miny, minz, maxx, maxy, maxz);
         return box;
     }
 

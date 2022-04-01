@@ -64,6 +64,6 @@ struct DescriptorSetSharedResources {
 };
 
 void ShaderConnector_CalculateDescriptorPool(uint32_t bindingsCount, BindingDescription* pBindings, std::vector<VkDescriptorPoolSize>& poolSizes);
-DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings, uint32_t sharedResourceCount, DescriptorSetSharedResources* pSharedResources);
+DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings);
 VkPipelineLayout ShaderConnector_CreatePipelineLayout(uint32_t descriptorSetCount, DescriptorSet* pSets, std::vector<VkPushConstantRange> ranges);
 void ShaderConnector_DestroySet(const DescriptorSet& set);

@@ -137,8 +137,8 @@ bool Application::CreateResources()
 	t0 = new Terrain(w, h, 10, 10);
 	std::vector<uint8_t> perlinBuffer(w * w);
 	Utils::perlin(w, h, 0xCaf, 8.0, 4, perlinBuffer.data());
-	t0->ApplyHeightmap(w, h, -1.0, 10.0f, perlinBuffer.data());
-	t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0, 2.0, 2.0)));
+	//t0->ApplyHeightmap(w, h, -1.0, 10.0f, perlinBuffer.data());
+	//t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);

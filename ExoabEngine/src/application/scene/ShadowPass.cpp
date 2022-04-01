@@ -145,7 +145,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	ShaderConnector_CalculateDescriptorPool(4, bindings, poolSize);
 	ShaderConnector_CalculateDescriptorPool(2, shadowTBindings, poolSize);
 	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2, poolSize);
-	mSet = ShaderConnector_CreateSet(0, mPool, 4, bindings, 0, nullptr);
+	mSet = ShaderConnector_CreateSet(0, mPool, 4, bindings);
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {});
 
 	PipelineVertexInputDescription input;
@@ -163,7 +163,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 
 	Shader shadowT = Shader(gContext, "assets/shaders/shadow/shadowT.vert");
 	shadowTBindings[1].mBuffer = mSet.GetBuffer2(3);
-	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 2, shadowTBindings, 0, nullptr);
+	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 2, shadowTBindings);
 	mTerrainLayout = ShaderConnector_CreatePipelineLayout(1, &mTerrainSet, {});
 
 	spec.m_CullMode = CullMode::CULL_FRONT;

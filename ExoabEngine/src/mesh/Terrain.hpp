@@ -15,7 +15,7 @@
 
 struct TerrainVertex
 {
-    Ph::hvec3 inPosition;
+    glm::vec3 inPosition;
     Ph::hvec3 inNormal;
     Ph::hvec3 inTangent;
     Ph::hvec3 inBiTangent;
