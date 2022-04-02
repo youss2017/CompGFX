@@ -26,12 +26,11 @@ layout (binding = 2) uniform sampler2D TerrainTextures[];
 layout (binding = 3) uniform sampler2D shadowMap;
 layout (binding = 4) uniform sampler2D normalMap;
 
-layout (constant_id = 0) const int pcfCount = 2;
+layout (constant_id = 0) const int pcfCount = 1;
 
 float ShadowCalculation()
 {
     vec3 pos = (LightSpacePos.xyz / LightSpacePos.w) * 0.5 + 0.5;
-    pos.z = 1.0 - pos.z;
     if(pos.z > 1.0) {
         pos.z = 1.0;
     }
@@ -50,7 +49,7 @@ float ShadowCalculation()
         }       
     }
 
-    return total / totalTexels;
+    return 1.0 - total / totalTexels;
 }
 
 layout (location = 0) out vec4 FragColor;

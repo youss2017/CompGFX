@@ -83,7 +83,7 @@ std::vector<float> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm:
 Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, EntityController* ecs, Camera* camera, int size) : Scene(gContext->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
 	mT0 = terrain;
 	VkClearValue clear{};
-	clear.depthStencil.depth = 0.0;
+	clear.depthStencil.depth = 1.0;
 	mFBO.m_width = size;
 	mFBO.m_height = size;
 	FramebufferAttachment depthAtachment = FramebufferAttachment::Create(gContext, 0, size, size, VK_FORMAT_D32_SFLOAT, clear);
@@ -150,10 +150,10 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec;
-	spec.m_CullMode = CullMode::CULL_FRONT;
+	spec.m_CullMode = CullMode::CULL_BACK;
 	spec.m_DepthEnabled = true;
 	spec.m_DepthWriteEnable = true;
-	spec.m_DepthFunc = DepthFunction::GREATER;
+	spec.m_DepthFunc = DepthFunction::LESS;
 	spec.m_PolygonMode = PolygonMode::FILL;
 	spec.m_FrontFaceCCW = true;
 	spec.m_Topology = PolygonTopology::TRIANGLE_LIST;
@@ -166,7 +166,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 2, shadowTBindings);
 	mTerrainLayout = ShaderConnector_CreatePipelineLayout(1, &mTerrainSet, {});
 
-	spec.m_CullMode = CullMode::CULL_FRONT;
+	spec.m_CullMode = CullMode::CULL_BACK;
 	mTerrainState = PipelineState_Create(gContext, spec, input, mFBO, mTerrainLayout, &shadowT, &fragment);
 
 	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);

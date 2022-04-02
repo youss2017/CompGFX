@@ -30,13 +30,17 @@ namespace UI
     int CubemapLOD = 0;
     int CubemapLODMax = 0;
     int CurrentOutputBuffer = 0;
-    float C_x, C_y, C_z;
-    float L_x = 0.0, L_y = 0.0, L_z = 0.0;
+    glm::vec3 CameraPosition;
+    glm::vec3 LightPosition;
     static bool UIInDebugMode = false;
     bool VSync = true;
     bool ReloadShaders = false;
     bool ClearShaderCache = false;
     int BloomDownsampleMip = 0;
+    float Frequency;
+    int Octave;
+    bool RegenerateNoiseMap = false;
+    static ImTextureID NoiseMapTexture = nullptr;
 }
 
 void UI::Initalize(void* _context, void* _gfx)
@@ -44,6 +48,10 @@ void UI::Initalize(void* _context, void* _gfx)
 	vk::VkContext context = ToVKContext(_context);
     s_Context = _context;
     s_Gfx = (Graphics3D*)_gfx;
+}
+
+void UI::UpdateNoiseMap(ITexture2 texture, VkSampler sampler) {
+    NoiseMapTexture = ImGui_ImplVulkan_AddTexture(sampler, texture->m_vk_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void UI::RenderUI()
@@ -84,13 +92,13 @@ void UI::RenderUI()
     ImGui::Text("%.2f ms -- Geometry Pass", GeometryPassTime);
     ImGui::Text("%.2f ms -- Debug Pass", DebugPassTime);
     ImGui::Text("%.2f ms -- Bloom Pass", BloomPassTime);
-    ImGui::Text("<%.2f, %.2f, %.2f>", C_x, C_y, C_z);
+    ImGui::Text("<%.2f, %.2f, %.2f>", CameraPosition[0], CameraPosition[1], CameraPosition[2]);
     ImGui::End();
     ImGui::Begin("Control Panel");
-    ImGui::SliderFloat3("Light", &L_x, -100.0, 100.0f);
+    ImGui::SliderFloat3("Light", &LightPosition[0], -100.0, 100.0f);
     ImGui::SameLine();
     if (ImGui::Button("Reset")) {
-        L_x = L_y = L_z = 0.0f;
+        LightPosition = glm::vec3(0.0f);
     }
     ImGui::SliderInt("Cubemap LOD", &UI::CubemapLOD, 0, UI::CubemapLODMax);
     ImGui::SliderInt("Bloom Downsample", &UI::BloomDownsampleMip, 0, 7);
@@ -120,6 +128,14 @@ void UI::RenderUI()
     if (ImGui::Button("Clear Shader Cache")) {
         StateChanged = true;
         ClearShaderCache = true;
+    }
+    if (NoiseMapTexture) {
+        ImGui::Image(NoiseMapTexture, ImVec2(100, 100));
+        ImGui::SliderFloat("Frequency", &Frequency, 0.0, 64.0f);
+        ImGui::SliderInt("Octaves", &Octave, 0, 16);
+        if (ImGui::Button("Regenerate")) {
+            RegenerateNoiseMap = true;
+        }
     }
     ImGui::End();
     //ImGui::ShowDemoWindow();

@@ -53,17 +53,6 @@ enum class TextureWrapping
 	ClampToBorder
 };
 
-enum class TextureSwizzle
-{
-	Identity = 0,
-	SwizzleONE,
-	SwizzleZERO,
-	SwizzleRED,
-	SwizzleGREEN,
-	SwizzleBLUE,
-	SwizzleALPHA,
-};
-
 struct TextureSamplerSpecification
 {
 	TextureFilter MinFilter = TextureFilter::Linear;
@@ -84,10 +73,6 @@ struct TextureSamplerSpecification
 		TextureWrapping WrappingMode_W = TextureWrapping::Repeat;
 		TextureWrapping WrappingMode_R;
 	};
-	TextureSwizzle SwizzleRed = TextureSwizzle::Identity;
-	TextureSwizzle SwizzleGreen = TextureSwizzle::Identity;
-	TextureSwizzle SwizzleBlue = TextureSwizzle::Identity;
-	TextureSwizzle SwizzleAlpha = TextureSwizzle::Identity;
 	float MipMapLODBias = -1.0f; // they say this is a good value
 	bool EnableAnisotropicFiltering = false;
 	float MaxAnisotropicLevel = 0; // MAX 16 (on most gpus)
@@ -129,10 +114,11 @@ struct Texture2DSpecification
 	VkImageCreateFlags mFlags = 0;
 	VkImageUsageFlags mUsage = 0;
 	VkImageTiling mTiling = VK_IMAGE_TILING_OPTIMAL;
-	bool m_GenerateMipMapLevels;
+	bool m_GenerateMipMapLevels = false;
 	bool m_CreatePerFrame = false;
 	bool m_LazilyAllocate = false;
 	bool mCreateViewPerMip = false;
+	VkComponentMapping mTextureSwizzling = {};
 };
 
 namespace vk

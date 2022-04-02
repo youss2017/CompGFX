@@ -43,8 +43,8 @@ public:
     Terrain(const Terrain& other) = delete;
     Terrain(const Terrain&& other) = delete;
 
-    void ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, uint8_t* heightmap);
-    void SetTransform(const glm::mat4& transform) { mModelTransform = transform; }
+    void ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, float* heightmap);
+    void SetTransform(const glm::mat4& transform) { mModelTransform = transform;  }
     glm::mat4 GetTransform() { return mModelTransform; }
    
     IBuffer2 GetVerticesBuffer() { return mVerticesBuffer; }
@@ -52,7 +52,6 @@ public:
 
     inline uint32_t GetSubmeshCount() { return mSubmeshes.size(); }
     inline TerrainSubmesh& GetSubmesh(uint32_t i) { return mSubmeshes[i]; }
-    //inline uint32_t GetIndicesCount() { return mIndices.size(); }
 
 private:
     void CalculateTangentBitangent();
@@ -60,6 +59,8 @@ private:
 private:
     uint32_t mWidth;
     uint32_t mHeight;
+    uint32_t mResolutionX;
+    uint32_t mResolutionY;
     std::vector<TerrainVertex> mVertices;
     std::vector<uint32_t> mIndices;
     std::vector<TerrainSubmesh> mSubmeshes;

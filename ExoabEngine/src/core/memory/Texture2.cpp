@@ -48,27 +48,8 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	viewInfo.viewType = (desc.m_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
 	viewInfo.format = (VkFormat)specification.m_Format;
-	auto GetVkSwizzle = [](TextureSwizzle swizz) throw()->VkComponentSwizzle
-	{
-		if (swizz == TextureSwizzle::SwizzleRED)
-			return VK_COMPONENT_SWIZZLE_R;
-		if (swizz == TextureSwizzle::SwizzleGREEN)
-			return VK_COMPONENT_SWIZZLE_G;
-		if (swizz == TextureSwizzle::SwizzleBLUE)
-			return VK_COMPONENT_SWIZZLE_B;
-		if (swizz == TextureSwizzle::SwizzleALPHA)
-			return VK_COMPONENT_SWIZZLE_A;
-		if (swizz == TextureSwizzle::SwizzleONE)
-			return VK_COMPONENT_SWIZZLE_ONE;
-		if (swizz == TextureSwizzle::SwizzleZERO)
-			return VK_COMPONENT_SWIZZLE_ZERO;
-		return VK_COMPONENT_SWIZZLE_IDENTITY;
-	};
 	viewInfo.image = texture->m_vk_image->m_image;
-	viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-	viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-	viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-	viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewInfo.components = specification.mTextureSwizzling;
 	if (specification.m_TextureUsage == TextureUsage::COLOR || specification.m_TextureUsage == TextureUsage::TEXTURE)
 		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	else if(specification.m_TextureUsage == TextureUsage::DEPTH_STENCIL)

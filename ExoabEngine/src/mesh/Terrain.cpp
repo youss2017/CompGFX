@@ -21,6 +21,8 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 		for (uint32_t xBlock = 0; xBlock < width; xBlock += width / splitX) {
 			uint32_t resolutionStepX = width / splitX + 1;
 			uint32_t resolutionStepY = height / splitY + 1;
+			TerrainSubmesh submesh;
+			bool set = false;
 			for (uint32_t y = 0; y < resolutionStepY; y++) {
 				for (uint32_t x = 0; x < resolutionStepX; x++) {
 					TerrainVertex v{};
@@ -29,6 +31,11 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 					v.inNormal = HalfVec3(glm::vec3(0.0, 1.0, 0.0));
 					v.inTexCoords = HalfVec2(glm::vec2(position.x / float(width), position.z / float(height)));
 					mVertices.push_back(v);
+					if (!set) {
+						set = true;
+						submesh.mBox.mBoxMin = position;
+					}
+					submesh.mBox.mBoxMax = position;
 				}
 			}
 
@@ -50,7 +57,6 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 					}
 				}
 			}
-			TerrainSubmesh submesh;
 			submesh.mFirstVertex = firstVertex;
 			submesh.mFirstIndex = firstIndex;
 			submesh.mIndicesCount = mIndices.size() - firstIndex;
@@ -60,7 +66,7 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 
 		}
 	}
-	printf("Total Vertices %llu Indices %llu\n", mVertices.size(), mIndices.size());
+	printf("Total Vertices %llu Indices %llu Total submeshes: %llu\n", mVertices.size(), mIndices.size(), mSubmeshes.size());
 	CalculateTangentBitangent();
 	mVertices.shrink_to_fit();
 	mIndices.shrink_to_fit();
@@ -73,14 +79,52 @@ Terrain::~Terrain() {
 	Buffer2_Destroy(mIndicesBuffer);
 }
 
-void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, uint8_t* heightmap) {
+void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, float* heightmap) {
 	using namespace glm;
-	for (int mapY = 0; mapY < heightMapHeight; mapY++) {
-		float yratio = float(mapY) / float(heightMapHeight);
-		for (int mapX = 0; mapX < heightMapWidth; mapX++) {
-			float height = clamp(float(heightmap[mapY * heightMapWidth + mapX]) / 255.0f, minHeight, maxHeight);
-			float xratio = float(mapX) / float(heightMapWidth);
-			mVertices[int((float(mHeight) * yratio) * float(mWidth) + (float(mWidth) * xratio))].inPosition.y = height;
+
+	auto sample = [heightMapWidth, heightMapHeight, minHeight, maxHeight, heightmap](int x, int y) throw() -> float {
+		/*		KtK
+				lcr
+				KbK
+			c = 0.5
+			l = r = t = b = 0.1
+			K1 = K2 = K3 = K4 = 0.025
+		*/
+		x = clamp(x, 0, heightMapWidth);
+		y = clamp(y, 0, heightMapHeight);
+		vec2 size = vec2(heightMapWidth, heightMapHeight);
+		vec2 texel = 1.0f / size;
+		vec2 c =   clamp(vec2(x, y) / size, vec2(0.0f), vec2(1.0f));
+		ivec2 l =  clamp(ivec2(size * (c - vec2(texel.x, 0.0))), ivec2(0), ivec2(size));
+		ivec2 r =  clamp(ivec2(size * (c + vec2(texel.x, 0.0))), ivec2(0), ivec2(size));
+		ivec2 t =  clamp(ivec2(size * (c - vec2(0.0, texel.y))), ivec2(0), ivec2(size));
+		ivec2 b =  clamp(ivec2(size * (c + vec2(0.0, texel.y))), ivec2(0), ivec2(size));
+		ivec2 k1 = clamp(ivec2(size * (c - texel)), ivec2(0), ivec2(size));
+		ivec2 k2 = clamp(ivec2(size * (c + vec2(texel.x, -texel.y))), ivec2(0), ivec2(size));
+		ivec2 k3 = clamp(ivec2(size * (c + vec2(-texel.x, texel.y))), ivec2(0), ivec2(size));
+		ivec2 k4 = clamp(ivec2(size * (c + texel)), ivec2(0), ivec2(size));
+		float cV  = 0.5f * float(heightmap[y * heightMapWidth + x]);
+		float lV  = 0.1f * float(heightmap[l.y * heightMapWidth + l.x]);
+		float rV  = 0.1f * float(heightmap[r.y * heightMapWidth + r.x]);
+		float tV  = 0.1f * float(heightmap[t.y * heightMapWidth + t.x]);
+		float bV  = 0.1f * float(heightmap[b.y * heightMapWidth + b.x]);
+		float k1V = 0.025 * float(heightmap[k1.y * heightMapWidth + k1.x]);
+		float k2V = 0.025 * float(heightmap[k2.y * heightMapWidth + k2.x]);
+		float k3V = 0.025 * float(heightmap[k3.y * heightMapWidth + k3.x]);
+		float k4V = 0.025 * float(heightmap[k4.y * heightMapWidth + k4.x]);
+		float value = clamp(cV + lV + rV + tV + bV + k1V + k2V + k3V + k4V, 0.0f, 1.0f);
+		return mix(minHeight, maxHeight, value);
+	};
+
+	for(auto& submesh : mSubmeshes) {
+		TerrainVertex* vertices = &mVertices[submesh.mFirstVertex];
+		uint32_t* indices = &mIndices[submesh.mFirstIndex];
+		for (int i = 0; i < submesh.mIndicesCount; i++) {
+			int x = vertices[indices[i]].inPosition.x;
+			int y = vertices[indices[i]].inPosition.z;
+			int X = (float(mVertices[y * mWidth + x].inPosition.x) / float(mWidth)) * float(heightMapWidth);
+			int Y = (float(mVertices[y * mWidth + x].inPosition.z) / float(mHeight)) * float(heightMapHeight);
+			mVertices[y * mWidth + x].inPosition.y = sample(X, Y);
 		}
 	}
 	CalculateTangentBitangent();
@@ -89,13 +133,14 @@ void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minH
 
 void Terrain::CalculateTangentBitangent() {
 	using namespace Ph;
-	auto vertices = mVertices.data();
-	auto indices = mIndices.data();
 	for (auto& submesh : mSubmeshes) {
+		auto vertices = &mVertices[submesh.mFirstVertex];
+		auto indices = &mIndices[submesh.mFirstIndex];
+		submesh.mBox = Ph::CalculateBoundingBox(vertices, indices, submesh.mIndicesCount, sizeof(TerrainVertex));
 		for (uint32_t i = 0; i < submesh.mIndicesCount; i+=3) {
-			auto T0 = &vertices[indices[i+0 + submesh.mFirstIndex] + submesh.mFirstVertex];
-			auto T1 = &vertices[indices[i+1 + submesh.mFirstIndex] + submesh.mFirstVertex];
-			auto T2 = &vertices[indices[i+2 + submesh.mFirstIndex] + submesh.mFirstVertex];
+			auto T0 = &vertices[indices[i+0]];
+			auto T1 = &vertices[indices[i+1]];
+			auto T2 = &vertices[indices[i+2]];
 			auto deltaPos1 = T1->inPosition - T0->inPosition;
 			auto deltaPos2 = T2->inPosition - T0->inPosition;
 			auto deltaUV1  = FullVec2(T1->inTexCoords) - FullVec2(T0->inTexCoords);
@@ -112,6 +157,5 @@ void Terrain::CalculateTangentBitangent() {
 			T0->inTangent = T1->inTangent = T2->inTangent = HalfVec3(tangent * -1.0f);
 			T0->inBiTangent = T1->inBiTangent = T2->inBiTangent = HalfVec3(bitangent);
 		}
-		submesh.mBox = Ph::CalculateBoundingBox(&mVertices[submesh.mFirstVertex], &mIndices[submesh.mFirstIndex], submesh.mIndicesCount, sizeof(TerrainVertex));
 	}
 }

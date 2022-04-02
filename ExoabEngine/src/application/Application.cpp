@@ -52,8 +52,9 @@ namespace Application
 	static BloomPass* bloom;
 	static VkSemaphore shadowPassSemaphore[gFrameOverlapCount];
 	static VkSemaphore bloomPassSemaphore[gFrameOverlapCount];
-	static Terrain* t0;
-	uint32_t instanceCount = 500;
+	static Terrain* t0 = nullptr;
+	static uint32_t instanceCount = 500;
+	static ITexture2 noiseMapTexture;
 	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
 
 }
@@ -128,17 +129,39 @@ bool Application::LoadAssets()
 	return true;
 }
 
+static void CreateTerrain() {
+	int w = 256;
+	int h = 256;
+	int hw = 512;
+	int hh = 512;
+	if(!Application::t0)
+		Application::t0 = new Terrain(w, h, 4, 4);
+	std::vector<float> perlinBuffer(hw * hh);
+	Utils::perlin(hw, hh, std::chrono::high_resolution_clock::now().time_since_epoch().count(), UI::Frequency, UI::Octave, perlinBuffer.data());
+	Application::t0->ApplyHeightmap(hw, hh, 0.0, 10.0f, perlinBuffer.data());
+	Application::t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0)));
+
+	if (!Application::noiseMapTexture) {
+		Texture2DSpecification specifcation;
+		specifcation.m_Width = hw;
+		specifcation.m_Height = hh;
+		specifcation.m_Format = VK_FORMAT_R32_SFLOAT;
+		specifcation.mTextureSwizzling.r = VK_COMPONENT_SWIZZLE_R;
+		specifcation.mTextureSwizzling.g = VK_COMPONENT_SWIZZLE_R;
+		specifcation.mTextureSwizzling.b = VK_COMPONENT_SWIZZLE_R;
+		Application::noiseMapTexture = Texture2_Create(gContext, specifcation);
+	}
+	Texture2_UploadPixels(Application::noiseMapTexture, perlinBuffer.data(), perlinBuffer.size() * sizeof(float));
+}
+
 bool Application::CreateResources()
 {
 	PROFILE_FUNCTION();
 	
-	int w = 250;
-	int h = 250;
-	t0 = new Terrain(w, h, 10, 10);
-	std::vector<uint8_t> perlinBuffer(w * w);
-	Utils::perlin(w, h, 0xCaf, 8.0, 4, perlinBuffer.data());
-	//t0->ApplyHeightmap(w, h, -1.0, 10.0f, perlinBuffer.data());
-	//t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
+	UI::Frequency = 8.0;
+	UI::Octave = 2;
+	CreateTerrain();
+	UI::UpdateNoiseMap(noiseMapTexture, vk::Gfx_CreateSampler(gContext));
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
@@ -185,7 +208,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		gCamera.MoveAlongUpAxis(dTime * 22.0);
 	}
 	auto position = gCamera.GetPosition();
-    UI::C_x = position.x, UI::C_y = position.y, UI::C_z = position.z;
+	UI::CameraPosition = position;
 	if (gWindow->IsKeyUp(GLFW_KEY_ESCAPE))
 	{
 		Quit = true;
@@ -214,6 +237,12 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		geoPass->SetWireframeMode(UI::ShowWireframe);
 		//Graphics3D_SetSyncInterval(gGfx, UI::VSync);
 	}
+
+	if (UI::RegenerateNoiseMap) {
+		UI::RegenerateNoiseMap = false;
+		CreateTerrain();
+	}
+
 	if (!UI::LockFrustrum) {
 		memcpy(&gLockedCamera, &gCamera, sizeof(Camera));
 	}
@@ -229,7 +258,7 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 		debugPass->GetStatistics(false, frame.m_FrameIndex, UI::DebugPassTime);
 	}
 	
-	glm::vec3 pos = glm::vec3(UI::L_x, UI::L_y, UI::L_z);
+	glm::vec3 pos = UI::LightPosition;
 	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
 	debugPass->SetProjectionView(proj, gCamera.GetViewMatrix());
 
@@ -243,11 +272,11 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	srand(0x42);
 	glm::vec3 color = glm::vec3(rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX);
 	color *= 5.0f;
-	debugPass->DrawCube(pos * glm::vec3(1.0, -1.0, 1.0), {1.0, 1.0, 1.0}, color, true);
+	debugPass->DrawCube(pos * glm::vec3(1.0, -1.0, 1.0), {1.0, 1.0, 1.0}, color, false);
 
 	for (int i = 0; i < t0->GetSubmeshCount(); i++) {
 		auto& submesh = t0->GetSubmesh(i);
-		debugPass->DrawCube(submesh.mBox.mBoxMin, glm::vec3(0.25), glm::vec3(52, 140, 235) / glm::vec3(255), false);
+		debugPass->DrawCube(submesh.mBox.mBoxMin + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.25), glm::vec3(52, 140, 235) / glm::vec3(255), false);
 		debugPass->DrawCube(submesh.mBox.mBoxMax, glm::vec3(0.25), glm::vec3(227, 18, 60) / glm::vec3(255), false);
 	}
 
@@ -317,6 +346,7 @@ void Application::Destroy()
 {
 	PROFILE_FUNCTION();
 	Graphics3D_WaitGPUIdle(gGfx);
+	Texture2_Destroy(noiseMapTexture);
 	delete t0;
 	delete cullPass;
 	delete geoPass;

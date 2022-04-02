@@ -1,4 +1,6 @@
 #pragma once
+#include <memory/Texture2.hpp>
+#include <glm/glm.hpp>
 
 namespace UI
 {
@@ -18,14 +20,18 @@ namespace UI
 	extern unsigned long long FragmentInvocations;
 	extern int CubemapLOD;
 	extern int CubemapLODMax;
-	extern float C_x, C_y, C_z;
 	extern int CurrentOutputBuffer;
 	extern bool VSync;
-	extern float L_x, L_y, L_z;
+	extern glm::vec3 CameraPosition;
+	extern glm::vec3 LightPosition;
 	extern bool ReloadShaders;
 	extern bool ClearShaderCache;
 	extern int BloomDownsampleMip;
+	extern float Frequency;
+	extern int Octave;
+	extern bool RegenerateNoiseMap;
 
 	void Initalize(void* context, void* gfx);
 	void RenderUI();
+	void UpdateNoiseMap(ITexture2 texture, VkSampler sampler);
 }
