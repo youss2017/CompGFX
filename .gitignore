@@ -9,5 +9,7 @@ ExoabEngine/assets/materials/shaders/spirv_cache/*
 *.jpg
 *.exe
 *.pdb
+*.vc
 *.ilk
 *.db
+*.suo
