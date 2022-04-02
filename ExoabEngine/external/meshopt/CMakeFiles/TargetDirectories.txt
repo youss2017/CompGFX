@@ -1,4 +1,0 @@
-D:/GFX Apis/ExoabEngine/ExoabEngine/external/meshopt/CMakeFiles/meshoptimizer.dir
-D:/GFX Apis/ExoabEngine/ExoabEngine/external/meshopt/CMakeFiles/INSTALL.dir
-D:/GFX Apis/ExoabEngine/ExoabEngine/external/meshopt/CMakeFiles/ALL_BUILD.dir
-D:/GFX Apis/ExoabEngine/ExoabEngine/external/meshopt/CMakeFiles/ZERO_CHECK.dir

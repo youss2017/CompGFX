@@ -1,0 +1,5 @@
+﻿  Building Custom Rule D:/GFX Apis/ExoabEngine/ExoabEngine/external/glfw/tests/CMakeLists.txt
+  threads.c
+  tinycthread.c
+  Generating Code...
+  threads.vcxproj -> D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\threads.exe

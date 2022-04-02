@@ -1,0 +1,4 @@
+﻿  Version.cpp
+  LINK : D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\assimp\code\..\..\..\bin\debug\assimp-vc143-mtd.dll not found or not built by the last incremental link; performing full link
+     Creating library D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\assimp\code\..\..\..\bin\debug\assimp-vc143-mtd.lib and object D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\assimp\code\..\..\..\bin\debug\assimp-vc143-mtd.exp
+  assimp.vcxproj -> D:\GFX Apis\ExoabEngine\ExoabEngine\external\bin\debug\assimp-vc143-mtd.dll

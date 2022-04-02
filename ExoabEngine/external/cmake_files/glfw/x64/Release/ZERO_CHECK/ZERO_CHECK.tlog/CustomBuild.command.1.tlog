@@ -1,0 +1,10 @@
+^D:\GFX APIS\EXOABENGINE\EXOABENGINE\EXTERNAL\CMAKE_FILES\GLFW\CMAKEFILES\22464343D450C1A5C335A2FF06638EE5\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SD:/GFX Apis/ExoabEngine/ExoabEngine/external/glfw" "-BD:/GFX Apis/ExoabEngine/ExoabEngine/external/cmake_files/glfw" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "D:/GFX Apis/ExoabEngine/ExoabEngine/external/cmake_files/glfw/GLFW.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

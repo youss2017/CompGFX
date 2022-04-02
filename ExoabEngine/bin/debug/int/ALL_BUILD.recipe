@@ -1,0 +1,110 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\x64\Debug\ZERO_CHECK</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\bin\debug\glfw3.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\allocator.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\boing.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\clipboard.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\cursor.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\empty.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\events.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\gamma.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\gears.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\glfwinfo.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\heightmap.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\icon.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\iconify.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\inputlag.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\joysticks.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\monitors.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\msaa.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\offscreen.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\particles.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\reopen.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\sharing.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\splitview.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\tearing.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\threads.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\timeout.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\title.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\triangle-opengl.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\triangle-opengles.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\triangle-vulkan.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\wave.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\window.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\windows.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\x64\Debug\ALL_BUILD</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

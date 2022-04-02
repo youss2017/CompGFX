@@ -1,6 +1,5 @@
 #include "PlatformWindow.hpp"
 #include "../utils/MBox.hpp"
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <atomic>

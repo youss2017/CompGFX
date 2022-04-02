@@ -1,0 +1,5 @@
+﻿  Building Custom Rule D:/GFX Apis/ExoabEngine/ExoabEngine/external/glfw/tests/CMakeLists.txt
+  iconify.c
+  getopt.c
+  Generating Code...
+  iconify.vcxproj -> D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\tests\Debug\iconify.exe

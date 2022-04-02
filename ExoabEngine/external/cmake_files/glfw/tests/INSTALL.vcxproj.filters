@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\CMakeFiles\4b3d19fde9e480d407c2f72d37551a5d\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{00ACAC35-C036-38CD-A821-229F47AAB900}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

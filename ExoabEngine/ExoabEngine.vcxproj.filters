@@ -290,9 +290,6 @@
     <ClCompile Include="external\imgui\backends\imgui_impl_vulkan.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="external\glad\glad.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

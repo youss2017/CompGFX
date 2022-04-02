@@ -1,0 +1,8 @@
+﻿  Building Custom Rule D:/GFX Apis/ExoabEngine/ExoabEngine/external/assimp/tools/assimp_cmd/CMakeLists.txt
+  CompareDump.cpp
+  ImageExtractor.cpp
+  Main.cpp
+  WriteDump.cpp
+  Info.cpp
+  Export.cpp
+LINK : fatal error LNK1181: cannot open input file '..\..\lib\Release\assimp-vc143-mt.lib'

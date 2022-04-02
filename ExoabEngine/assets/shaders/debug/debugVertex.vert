@@ -17,7 +17,7 @@ struct DebugObject {
 
 DECLARE_POINTER_ARRAY(DebugObject, scalar);
 
-const vec3 CubeVertices [36] = {        
+const vec3 CubeVertices [36] = {
 	vec3(-1.0,  1.0, -1.0),
 	vec3(-1.0, -1.0, -1.0),
 	vec3(+1.0, -1.0, -1.0),
