@@ -159,18 +159,44 @@ void Buffer2_Destroy(IBuffer2 buffer)
 
 static std::unordered_map<uint64_t, IBuffer2> GmallocBuffers;
 
-void* Gmalloc(uint32_t size, BufferType type) {
-	IBuffer2 buffer = Buffer2_Create(type, size, BufferMemoryType::CPU_TO_GPU, true, true);
+void* Gmalloc(uint32_t size, BufferType type, bool DisableVerfication) {
+	IBuffer2 buffer = Buffer2_Create(type, size, BufferMemoryType::CPU_TO_GPU, true, DisableVerfication);
 	void* ptr = Buffer2_Map(buffer);
 	GmallocBuffers.insert(std::make_pair(uint64_t(ptr), buffer));
 	return ptr;
 }
 
-void Gfree(void* ptr) {
-	uint64_t ptr64 = uint64_t(ptr);
-	if (GmallocBuffers.find(ptr64) != GmallocBuffers.end()) {
-		Buffer2_Destroy(GmallocBuffers[ptr64]);
+static void GverifyExistence(void* ptr) {
+	if (GmallocBuffers.find(uint64_t(ptr)) == GmallocBuffers.end()) {
+		throw std::runtime_error("Gbuffer is not found. Did you allocate this buffer, was it allocated successfully?");
 	}
+}
+
+void GverifyReadWrite(void* ptr) {
+	GverifyRead(ptr);
+	GverifyWrite(ptr);
+}
+
+void GverifyRead(void* ptr) {
+#ifdef _DEBUG
+	GverifyExistence(ptr);
+#endif
+	Buffer2_Invalidate(GmallocBuffers[uint64_t(ptr)], 0, VK_WHOLE_SIZE);
+}
+
+void GverifyWrite(void* ptr) {
+#ifdef _DEBUG
+	GverifyExistence(ptr);
+#endif
+	Buffer2_Flush(GmallocBuffers[uint64_t(ptr)], 0, VK_WHOLE_SIZE);
+}
+
+void Gfree(void* ptr) {
+#ifdef _DEBUG
+	GverifyExistence(ptr);
+#endif
+	Buffer2_Destroy(GmallocBuffers[uint64_t(ptr)]);
+	GmallocBuffers.erase(uint64_t(ptr));
 }
 
 IBuffer2 Gbuffer(void* ptr)

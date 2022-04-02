@@ -1,7 +1,6 @@
 .vs/*
 bin/*
 ExoabEngine/external/bin/*
-ExoabEngine/external/*
 ExoabEngine/assets/materials/shaders/spirv_cache/*
 *.dll
 *.lib

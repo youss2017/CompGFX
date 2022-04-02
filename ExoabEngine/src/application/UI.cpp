@@ -37,10 +37,16 @@ namespace UI
     bool ReloadShaders = false;
     bool ClearShaderCache = false;
     int BloomDownsampleMip = 0;
-    float Frequency;
-    int Octave;
+    int Frequency[3];
+    int Octave[3];
+    int Octave1;
+    int Octave2;
     bool RegenerateNoiseMap = false;
     static ImTextureID NoiseMapTexture = nullptr;
+    static ImTextureID NoiseMapTexture1 = nullptr;
+    static ImTextureID NoiseMapTexture2 = nullptr;
+    int ActiveNoiseMap = 0;
+    float Contribution[3] = { 1.0 };
 }
 
 void UI::Initalize(void* _context, void* _gfx)
@@ -50,8 +56,10 @@ void UI::Initalize(void* _context, void* _gfx)
     s_Gfx = (Graphics3D*)_gfx;
 }
 
-void UI::UpdateNoiseMap(ITexture2 texture, VkSampler sampler) {
-    NoiseMapTexture = ImGui_ImplVulkan_AddTexture(sampler, texture->m_vk_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+void UI::UpdateNoiseMap(ITexture2 noise1, ITexture2 noise2, ITexture2 noise3, VkSampler sampler) {
+    NoiseMapTexture = ImGui_ImplVulkan_AddTexture(sampler, noise1->m_vk_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    NoiseMapTexture1 = ImGui_ImplVulkan_AddTexture(sampler, noise2->m_vk_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    NoiseMapTexture2 = ImGui_ImplVulkan_AddTexture(sampler, noise3->m_vk_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void UI::RenderUI()
@@ -130,9 +138,14 @@ void UI::RenderUI()
         ClearShaderCache = true;
     }
     if (NoiseMapTexture) {
-        ImGui::Image(NoiseMapTexture, ImVec2(100, 100));
-        ImGui::SliderFloat("Frequency", &Frequency, 0.0, 64.0f);
-        ImGui::SliderInt("Octaves", &Octave, 0, 16);
+        if(ImGui::ImageButton(NoiseMapTexture, ImVec2(100, 100))  ) {ActiveNoiseMap = 0;} ImGui::SameLine();
+        if(ImGui::ImageButton(NoiseMapTexture1, ImVec2(100, 100)) ) {ActiveNoiseMap = 1;} ImGui::SameLine();
+        if (ImGui::ImageButton(NoiseMapTexture2, ImVec2(100, 100))) { ActiveNoiseMap = 2; } ImGui::SameLine();
+        ImGui::Text("Active Noise Map %d", ActiveNoiseMap);
+        ImGui::Text("Contributions: %.2f, %.2f, %.2f Total: %.2f%%", Contribution[0], Contribution[1], Contribution[2], (Contribution[0] + Contribution[1] + Contribution[2]) * 100.0);
+        ImGui::SliderInt("Frequency", &Frequency[ActiveNoiseMap], 0.0, 64.0f);
+        ImGui::SliderInt("Octaves", &Octave[ActiveNoiseMap], 0, 16);
+        ImGui::SliderFloat("Contribution", &Contribution[ActiveNoiseMap], 0.0, 1.0f);
         if (ImGui::Button("Regenerate")) {
             RegenerateNoiseMap = true;
         }

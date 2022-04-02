@@ -1,14 +1,21 @@
 #version 450 core
-#extension GL_EXT_scalar_block_layout : enable
+#include "../pointer.h"
 
 layout (location = 0) out vec3 color;
 
-layout (scalar, push_constant) uniform pushblock {
-    vec3 inOffset;
+layout (push_constant) uniform pushblock {
+	mat4 u_ProjView;
+	uint64_t u_DebugObjectPtr;
+	uint u_DebugInstanceOffset; 
+};
+
+struct DebugObject {
+	vec3 inOffset;
 	vec3 inScale;
 	vec3 inColor;
-	mat4 u_ProjView;
 };
+
+DECLARE_POINTER_ARRAY(DebugObject, scalar);
 
 const vec3 CubeVertices [36] = {        
 	vec3(-1.0,  1.0, -1.0),
@@ -50,6 +57,7 @@ const vec3 CubeVertices [36] = {
 };
 
 void main() {
-    color = inColor;
-    gl_Position = u_ProjView * vec4((CubeVertices[gl_VertexIndex] * inScale) + inOffset, 1.0);
+	DebugObject obj = DebugObject_T(u_DebugObjectPtr).v[gl_InstanceIndex + u_DebugInstanceOffset];
+    color = obj.inColor;
+    gl_Position = u_ProjView * vec4((CubeVertices[gl_VertexIndex] * obj.inScale) + obj.inOffset, 1.0);
 }

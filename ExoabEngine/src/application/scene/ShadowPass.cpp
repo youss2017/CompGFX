@@ -89,7 +89,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	FramebufferAttachment depthAtachment = FramebufferAttachment::Create(gContext, 0, size, size, VK_FORMAT_D32_SFLOAT, clear);
 	mFBO.SetDepthAttachment(depthAtachment);
 	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
-	Framebuffer_TransistionAttachment(cmd.cmd, &depthAtachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	vk::Framebuffer_TransistionAttachment(cmd.cmd, &depthAtachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(cmd);
 
 	Shader vertex = Shader(gContext, "assets/shaders/shadow/shadow.vert");

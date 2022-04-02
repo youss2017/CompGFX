@@ -32,6 +32,11 @@ struct TerrainSubmesh {
     Ph::BoundingBox mBox;
 };
 
+struct TerrainHeightMap {
+    float mContribution;
+    float* mHeightMap;
+};
+
 class Terrain {
 
 public:
@@ -43,7 +48,7 @@ public:
     Terrain(const Terrain& other) = delete;
     Terrain(const Terrain&& other) = delete;
 
-    void ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, float* heightmap);
+    void ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, std::vector<TerrainHeightMap> heightMaps);
     void SetTransform(const glm::mat4& transform) { mModelTransform = transform;  }
     glm::mat4 GetTransform() { return mModelTransform; }
    

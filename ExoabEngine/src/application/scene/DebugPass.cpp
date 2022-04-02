@@ -3,8 +3,8 @@
 
 extern vk::VkContext gContext;
 
-Application::DebugPass::DebugPass(const Framebuffer& fbo) : Scene(gContext->defaultDevice, true), mFBO(fbo), mProjView(glm::mat4(1.0)) {
-	mLayout = ShaderConnector_CreatePipelineLayout(0, nullptr, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject)}});
+Application::DebugPass::DebugPass(const Framebuffer& fbo) : Scene(gContext->defaultDevice, true), mFBO(fbo), mProjView(glm::mat4(1.0)), mDebugObjectCount(0), mDebugBuffer(nullptr), mDebugObjectIndex(0), mDebugBufferPointer(0) {
+	mLayout = ShaderConnector_CreatePipelineLayout(0, nullptr, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugPushblock)}});
 	Shader vertexShader = Shader(gContext, "assets/shaders/debug/debugVertex.vert");
 	Shader fragmentShader = Shader(gContext, "assets/shaders/debug/debugFragment.frag");
 	PipelineSpecification specification;
@@ -33,6 +33,8 @@ Application::DebugPass::~DebugPass() {
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	PipelineState_Destroy(mState);
 	PipelineState_Destroy(mStateInFront);
+	if (mDebugBuffer)
+		Gfree(mDebugBuffer);
 }
 
 void Application::DebugPass::ReloadShaders() {
@@ -50,16 +52,36 @@ VkCommandBuffer Application::DebugPass::Prepare(uint32_t FrameIndex, float dTime
 	return mCmds[FrameIndex];
 }
 
-void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color, bool inFront) {
+void Application::DebugPass::DrawCube(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color, bool inFront, uint32_t requiredSize) {
+	if ((mDebugObjectCount == 0) || (mDebugObjectIndex + 1 == mDebugObjectCount) || (requiredSize > (mDebugObjectCount - mDebugObjectIndex))) {
+		if (mDebugBuffer) {
+			DebugObject* tempBuffer = new DebugObject[mDebugObjectCount];
+			memcpy(tempBuffer, mDebugBuffer, sizeof(DebugObject) * mDebugObjectCount);
+			Gfree(mDebugBuffer);
+			uint32_t countPreIcremeant = mDebugObjectCount;
+			mDebugObjectCount += (requiredSize) ? requiredSize : 10;
+			mDebugBuffer = (DebugObject*)Gmalloc(mDebugObjectCount * sizeof(DebugObject), BufferType::BUFFER_TYPE_STORAGE, true);
+			mDebugBufferPointer = Buffer2_GetGPUPointer(Gbuffer(mDebugBuffer));
+			memcpy(mDebugBuffer, tempBuffer, sizeof(DebugObject) * countPreIcremeant);
+			delete[] tempBuffer;
+		}
+		else {
+			mDebugObjectCount += (requiredSize) ? requiredSize : 10;
+			mDebugBuffer = (DebugObject*)Gmalloc(sizeof(DebugObject) * mDebugObjectCount, BufferType::BUFFER_TYPE_STORAGE, true);
+			mDebugBufferPointer = Buffer2_GetGPUPointer(Gbuffer(mDebugBuffer));
+		}
+	}
 	DebugObject obj;
 	obj.inOffset = position - (scale / 2.0f);
 	obj.inScale = scale;
 	obj.inColor = color;
-	obj.u_ProjView = mProjView;
+	// memcpy to avoid coherent memory read.
+	memcpy(&mDebugBuffer[mDebugObjectIndex], &obj, sizeof(DebugObject));
 	if (inFront)
-		mCubesInFront.push_back(obj);
+		mCubesInFrontCount++;
 	else
-		mCubes.push_back(obj);
+		mCubesCount++;
+	mDebugObjectIndex++;
 }
 
 void Application::DebugPass::GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime) {
@@ -112,20 +134,24 @@ void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	renderingInfo.pStencilAttachment = nullptr;
 	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
 
-	if (mCubes.size() > 0) {
+	if (mCubesCount > 0) {
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
-		for (const auto& cube : mCubes) {
-			vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject), &cube);
-			vkCmdDraw(cmd, 36, 1, 0, 0);
-		}
+		DebugPushblock pushblock;
+		pushblock.u_ProjView = mProjView;
+		pushblock.u_DebugObjectPtr = mDebugBufferPointer;
+		pushblock.u_DebugInstanceOffset = 0;
+		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugPushblock), &pushblock);
+		vkCmdDraw(cmd, 36, mCubesCount, 0, 0);
 	}
 
-	if (mCubesInFront.size() > 0) {
+	if (mCubesInFrontCount > 0) {
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mStateInFront->m_pipeline);
-		for (const auto& cube : mCubesInFront) {
-			vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugObject), &cube);
-			vkCmdDraw(cmd, 36, 1, 0, 0);
-		}
+		DebugPushblock pushblock;
+		pushblock.u_ProjView = mProjView;
+		pushblock.u_DebugObjectPtr = mDebugBufferPointer;
+		pushblock.u_DebugInstanceOffset = mCubesCount;
+		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugPushblock), &pushblock);
+		vkCmdDraw(cmd, 36, mCubesInFrontCount, 0, 0);
 	}
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);

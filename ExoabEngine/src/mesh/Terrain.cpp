@@ -79,10 +79,10 @@ Terrain::~Terrain() {
 	Buffer2_Destroy(mIndicesBuffer);
 }
 
-void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, float* heightmap) {
+void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, std::vector<TerrainHeightMap> heightMaps) {
 	using namespace glm;
 
-	auto sample = [heightMapWidth, heightMapHeight, minHeight, maxHeight, heightmap](int x, int y) throw() -> float {
+	auto sample = [heightMapWidth, heightMapHeight, minHeight, maxHeight, heightMaps](int x, int y) throw() -> float {
 		/*		KtK
 				lcr
 				KbK
@@ -103,16 +103,19 @@ void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minH
 		ivec2 k2 = clamp(ivec2(size * (c + vec2(texel.x, -texel.y))), ivec2(0), ivec2(size));
 		ivec2 k3 = clamp(ivec2(size * (c + vec2(-texel.x, texel.y))), ivec2(0), ivec2(size));
 		ivec2 k4 = clamp(ivec2(size * (c + texel)), ivec2(0), ivec2(size));
-		float cV  = 0.5f * float(heightmap[y * heightMapWidth + x]);
-		float lV  = 0.1f * float(heightmap[l.y * heightMapWidth + l.x]);
-		float rV  = 0.1f * float(heightmap[r.y * heightMapWidth + r.x]);
-		float tV  = 0.1f * float(heightmap[t.y * heightMapWidth + t.x]);
-		float bV  = 0.1f * float(heightmap[b.y * heightMapWidth + b.x]);
-		float k1V = 0.025 * float(heightmap[k1.y * heightMapWidth + k1.x]);
-		float k2V = 0.025 * float(heightmap[k2.y * heightMapWidth + k2.x]);
-		float k3V = 0.025 * float(heightmap[k3.y * heightMapWidth + k3.x]);
-		float k4V = 0.025 * float(heightmap[k4.y * heightMapWidth + k4.x]);
-		float value = clamp(cV + lV + rV + tV + bV + k1V + k2V + k3V + k4V, 0.0f, 1.0f);
+		float value = 0.0;
+		for (auto& heightmap : heightMaps) {
+			float cV = 0.5f * (float(heightmap.mHeightMap[y * heightMapWidth + x]));
+			float lV = 0.1f * (float(heightmap.mHeightMap[l.y * heightMapWidth + l.x]));
+			float rV = 0.1f * (float(heightmap.mHeightMap[r.y * heightMapWidth + r.x]));
+			float tV = 0.1f * (float(heightmap.mHeightMap[t.y * heightMapWidth + t.x]));
+			float bV = 0.1f * (float(heightmap.mHeightMap[b.y * heightMapWidth + b.x]));
+			float k1V = 0.025 * (float(heightmap.mHeightMap[k1.y * heightMapWidth + k1.x]));
+			float k2V = 0.025 * (float(heightmap.mHeightMap[k2.y * heightMapWidth + k2.x]));
+			float k3V = 0.025 * (float(heightmap.mHeightMap[k3.y * heightMapWidth + k3.x]));
+			float k4V = 0.025 * (float(heightmap.mHeightMap[k4.y * heightMapWidth + k4.x]));
+			value += clamp(cV + lV + rV + tV + bV + k1V + k2V + k3V + k4V, 0.0f, 1.0f) * heightmap.mContribution;
+		}
 		return mix(minHeight, maxHeight, value);
 	};
 

@@ -140,7 +140,7 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 
 	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
-		Framebuffer_TransistionImage(cmd.cmd, mDownsampleTexture, VK_IMAGE_ASPECT_COLOR_BIT, i, VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL);
+		vk::Framebuffer_TransistionImage(cmd.cmd, mDownsampleTexture, VK_IMAGE_ASPECT_COLOR_BIT, i, VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL);
 		RecordCommands(i);
 	}
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(cmd);

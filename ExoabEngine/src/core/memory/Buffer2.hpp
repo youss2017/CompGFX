@@ -33,6 +33,10 @@ void Buffer2_Unmap(IBuffer2 buffer);
 uint64_t Buffer2_GetGPUPointer(IBuffer2 buffer);
 void Buffer2_Destroy(IBuffer2 buffer);
 
-void* Gmalloc(uint32_t size, BufferType type);
+// DisableVerification means you do not to use verify methods
+void* Gmalloc(uint32_t size, BufferType type, bool DisableVerification);
+void GverifyReadWrite(void* ptr);
+void GverifyRead(void* ptr);
+void GverifyWrite(void* ptr);
 void Gfree(void* ptr);
 IBuffer2 Gbuffer(void* ptr);

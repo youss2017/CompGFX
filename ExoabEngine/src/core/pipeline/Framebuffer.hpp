@@ -75,25 +75,3 @@ struct Framebuffer {
 	}
 
 };
-
-/*
-	Since were using dynamic rendering (no render pass) we must transistion textures into "final layout" in the first use
-*/
-
-void Framebuffer_TransistionAttachment(VkCommandBuffer cmd, FramebufferAttachment* attachment, VkAccessFlags dstAccess, VkImageLayout newLayout,
-	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	VkAccessFlags srcAccess = VK_ACCESS_NONE,
-	VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
-
-void Framebuffer_TransistionImage(VkCommandBuffer cmd, ITexture2 attachment, VkImageAspectFlags aspect, uint32_t frameIndex, VkAccessFlags dstAccess, VkImageLayout newLayout,
-	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	VkAccessFlags srcAccess = VK_ACCESS_NONE,
-	VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
-
-void Framebuffer_TransistionImage(VkCommandBuffer cmd, FramebufferAttachment* attachment, uint32_t frameIndex, VkAccessFlags dstAccess, VkImageLayout newLayout,
-	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	VkAccessFlags srcAccess = VK_ACCESS_NONE,
-	VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);

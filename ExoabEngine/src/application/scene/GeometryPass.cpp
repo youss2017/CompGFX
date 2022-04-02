@@ -25,8 +25,8 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
 	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
-	Framebuffer_TransistionAttachment(transitionCmd.cmd, &colorAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-	Framebuffer_TransistionAttachment(transitionCmd.cmd, &depthAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &colorAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &depthAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
 	
 	mSampler = vk::Gfx_CreateSampler(gContext);

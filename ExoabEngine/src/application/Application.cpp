@@ -17,6 +17,7 @@
 #include "perlin_noise.hpp"
 #include "../audio/Audio.hpp"
 #include "../assets/geometry.cfg"
+#include <stb/stb_image_write.h>
 
 bool Application::Quit = false;
 
@@ -55,6 +56,8 @@ namespace Application
 	static Terrain* t0 = nullptr;
 	static uint32_t instanceCount = 500;
 	static ITexture2 noiseMapTexture;
+	static ITexture2 noiseMapTexture1;
+	static ITexture2 noiseMapTexture2;
 	ShaderTypes::InstanceData* instance = new ShaderTypes::InstanceData[instanceCount];
 
 }
@@ -130,17 +133,22 @@ bool Application::LoadAssets()
 }
 
 static void CreateTerrain() {
-	int w = 256;
-	int h = 256;
+	int w = 512;
+	int h = 512;
 	int hw = 512;
 	int hh = 512;
-	if(!Application::t0)
-		Application::t0 = new Terrain(w, h, 4, 4);
 	std::vector<float> perlinBuffer(hw * hh);
-	Utils::perlin(hw, hh, std::chrono::high_resolution_clock::now().time_since_epoch().count(), UI::Frequency, UI::Octave, perlinBuffer.data());
-	Application::t0->ApplyHeightmap(hw, hh, 0.0, 10.0f, perlinBuffer.data());
-	Application::t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0)));
-
+	std::vector<float> perlinBuffer1(hw * hh);
+	std::vector<float> perlinBuffer2(hw * hh);
+	if (UI::ActiveNoiseMap == 0 || !(Application::t0)) {
+		Utils::perlin(hw, hh, std::chrono::high_resolution_clock::now().time_since_epoch().count(), UI::Frequency[0], UI::Octave[0], perlinBuffer.data());
+	}
+	if (UI::ActiveNoiseMap == 1 || !(Application::t0)) {
+		Utils::perlin(hw, hh, std::chrono::high_resolution_clock::now().time_since_epoch().count(), UI::Frequency[1], UI::Octave[1], perlinBuffer1.data());
+	}
+	if (UI::ActiveNoiseMap == 2 || !(Application::t0)) {
+		Utils::perlin(hw, hh, std::chrono::high_resolution_clock::now().time_since_epoch().count(), UI::Frequency[2], UI::Octave[2], perlinBuffer2.data());
+	}
 	if (!Application::noiseMapTexture) {
 		Texture2DSpecification specifcation;
 		specifcation.m_Width = hw;
@@ -150,18 +158,39 @@ static void CreateTerrain() {
 		specifcation.mTextureSwizzling.g = VK_COMPONENT_SWIZZLE_R;
 		specifcation.mTextureSwizzling.b = VK_COMPONENT_SWIZZLE_R;
 		Application::noiseMapTexture = Texture2_Create(gContext, specifcation);
+		Application::noiseMapTexture1 = Texture2_Create(gContext, specifcation);
+		Application::noiseMapTexture2 = Texture2_Create(gContext, specifcation);
 	}
-	Texture2_UploadPixels(Application::noiseMapTexture, perlinBuffer.data(), perlinBuffer.size() * sizeof(float));
+	if (UI::ActiveNoiseMap == 0 || !(Application::t0)) {
+		Texture2_UploadPixels(Application::noiseMapTexture, perlinBuffer.data(), perlinBuffer.size() * sizeof(float));
+	}
+	if (UI::ActiveNoiseMap == 1 || !(Application::t0)) {
+		Texture2_UploadPixels(Application::noiseMapTexture1, perlinBuffer1.data(), perlinBuffer1.size() * sizeof(float));
+	}
+	if (UI::ActiveNoiseMap == 2 || !(Application::t0)) {
+		Texture2_UploadPixels(Application::noiseMapTexture2, perlinBuffer2.data(), perlinBuffer2.size() * sizeof(float));
+	}
+	if (!Application::t0)
+		Application::t0 = new Terrain(w, h, 50, 50);
+	Application::t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0)));
+	Texture2_ReadPixels(Application::noiseMapTexture, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer.data());
+	Texture2_ReadPixels(Application::noiseMapTexture1, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer1.data());
+	Texture2_ReadPixels(Application::noiseMapTexture2, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer2.data());
+	Application::t0->ApplyHeightmap(hw, hh, 0.0, 10.0f, { {UI::Contribution[0], perlinBuffer.data() }, {UI::Contribution[1], perlinBuffer1.data() }, {UI::Contribution[2], perlinBuffer2.data() } });
 }
 
 bool Application::CreateResources()
 {
 	PROFILE_FUNCTION();
 	
-	UI::Frequency = 8.0;
-	UI::Octave = 2;
+	UI::Frequency[0] = 8.0;
+	UI::Octave[0] = 2;
+	UI::Frequency[1] = 8.0;
+	UI::Octave[1] = 2;
+	UI::Frequency[2] = 8.0;
+	UI::Octave[2] = 2;
 	CreateTerrain();
-	UI::UpdateNoiseMap(noiseMapTexture, vk::Gfx_CreateSampler(gContext));
+	UI::UpdateNoiseMap(noiseMapTexture, noiseMapTexture1, noiseMapTexture2, vk::Gfx_CreateSampler(gContext));
 
 	shadow = new ShadowPass(gVerticesSSBO, gIndicesBuffer, t0, gECS, &gCamera, 2048);
 	cullPass = new FrustumCullPass(gECS, &gLockedCamera);
@@ -272,21 +301,20 @@ bool Application::Update(double dTimeFromStart, double dTime, double FrameRate, 
 	srand(0x42);
 	glm::vec3 color = glm::vec3(rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX);
 	color *= 5.0f;
-	debugPass->DrawCube(pos * glm::vec3(1.0, -1.0, 1.0), {1.0, 1.0, 1.0}, color, false);
+	debugPass->DrawCube(pos * glm::vec3(1.0, -1.0, 1.0), {1.0, 1.0, 1.0}, color, false, 1);
 
 	for (int i = 0; i < t0->GetSubmeshCount(); i++) {
 		auto& submesh = t0->GetSubmesh(i);
-		debugPass->DrawCube(submesh.mBox.mBoxMin + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.25), glm::vec3(52, 140, 235) / glm::vec3(255), false);
-		debugPass->DrawCube(submesh.mBox.mBoxMax, glm::vec3(0.25), glm::vec3(227, 18, 60) / glm::vec3(255), false);
+		debugPass->DrawCube(submesh.mBox.mBoxMin + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.25), glm::vec3(52, 140, 235) / glm::vec3(255), false, t0->GetSubmeshCount());
+		debugPass->DrawCube(submesh.mBox.mBoxMax, glm::vec3(0.25), glm::vec3(227, 18, 60) / glm::vec3(255), false, t0->GetSubmeshCount());
 	}
 
 	for (int i = 0; i < instanceCount; i++) {
 		glm::vec3 centerPos = instance[i].mModel * glm::vec4(gGeomtry[0].m_bounding_sphere_center, 1.0);
 		glm::vec3 radPos = glm::vec3(instance[i].mModel * glm::vec4(gGeomtry[0].m_bounding_sphere_center, 1.0)) + glm::vec3(gGeomtry[0].m_bounding_sphere_radius, 0, 0);
-		debugPass->DrawCube(centerPos, glm::vec3(0.25), glm::vec3(196, 26, 201) / glm::vec3(255), false);
-		debugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(26, 173, 63) / glm::vec3(255), false);
+		debugPass->DrawCube(centerPos, glm::vec3(0.25), glm::vec3(196, 26, 201) / glm::vec3(255), false, instanceCount);
+		debugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(26, 173, 63) / glm::vec3(255), false, instanceCount);
 	}
-
 	return true;
 }
 

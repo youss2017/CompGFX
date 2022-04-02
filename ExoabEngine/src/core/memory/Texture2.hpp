@@ -28,6 +28,8 @@ typedef GPUTexture2D_2* ITexture2;
 ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification& specification);
 void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size);
 void Texture2_UpdateMipmaps(ITexture2 texture);
+// PixelSize refers to the size of a single pixel, what access do you want after copy is complete
+void Texture2_ReadPixels(ITexture2 texture, VkAccessFlagBits finalAccessFlags, VkImageLayout currentLayout, uint32_t pixelSize, void* buffer);
 void Texture2_Destroy(ITexture2 texture);
 
 ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, bool mipmaps);

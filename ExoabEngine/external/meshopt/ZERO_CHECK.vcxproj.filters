@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\GFX Apis\ExoabEngine\ExoabEngine\external\meshopt\CMakeFiles\4068c726712adab1478374fa2aa1755b\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{FEDD8D32-AC23-36C2-A7EE-4EFE675E1E47}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

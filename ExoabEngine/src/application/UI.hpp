@@ -27,11 +27,13 @@ namespace UI
 	extern bool ReloadShaders;
 	extern bool ClearShaderCache;
 	extern int BloomDownsampleMip;
-	extern float Frequency;
-	extern int Octave;
+	extern int Frequency[3];
+	extern int Octave[3];
 	extern bool RegenerateNoiseMap;
+	extern int ActiveNoiseMap;
+	extern float Contribution[3];
 
 	void Initalize(void* context, void* gfx);
 	void RenderUI();
-	void UpdateNoiseMap(ITexture2 texture, VkSampler sampler);
+	void UpdateNoiseMap(ITexture2 noise1, ITexture2 noise2, ITexture2 noise3, VkSampler sampler);
 }

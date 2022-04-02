@@ -4,6 +4,8 @@
 #include <stb/stb_image.h>
 #include <StringUtils.hpp>
 
+extern vk::VkContext gContext;
+
 ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification& specification)
 {
 	using namespace VkAlloc;
@@ -93,6 +95,12 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 			VkImageView view;
 			vkCreateImageView(cont->defaultDevice, &viewInfo, nullptr, &view);
 			texture->m_vk_views_per_frame.push_back(view);
+		}
+	}
+	else {
+		for (int i = 0; i < gFrameOverlapCount; i++) {
+			texture->m_vk_views_per_frame.push_back(texture->m_vk_view);
+			texture->m_vk_images_per_frame.push_back(texture->m_vk_image->m_image);
 		}
 	}
 
@@ -283,6 +291,26 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 
 	vkDestroyFence(context->defaultDevice, fence, context->m_allocation_callback);
 	vkDestroyCommandPool(context->defaultDevice, pool, context->m_allocation_callback);
+}
+
+void Texture2_ReadPixels(ITexture2 texture, VkAccessFlagBits finalAccessFlags, VkImageLayout currentLayout, uint32_t pixelSize, void* buffer) {
+	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	vk::Framebuffer_TransistionImage(cmd.cmd, texture, texture->m_vk_aspectmask, 0, VK_ACCESS_MEMORY_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currentLayout);
+	auto spec = texture->m_specification;
+	size_t dstBufferSize = spec.m_Width * spec.m_Height * pixelSize;
+	void* dstBuffer = Gmalloc(dstBufferSize, BufferType::BUFFER_TYPE_TRANSFER_DST, false);
+	VkBufferImageCopy region{};
+	region.bufferOffset = 0;
+	region.imageSubresource.aspectMask = texture->m_vk_aspectmask;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = {0, 0, 0};
+	region.imageExtent = { spec.m_Width, spec.m_Height, 1 };
+	vkCmdCopyImageToBuffer(cmd.cmd, texture->m_vk_image->m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Gbuffer(dstBuffer)->mBuffers[0], 1, &region);
+	vk::Framebuffer_TransistionImage(cmd.cmd, texture, texture->m_vk_aspectmask, 0, finalAccessFlags, currentLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(cmd);
+	GverifyRead(dstBuffer);
+	memcpy(buffer, dstBuffer, dstBufferSize);
+	Gfree(dstBuffer);
 }
 
 void Texture2_Destroy(ITexture2 texture)
