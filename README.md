@@ -25,6 +25,7 @@
 		<li>Compile "ALL_BUILD" in both debug and release mode.</li>
 	</ul>
 </ol>
+<p><h1>***IMPORTANT***</h1><b>Update Vulkan SDK C/C++ include directroy and Additional Library Directory.</b></p>
 </p>
 </body>
 

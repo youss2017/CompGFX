@@ -172,7 +172,7 @@ static void CreateTerrain() {
 	}
 	if (!Application::t0)
 		Application::t0 = new Terrain(w, h, 50, 50);
-	Application::t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(2.0)));
+	Application::t0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
 	Texture2_ReadPixels(Application::noiseMapTexture, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer.data());
 	Texture2_ReadPixels(Application::noiseMapTexture1, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer1.data());
 	Texture2_ReadPixels(Application::noiseMapTexture2, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer2.data());
