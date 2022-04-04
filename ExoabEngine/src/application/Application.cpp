@@ -117,34 +117,72 @@ namespace Application
 		
 		/* Camera Controls */
 		double RotateRate = 45.0;
-		if (Global::Window->IsKeyDown('w')) {
-			mCamera.MoveForward(Global::Time * 22.0);
-		}if (Global::Window->IsKeyDown('s')) {
-			mCamera.MoveForward(Global::Time * -22.0);
-		}if (Global::Window->IsKeyDown('a')) {
-			mCamera.MoveSideways(Global::Time * -22.0);
-		}if (Global::Window->IsKeyDown('d')) {
-			mCamera.MoveSideways(Global::Time * 22.0);
-		}if (Global::Window->IsKeyDown('q')) {
-			mCamera.Yaw(Global::Time * -RotateRate, true);
-		}if (Global::Window->IsKeyDown('e')) {
-			mCamera.Yaw(Global::Time * RotateRate, true);
-		}if (Global::Window->IsKeyDown('z')) {
-			mCamera.Pitch(Global::Time * -RotateRate, true);
-		}if (Global::Window->IsKeyDown('x')) {
-			mCamera.Pitch(Global::Time * RotateRate, true);
-		}if (Global::Window->IsKeyDown(GLFW_KEY_UP)) {
-			mCamera.MoveAlongUpAxis(Global::Time * -22.0);
-		}if (Global::Window->IsKeyDown(GLFW_KEY_DOWN)) {
-			mCamera.MoveAlongUpAxis(Global::Time * 22.0);
-		}
+		static bool WKey = false;
+		static bool SKey = false;
+		static bool AKey = false;
+		static bool DKey = false;
+		static bool QKey = false;
+		static bool EKey = false;
+		static bool ZKey = false;
+		static bool XKey = false;
+		static bool UpKey = false;
+		static bool DownKey = false;
+		
+		Global::Window->RegisterCallback(EVENT_KEY_PRESS | EVENT_KEY_RELEASE, [&](const Event& e) throw() -> void {
+				switch (e.mPayload.KeyLowerCase) {
+				case 'w':
+					WKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 's':
+					SKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'a':
+					AKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'd':
+					DKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'q':
+					QKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'e':
+					EKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'z':
+					ZKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'x':
+					XKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				};
+			switch (e.mPayload.NonASCIKey) {
+				case GLFW_KEY_UP:
+					UpKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case GLFW_KEY_DOWN:
+					DownKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case GLFW_KEY_ESCAPE:
+					Global::Quit = e.mEvents & EVENT_KEY_RELEASE;
+					break;
+				}
+			}
+		);
+
+		if (WKey) mCamera.MoveForward(Global::Time * 22.0);
+		if (SKey) mCamera.MoveForward(Global::Time * -22.0);
+		if (AKey) mCamera.MoveSideways(Global::Time * -22.0);
+		if (DKey) mCamera.MoveSideways(Global::Time * 22.0);
+		if (QKey) mCamera.Yaw(Global::Time * -RotateRate, true);
+		if (EKey) mCamera.Yaw(Global::Time * RotateRate, true);
+		if (ZKey) mCamera.Pitch(Global::Time * -RotateRate, true);
+		if (XKey) mCamera.Pitch(Global::Time * RotateRate, true);
+		if (UpKey) mCamera.MoveAlongUpAxis(Global::Time * -22.0);
+		if (DownKey) mCamera.MoveAlongUpAxis(Global::Time * 22.0);
+
 		mCamera.UpdateViewMatrix();
 		auto position = mCamera.GetPosition();
 		UI::CameraPosition = position;
-		if (Global::Window->IsKeyUp(GLFW_KEY_ESCAPE))
-		{
-			Global::Quit = true;
-		}
 
 		if (UI::StateChanged)
 		{

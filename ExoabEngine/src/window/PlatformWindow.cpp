@@ -40,7 +40,22 @@ static void _Internal_WindowKeyCallback(GLFWwindow *window, int key, int scancod
         return;
     if (action == GLFW_REPEAT)
         action = GLFW_PRESS;
-    w->m_keys[key] = action;
+    for (auto& callback : w->mCallbacks) {
+        if (callback.first & EVENT_KEY_PRESS || callback.first & EVENT_KEY_RELEASE) {
+            if (callback.first & EVENT_KEY_PRESS && action != GLFW_PRESS && !(callback.first & EVENT_KEY_RELEASE))
+                continue;
+            if (callback.first & EVENT_KEY_RELEASE && action != GLFW_RELEASE && !(callback.first & EVENT_KEY_PRESS))
+                continue;
+            Event e{};
+            e.mEvents = action == GLFW_PRESS ? EVENT_KEY_PRESS : EVENT_KEY_RELEASE;
+            e.mDetails = EVENT_DETAIL_UNDEFINED;
+            e.mPayload.NonASCIKey = key;
+            e.mPayload.KeyLowerCase = tolower(key);
+            e.mPayload.KeyUpperCase = toupper(key);
+            callback.second(e);
+        }
+    }
+    //w->m_keys[key] = action;
 }
 
 void _Internal_WindowFocusCallback(GLFWwindow *window, int focused)
@@ -57,8 +72,12 @@ void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int act
         return;
     for (auto& callback : w->mCallbacks) {
         if (callback.first & EVENT_MOUSE_PRESS || callback.first & EVENT_MOUSE_RELEASE) {
+            if (callback.first & EVENT_MOUSE_PRESS && action != GLFW_PRESS && !(callback.first & EVENT_MOUSE_RELEASE))
+                continue;
+            if (callback.first & EVENT_MOUSE_RELEASE && action != GLFW_RELEASE && !(callback.first & EVENT_MOUSE_PRESS))
+                continue;
             Event e{};
-            e.mEvents = (action == GLFW_PRESS) ? EVENT_MOUSE_PRESS : EVENT_MOUSE_RELEASE;
+            e.mEvents = action == GLFW_PRESS ? EVENT_MOUSE_PRESS : EVENT_MOUSE_RELEASE;;
             switch (button) {
                 case GLFW_MOUSE_BUTTON_LEFT:
                     e.mDetails = EVENT_DETAIL_LEFT_BUTTON;
@@ -85,7 +104,7 @@ void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int act
 PlatformWindow::PlatformWindow(std::string title, int width, int height)
     : m_width(width), m_height(height)
 {
-    memset(m_keys, 3, 512 * 4);
+    //memset(m_keys, 3, 512 * 4);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
@@ -123,18 +142,18 @@ void PlatformWindow::RegisterCallback(EventFlagBits events, const std::function<
     mCallbacks.push_back(std::make_pair(events, func));
 }
 
-bool PlatformWindow::IsKeyDown(uint16_t key)
-{
-    key = toupper(key);
-    if (m_keys[key] == GLFW_PRESS)
-        return true;
-    return false;
-}
-
-bool PlatformWindow::IsKeyUp(uint16_t key)
-{
-    key = toupper(key);
-    bool status = m_keys[key] == GLFW_RELEASE;
-    m_keys[key] = 3;
-    return status;
-}
+//bool PlatformWindow::IsKeyDown(uint16_t key)
+//{
+//    key = toupper(key);
+//    if (m_keys[key] == GLFW_PRESS)
+//        return true;
+//    return false;
+//}
+//
+//bool PlatformWindow::IsKeyUp(uint16_t key)
+//{
+//    key = toupper(key);
+//    bool status = m_keys[key] == GLFW_RELEASE;
+//    m_keys[key] = 3;
+//    return status;
+//}
