@@ -3,10 +3,9 @@
 #include "Buffer2.hpp"
 #include <stb/stb_image.h>
 #include <StringUtils.hpp>
+#include "Globals.hpp"
 
-extern vk::VkContext gContext;
-
-ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification& specification)
+ITexture2 Texture2_Create(const Texture2DSpecification& specification)
 {
 	using namespace VkAlloc;
 	IMAGE_DESCRIPITION desc{};
@@ -40,13 +39,13 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	}
 	ITexture2 texture = new GPUTexture2D_2();
 	texture->m_vk_description = desc;
-	texture->m_context = context;
+	texture->m_context = Global::Context;
 	texture->m_specification = specification;
 	texture->mMipCount = desc.m_mipLevels;
 	desc.m_lazyAllocate = specification.m_LazilyAllocate;
-	VkAlloc::CreateImages(ToVKContext(context)->m_future_memory_context, 1, &desc, &texture->m_vk_image);
+	VkAlloc::CreateImages(Global::Context->m_future_memory_context, 1, &desc, &texture->m_vk_image);
 	std::string userData = "IMAGE";
-	vmaSetAllocationUserData(ToVKContext(context)->m_future_memory_context->m_allocator, texture->m_vk_image->m_suballocation.m_allocation, userData.data());
+	vmaSetAllocationUserData(Global::Context->m_future_memory_context->m_allocator, texture->m_vk_image->m_suballocation.m_allocation, userData.data());
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	viewInfo.viewType = (desc.m_flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
 	viewInfo.format = (VkFormat)specification.m_Format;
@@ -63,8 +62,8 @@ ITexture2 Texture2_Create(GraphicsContext context, const Texture2DSpecification&
 	viewInfo.subresourceRange.baseArrayLayer = 0;
 	viewInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 	texture->m_vk_aspectmask = viewInfo.subresourceRange.aspectMask;
-	vkcheck(vkCreateImageView(ToVKContext(context)->defaultDevice, &viewInfo, nullptr, &texture->m_vk_view));
-	vk::VkContext cont = ToVKContext(context);
+	vkcheck(vkCreateImageView(Global::Context->defaultDevice, &viewInfo, nullptr, &texture->m_vk_view));
+	vk::VkContext cont = Global::Context;
 	if (specification.m_CreatePerFrame)
 	{
 		texture->m_vk_views_per_frame.push_back(texture->m_vk_view);
@@ -294,7 +293,7 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 }
 
 void Texture2_ReadPixels(ITexture2 texture, VkAccessFlagBits finalAccessFlags, VkImageLayout currentLayout, uint32_t pixelSize, void* buffer) {
-	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(Global::Context);
 	vk::Framebuffer_TransistionImage(cmd.cmd, texture, texture->m_vk_aspectmask, 0, VK_ACCESS_MEMORY_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currentLayout);
 	auto spec = texture->m_specification;
 	size_t dstBufferSize = spec.m_Width * spec.m_Height * pixelSize;
@@ -334,7 +333,7 @@ void Texture2_Destroy(ITexture2 texture)
 	delete texture;
 }
 
-ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, bool mipmaps)
+ITexture2 Texture2_CreateFromFile(const char* path, bool mipmaps)
 {
 	int w, h, c;
 	void* pixels = stbi_load(path, &w, &h, &c, 4);
@@ -348,7 +347,7 @@ ITexture2 Texture2_CreateFromFile(GraphicsContext context, const char* path, boo
 	specification.m_Format = VK_FORMAT_R8G8B8A8_UNORM;
 	specification.m_GenerateMipMapLevels = mipmaps;
 	specification.m_TextureUsage = TextureUsage::TEXTURE;
-	ITexture2 texture = Texture2_Create(context, specification);
+	ITexture2 texture = Texture2_Create(specification);
 	Texture2_UploadPixels(texture, pixels, w * h * sizeof(uint32_t));
 	stbi_image_free(pixels);
 	return texture;

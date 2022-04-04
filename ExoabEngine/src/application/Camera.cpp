@@ -1,6 +1,8 @@
 #include "Camera.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
+Camera::Camera() : vPosition(glm::vec3(0.0)), vLookDir(glm::vec3(0.0, 0.0, 1.0f)) {}
+
 Camera::Camera(glm::vec3 vPosition, glm::vec3 vLookDir) : vPosition(vPosition), vLookDir(vLookDir) {}
 
 void Camera::Pitch(double dAngle, bool isDegree) {
@@ -94,11 +96,16 @@ double Camera::GetPitchDegrees() {
 	return dPitchAngle;
 }
 
-glm::mat4 Camera::GetViewMatrix() {
+void Camera::UpdateViewMatrix() {
 	glm::vec3 tmpLookDir = GetLookDir();
 	glm::vec3 vTarget = vPosition + tmpLookDir;
 	glm::mat4 lookAt = glm::lookAt(vTarget, vPosition, vUp);
-	return lookAt;
+	mView = lookAt;
+}
+
+glm::mat4 Camera::GetViewMatrix() {
+	
+	return mView;
 }
 
 void Camera::ResetCamera() {

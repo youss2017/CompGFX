@@ -97,7 +97,7 @@ namespace vk
 			logwarning("Enabling Validation Layers requires the VulkanSDK to be installed or validation .dlls/.so");
 			logwarning("If VulkanSDK is not installed, then validation layers will be prevent the application from running and cause a crash.");
 		}
-		VkContext context = (VkContext)malloc(sizeof(_VkContext));
+		VkContext context = new _VkContext();
 		assert(context);
 		context->m_ApiType = 0;
 		if (!context)
@@ -228,7 +228,8 @@ namespace vk
 		vkDestroyInstance(context->instance, nullptr);
 		if (context->m_allocation_callback)
 			delete context->m_allocation_callback;
-		free(context);
+		// For some reason this is broken?
+		//delete context;
 	}
 
 	std::vector<GraphicsCard> Gfx_GetAllGraphicsCards(VkContext context)

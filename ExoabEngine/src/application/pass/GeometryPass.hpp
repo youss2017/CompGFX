@@ -1,5 +1,5 @@
 #pragma once
-#include "Scene.hpp"
+#include "Pass.hpp"
 #include "FrustrumCullPass.hpp"
 #include "../Camera.hpp"
 #include "../ecs/EntityController.hpp"
@@ -9,13 +9,11 @@
 #include <memory/Buffer2.hpp>
 #include <pipeline/Pipeline.hpp>
 
-extern vk::VkContext gContext;
-
 namespace Application {
 
-	class GeometryPass : public Scene {
+	class GeometryPass : public Pass {
 	public:
-		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap);
+		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap);
 		~GeometryPass();
 		
 		void ReloadShaders();
@@ -27,11 +25,13 @@ namespace Application {
 		Framebuffer& GetFramebuffer() { return mFBO; }
 
 	private:
+		void CullTerrain(const glm::mat4& proj, const glm::mat4& view);
 		void RecordCommands(uint32_t FrameIndex);
 		IBuffer2 mIndicsSSBO;
 		FrustumCullPass* mCullPass;
 	private:
 		Camera* mCamera;
+		Camera* mLockedCamera;
 		EntityController* mECS;
 		glm::vec4 mLightDirection;
 		glm::mat4 mLightSpace;
@@ -55,6 +55,8 @@ namespace Application {
 		VkPipelineLayout mGeoLayout;
 		IPipelineState mGeoState;
 		Framebuffer mFBO;
+		VkDrawIndexedIndirectCommand* mTerrainDrawCommands;
+		uint32_t* mTerrainDrawCount;
 		friend class SkyboxPass;
 	};
 

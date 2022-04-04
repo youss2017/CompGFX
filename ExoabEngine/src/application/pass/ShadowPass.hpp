@@ -1,5 +1,5 @@
 #pragma once
-#include "Scene.hpp"
+#include "Pass.hpp"
 #include "FrustrumCullPass.hpp"
 #include <pipeline/Framebuffer.hpp>
 #include <pipeline/Pipeline.hpp>
@@ -10,7 +10,7 @@
 
 namespace Application {
 
-	class ShadowPass : public Scene {
+	class ShadowPass : public Pass {
 
 	public:
 		ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, EntityController* ecs, Camera* camera, int size);

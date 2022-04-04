@@ -10,8 +10,10 @@ private:
 
 	double dPitchAngle = 0.0;
 	double dYawAngle = 0.0;
+	glm::mat4 mView = glm::mat4(1.0);
 
 public:
+	Camera();
 	Camera(glm::vec3 vPosition, glm::vec3 vLookDir = { 0, 0, 1 });
 
 	void Pitch(double dAngle, bool isDegree);
@@ -34,6 +36,7 @@ public:
 
 	double GetPitchDegrees();
 
+	void UpdateViewMatrix();
 	glm::mat4 GetViewMatrix();
 
 	void ResetCamera();

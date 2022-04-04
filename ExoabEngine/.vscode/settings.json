@@ -2,6 +2,7 @@
     "files.associations": {
         "*.asm": "masm",
         "vector": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "utility": "cpp"
     }
 }

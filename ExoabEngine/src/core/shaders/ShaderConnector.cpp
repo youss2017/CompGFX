@@ -1,7 +1,6 @@
 #include "ShaderConnector.hpp"
 #include <backend/VkGraphicsCard.hpp>
-
-extern vk::VkContext gContext;
+#include "Globals.hpp"
 
 void ShaderConnector_CalculateDescriptorPool(uint32_t bindingsCount, BindingDescription* pBindings, std::vector<VkDescriptorPoolSize>& poolSizes) {
     for (uint32_t i = 0; i < bindingsCount; i++) {
@@ -41,6 +40,9 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
         BindingDescription& binding = pBindings[i];
         if (binding.mBuffer)
             binding.mSharedResources = true;
+        if (binding.mSharedResources && binding.mBuffer == nullptr) {
+            logwarning("Shared resource without providing the buffer!");
+        }
         auto type = binding.mType;
         if ((type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)) {
             set.mBindings.insert(std::make_pair(binding.mBindingID, binding));
@@ -94,7 +96,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
     createInfo.bindingCount = setLayoutDescs.size();
     createInfo.pBindings = setLayoutDescs.data();
     VkDescriptorSetLayout setlayout;
-    vkcheck(vkCreateDescriptorSetLayout(gContext->defaultDevice, &createInfo, nullptr, &setlayout));
+    vkcheck(vkCreateDescriptorSetLayout(Global::Context->defaultDevice, &createInfo, nullptr, &setlayout));
     set.mSetLayout = setlayout;
 
     VkDescriptorSetAllocateInfo allocateInfo;
@@ -104,7 +106,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
     allocateInfo.descriptorSetCount = 1;
     allocateInfo.pSetLayouts = &setlayout;
     for (int32_t i = 0; i < gFrameOverlapCount; i++)
-        vkcheck(vkAllocateDescriptorSets(gContext->defaultDevice, &allocateInfo, &set.mSets[i]));
+        vkcheck(vkAllocateDescriptorSets(Global::Context->defaultDevice, &allocateInfo, &set.mSets[i]));
 
     for (uint32_t frameIndex = 0; frameIndex < gFrameOverlapCount; frameIndex++) {
         for (auto& bindingPair : set.mBindings) {
@@ -129,7 +131,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
                         for (uint32_t mipIndex = 0; mipIndex < texture->mMipCount; mipIndex++) {
                             imageInfo.imageView = texture->mMipmapViews.mMipmapViewsPerFrame[frameIndex][mipIndex];
                             write.pImageInfo = &imageInfo;
-                            vkUpdateDescriptorSets(gContext->defaultDevice, 1, &write, 0, nullptr);
+                            vkUpdateDescriptorSets(Global::Context->defaultDevice, 1, &write, 0, nullptr);
                             write.dstArrayElement++;
                         }
                     }
@@ -141,7 +143,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
                             imageInfo.imageView = texture->m_vk_view;
                         }
                         write.pImageInfo = &imageInfo;
-                        vkUpdateDescriptorSets(gContext->defaultDevice, 1, &write, 0, nullptr);
+                        vkUpdateDescriptorSets(Global::Context->defaultDevice, 1, &write, 0, nullptr);
                         write.dstArrayElement++;
                     }
                 }
@@ -157,7 +159,7 @@ DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, u
                 bufferInfo.offset = 0;
                 bufferInfo.range = VK_WHOLE_SIZE;
                 write.pBufferInfo = &bufferInfo;
-                vkUpdateDescriptorSets(gContext->defaultDevice, 1, &write, 0, nullptr);
+                vkUpdateDescriptorSets(Global::Context->defaultDevice, 1, &write, 0, nullptr);
             }
         }
     }
@@ -177,13 +179,13 @@ VkPipelineLayout ShaderConnector_CreatePipelineLayout(uint32_t descriptorSetCoun
     createInfo.pushConstantRangeCount = ranges.size();
     createInfo.pPushConstantRanges = ranges.data();
     VkPipelineLayout layout;
-    vkcheck(vkCreatePipelineLayout(gContext->defaultDevice, &createInfo, nullptr, &layout));
+    vkcheck(vkCreatePipelineLayout(Global::Context->defaultDevice, &createInfo, nullptr, &layout));
     return layout;
 }
 
 void ShaderConnector_DestroySet(const DescriptorSet& set) {
-    vkDestroyDescriptorSetLayout(gContext->defaultDevice, set.mSetLayout, nullptr);
-    //vkFreeDescriptorSets(gContext->defaultDevice, set.mPool, gFrameOverlapCount, &set.mSets[0]);
+    vkDestroyDescriptorSetLayout(Global::Context->defaultDevice, set.mSetLayout, nullptr);
+    //vkFreeDescriptorSets(Global::Context->defaultDevice, set.mPool, gFrameOverlapCount, &set.mSets[0]);
     for (auto& bindingPair : set.mBindings) {
         auto& binding = bindingPair.second;
         if (binding.mSharedResources)

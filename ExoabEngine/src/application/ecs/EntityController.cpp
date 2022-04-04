@@ -1,8 +1,6 @@
 #include "EntityController.hpp"
 #include <backend/VkGraphicsCard.hpp>
 
-extern vk::VkContext gContext;
-
 EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
 : mGeometry(geometry)
 {

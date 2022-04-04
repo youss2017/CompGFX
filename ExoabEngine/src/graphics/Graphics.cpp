@@ -164,9 +164,8 @@ void Graphics3D_Destroy(IGraphics3D gfx)
         vkDestroyFence(ToVKContext(gfx->m_context)->defaultDevice, gfx->m_FrameData[i].m_RenderFence, nullptr);
         vkDestroyCommandPool(ToVKContext(gfx->m_context)->defaultDevice, gfx->m_FrameData[i].m_pool, nullptr);
     }
-    vk::Gfx_DestroyContext(ToVKContext(gfx->m_context));
     delete gfx->m_window;
-    delete gfx;
+    vk::Gfx_DestroyContext(ToVKContext(gfx->m_context));
 }
 
 FrameData& Graphics3D_GetFrame(IGraphics3D gfx)

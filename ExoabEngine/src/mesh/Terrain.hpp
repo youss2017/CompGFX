@@ -29,7 +29,7 @@ struct TerrainSubmesh {
     uint32_t mFirstVertex;
     uint32_t mFirstIndex;
     uint32_t mIndicesCount;
-    Ph::BoundingBox mBox;
+    Ph::BoundingSphere mSphere;
 };
 
 struct TerrainHeightMap {

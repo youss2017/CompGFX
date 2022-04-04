@@ -76,6 +76,7 @@ namespace vk {
 		bool debugEnabled;
 		VkAlloc::CONTEXT m_future_memory_context;
 		VkAllocationCallbacks* m_allocation_callback;
+		uint32_t mFrameIndex = 0;
 	} typedef* VkContext;
 
 	VkContext Gfx_CreateContext(PlatformWindow* Window, bool EnableDebug, bool ForceIntegeratedGPU,

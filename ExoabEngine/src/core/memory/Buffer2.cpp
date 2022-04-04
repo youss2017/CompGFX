@@ -1,8 +1,7 @@
 #include "Buffer2.hpp"
 #include <backend/VkGraphicsCard.hpp>
 #include <unordered_map>
-
-extern vk::VkContext gContext;
+#include "Globals.hpp"
 
 IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
 {
@@ -29,13 +28,14 @@ IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryTyp
 		desc.m_usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 	desc.mRequireCoherent = requireCoherent;
 	IBuffer2 buffer = new GPUBuffer2();
-	buffer->mContext = gContext;
+	buffer->mContext = Global::Context;
 	buffer->mMemoryType = memoryType;
 	buffer->mSize = size;
 	buffer->mType = type;
-	VkAlloc::CreateBuffers(gContext->m_future_memory_context, 1, &desc, &buffer->mVkAllocBuffer);
-	std::string userData = "BUFFEr";
-	vmaSetAllocationUserData(gContext->m_future_memory_context->m_allocator, buffer->mVkAllocBuffer->m_suballocation.m_allocation, userData.data());
+	VkAlloc::CreateBuffers(Global::Context->m_future_memory_context, 1, &desc, &buffer->mVkAllocBuffer);
+	static int BufferCounter = 0;
+	std::string userData = "BUFFER_" + std::to_string(BufferCounter++);
+	vmaSetAllocationUserData(Global::Context->m_future_memory_context->m_allocator, buffer->mVkAllocBuffer->m_suballocation.m_allocation, userData.data());
 	buffer->mBuffers[0] = buffer->mVkAllocBuffer->m_buffer;
 	if (!intermediateBuffer) {
 		for (int i = 1; i < gFrameOverlapCount; i++) {
@@ -49,9 +49,9 @@ IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryTyp
 			createInfo.queueFamilyIndexCount = 0;
 			createInfo.pQueueFamilyIndices = nullptr;
 			createInfo.flags = 0;
-			vkCreateBuffer(gContext->defaultDevice, &createInfo, nullptr, &buffer->mBuffers[i]);
+			vkCreateBuffer(Global::Context->defaultDevice, &createInfo, nullptr, &buffer->mBuffers[i]);
 			auto& suballoc = buffer->mVkAllocBuffer->m_suballocation;
-			vkBindBufferMemory(gContext->defaultDevice, buffer->mBuffers[i], suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
+			vkBindBufferMemory(Global::Context->defaultDevice, buffer->mBuffers[i], suballoc.m_allocation_info.deviceMemory, suballoc.m_allocation_info.offset);
 		}
 	}
 	return buffer;
@@ -78,9 +78,9 @@ void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset, size_t size
 	}
 	IBuffer2 intermediate = Buffer2_Create(BUFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false, true);
 	Buffer2_UploadData(intermediate, pData, 0, size);
-	VkFence fence = vk::Gfx_CreateFence(gContext, false);
-	VkCommandPool pool = vk::Gfx_CreateCommandPool(gContext, true, false);
-	VkCommandBuffer cmd = vk::Gfx_AllocCommandBuffer(gContext, pool, true);
+	VkFence fence = vk::Gfx_CreateFence(Global::Context, false);
+	VkCommandPool pool = vk::Gfx_CreateCommandPool(Global::Context, true, false);
+	VkCommandBuffer cmd = vk::Gfx_AllocCommandBuffer(Global::Context, pool, true);
 	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	VkBufferCopy region;
 	region.srcOffset = 0;
@@ -88,11 +88,11 @@ void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset, size_t size
 	region.dstOffset = offset;
 	vkCmdCopyBuffer(cmd, intermediate->mBuffers[0], buffer->mBuffers[0], 1, &region);
 	vkEndCommandBuffer(cmd);
-	vk::Gfx_SubmitCmdBuffers(gContext->defaultQueue, {cmd}, {}, {}, {}, fence);
-	vkWaitForFences(gContext->defaultDevice, 1, &fence, true, 5e9);
+	vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, {cmd}, {}, {}, {}, fence);
+	vkWaitForFences(Global::Context->defaultDevice, 1, &fence, true, 5e9);
 	Buffer2_Destroy(intermediate);
-	vkDestroyFence(gContext->defaultDevice, fence, gContext->m_allocation_callback);
-	vkDestroyCommandPool(gContext->defaultDevice, pool, gContext->m_allocation_callback);
+	vkDestroyFence(Global::Context->defaultDevice, fence, Global::Context->m_allocation_callback);
+	vkDestroyCommandPool(Global::Context->defaultDevice, pool, Global::Context->m_allocation_callback);
 }
 
 void* Buffer2_Map(IBuffer2 buffer)
@@ -101,7 +101,7 @@ void* Buffer2_Map(IBuffer2 buffer)
 	if (buffer->mIsMapped)
 		return buffer->mMappedPtr;
 	char8_t **mapped_pointer = (char8_t**)&buffer->mVkAllocBuffer->m_suballocation.m_allocation_info.pMappedData;
-	VkAlloc::MapBuffer(gContext->m_future_memory_context, buffer->mVkAllocBuffer);
+	VkAlloc::MapBuffer(Global::Context->m_future_memory_context, buffer->mVkAllocBuffer);
 	buffer->mIsMapped = true;
 	buffer->mMappedPtr = *mapped_pointer;
 	return *mapped_pointer;
@@ -113,7 +113,7 @@ void Buffer2_Flush(IBuffer2 buffer, uint64_t offset, uint64_t size)
 	{
 		size = buffer->mSize - offset;
 	}
-	VkAlloc::FlushBuffer(gContext->m_future_memory_context, buffer->mVkAllocBuffer, offset, size);
+	VkAlloc::FlushBuffer(Global::Context->m_future_memory_context, buffer->mVkAllocBuffer, offset, size);
 }
 
 void Buffer2_Invalidate(IBuffer2 buffer, uint64_t offset, uint64_t size)
@@ -122,7 +122,7 @@ void Buffer2_Invalidate(IBuffer2 buffer, uint64_t offset, uint64_t size)
 	{
 		size = buffer->mSize - offset;
 	}
-	VkAlloc::InvalidateBuffer(gContext->m_future_memory_context, buffer->mVkAllocBuffer, offset, size);
+	VkAlloc::InvalidateBuffer(Global::Context->m_future_memory_context, buffer->mVkAllocBuffer, offset, size);
 }
 
 void Buffer2_Unmap(IBuffer2 buffer)
@@ -130,7 +130,7 @@ void Buffer2_Unmap(IBuffer2 buffer)
 	assert(buffer->mMemoryType != BufferMemoryType::GPU_ONLY && "Cannot be static.");
 	buffer->mIsMapped = false;
 	buffer->mMappedPtr = nullptr;
-	VkAlloc::UnmapBuffer(gContext->m_future_memory_context, buffer->mVkAllocBuffer);
+	VkAlloc::UnmapBuffer(Global::Context->m_future_memory_context, buffer->mVkAllocBuffer);
 }
 
 uint64_t Buffer2_GetGPUPointer(IBuffer2 buffer)
@@ -139,7 +139,7 @@ uint64_t Buffer2_GetGPUPointer(IBuffer2 buffer)
 		return buffer->mGPUPointer;
 	VkBufferDeviceAddressInfo info{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
 	info.buffer = buffer->mBuffers[0];
-	uint64_t ptr = vkGetBufferDeviceAddress(gContext->defaultDevice, &info);
+	uint64_t ptr = vkGetBufferDeviceAddress(Global::Context->defaultDevice, &info);
 	if (ptr == uint64_t(NULL)) {
 		logerror("Could not get GPU buffer pointer!");
 	}
@@ -151,9 +151,9 @@ void Buffer2_Destroy(IBuffer2 buffer)
 {
 	if (buffer->mIsMapped)
 		Buffer2_Unmap(buffer);
-	VkAlloc::DestroyBuffers(gContext->m_future_memory_context, 1, &buffer->mVkAllocBuffer);
+	VkAlloc::DestroyBuffers(Global::Context->m_future_memory_context, 1, &buffer->mVkAllocBuffer);
 	for (int i = 1; i < gFrameOverlapCount; i++)
-		vkDestroyBuffer(gContext->defaultDevice, buffer->mBuffers[i], nullptr);
+		vkDestroyBuffer(Global::Context->defaultDevice, buffer->mBuffers[i], nullptr);
 	delete buffer;
 }
 

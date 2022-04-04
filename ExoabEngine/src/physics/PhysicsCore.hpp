@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <glm/detail/type_half.hpp>
+#include <vector>
 
 namespace Ph {
 
@@ -48,9 +49,26 @@ namespace Ph {
 		vec3 mBoxMax;
 	};
 
+	struct BoundingSphere {
+		vec3 mCenter;
+		float mRadius;
+	};
+
+	std::vector<float16> VFloat32ToFloat16(const std::vector<float>& source);
+	std::vector<float16> VFloat32ToFloat16(const float* source, uint32_t count);
+	std::vector<float16> VFloat64ToFloat16(const std::vector<double>& source);
+	std::vector<float16> VFloat64ToFloat16(const double* source, uint32_t count);
+
+	std::vector<float> VFloat16ToFloat32(const std::vector<float16>& source);
+	std::vector<float> VFloat16ToFloat32(const float16* source, uint32_t count);
+	std::vector<double> VFloat16ToFloat64(const std::vector<float16>& source);
+	std::vector<double> VFloat16ToFloat64(const float16* source, uint32_t count);
+
 	// Stride to next position
 	BoundingBox CalculateBoundingBox(void* pVertices, uint32_t* pIndices, uint32_t indicesCount, uint32_t verticesStride);
 	// Same as the original expect were working with hvec3 instead.
 	BoundingBox CalculateBoundingBox16(void* pVertices, uint32_t* pIndices, uint32_t indicesCount, uint32_t verticesStride);
+
+	BoundingSphere CalculateBoundingSphere(void* pVertices, uint32_t* pIndices, uint32_t indicesCount, uint32_t verticesStride);
 
 }

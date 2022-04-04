@@ -3,35 +3,34 @@
 #include "../../window/PlatformWindow.hpp"
 #include "perlin_noise.hpp"
 #include <stb/stb_image_write.h>
-
-extern vk::VkContext gContext;
-namespace Application {
-	extern PlatformWindow* gWindow;
-}
+#include "../Globals.hpp"
 
 struct TerrainPushblock {
 	glm::mat4 u_Model;
 	glm::mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
 };
 
-Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, EntityController* ecs, ITexture2 shadowMap) : Scene(gContext->defaultDevice, true), mCamera(camera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap) : Pass(Global::Context->defaultDevice, true), mCamera(camera), mLockedCamera(lockedCamera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	
+	mTerrainDrawCommands = (VkDrawIndexedIndirectCommand*)Gmalloc(terrain->GetSubmeshCount() * sizeof(VkDrawIndexedIndirectCommand), BufferType::BUFFER_TYPE_INDIRECT, false);
+	mTerrainDrawCount = (uint32_t*)Gmalloc(sizeof(uint32_t), BufferType::BUFFER_TYPE_INDIRECT, false);
+
 	mFBO.m_width = width;
 	mFBO.m_height = height;
-	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(gContext, VK_IMAGE_USAGE_STORAGE_BIT, width, height, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
-	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(gContext, 0, width, height, VK_FORMAT_D32_SFLOAT, { 1.0f });
+	FramebufferAttachment colorAttachment = FramebufferAttachment::Create(Global::Context, VK_IMAGE_USAGE_STORAGE_BIT, width, height, VK_FORMAT_B10G11R11_UFLOAT_PACK32, { 0.5, 0.5, 0.6, 0 });
+	FramebufferAttachment depthAttachment = FramebufferAttachment::Create(Global::Context, 0, width, height, VK_FORMAT_D32_SFLOAT, { 1.0f });
 	mFBO.AddColorAttachment(0, colorAttachment);
 	mFBO.SetDepthAttachment(depthAttachment);
 
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
-	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(Global::Context);
 	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &colorAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &depthAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
 	
-	mSampler = vk::Gfx_CreateSampler(gContext);
+	mSampler = vk::Gfx_CreateSampler(Global::Context);
 	mT0 = terrain;
-	mShadowSampler = vk::Gfx_CreateSampler(gContext,
+	mShadowSampler = vk::Gfx_CreateSampler(Global::Context,
 		VK_FILTER_LINEAR,
 		VK_FILTER_LINEAR,
 		VK_SAMPLER_MIPMAP_MODE_LINEAR,
@@ -40,13 +39,13 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		0.0f, VK_TRUE, 16.0f, 0.01f, 1000.0f,
 		VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
-	mWoodTex = Texture2_CreateFromFile(gContext, "assets/textures/wood.png", true);
-	mSandTex = Texture2_CreateFromFile(gContext, "assets/textures/sand.jpg", true);
-	mStatueTex = Texture2_CreateFromFile(gContext, "assets/textures/statue.jpg", true);
-	mNormalMap = Texture2_CreateFromFile(gContext, "assets/textures/normal.jpg", true);
+	mWoodTex = Texture2_CreateFromFile("assets/textures/wood.png", true);
+	mSandTex = Texture2_CreateFromFile("assets/textures/sand.jpg", true);
+	mStatueTex = Texture2_CreateFromFile("assets/textures/statue.jpg", true);
+	mNormalMap = Texture2_CreateFromFile("assets/textures/normal.jpg", true);
 	mLightDirection = glm::vec4(0.0);
-	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
-	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT);
+	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+	mInvocationQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT);
 	
 	BindingDescription geometryPass[4];
 	geometryPass[0].mBindingID = 0;
@@ -95,7 +94,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	geometryPassFragment[1].mTextures.push_back(shadowMap);
 	geometryPassFragment[1].mSampler = mShadowSampler;
 
-	BindingDescription terrainBindings[5];
+	BindingDescription terrainBindings[5]{};
 	terrainBindings[0].mBindingID = 0;
 	terrainBindings[0].mFlags = 0;
 	terrainBindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -137,14 +136,14 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	ShaderConnector_CalculateDescriptorPool(4, geometryPass, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(2, geometryPassFragment, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(5, terrainBindings, poolSizes);
-	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2 + (gFrameOverlapCount * 1), poolSizes);
+	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2 + (gFrameOverlapCount * 1), poolSizes);
 	
 	mGeoSet0 = ShaderConnector_CreateSet(0, mPool, 4, geometryPass);
 	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 2, geometryPassFragment);
 	DescriptorSet GeoSets[2] = { mGeoSet0, mGeoSet1 };
 	mGeoLayout = ShaderConnector_CreatePipelineLayout(2, GeoSets, {});
-	Shader geoVertex = Shader(gContext, "assets/shaders/vertex.vert");
-	Shader geoFragment = Shader(gContext, "assets/shaders/fragment.frag");
+	Shader geoVertex = Shader(Global::Context, "assets/shaders/vertex.vert");
+	Shader geoFragment = Shader(Global::Context, "assets/shaders/fragment.frag");
 	PipelineSpecification spec;
 	spec.m_CullMode = CullMode::CULL_BACK;
 	spec.m_DepthEnabled = true;
@@ -158,15 +157,15 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	spec.m_NearField = 0.0f;
 	spec.m_FarField = 1.0f;
 	PipelineVertexInputDescription input;
-	mGeoState = PipelineState_Create(gContext, spec, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
+	mGeoState = PipelineState_Create(Global::Context, spec, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
 
 	terrainBindings[1].mBuffer = mGeoSet0.GetBuffer2(1);
 	
 	mMapSet = ShaderConnector_CreateSet(0, mPool, 5, terrainBindings);
 	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock)} });
-	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
-	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
-	mMapState = PipelineState_Create(gContext, mGeoState->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
+	Shader mapVertex = Shader(Global::Context, "assets/shaders/Terrain.vert");
+	Shader mapFragment = Shader(Global::Context, "assets/shaders/Terrain.frag");
+	mMapState = PipelineState_Create(Global::Context, mGeoState->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
@@ -175,7 +174,9 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 }
 
 Application::GeometryPass::~GeometryPass() {
-	Super_Scene_Destroy();
+	Super_Pass_Destroy();
+	Gfree(mTerrainDrawCommands);
+	Gfree(mTerrainDrawCount);
 	mFBO.DestroyAllBoundAttachments();
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderConnector_DestroySet(mGeoSet0);
@@ -197,13 +198,12 @@ Application::GeometryPass::~GeometryPass() {
 
 VkCommandBuffer Application::GeometryPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
 	mECS->PrepareDataForFrame(FrameIndex);
-
-	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
+	glm::mat4 proj = Global::Projection;
+	glm::mat4 view = mCamera->GetViewMatrix();
 
 	auto globalDataBuffer = mGeoSet0.GetBuffer2(1);
 	void* ptr = Buffer2_Map(globalDataBuffer);
 	ShaderTypes::GlobalData data;
-	glm::mat4 view = mCamera->GetViewMatrix();
 	data.u_LightDirection = mLightDirection;
 
 	data.u_DeltaTime = dTime;
@@ -214,20 +214,100 @@ VkCommandBuffer Application::GeometryPass::Prepare(uint32_t FrameIndex, float dT
 	data.u_LightSpace = mLightSpace;
 	memcpy(ptr, &data, sizeof(data));
 	Buffer2_Flush(globalDataBuffer, 0, VK_WHOLE_SIZE);
-	return mCmds[FrameIndex];
+	CullTerrain(proj, mLockedCamera->GetViewMatrix());
+	return *mCmd;
+}
+
+void Application::GeometryPass::CullTerrain(const glm::mat4& proj, const glm::mat4& view) {
+	using namespace glm;
+	glm::mat4 transform = mT0->GetTransform();
+	// Thanks to https://stackoverflow.com/questions/58211003/about-view-matrix-and-frustum-culling
+	// and http://www.lighthouse3d.com/tutorials/view-frustum-culling/radar-approach-testing-points/
+#pragma message("@@@@@@@@@@Make Sure to remove this when done debugging@@@@@@@@@@@@@ In GeometryPass.cpp CullTerrain()")
+	mT0->SetTransform(glm::mat4(1.0));
+	
+	glm::mat4 projT = glm::transpose(proj * view);
+	//glm::mat4 viewT = glm::transpose(view);
+	glm::mat4 model = mT0->GetTransform();
+
+	auto normalizePlane = [](glm::vec4 p) -> glm::vec4
+	{
+		return p / glm::length(glm::vec3(p));
+	};
+	glm::vec4 planes[5];
+	planes[0] = normalizePlane(projT[3] + projT[0]);
+	planes[1] = normalizePlane(projT[3] - projT[0]);
+	planes[2] = normalizePlane(projT[3] + projT[1]);
+	planes[3] = normalizePlane(projT[3] - projT[1]);
+	planes[4] = normalizePlane(projT[3] - projT[2]);
+
+	vec4 frustumX = normalizePlane(projT[3] + projT[0]); // x + w < 0
+	vec4 frustumY = normalizePlane(projT[3] + projT[1]); // y + w < 0
+
+	float frustrumF[4] = {
+		frustumX.x,
+		frustumX.z,
+		frustumY.y,
+		frustumY.z,
+	};
+
+	vec3 modelScale = vec3(model[0][0], model[1][1], model[2][2]);
+	auto InsideFrustrum = [&](const Ph::BoundingSphere& sphere) throw() -> bool {
+		
+		vec3 radiusxyz = modelScale * sphere.mRadius;
+		// choose the biggest radius in any direction
+		float radius = sphere.mRadius * 2.5f; // max(max(radiusxyz.x, radiusxyz.y), radiusxyz.z) * 1.0f;
+		vec4 center = model * vec4(sphere.mCenter, 1.0);
+
+		bool visible = true;
+		// the left/top/right/bottom plane culling utilizes frustum symmetry to cull against two planes at the same time
+		visible = visible && center.z * frustrumF[1] - abs(center.x) * frustrumF[0] > -radius;
+		visible = visible && center.z * frustrumF[3] - abs(center.y) * frustrumF[2] > -radius;
+#if 0
+		for (int i = 0; i < 5; i++) {
+		//	if (i == 3)
+		//		continue;
+			visible = visible && dot(planes[i], center) > -radius;
+		}
+#endif
+
+		return visible;
+	};
+
+	uint32_t DrawCount = 0;
+	for (uint32_t i = 0; i < mT0->GetSubmeshCount(); i++) {
+		const auto& submesh = mT0->GetSubmesh(i);
+		Ph::BoundingSphere sphere = submesh.mSphere;
+		//sphere.mBoxMin = transform * glm::vec4(box.mBoxMin, 1.0f);
+		//sphere.mBoxMax = transform * glm::vec4(box.mBoxMax, 1.0f);
+
+		if (InsideFrustrum(sphere)) {
+			VkDrawIndexedIndirectCommand command;
+			command.indexCount = submesh.mIndicesCount;
+			command.instanceCount = 1;
+			command.firstIndex = submesh.mFirstIndex;
+			command.vertexOffset = submesh.mFirstVertex;
+			command.firstInstance = 0;
+			memcpy(&mTerrainDrawCommands[DrawCount], &command, sizeof(command));
+			DrawCount++;
+		}
+	}
+	*mTerrainDrawCount = DrawCount;
+	GverifyWrite(mTerrainDrawCommands);
+	GverifyWrite(mTerrainDrawCount);
 }
 
 void Application::GeometryPass::ReloadShaders() {
 	PipelineSpecification specification = mGeoState->m_spec;
 	PipelineState_Destroy(mGeoState);
 	PipelineState_Destroy(mMapState);
-	Shader geoVertex = Shader(gContext, "assets/shaders/vertex.vert");
-	Shader geoFragment = Shader(gContext, "assets/shaders/fragment.frag");
-	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
-	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
+	Shader geoVertex = Shader(Global::Context, "assets/shaders/vertex.vert");
+	Shader geoFragment = Shader(Global::Context, "assets/shaders/fragment.frag");
+	Shader mapVertex = Shader(Global::Context, "assets/shaders/Terrain.vert");
+	Shader mapFragment = Shader(Global::Context, "assets/shaders/Terrain.frag");
 	PipelineVertexInputDescription input;
-	mGeoState = PipelineState_Create(gContext, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
-	mMapState = PipelineState_Create(gContext, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
+	mGeoState = PipelineState_Create(Global::Context, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
+	mMapState = PipelineState_Create(Global::Context, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}
@@ -241,14 +321,14 @@ void Application::GeometryPass::SetWireframeMode(bool mode)
 	PipelineSpecification specification = mGeoState->m_spec;
 	specification.m_PolygonMode = mode ? PolygonMode::LINE : PolygonMode::FILL;
 	PipelineState_Destroy(mGeoState);
-	Shader geoVertex = Shader(gContext, "assets/shaders/vertex.vert");
-	Shader geoFragment = Shader(gContext, "assets/shaders/fragment.frag");
+	Shader geoVertex = Shader(Global::Context, "assets/shaders/vertex.vert");
+	Shader geoFragment = Shader(Global::Context, "assets/shaders/fragment.frag");
 	PipelineVertexInputDescription input;
-	mGeoState = PipelineState_Create(gContext, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
+	mGeoState = PipelineState_Create(Global::Context, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
 	PipelineState_Destroy(mMapState);
-	Shader mapVertex = Shader(gContext, "assets/shaders/Terrain.vert");
-	Shader mapFragment = Shader(gContext, "assets/shaders/Terrain.frag");
-	mMapState = PipelineState_Create(gContext, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
+	Shader mapVertex = Shader(Global::Context, "assets/shaders/Terrain.vert");
+	Shader mapFragment = Shader(Global::Context, "assets/shaders/Terrain.frag");
+	mMapState = PipelineState_Create(Global::Context, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		this->RecordCommands(i);
 	}
@@ -261,7 +341,7 @@ void Application::GeometryPass::GetStatistics(bool wait, uint32_t frameIndex, do
 	VkResult r0 = vkGetQueryPoolResults(mDevice, mQuery, frameIndex * 2, 2, sizeof(data0), data0, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
 	VkResult r1 = vkGetQueryPoolResults(mDevice, mInvocationQuery, frameIndex, 1, sizeof(invocs), invocs, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
 	if (r0 == VK_SUCCESS && r1 == VK_SUCCESS) {
-		passTime = (double(data0[1] - data0[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		passTime = (double(data0[1] - data0[0]) * Global::Context->card.deviceLimits.timestampPeriod) * 1e-6;
 		vertexInvocations = invocs[0];
 		fragmentInvocations = invocs[1];
 	}
@@ -271,8 +351,8 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 {
 	uint32_t i = FrameIndex;
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	VkCommandBuffer cmd = mCmds[i];
-	vkResetCommandPool(mDevice, mPools[i], 0);
+	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
+	mCmdPool->Reset(FrameIndex);
 	vkBeginCommandBuffer(cmd, &beginInfo);
 	vkCmdResetQueryPool(cmd, mQuery, FrameIndex * 2, 2);
 	vkCmdResetQueryPool(cmd, mInvocationQuery, FrameIndex, 1);
@@ -354,10 +434,14 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
 	vkCmdPushConstants(cmd, mMapLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock), &pushblock);
 	vkCmdBindIndexBuffer(cmd, mT0->GetIndicesBuffer()->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
+#if 0
 	for (uint32_t i = 0; i < mT0->GetSubmeshCount(); i++) {
 		auto& submesh = mT0->GetSubmesh(i);
 		vkCmdDrawIndexed(cmd, submesh.mIndicesCount, 1, submesh.mFirstIndex, submesh.mFirstVertex, 0);
 	}
+#else
+	vkCmdDrawIndexedIndirectCount(cmd, Gbuffer(mTerrainDrawCommands)->mBuffers[FrameIndex], 0, Gbuffer(mTerrainDrawCount)->mBuffers[FrameIndex], 0, mT0->GetSubmeshCount(), sizeof(VkDrawIndexedIndirectCommand));
+#endif
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;

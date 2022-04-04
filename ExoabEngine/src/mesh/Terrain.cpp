@@ -17,12 +17,11 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 
 	uint32_t firstVertex = 0;
 	uint32_t firstIndex = 0;
-	for (uint32_t yBlock = 0; yBlock < height; yBlock += height / splitY) {
-		for (uint32_t xBlock = 0; xBlock < width; xBlock += width / splitX) {
-			uint32_t resolutionStepX = width / splitX + 1;
-			uint32_t resolutionStepY = height / splitY + 1;
+	for (uint32_t yBlock = 0; yBlock < height; yBlock += splitY) {
+		for (uint32_t xBlock = 0; xBlock < width; xBlock += splitX) {
+			uint32_t resolutionStepX = splitX + 1;
+			uint32_t resolutionStepY = splitY + 1;
 			TerrainSubmesh submesh;
-			bool set = false;
 			for (uint32_t y = 0; y < resolutionStepY; y++) {
 				for (uint32_t x = 0; x < resolutionStepX; x++) {
 					TerrainVertex v{};
@@ -31,11 +30,6 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 					v.inNormal = HalfVec3(glm::vec3(0.0, 1.0, 0.0));
 					v.inTexCoords = HalfVec2(glm::vec2(position.x / float(width), position.z / float(height)));
 					mVertices.push_back(v);
-					if (!set) {
-						set = true;
-						submesh.mBox.mBoxMin = position;
-					}
-					submesh.mBox.mBoxMax = position;
 				}
 			}
 
@@ -122,7 +116,7 @@ void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minH
 	for(auto& submesh : mSubmeshes) {
 		TerrainVertex* vertices = &mVertices[submesh.mFirstVertex];
 		uint32_t* indices = &mIndices[submesh.mFirstIndex];
-		for (int i = 0; i < submesh.mIndicesCount; i++) {
+		for (uint32_t i = 0; i < submesh.mIndicesCount; i++) {
 			int x = vertices[indices[i]].inPosition.x;
 			int y = vertices[indices[i]].inPosition.z;
 			int X = (float(mVertices[y * mWidth + x].inPosition.x) / float(mWidth)) * float(heightMapWidth);
@@ -139,7 +133,7 @@ void Terrain::CalculateTangentBitangent() {
 	for (auto& submesh : mSubmeshes) {
 		auto vertices = &mVertices[submesh.mFirstVertex];
 		auto indices = &mIndices[submesh.mFirstIndex];
-		submesh.mBox = Ph::CalculateBoundingBox(vertices, indices, submesh.mIndicesCount, sizeof(TerrainVertex));
+		submesh.mSphere = Ph::CalculateBoundingSphere(vertices, indices, submesh.mIndicesCount, sizeof(TerrainVertex));
 		for (uint32_t i = 0; i < submesh.mIndicesCount; i+=3) {
 			auto T0 = &vertices[indices[i+0]];
 			auto T1 = &vertices[indices[i+1]];

@@ -5,6 +5,7 @@
 #include "../../mesh/geometry.hpp"
 #include "../../window/PlatformWindow.hpp"
 #include <backend/VkGraphicsCard.hpp>
+#include "../Globals.hpp"
 
 // Specialization Constants
 // TODO: Use 32 for Nvidia Graphics cards
@@ -15,21 +16,16 @@
 // the radius epsillion multiples the radius to reduce incorrect culling results, this is a hotfix.
 #define RadiusEpsillion (2.5f)
 
-extern vk::VkContext gContext;
-
 namespace Application {
-	extern PlatformWindow* gWindow;
-	extern std::vector<Mesh::Geometry> gGeomtry;
-
 	struct FrustrumPlanes {
 		int u_MaxGeometry;
 		glm::vec4 u_CullPlanes[5];
 	};
 }
 
-Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* camera) : Scene(gContext->defaultDevice, true), mECS(ecs), mCamera(camera)
+Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* camera) : Pass(Global::Context->defaultDevice, true), mECS(ecs), mCamera(camera)
 {
-	BindingDescription computeBindings[5];
+	BindingDescription computeBindings[5]{};
 	computeBindings[0].mBindingID = 0;
 	computeBindings[0].mFlags = 0;
 	computeBindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -59,7 +55,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeBindings[3].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
 	computeBindings[3].mBufferSize = ecs->GetDrawDataBuffer()->mSize;
 	computeBindings[3].mBuffer = nullptr;
-	computeBindings[3].mSharedResources = true;
+	computeBindings[3].mSharedResources = false;
 
 	computeBindings[4].mBindingID = 4;
 	computeBindings[4].mFlags = BINDING_FLAG_CPU_VISIBLE;
@@ -70,22 +66,22 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderConnector_CalculateDescriptorPool(5, computeBindings, poolSize);
-	mPool = vk::Gfx_CreateDescriptorPool(gContext, 1 * gFrameOverlapCount, poolSize);
+	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, 1 * gFrameOverlapCount, poolSize);
 	mSet = ShaderConnector_CreateSet(0, mPool, 5, computeBindings);
 
 	mFrustrumLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
-	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
+	Shader computeShader = Shader(Global::Context, "assets/shaders/FrustrumCulling.comp");
 	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = Pipeline_CreateCompute(gContext, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = Pipeline_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
 
 	mOutputGeometryDataArray = mSet.GetBuffer2(1);
 	mOutputDrawDataArray = mSet.GetBuffer2(3);
 
-	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
-	mInvocationQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT);
+	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+	mInvocationQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT);
 	
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
@@ -94,7 +90,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 
 Application::FrustumCullPass::~FrustumCullPass()
 {
-	Super_Scene_Destroy();
+	Super_Pass_Destroy();
 	vkDestroyPipelineLayout(mDevice, mFrustrumLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderConnector_DestroySet(mSet);
@@ -105,12 +101,12 @@ Application::FrustumCullPass::~FrustumCullPass()
 
 void Application::FrustumCullPass::ReloadShaders() {
 	vkDestroyPipeline(mDevice, mFrustrum, nullptr);
-	Shader computeShader = Shader(gContext, "assets/shaders/FrustrumCulling.comp");
+	Shader computeShader = Shader(Global::Context, "assets/shaders/FrustrumCulling.comp");
 	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = Pipeline_CreateCompute(gContext, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = Pipeline_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}
@@ -119,13 +115,13 @@ void Application::FrustumCullPass::ReloadShaders() {
 VkCommandBuffer Application::FrustumCullPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart)
 {
 	glm::mat4 view = mCamera->GetViewMatrix();
-	glm::mat4 projT = glm::transpose(glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->m_width, float(gWindow->m_height), 0.1f, 1000.0f) * view);
+	glm::mat4 projT = glm::transpose(Global::Projection * view);
 	auto normalizePlane = [](glm::vec4 p) -> glm::vec4
 	{
 		return p / glm::length(glm::vec3(p));
 	};
 	FrustrumPlanes planes;
-	planes.u_MaxGeometry = gGeomtry.size();
+	planes.u_MaxGeometry = Global::Geomtry.size();
 	planes.u_CullPlanes[0] = normalizePlane(projT[3] + projT[0]);
 	planes.u_CullPlanes[1] = normalizePlane(projT[3] - projT[0]);
 	planes.u_CullPlanes[2] = normalizePlane(projT[3] + projT[1]);
@@ -133,7 +129,7 @@ VkCommandBuffer Application::FrustumCullPass::Prepare(uint32_t FrameIndex, float
 	planes.u_CullPlanes[4] = normalizePlane(projT[3] - projT[2]);
 	memcpy(mFrustrumPlanesMapped[FrameIndex], &planes, sizeof(planes));
 	Buffer2_Flush(mSet.GetBuffer2(4), 0, VK_WHOLE_SIZE);
-	return mCmds[FrameIndex];
+	return *mCmd;
 }
 
 VkResult Application::FrustumCullPass::GetComputeShaderStatistics(bool Wait, uint32_t FrameIndex, double& duration, uint64_t& invocations)
@@ -143,7 +139,7 @@ VkResult Application::FrustumCullPass::GetComputeShaderStatistics(bool Wait, uin
 	VkResult qr = vkGetQueryPoolResults(mDevice, mQuery, FrameIndex * 2, 2, sizeof(data), data, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
 	VkResult qr2 = vkGetQueryPoolResults(mDevice, mInvocationQuery, FrameIndex, 1, sizeof(uint64_t), &invoc, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
 	if (qr == VK_SUCCESS) {
-		duration = (double(data[1] - data[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		duration = (double(data[1] - data[0]) * Global::Context->card.deviceLimits.timestampPeriod) * 1e-6;
 		invocations = invoc;
 		return VK_SUCCESS;
 	}
@@ -152,11 +148,11 @@ VkResult Application::FrustumCullPass::GetComputeShaderStatistics(bool Wait, uin
 
 void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 {
-	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
+	mCmdPool->Reset(FrameIndex);
 	uint32_t i = FrameIndex;
 	mFrustrumPlanesMapped[i] = Buffer2_Map(mSet.GetBuffer2(4));
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	VkCommandBuffer cmd = mCmds[i];
+	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
 	vkCmdResetQueryPool(cmd, mQuery, (i * 2), 2);
 	vkCmdResetQueryPool(cmd, mInvocationQuery, i, 1);

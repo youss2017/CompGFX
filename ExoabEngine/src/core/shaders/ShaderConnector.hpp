@@ -30,7 +30,7 @@ struct BindingDescription {
 	VkSampler mSampler;
 	// Custom VkImageLayout, <id in mTextures, VkImageLayout>
 	std::map<uint32_t, VkImageLayout> mCustomImageLayouts;
-	bool mSharedResources;
+	bool mSharedResources = false;
 };
 
 struct DescriptorSet {

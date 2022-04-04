@@ -59,7 +59,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\cmake_files\assimp\include\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir)src\application\;$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\cmake_files\assimp\include\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -70,7 +70,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(ProjectName)\external\bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -82,7 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\cmake_files\assimp\include\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir)src\application\;$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\cmake_files\assimp\include\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -93,7 +93,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(ProjectName)\external\bin\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -116,16 +116,19 @@
     <ClInclude Include="src\application\Camera.hpp" />
     <ClInclude Include="src\application\Application.hpp" />
     <ClInclude Include="src\application\ecs\EntityController.hpp" />
-    <ClInclude Include="src\application\scene\DebugPass.hpp" />
-    <ClInclude Include="src\application\scene\FrustrumCullPass.hpp" />
-    <ClInclude Include="src\application\scene\GeometryPass.hpp" />
-    <ClInclude Include="src\application\scene\postprocess\BloomPass.hpp" />
-    <ClInclude Include="src\application\scene\postprocess\FXAAPass.hpp" />
-    <ClInclude Include="src\application\scene\postprocess\SSAOPass.hpp" />
-    <ClInclude Include="src\application\scene\Scene.hpp" />
-    <ClInclude Include="src\application\scene\ShadowPass.hpp" />
-    <ClInclude Include="src\application\scene\SkyboxPass.hpp" />
+    <ClInclude Include="src\application\Globals.hpp" />
+    <ClInclude Include="src\application\Layer.hpp" />
+    <ClInclude Include="src\application\pass\DebugPass.hpp" />
+    <ClInclude Include="src\application\pass\FrustrumCullPass.hpp" />
+    <ClInclude Include="src\application\pass\GeometryPass.hpp" />
+    <ClInclude Include="src\application\pass\postprocess\BloomPass.hpp" />
+    <ClInclude Include="src\application\pass\postprocess\FXAAPass.hpp" />
+    <ClInclude Include="src\application\pass\postprocess\SSAOPass.hpp" />
+    <ClInclude Include="src\application\pass\Pass.hpp" />
+    <ClInclude Include="src\application\pass\ShadowPass.hpp" />
+    <ClInclude Include="src\application\pass\SkyboxPass.hpp" />
     <ClInclude Include="src\audio\Audio.hpp" />
+    <ClInclude Include="src\core\backend\Command.hpp" />
     <ClInclude Include="src\core\memory\CubeMap.hpp" />
     <ClInclude Include="src\core\shaders\ShaderConnector.hpp" />
     <ClInclude Include="src\physics\PhysicsCore.hpp" />
@@ -160,6 +163,7 @@
     <ClInclude Include="src\utils\perlin_noise.hpp" />
     <ClInclude Include="src\utils\Profiling.hpp" />
     <ClInclude Include="src\utils\StringUtils.hpp" />
+    <ClInclude Include="src\window\Event.hpp" />
     <ClInclude Include="src\window\NMB.h" />
     <ClInclude Include="src\window\PlatformWindow.hpp" />
   </ItemGroup>
@@ -193,12 +197,12 @@
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
     <ClCompile Include="src\application\ecs\EntityController.cpp" />
-    <ClCompile Include="src\application\scene\DebugPass.cpp" />
-    <ClCompile Include="src\application\scene\FrustrumCullPass.cpp" />
-    <ClCompile Include="src\application\scene\GeometryPass.cpp" />
-    <ClCompile Include="src\application\scene\postprocess\BloomPass.cpp" />
-    <ClCompile Include="src\application\scene\ShadowPass.cpp" />
-    <ClCompile Include="src\application\scene\SkyboxPass.cpp" />
+    <ClCompile Include="src\application\pass\DebugPass.cpp" />
+    <ClCompile Include="src\application\pass\FrustrumCullPass.cpp" />
+    <ClCompile Include="src\application\pass\GeometryPass.cpp" />
+    <ClCompile Include="src\application\pass\postprocess\BloomPass.cpp" />
+    <ClCompile Include="src\application\pass\ShadowPass.cpp" />
+    <ClCompile Include="src\application\pass\SkyboxPass.cpp" />
     <ClCompile Include="src\audio\Audio.cpp" />
     <ClCompile Include="src\audio\Win32Audio.cpp" />
     <ClCompile Include="src\core\backend\Swapchain.cpp" />

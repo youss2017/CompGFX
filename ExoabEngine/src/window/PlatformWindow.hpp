@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include "Event.hpp"
+#include <functional>
 
 #ifndef _glfw3_h_
 /* The unknown key */
@@ -152,15 +154,17 @@ public:
 	inline bool IsWindowFocus() { return m_focus; }
 	bool IsWindowMinimized();
 
-	// TODO: Handle Mouse Input
+	void RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func);
 
 	int m_width, m_height;
 private:
 	int m_keys[512];
 	GLFWwindow* m_window;
 	bool m_focus = true;
+	std::vector<std::pair<EventFlagBits, std::function<void(const Event& e)>>> mCallbacks;
 private:
 	friend void _Internal_WindowResizeCallback(GLFWwindow* window, int width, int height);
 	friend void _Internal_WindowKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	friend void _Internal_WindowFocusCallback(GLFWwindow* window, int focused);
+	friend void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 };

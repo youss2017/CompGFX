@@ -1,8 +1,7 @@
 #include "BloomPass.hpp"
 #include <backend/VkGraphicsCard.hpp>
 #include <glm/glm.hpp>
-
-extern vk::VkContext gContext;
+#include "../../Globals.hpp"
 
 struct DownsamplePushblock {
 	glm::uint u_SourceMiplevel;
@@ -23,7 +22,7 @@ struct UpsamplePushblock {
 	glm::vec2 u_UpsampleMipSize;
 };
 
-Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, float threshold) : Scene(gContext->defaultDevice, true), mFBO(fbo), mThresholdValue(threshold) {
+Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, float threshold) : Pass(Global::Context->defaultDevice, true), mFBO(fbo), mThresholdValue(threshold) {
 	Texture2DSpecification spec;
 	spec.m_Width = fbo.m_width >> 1;
 	spec.m_Height = fbo.m_height >> 1;
@@ -38,29 +37,29 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	spec.m_CreatePerFrame = true;
 	spec.m_LazilyAllocate = false;
 	spec.mCreateViewPerMip = true;
-	mDownsampleTexture = Texture2_Create(gContext, spec);
+	mDownsampleTexture = Texture2_Create(spec);
 	mTextureWidth = spec.m_Width;
 	mTextureHeight = spec.m_Height;
 	mKernalSizeX = 32;
 	mKernalSizeY = 32;
-	Shader thresholdShader = Shader(gContext, "assets/shaders/bloom/threshold.comp");
+	Shader thresholdShader = Shader(Global::Context, "assets/shaders/bloom/threshold.comp");
 	thresholdShader.SetSpecializationConstant<int>(0, fbo.m_width);
 	thresholdShader.SetSpecializationConstant<int>(1, fbo.m_height);
 	thresholdShader.SetSpecializationConstant<int>(2, mTextureWidth);
 	thresholdShader.SetSpecializationConstant<int>(3, mTextureHeight);
 	thresholdShader.SetSpecializationConstant<int>(4, mKernalSizeX);
 	thresholdShader.SetSpecializationConstant<int>(5, mKernalSizeY);
-	Shader downsampleShader = Shader(gContext, "assets/shaders/bloom/downsample.comp");
+	Shader downsampleShader = Shader(Global::Context, "assets/shaders/bloom/downsample.comp");
 	downsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader downsampleVerticalShader = Shader(gContext, "assets/shaders/bloom/downsampleVertical.comp");
+	Shader downsampleVerticalShader = Shader(Global::Context, "assets/shaders/bloom/downsampleVertical.comp");
 	downsampleVerticalShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleVerticalShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader upsampleShader = Shader(gContext, "assets/shaders/bloom/upsample.comp");
+	Shader upsampleShader = Shader(Global::Context, "assets/shaders/bloom/upsample.comp");
 	upsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	upsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
 	
-	mSampler = vk::Gfx_CreateSampler(gContext,
+	mSampler = vk::Gfx_CreateSampler(Global::Context,
 		VK_FILTER_LINEAR,
 		VK_FILTER_LINEAR,
 		VK_SAMPLER_MIPMAP_MODE_LINEAR,
@@ -124,21 +123,21 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(2, thresholdBindings, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(2, downsampleBindings, poolSizes);
-	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2, poolSizes);
+	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2, poolSizes);
 	mThresholdSet = ShaderConnector_CreateSet(0, mPool, 2, thresholdBindings);
 	mThresholdLayout = ShaderConnector_CreatePipelineLayout(1, &mThresholdSet, {{VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float)}});
-	mThreshold = Pipeline_CreateCompute(gContext, &thresholdShader, mThresholdLayout, 0);
+	mThreshold = Pipeline_CreateCompute(Global::Context, &thresholdShader, mThresholdLayout, 0);
 	mDownsampleSet = ShaderConnector_CreateSet(0, mPool, 2, downsampleBindings);
 	mDownsampleLayout = ShaderConnector_CreatePipelineLayout(1, &mDownsampleSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DownsamplePushblock)} });
 	mDownsampleVerticalLayout = ShaderConnector_CreatePipelineLayout(1, &mDownsampleSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(DownsampleVerticalPushblock)} });
 	mUpsampleLayout = ShaderConnector_CreatePipelineLayout(1, &mDownsampleSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(UpsamplePushblock)} });
-	mDownsample = Pipeline_CreateCompute(gContext, &downsampleShader, mDownsampleLayout, 0);
-	mDownsampleVertical = Pipeline_CreateCompute(gContext, &downsampleVerticalShader, mDownsampleVerticalLayout, 0);
-	mUpsample = Pipeline_CreateCompute(gContext, &upsampleShader, mUpsampleLayout, 0);
+	mDownsample = Pipeline_CreateCompute(Global::Context, &downsampleShader, mDownsampleLayout, 0);
+	mDownsampleVertical = Pipeline_CreateCompute(Global::Context, &downsampleVerticalShader, mDownsampleVerticalLayout, 0);
+	mUpsample = Pipeline_CreateCompute(Global::Context, &upsampleShader, mUpsampleLayout, 0);
 
-	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 
-	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(Global::Context);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		vk::Framebuffer_TransistionImage(cmd.cmd, mDownsampleTexture, VK_IMAGE_ASPECT_COLOR_BIT, i, VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL);
 		RecordCommands(i);
@@ -147,7 +146,7 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 }
 
 Application::BloomPass::~BloomPass() {
-	Super_Scene_Destroy();
+	Super_Pass_Destroy();
 	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipelineLayout(mDevice, mThresholdLayout, nullptr);
@@ -165,30 +164,30 @@ Application::BloomPass::~BloomPass() {
 }
 
 void Application::BloomPass::ReloadShaders() {
-	Shader thresholdShader = Shader(gContext, "assets/shaders/bloom/threshold.comp");
+	Shader thresholdShader = Shader(Global::Context, "assets/shaders/bloom/threshold.comp");
 	thresholdShader.SetSpecializationConstant<int>(0, mFBO.m_width);
 	thresholdShader.SetSpecializationConstant<int>(1, mFBO.m_height);
 	thresholdShader.SetSpecializationConstant<int>(2, mTextureWidth);
 	thresholdShader.SetSpecializationConstant<int>(3, mTextureHeight);
 	thresholdShader.SetSpecializationConstant<int>(4, mKernalSizeX);
 	thresholdShader.SetSpecializationConstant<int>(5, mKernalSizeY);
-	Shader downsampleShader = Shader(gContext, "assets/shaders/bloom/downsample.comp");
+	Shader downsampleShader = Shader(Global::Context, "assets/shaders/bloom/downsample.comp");
 	downsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader downsampleVerticalShader = Shader(gContext, "assets/shaders/bloom/downsampleVertical.comp");
+	Shader downsampleVerticalShader = Shader(Global::Context, "assets/shaders/bloom/downsampleVertical.comp");
 	downsampleVerticalShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleVerticalShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader upsampleShader = Shader(gContext, "assets/shaders/bloom/upsample.comp");
+	Shader upsampleShader = Shader(Global::Context, "assets/shaders/bloom/upsample.comp");
 	upsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	upsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
 	vkDestroyPipeline(mDevice, mThreshold, nullptr);
 	vkDestroyPipeline(mDevice, mDownsample, nullptr);
 	vkDestroyPipeline(mDevice, mDownsampleVertical, nullptr);
 	vkDestroyPipeline(mDevice, mUpsample, nullptr);
-	mThreshold = Pipeline_CreateCompute(gContext, &thresholdShader, mThresholdLayout, 0);
-	mDownsample = Pipeline_CreateCompute(gContext, &downsampleShader, mDownsampleLayout, 0);
-	mDownsampleVertical = Pipeline_CreateCompute(gContext, &downsampleVerticalShader, mDownsampleVerticalLayout, 0);
-	mUpsample = Pipeline_CreateCompute(gContext, &upsampleShader, mUpsampleLayout, 0);
+	mThreshold = Pipeline_CreateCompute(Global::Context, &thresholdShader, mThresholdLayout, 0);
+	mDownsample = Pipeline_CreateCompute(Global::Context, &downsampleShader, mDownsampleLayout, 0);
+	mDownsampleVertical = Pipeline_CreateCompute(Global::Context, &downsampleVerticalShader, mDownsampleVerticalLayout, 0);
+	mUpsample = Pipeline_CreateCompute(Global::Context, &upsampleShader, mUpsampleLayout, 0);
 
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
@@ -196,21 +195,21 @@ void Application::BloomPass::ReloadShaders() {
 }
 
 VkCommandBuffer  Application::BloomPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
-	return mCmds[FrameIndex];
+	return *mCmd;
 }
 
 void Application::BloomPass::GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime) {
 	uint64_t data[2];
 	VkResult q = vkGetQueryPoolResults(mDevice, mQuery, FrameIndex * 2, 2, sizeof(data), data, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
 	if (q == VK_SUCCESS) {
-		dTime = (double(data[1] - data[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		dTime = (double(data[1] - data[0]) * Global::Context->card.deviceLimits.timestampPeriod) * 1e-6;
 	}
 }
 
 void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
-	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
+	mCmdPool->Reset(FrameIndex);
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	VkCommandBuffer cmd = mCmds[FrameIndex];
+	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
 	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2));

@@ -4,8 +4,7 @@
 #include <stb/stb_image_resize.h>
 #include <backend/VkGraphicsCard.hpp>
 #include <memory/Buffer2.hpp>
-
-extern vk::VkContext gContext;
+#include "Globals.hpp"
 
 /*
 	There are more efficent ways of doing this but this only used in loading and its fast enough.
@@ -65,7 +64,7 @@ ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 		spec.m_CreatePerFrame  = false;
 		spec.m_LazilyAllocate  = false;
 		spec.mUsage = 0;
-		cubeFaces[i] = Texture2_Create(gContext, spec);
+		cubeFaces[i] = Texture2_Create(spec);
 		Texture2_UploadPixels(cubeFaces[i], faces[i], face_size * face_size * 4);
 	}
 
@@ -80,9 +79,9 @@ ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 	spec.m_CreatePerFrame = false;
 	spec.m_LazilyAllocate = false;
 	spec.mFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-	ITexture2 cubeMap = Texture2_Create(gContext, spec);
+	ITexture2 cubeMap = Texture2_Create(spec);
 
-	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(Global::Context);
 	VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;

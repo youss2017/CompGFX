@@ -24,7 +24,7 @@ FramebufferAttachment FramebufferAttachment::Create(vk::VkContext context, VkIma
 	spec.m_Height = height;
 	spec.m_Samples = TextureSamples::MSAA_1;
 	spec.mUsage = usage;
-	attachment.m_attachment = Texture2_Create(context, spec);
+	attachment.m_attachment = Texture2_Create(spec);
 	return attachment;
 }
 

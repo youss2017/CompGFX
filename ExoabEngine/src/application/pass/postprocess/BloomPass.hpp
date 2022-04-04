@@ -1,5 +1,5 @@
 #pragma once
-#include "../Scene.hpp"
+#include "../Pass.hpp"
 #include <pipeline/PipelineCS.hpp>
 #include <pipeline/Framebuffer.hpp>
 #include <shaders/ShaderConnector.hpp>
@@ -7,7 +7,7 @@
 
 namespace Application {
 
-	class BloomPass : public Scene {
+	class BloomPass : public Pass {
 
 	public:
 		BloomPass(Framebuffer& fbo, int colorAttachmentIndex, float threshold);

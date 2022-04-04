@@ -1,5 +1,5 @@
 #pragma once
-#include "Scene.hpp"
+#include "Pass.hpp"
 #include "../Camera.hpp"
 #include "../ecs/EntityController.hpp"
 #include <memory/Buffer2.hpp>
@@ -7,7 +7,7 @@
 
 namespace Application {
 
-	class FrustumCullPass : public Scene {
+	class FrustumCullPass : public Pass {
 
 	public:
 

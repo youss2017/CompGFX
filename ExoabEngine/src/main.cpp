@@ -31,7 +31,16 @@ static void PreparePOSIX(int argc, char** argv);
         - https://github.com/zeux/meshoptimizer mesh optimizer
 */
 
-static ConfigurationSettings LoadConfiguration();
+namespace Global {
+    ConfigurationSettings Configuration;
+    double TimeFromStart;
+    double Time;
+    double FrameRate;
+    bool UpdateUIInfo;
+    bool RenderDOC;
+}
+
+static void LoadConfiguration();
 
 int main(int argc, char** argv)
 {
@@ -42,8 +51,7 @@ int main(int argc, char** argv)
     PreparePOSIX(argc, argv);
 #endif
     /* Load Game Settings from settings.cfg */
-    ConfigurationSettings config = LoadConfiguration();
-    config.VSync = true;
+    LoadConfiguration();
     bool rd = false;
     if (argc > 1) {
         std::string arg1 = Utils::StrLowerCase(argv[1]);
@@ -52,19 +60,11 @@ int main(int argc, char** argv)
             log_info("[RenderDOC Debugging]", false);
         }
     }
-    if(!Application::Initalize(&config, rd)) {
+    Global::RenderDOC = rd;
+    Application::Application* app = new Application::Application();
+    if(!app->OnInitalize()) {
         log_error("Could not initalize Application");
         return 0x1;
-    }
-    if (!Application::LoadAssets())
-    {
-        log_error("Could not load assets.");
-        return 0x2;
-    }
-    if (!Application::CreateResources())
-    {
-        log_error("Could not create resources.");
-        return 0x3;
     }
     PROFILE_END_SESSION();
 
@@ -75,11 +75,13 @@ int main(int argc, char** argv)
     double FrameRate = 0.0;
     double Checkpoint = 0;
     bool UpdateUIInfo = false;
-    while (!Application::Quit)
+    while (!Global::Quit)
     {
-        UpdateUIInfo = dTimeFromStart - Checkpoint >= 5.4e-1;
-        if(Application::Update(dTimeFromStart, dElapsedTime, FrameRate, UpdateUIInfo))
-            Application::Render(dTimeFromStart, dElapsedTime, UpdateUIInfo);
+        Global::UpdateUIInfo = dTimeFromStart - Checkpoint >= 5.4e-1;
+        Global::TimeFromStart = dTimeFromStart;
+        Global::Time = dElapsedTime;
+        Global::FrameRate = FrameRate;
+        app->OnFrame();
         auto end = std::chrono::high_resolution_clock::now();
         dElapsedTime = (end - start).count();
         start = end;
@@ -93,12 +95,13 @@ int main(int argc, char** argv)
     }
     PROFILE_END_SESSION();
     PROFILE_BEGIN_SESSION("Cleanup", "Profiling-Cleanup.json");
-    Application::Destroy();
+    app->OnDestroy();
+    delete app;
     PROFILE_END_SESSION();
     return 0;
 }
 
-static ConfigurationSettings LoadConfiguration()
+static void LoadConfiguration()
 {
     FILE *settingsIO = fopen("assets/settings.cfg", "r");
     ConfigurationSettings config;
@@ -152,7 +155,7 @@ static ConfigurationSettings LoadConfiguration()
     } else {
         logalert("Could not load settings.cfg --- Using default settings instead.");
     }
-    return config;
+    Global::Configuration = config;
 }
 
 #ifndef _WIN32

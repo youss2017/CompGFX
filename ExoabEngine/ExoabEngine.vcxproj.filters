@@ -165,28 +165,28 @@
     <ClInclude Include="src\utils\atomic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\Scene.hpp">
+    <ClInclude Include="src\application\pass\Pass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\FrustrumCullPass.hpp">
+    <ClInclude Include="src\application\pass\FrustrumCullPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\GeometryPass.hpp">
+    <ClInclude Include="src\application\pass\GeometryPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\memory\CubeMap.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\SkyboxPass.hpp">
+    <ClInclude Include="src\application\pass\SkyboxPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\ShadowPass.hpp">
+    <ClInclude Include="src\application\pass\ShadowPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\postprocess\BloomPass.hpp">
+    <ClInclude Include="src\application\pass\postprocess\BloomPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\DebugPass.hpp">
+    <ClInclude Include="src\application\pass\DebugPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\shaders\ShaderConnector.hpp">
@@ -195,16 +195,28 @@
     <ClInclude Include="src\utils\perlin_noise.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\postprocess\FXAAPass.hpp">
+    <ClInclude Include="src\application\pass\postprocess\FXAAPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\application\scene\postprocess\SSAOPass.hpp">
+    <ClInclude Include="src\application\pass\postprocess\SSAOPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\audio\Audio.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\physics\PhysicsCore.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\backend\Command.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\window\Event.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\Layer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\application\Globals.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -374,25 +386,25 @@
     <ClCompile Include="src\mesh\SkinnedMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\application\scene\FrustrumCullPass.cpp">
+    <ClCompile Include="src\application\pass\FrustrumCullPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\application\scene\GeometryPass.cpp">
+    <ClCompile Include="src\application\pass\GeometryPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\memory\CubeMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\application\scene\SkyboxPass.cpp">
+    <ClCompile Include="src\application\pass\SkyboxPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\application\scene\ShadowPass.cpp">
+    <ClCompile Include="src\application\pass\ShadowPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\application\scene\postprocess\BloomPass.cpp">
+    <ClCompile Include="src\application\pass\postprocess\BloomPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\application\scene\DebugPass.cpp">
+    <ClCompile Include="src\application\pass\DebugPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\shaders\ShaderConnector.cpp">

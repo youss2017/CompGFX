@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <atomic>
+#include <unordered_map>
 
 #if defined(_DEBUG)
 constexpr bool DebugEnabled = true;
@@ -10,14 +11,14 @@ constexpr bool DebugEnabled = true;
 constexpr bool DebugEnabled = false;
 #endif
 
-static std::vector<PlatformWindow *> s_Internal_Windows;
-static std::atomic<uint32_t> s_Internal_WindowCount(0);
+static std::unordered_map<GLFWwindow*, PlatformWindow*> s_Internal_Windows;
 
 static PlatformWindow *_Internal_GetWindow(GLFWwindow *window)
 {
-    for (PlatformWindow *w : s_Internal_Windows)
-        if (w->GetWindow() == window)
-            return w;
+    auto it = s_Internal_Windows.find(window);
+    if (it != s_Internal_Windows.end()) {
+        return it->second;
+    }
     return nullptr;
 }
 
@@ -50,44 +51,55 @@ void _Internal_WindowFocusCallback(GLFWwindow *window, int focused)
     w->m_focus = focused;
 }
 
+void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    PlatformWindow* w = _Internal_GetWindow(window);
+    if (!w)
+        return;
+    for (auto& callback : w->mCallbacks) {
+        if (callback.first & EVENT_MOUSE_PRESS || callback.first & EVENT_MOUSE_RELEASE) {
+            Event e{};
+            e.mEvents = (action == GLFW_PRESS) ? EVENT_MOUSE_PRESS : EVENT_MOUSE_RELEASE;
+            switch (button) {
+                case GLFW_MOUSE_BUTTON_LEFT:
+                    e.mDetails = EVENT_DETAIL_LEFT_BUTTON;
+                    break;
+                case GLFW_MOUSE_BUTTON_MIDDLE:
+                    e.mDetails = EVENT_DETAIL_MIDDLE_BUTTON;
+                    break;
+                case GLFW_MOUSE_BUTTON_RIGHT:
+                    e.mDetails = EVENT_DETAIL_RIGHT_BUTTON;
+                    break;
+                default:
+                    printf("Unknowning mouse button pressed!\n");
+                    return;
+            }
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+            e.mPayload.mClickX = int(xpos);
+            e.mPayload.mClickY = int(ypos);
+            callback.second(e);
+        }
+    }
+}
+
 PlatformWindow::PlatformWindow(std::string title, int width, int height)
     : m_width(width), m_height(height)
 {
     memset(m_keys, 3, 512 * 4);
-    if (s_Internal_WindowCount == 0)
-    {
-        if (glfwInit() != GLFW_TRUE)
-        {
-            Utils::Message("Fatal Error", "GLFW Library could not initalize!", Utils::ERR);
-            exit(1);
-        }
-    }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
     glfwSetWindowSizeCallback(m_window, _Internal_WindowResizeCallback);
     glfwSetWindowFocusCallback(m_window, _Internal_WindowFocusCallback);
     glfwSetKeyCallback(m_window, _Internal_WindowKeyCallback);
-    s_Internal_Windows.push_back(this);
-    s_Internal_WindowCount++;
+    glfwSetMouseButtonCallback(m_window, _Internal_WindowMouseButtonCallback);
+    s_Internal_Windows[m_window] = this;
 }
 
 PlatformWindow::~PlatformWindow()
 {
-    int index = 0;
-    for (PlatformWindow *w : s_Internal_Windows)
-    {
-        if (w->GetWindow() == m_window)
-        {
-            s_Internal_Windows.erase(s_Internal_Windows.begin() + index);
-            break;
-        }
-        index++;
-    }
+    s_Internal_Windows.erase(m_window);
     glfwDestroyWindow(m_window);
-    s_Internal_WindowCount--;
-    if (s_Internal_WindowCount == 0)
-        glfwTerminate();
 }
 
 void PlatformWindow::Poll()
@@ -105,6 +117,10 @@ bool PlatformWindow::IsWindowMinimized()
     int w, h;
     glfwGetWindowSize(m_window, &w, &h);
     return !(w && h);
+}
+
+void PlatformWindow::RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func) {
+    mCallbacks.push_back(std::make_pair(events, func));
 }
 
 bool PlatformWindow::IsKeyDown(uint16_t key)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Scene.hpp"
+#include "Pass.hpp"
 #include "../Camera.hpp"
 #include <string>
 #include <memory/CubeMap.hpp>
@@ -9,7 +9,7 @@
 
 namespace Application {
 
-	class SkyboxPass : public Scene {
+	class SkyboxPass : public Pass {
 
 	public:
 		SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera, bool UsingDebugPass);

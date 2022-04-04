@@ -4,12 +4,7 @@
 #include <shaders/Shader.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/glm.hpp>
-
-extern vk::VkContext gContext;
-
-namespace Application {
-	extern PlatformWindow* gWindow;
-}
+#include "../Globals.hpp"
 
 std::vector<float> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view, const glm::mat4& lightView)
 {
@@ -80,22 +75,22 @@ std::vector<float> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm:
 
 
 // TODO: Perform frustrm culling.
-Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, EntityController* ecs, Camera* camera, int size) : Scene(gContext->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
+Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, EntityController* ecs, Camera* camera, int size) : Pass(Global::Context->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
 	mT0 = terrain;
 	VkClearValue clear{};
 	clear.depthStencil.depth = 1.0;
 	mFBO.m_width = size;
 	mFBO.m_height = size;
-	FramebufferAttachment depthAtachment = FramebufferAttachment::Create(gContext, 0, size, size, VK_FORMAT_D32_SFLOAT, clear);
+	FramebufferAttachment depthAtachment = FramebufferAttachment::Create(Global::Context, 0, size, size, VK_FORMAT_D32_SFLOAT, clear);
 	mFBO.SetDepthAttachment(depthAtachment);
-	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(gContext);
+	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(Global::Context);
 	vk::Framebuffer_TransistionAttachment(cmd.cmd, &depthAtachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(cmd);
 
-	Shader vertex = Shader(gContext, "assets/shaders/shadow/shadow.vert");
-	Shader fragment = Shader(gContext, "assets/shaders/shadow/shadow.frag");
+	Shader vertex = Shader(Global::Context, "assets/shaders/shadow/shadow.vert");
+	Shader fragment = Shader(Global::Context, "assets/shaders/shadow/shadow.frag");
 
-	BindingDescription bindings[4];
+	BindingDescription bindings[4]{};
 	bindings[0].mBindingID = 0;
 	bindings[0].mFlags = 0;
 	bindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -126,13 +121,14 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	bindings[3].mStages = VK_SHADER_STAGE_VERTEX_BIT;
 	bindings[3].mBufferSize = sizeof(glm::mat4) * 2;
 	bindings[3].mBuffer = nullptr;
+	bindings[3].mSharedResources = false;
 
 	BindingDescription shadowTBindings[2]{};
 	shadowTBindings[0].mBindingID = 0;
 	shadowTBindings[0].mFlags = 0;
 	shadowTBindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	shadowTBindings[0].mStages = VK_SHADER_STAGE_VERTEX_BIT;
-	shadowTBindings[0].mBuffer= terrain->GetVerticesBuffer();
+	shadowTBindings[0].mBuffer = terrain->GetVerticesBuffer();
 	shadowTBindings[0].mSharedResources = true;
 
 	shadowTBindings[1].mBindingID = 1;
@@ -144,7 +140,7 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderConnector_CalculateDescriptorPool(4, bindings, poolSize);
 	ShaderConnector_CalculateDescriptorPool(2, shadowTBindings, poolSize);
-	mPool = vk::Gfx_CreateDescriptorPool(gContext, gFrameOverlapCount * 2, poolSize);
+	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2, poolSize);
 	mSet = ShaderConnector_CreateSet(0, mPool, 4, bindings);
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {});
 
@@ -159,28 +155,30 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	spec.m_Topology = PolygonTopology::TRIANGLE_LIST;
 	spec.m_NearField = 0.0f;
 	spec.m_FarField = 1.0f;
-	mState = PipelineState_Create(gContext, spec, input, mFBO, mLayout, &vertex, &fragment);
+	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment);
 
-	Shader shadowT = Shader(gContext, "assets/shaders/shadow/shadowT.vert");
+	Shader shadowT = Shader(Global::Context, "assets/shaders/shadow/shadowT.vert");
 	shadowTBindings[1].mBuffer = mSet.GetBuffer2(3);
+	shadowTBindings[1].mSharedResources = true;
 	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 2, shadowTBindings);
 	mTerrainLayout = ShaderConnector_CreatePipelineLayout(1, &mTerrainSet, {});
 
 	spec.m_CullMode = CullMode::CULL_BACK;
-	mTerrainState = PipelineState_Create(gContext, spec, input, mFBO, mTerrainLayout, &shadowT, &fragment);
+	mTerrainState = PipelineState_Create(Global::Context, spec, input, mFBO, mTerrainLayout, &shadowT, &fragment);
 
-	mQuery = vk::Gfx_CreateQueryPool(gContext, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 
 	for (int i = 0; i < gFrameOverlapCount; i++)
 		RecordCommands(i);
 }
 
 Application::ShadowPass::~ShadowPass() {
-	Super_Scene_Destroy();
+	Super_Pass_Destroy();
 	mFBO.DestroyAllBoundAttachments();
 	PipelineState_Destroy(mState);
 	PipelineState_Destroy(mTerrainState);
 	ShaderConnector_DestroySet(mSet);
+	ShaderConnector_DestroySet(mTerrainSet);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
@@ -188,12 +186,12 @@ Application::ShadowPass::~ShadowPass() {
 }
 
 void Application::ShadowPass::ReloadShaders() {
-	Shader vertex = Shader(gContext, "assets/shaders/shadow/shadow.vert");
-	Shader fragment = Shader(gContext, "assets/shaders/shadow/shadow.frag");
+	Shader vertex = Shader(Global::Context, "assets/shaders/shadow/shadow.vert");
+	Shader fragment = Shader(Global::Context, "assets/shaders/shadow/shadow.frag");
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec = mState->m_spec;
 	PipelineState_Destroy(mState);
-	mState = PipelineState_Create(gContext, spec, input, mFBO, mLayout, &vertex, &fragment);
+	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment);
 	for (int i = 0; i < gFrameOverlapCount; i++)
 		RecordCommands(i);
 }
@@ -210,20 +208,20 @@ VkCommandBuffer Application::ShadowPass::Prepare(uint32_t FrameIndex, float dTim
 	void* mapped_ptr = Buffer2_Map(uniform);
 	memcpy(mapped_ptr, &MVPBinding, sizeof(MVPBinding));
 	Buffer2_Flush(uniform, 0, VK_WHOLE_SIZE);
-	return mCmds[FrameIndex];
+	return *mCmd;
 }
 
 void Application::ShadowPass::GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime) {
 	uint64_t data[2];
 	VkResult q = vkGetQueryPoolResults(mDevice, mQuery, FrameIndex * 2, 2, sizeof(data), data, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | (Wait ? VK_QUERY_RESULT_WAIT_BIT : 0));
 	if (q == VK_SUCCESS) {
-		dTime = (double(data[1] - data[0]) * gContext->card.deviceLimits.timestampPeriod) * 1e-6;
+		dTime = (double(data[1] - data[0]) * Global::Context->card.deviceLimits.timestampPeriod) * 1e-6;
 	}
 }
 
 glm::mat4 Application::ShadowPass::GetLightSpace()
 {
-	glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)gWindow->GetWidth(), (float)gWindow->GetHeight(), 0.1f, 1000.0f);
+	glm::mat4 proj = Global::Projection;
 	glm::mat4 view = mCamera->GetViewMatrix();
 	glm::mat4 ip = glm::inverse(proj * view);
 	glm::mat4 lightView = glm::lookAt(mLightPosition, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
@@ -238,8 +236,8 @@ glm::mat4 Application::ShadowPass::GetLightSpace()
 
 void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 {
-	vkResetCommandPool(mDevice, mPools[FrameIndex], 0);
-	VkCommandBuffer cmd = mCmds[FrameIndex];
+	mCmdPool->Reset(FrameIndex);
+	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
 	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
@@ -287,6 +285,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindIndexBuffer(cmd, mIndices->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexedIndirect(cmd, mSet.GetBuffer(2, FrameIndex), 0, 1, sizeof(ShaderTypes::DrawData));
 
+#if 0
 	VkBuffer indices = mT0->GetIndicesBuffer()->mBuffers[FrameIndex];
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainLayout, 0, 1, &mTerrainSet[FrameIndex], 0, nullptr);
@@ -295,6 +294,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 		auto& submesh = mT0->GetSubmesh(i);
 		vkCmdDrawIndexed(cmd, submesh.mIndicesCount, 1, submesh.mFirstIndex, submesh.mFirstVertex, 0);
 	}
+#endif
 
 	barrier0.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;
 	barrier0.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
