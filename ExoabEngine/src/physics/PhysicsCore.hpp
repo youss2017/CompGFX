@@ -68,7 +68,8 @@ namespace Ph {
 	BoundingBox CalculateBoundingBox(void* pVertices, uint32_t* pIndices, uint32_t indicesCount, uint32_t verticesStride);
 	// Same as the original expect were working with hvec3 instead.
 	BoundingBox CalculateBoundingBox16(void* pVertices, uint32_t* pIndices, uint32_t indicesCount, uint32_t verticesStride);
-
 	BoundingSphere CalculateBoundingSphere(void* pVertices, uint32_t* pIndices, uint32_t indicesCount, uint32_t verticesStride);
+
+	vec3 GenerateRayFromScreenCoordinates(const mat4& proj, const mat4& view, const vec2& xy, const vec2& windowSize);
 
 }

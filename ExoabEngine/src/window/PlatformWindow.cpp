@@ -55,7 +55,6 @@ static void _Internal_WindowKeyCallback(GLFWwindow *window, int key, int scancod
             callback.second(e);
         }
     }
-    //w->m_keys[key] = action;
 }
 
 void _Internal_WindowFocusCallback(GLFWwindow *window, int focused)
@@ -104,7 +103,6 @@ void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int act
 PlatformWindow::PlatformWindow(std::string title, int width, int height)
     : m_width(width), m_height(height)
 {
-    //memset(m_keys, 3, 512 * 4);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
@@ -141,19 +139,3 @@ bool PlatformWindow::IsWindowMinimized()
 void PlatformWindow::RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func) {
     mCallbacks.push_back(std::make_pair(events, func));
 }
-
-//bool PlatformWindow::IsKeyDown(uint16_t key)
-//{
-//    key = toupper(key);
-//    if (m_keys[key] == GLFW_PRESS)
-//        return true;
-//    return false;
-//}
-//
-//bool PlatformWindow::IsKeyUp(uint16_t key)
-//{
-//    key = toupper(key);
-//    bool status = m_keys[key] == GLFW_RELEASE;
-//    m_keys[key] = 3;
-//    return status;
-//}

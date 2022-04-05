@@ -127,8 +127,13 @@ namespace Application
 		static bool XKey = false;
 		static bool UpKey = false;
 		static bool DownKey = false;
-		
-		Global::Window->RegisterCallback(EVENT_KEY_PRESS | EVENT_KEY_RELEASE, [&](const Event& e) throw() -> void {
+		static bool IOInit = true;
+
+		static glm::vec3 RayOrigin = glm::vec3(0.0);
+		static glm::vec3 RayDirection = glm::vec3(0.0, 0.0, 1.0f);
+
+		if (IOInit) {
+			Global::Window->RegisterCallback(EVENT_KEY_PRESS | EVENT_KEY_RELEASE, [&](const Event& e) throw() -> void {
 				switch (e.mPayload.KeyLowerCase) {
 				case 'w':
 					WKey = e.mEvents & EVENT_KEY_PRESS;
@@ -155,7 +160,7 @@ namespace Application
 					XKey = e.mEvents & EVENT_KEY_PRESS;
 					break;
 				};
-			switch (e.mPayload.NonASCIKey) {
+				switch (e.mPayload.NonASCIKey) {
 				case GLFW_KEY_UP:
 					UpKey = e.mEvents & EVENT_KEY_PRESS;
 					break;
@@ -166,8 +171,16 @@ namespace Application
 					Global::Quit = e.mEvents & EVENT_KEY_RELEASE;
 					break;
 				}
-			}
-		);
+				}
+			);
+
+			Global::Window->RegisterCallback(EVENT_MOUSE_PRESS, [&](const Event& e) throw() -> void {
+				using namespace glm;
+				RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY), 
+					vec2(Global::Window->GetWidth(), Global::Window->GetHeight()));
+			});
+			IOInit = !IOInit;
+		}
 
 		if (WKey) mCamera.MoveForward(Global::Time * 22.0);
 		if (SKey) mCamera.MoveForward(Global::Time * -22.0);
@@ -227,7 +240,7 @@ namespace Application
 			mBloom->GetStatistics(wait, frame.m_FrameIndex, UI::BloomPassTime);
 			mDebugPass->GetStatistics(wait, frame.m_FrameIndex, UI::DebugPassTime);
 		}
-
+		
 		//glm::mat4 transform = glm::translate(glm::mat4(1.0), glm::vec3(t0->, 0.0, 0.0));
 		//t0->SetTransform(transform);
 
@@ -235,7 +248,7 @@ namespace Application
 		if (UI::LockFrustrum) {
 			float width = Global::Window->GetWidth();
 			float height = Global::Window->GetHeight();
-			glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), width, height, 2.0f, 1000.0f);
+			glm::mat4 proj = Global::Projection;
 			glm::mat4 view = mLockedCamera.GetViewMatrix();
 		
 			//(-1, -1, -1) (1, -1, -1) (1, 1, -1) (-1, 1, -1) // near plane
@@ -287,9 +300,13 @@ namespace Application
 		}
 		
 		glm::vec3 pos = UI::LightPosition;
-		glm::mat4 proj = glm::perspectiveFovLH(glm::radians(90.0f), (float)Global::Window->GetWidth(), (float)Global::Window->GetHeight(), 0.1f, 1000.0f);
-		mDebugPass->SetProjectionView(proj, mCamera.GetViewMatrix());
-		
+		mDebugPass->SetProjectionView(Global::Projection, mCamera.GetViewMatrix());
+		glm::vec3 v = glm::normalize(mCamera.GetLookDir()) * 3.14f;
+		glm::vec3 origin = RayOrigin;// +v;
+		glm::vec3 ray = origin + (RayDirection * 100.0f);
+		mDebugPass->DrawCube(origin, glm::vec3(1.25f), glm::vec3(242, 128, 15) / glm::vec3(255.0f), 1);
+		mDebugPass->DrawCube(ray, glm::vec3(10.0f), glm::vec3(255.0f) / glm::vec3(255.0f), 1);
+
 		mSkybox->SetLOD(UI::CubemapLOD);
 		
 		mShadow->SetShadowLightPosition(pos);
@@ -315,6 +332,10 @@ namespace Application
 			mDebugPass->DrawCube(centerPos, glm::vec3(0.25), glm::vec3(196, 26, 201) / glm::vec3(255), false, mInstanceCount);
 			mDebugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(26, 173, 63) / glm::vec3(255), false, mInstanceCount);
 		}
+
+		/// <summary>
+		/// VkCMD
+		/// </summary>
 
 		VkDevice device = Global::Context->defaultDevice;
 		uint32_t FrameIndex = frame.m_FrameIndex;

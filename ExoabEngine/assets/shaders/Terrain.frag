@@ -26,7 +26,7 @@ layout (binding = 2) uniform sampler2D TerrainTextures[];
 layout (binding = 3) uniform sampler2D shadowMap;
 layout (binding = 4) uniform sampler2D normalMap;
 
-layout (constant_id = 0) const int pcfCount = 1;
+layout (constant_id = 0) const int pcfCount = 4;
 
 float ShadowCalculation()
 {

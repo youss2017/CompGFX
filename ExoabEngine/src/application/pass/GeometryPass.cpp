@@ -166,7 +166,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	Shader mapVertex = Shader(Global::Context, "assets/shaders/Terrain.vert");
 	Shader mapFragment = Shader(Global::Context, "assets/shaders/Terrain.frag");
 	mMapState = PipelineState_Create(Global::Context, mGeoState->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
-
+	
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}
@@ -260,10 +260,10 @@ void Application::GeometryPass::CullTerrain(const glm::mat4& proj, const glm::ma
 		vec4 center = model * vec4(sphere.mCenter, 1.0);
 
 		bool visible = true;
-		// the left/top/right/bottom plane culling utilizes frustum symmetry to cull against two planes at the same time
-		visible = visible && center.z * frustrumF[1] - abs(center.x) * frustrumF[0] > -radius;
-		visible = visible && center.z * frustrumF[3] - abs(center.y) * frustrumF[2] > -radius;
-#if 0
+		//// the left/top/right/bottom plane culling utilizes frustum symmetry to cull against two planes at the same time
+		//visible = visible && center.z * frustrumF[1] - abs(center.x) * frustrumF[0] < -radius;
+		//visible = visible && center.z * frustrumF[3] - abs(center.y) * frustrumF[2] < radius;
+#if 1
 		for (int i = 0; i < 5; i++) {
 		//	if (i == 3)
 		//		continue;

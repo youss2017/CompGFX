@@ -143,9 +143,6 @@ public:
 	~PlatformWindow();
 
 	static void Poll();
-
-	//bool IsKeyDown(uint16_t key);
-	//bool IsKeyUp(uint16_t key);
 	
 	inline GLFWwindow* GetWindow() { return m_window; }
 	bool ShouldClose();
@@ -158,7 +155,6 @@ public:
 
 	int m_width, m_height;
 private:
-	//int m_keys[512];
 	GLFWwindow* m_window;
 	bool m_focus = true;
 	std::vector<std::pair<EventFlagBits, std::function<void(const Event& e)>>> mCallbacks;
