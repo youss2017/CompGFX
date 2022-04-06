@@ -122,14 +122,10 @@ namespace Ph {
         vec2 coord = xy / windowSize;
         // convert from [0,1] range to [-1,1];
         coord = coord * 2.0f - 1.0f;
-        // undo perspective projection
-        mat4 invProj = inverse(proj);
-        vec4 coord4D = invProj * vec4(coord, 1.0f, 1.0f);
-        // undo view projection
-        mat4 invView = inverse(view);
-        coord4D = invView * coord4D;
-        vec3 coord3D = normalize(vec3(coord4D));
-        //printf("(%.2f, %.2f) --> (%.2f, %.2f, %.2f)\n", temp.x, temp.y, coord3D[0], coord3D[1], coord3D[2]);
+        // undo perspective projection and view projection
+        mat4 invProjView = inverse(proj * view);
+        vec4 coord4D = invProjView * vec4(coord, 1.0f, 1.0f);
+        vec3 coord3D = normalize(vec3(coord4D) * coord4D.w);
         return coord3D;
     }
 

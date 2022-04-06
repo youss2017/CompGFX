@@ -15,16 +15,14 @@
 
 struct TerrainVertex
 {
-    glm::vec3 inPosition;
-    Ph::hvec3 inNormal;
-    Ph::hvec3 inTangent;
-    Ph::hvec3 inBiTangent;
-    glm::i16vec3 inTextureIDs;
+    Ph::hvec3 inPosition16;
+    Ph::hvec3 inNormal16;
+    Ph::hvec3 inTangent16;
+    glm::u8vec3 inTextureIDs;
     Ph::hvec3 inTextureWeights;
     Ph::hvec2 inTexCoords;
 };
 
-// TODO: Split map into smaller squares so we can do frustrum culling on the map.
 struct TerrainSubmesh {
     uint32_t mFirstVertex;
     uint32_t mFirstIndex;
@@ -58,14 +56,17 @@ public:
     inline uint32_t GetSubmeshCount() { return mSubmeshes.size(); }
     inline TerrainSubmesh& GetSubmesh(uint32_t i) { return mSubmeshes[i]; }
 
+    static std::vector<std::pair<std::string, std::string>> GetFilters(std::vector<std::string>& extensionIDs);
+    void Save(const std::string& assimpID, const std::string& path);
+
 private:
     void CalculateTangentBitangent();
 
 private:
     uint32_t mWidth;
     uint32_t mHeight;
-    uint32_t mResolutionX;
-    uint32_t mResolutionY;
+    uint32_t mSplitX;
+    uint32_t mSplitY;
     std::vector<TerrainVertex> mVertices;
     std::vector<uint32_t> mIndices;
     std::vector<TerrainSubmesh> mSubmeshes;

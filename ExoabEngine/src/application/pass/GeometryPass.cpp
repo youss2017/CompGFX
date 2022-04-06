@@ -253,7 +253,7 @@ void Application::GeometryPass::CullTerrain(const glm::mat4& proj, const glm::ma
 
 	vec3 modelScale = vec3(model[0][0], model[1][1], model[2][2]);
 	auto InsideFrustrum = [&](const Ph::BoundingSphere& sphere) throw() -> bool {
-		
+		return true;
 		vec3 radiusxyz = modelScale * sphere.mRadius;
 		// choose the biggest radius in any direction
 		float radius = sphere.mRadius * 2.5f; // max(max(radiusxyz.x, radiusxyz.y), radiusxyz.z) * 1.0f;
@@ -434,14 +434,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mMapLayout, 0, 1, mapSet, 0, nullptr);
 	vkCmdPushConstants(cmd, mMapLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock), &pushblock);
 	vkCmdBindIndexBuffer(cmd, mT0->GetIndicesBuffer()->mBuffers[FrameIndex], 0, VK_INDEX_TYPE_UINT32);
-#if 0
-	for (uint32_t i = 0; i < mT0->GetSubmeshCount(); i++) {
-		auto& submesh = mT0->GetSubmesh(i);
-		vkCmdDrawIndexed(cmd, submesh.mIndicesCount, 1, submesh.mFirstIndex, submesh.mFirstVertex, 0);
-	}
-#else
 	vkCmdDrawIndexedIndirectCount(cmd, Gbuffer(mTerrainDrawCommands)->mBuffers[FrameIndex], 0, Gbuffer(mTerrainDrawCount)->mBuffers[FrameIndex], 0, mT0->GetSubmeshCount(), sizeof(VkDrawIndexedIndirectCommand));
-#endif
 
 	VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;

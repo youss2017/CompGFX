@@ -4,7 +4,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_debug_printf : disable
 
-layout (location = 0) in flat ivec3 TextureIDs;
+layout (location = 0) in flat uvec3 TextureIDs;
 layout (location = 1) in vec3 TextureWeights;
 layout (location = 2) in vec2 TexCoord;
 layout (location = 3) in vec4 LightSpacePos;
@@ -26,7 +26,8 @@ layout (binding = 2) uniform sampler2D TerrainTextures[];
 layout (binding = 3) uniform sampler2D shadowMap;
 layout (binding = 4) uniform sampler2D normalMap;
 
-layout (constant_id = 0) const int pcfCount = 4;
+
+layout (constant_id = 0) const int pcfCount = 1;
 
 float ShadowCalculation()
 {
@@ -71,5 +72,5 @@ void main()
     float diffuse = dot(normal, u_LightDirection.xyz);
 
     // TODO: Support Specular Map
-    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), 0.4, 1.0) + ambient;
+    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), /*0.5*/1.0, 1.0) + ambient;
 }

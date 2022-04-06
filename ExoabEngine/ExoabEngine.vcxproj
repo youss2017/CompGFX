@@ -160,6 +160,7 @@
     <ClInclude Include="src\utils\defines.h" />
     <ClInclude Include="src\utils\Logger.hpp" />
     <ClInclude Include="src\utils\MBox.hpp" />
+    <ClInclude Include="src\utils\OpenSaveDialog.hpp" />
     <ClInclude Include="src\utils\perlin_noise.hpp" />
     <ClInclude Include="src\utils\Profiling.hpp" />
     <ClInclude Include="src\utils\StringUtils.hpp" />
@@ -231,6 +232,7 @@
     <ClCompile Include="src\utils\commonn.cpp" />
     <ClCompile Include="src\utils\Logger.cpp" />
     <ClCompile Include="src\utils\MBox.cpp" />
+    <ClCompile Include="src\utils\OpenSaveDialog.cpp" />
     <ClCompile Include="src\utils\perlin_noise.cpp" />
     <ClCompile Include="src\utils\Profiling.cpp" />
     <ClCompile Include="src\utils\StringUtils.cpp" />

@@ -22,14 +22,14 @@ namespace Application
 	bool Application::OnInitalize()
 	{
 		PROFILE_FUNCTION();
-		Audio* audio = new Audio();
-		AudioBuffer* buffer = new AudioBuffer(audio, 44100, 15.0);
+		//Audio* audio = new Audio();
+		//AudioBuffer* buffer = new AudioBuffer(audio, 44100, 15.0);
 		//float* fbuf = buffer->GetBuffer();
 		//float step = 1.0 / (44100 * 2);
 		//for (int i = 0; i < (44100 * 2 * 15); i++) {
 		//	fbuf[i] = sinf(step * i * 50.0 * 2.0 * 3.14);
 		//}
-		buffer->Play();
+		//buffer->Play();
 		log_configure(true, true);
 		if (!glfwInit())
 		{
@@ -46,7 +46,6 @@ namespace Application
 		Global::Context = ToVKContext(mGfx->m_context);
 		mSwapchain = mGfx->m_vswapchain;
 		Global::Window = mGfx->m_window;
-
 		Shader::ConfigureShaderCache(s_ShaderCache);
 
 		if (s_EnableImGui)
@@ -176,7 +175,8 @@ namespace Application
 
 			Global::Window->RegisterCallback(EVENT_MOUSE_PRESS, [&](const Event& e) throw() -> void {
 				using namespace glm;
-				RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY), 
+				RayOrigin = mCamera.GetPosition();
+				RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY),
 					vec2(Global::Window->GetWidth(), Global::Window->GetHeight()));
 			});
 			IOInit = !IOInit;
@@ -208,7 +208,7 @@ namespace Application
 			}
 			if (UI::ReloadShaders) {
 				UI::ReloadShaders = false;
-				logalert("Reloading ALL Scene Shaders.");
+				logalert("Reloading All Scene Shaders.");
 				mCullPass->ReloadShaders();
 				mGeoPass->ReloadShaders();
 				mSkybox->ReloadShaders();
@@ -217,7 +217,17 @@ namespace Application
 				mBloom->ReloadShaders();
 			}
 			mGeoPass->SetWireframeMode(UI::ShowWireframe);
-			//Graphics3D_SetSyncInterval(gGfx, UI::VSync);
+			if (UI::SaveTerrain) {
+				int choosenFilter = 0;
+				std::vector<std::string> assimpIDs;
+				std::vector<std::pair<std::string, std::string>> filters = Terrain::GetFilters(assimpIDs);
+				std::string path = Utils::SaveAsDialog(Utils::CreateDialogFilter(filters), choosenFilter);
+				if (path.size() > 0) {
+					if (!Utils::StrContains(path, "."))
+						path += filters[choosenFilter].second.data() + 1;
+					mT0->Save(assimpIDs[choosenFilter].data(), path);
+				}
+			}
 		}
 
 		if (UI::RegenerateNoiseMap) {
@@ -414,10 +424,10 @@ namespace Application
 	}
 
 	void Application::CreateTerrain() {
-		int w = 512;
-		int h = 512;
-		int hw = 512;
-		int hh = 512;
+		int w = 256;
+		int h = 256;
+		int hw = 256;
+		int hh = 256;
 		std::vector<float> perlinBuffer(hw * hh);
 		std::vector<float> perlinBuffer1(hw * hh);
 		std::vector<float> perlinBuffer2(hw * hh);
@@ -452,12 +462,12 @@ namespace Application
 			Texture2_UploadPixels(mNoiseMapTexture2, perlinBuffer2.data(), perlinBuffer2.size() * sizeof(float));
 		}
 		if (!mT0)
-			mT0 = new Terrain(w, h, 25, 25);
+			mT0 = new Terrain(w, h, w/8, h/8);
 		mT0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
 		Texture2_ReadPixels(mNoiseMapTexture, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer.data());
 		Texture2_ReadPixels(mNoiseMapTexture1, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer1.data());
 		Texture2_ReadPixels(mNoiseMapTexture2, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer2.data());
-		mT0->ApplyHeightmap(hw, hh, 0.0, 10.0f, { {UI::Contribution[0], perlinBuffer.data() }, {UI::Contribution[1], perlinBuffer1.data() }, {UI::Contribution[2], perlinBuffer2.data() } });
+		mT0->ApplyHeightmap(hw, hh, -6.0, 25.0f, { {UI::Contribution[0], perlinBuffer.data() }, {UI::Contribution[1], perlinBuffer1.data() }, {UI::Contribution[2], perlinBuffer2.data() } });
 	}
 
 }

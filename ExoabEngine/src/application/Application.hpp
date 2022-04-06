@@ -21,6 +21,8 @@
 #include "../assets/geometry.cfg"
 #include <stb/stb_image_write.h>
 #include "Globals.hpp"
+#include "OpenSaveDialog.hpp"
+#include "StringUtils.hpp"
 
 namespace Application {
 

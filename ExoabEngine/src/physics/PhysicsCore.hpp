@@ -44,6 +44,14 @@ namespace Ph {
 		return glm::detail::toFloat32(v);
 	}
 
+	inline i8vec3 Normal32To8(const vec3& normal) {
+		return i8vec3(normal * vec3(127.0));
+	}
+
+	inline vec3 Normal8To32(const i8vec3& normal) {
+		return vec3(normal) / 127.0f;
+	}
+
 	struct BoundingBox {
 		vec3 mBoxMin;
 		vec3 mBoxMax;

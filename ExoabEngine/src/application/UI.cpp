@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <string>
 #include <sstream>
+#include "Globals.hpp"
 
 namespace UI
 {
@@ -47,6 +48,7 @@ namespace UI
     static ImTextureID NoiseMapTexture2 = nullptr;
     int ActiveNoiseMap = 0;
     float Contribution[3] = { 1.0 };
+    bool SaveTerrain = false;
 }
 
 void UI::Initalize(void* _context, void* _gfx)
@@ -149,6 +151,15 @@ void UI::RenderUI()
         if (ImGui::Button("Regenerate")) {
             RegenerateNoiseMap = true;
         }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Export Terrain")) {
+        StateChanged = true;
+        SaveTerrain = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Quit")) {
+        Global::Quit = true;
     }
     ImGui::End();
     //ImGui::ShowDemoWindow();
