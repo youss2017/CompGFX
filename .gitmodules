@@ -26,3 +26,6 @@
 [submodule "ExoabEngine/external/-b"]
 	path = ExoabEngine/external/-b
 	url = https://github.com/ocornut/imgui
+[submodule "ExoabEngine/external/zip"]
+	path = ExoabEngine/external/zip
+	url = https://github.com/kuba--/zip
