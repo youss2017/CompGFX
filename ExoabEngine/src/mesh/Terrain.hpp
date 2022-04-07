@@ -4,6 +4,7 @@
 #include <shaders/ShaderConnector.hpp>
 #include <vector>
 #include <glm/glm.hpp>
+#include <assimp/cexport.h>
 #include "../physics/PhysicsCore.hpp"
 
 /*
@@ -57,7 +58,8 @@ public:
     inline TerrainSubmesh& GetSubmesh(uint32_t i) { return mSubmeshes[i]; }
 
     static std::vector<std::pair<std::string, std::string>> GetFilters(std::vector<std::string>& extensionIDs);
-    void Save(const std::string& assimpID, const std::string& path);
+    void Export(const std::string& assimpID, const std::string& path, size_t* pOutSize = nullptr, char** pOutBuffer = nullptr);
+    void Save(const std::string& name);
 
 private:
     void CalculateTangentBitangent();

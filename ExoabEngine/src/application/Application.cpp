@@ -225,7 +225,8 @@ namespace Application
 				if (path.size() > 0) {
 					if (!Utils::StrContains(path, "."))
 						path += filters[choosenFilter].second.data() + 1;
-					mT0->Save(assimpIDs[choosenFilter].data(), path);
+					mT0->Export(assimpIDs[choosenFilter].data(), path);
+					mT0->Save("output.zip");
 				}
 			}
 		}

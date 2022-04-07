@@ -1,11 +1,12 @@
 #include "Terrain.hpp"
 #include <iostream>
 #include <meshoptimizer/src/meshoptimizer.h>
-#include <assimp/Exporter.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <assimp/Exporter.hpp>
 #include <assimp/ProgressHandler.hpp>
+#include "zip.h"
 
 Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t splitY) : mModelTransform(glm::mat4(1.0)) {
 	using namespace glm;
@@ -202,7 +203,7 @@ std::vector<std::pair<std::string, std::string>> Terrain::GetFilters(std::vector
 }
 
 // Thanks to https://github.com/assimp/assimp/issues/203
-void Terrain::Save(const std::string& assimpID, const std::string& path) {
+void Terrain::Export(const std::string& assimpID, const std::string& path, size_t* pOutSize, char** pOutBuffer) {
 	aiScene scene{};
 	auto start1 = std::chrono::high_resolution_clock::now();
 	scene.mRootNode = new aiNode();
@@ -287,11 +288,44 @@ void Terrain::Save(const std::string& assimpID, const std::string& path) {
 	};
 	Progress* p = new Progress;
 	exp.SetProgressHandler(p);
-	if (exp.Export(&scene, assimpID, path) != AI_SUCCESS) {
-		logerror("Could not export terrain!");
+	if (pOutSize) {
+		auto buf = exp.ExportToBlob(&scene, assimpID);
+		*pOutSize = buf->size;
+		*pOutBuffer = new char[buf->size];
+		memcpy(*pOutBuffer, buf->data, buf->size);
+	}
+	else {
+		if (exp.Export(&scene, assimpID, path) != AI_SUCCESS) {
+			logerror("Could not export terrain!");
+		}
 	}
 	auto end2 = std::chrono::high_resolution_clock::now();
 	printf("Copying Data to Assimp structure took %.2f sec\nAssimp Exporting took %.2f sec\n", float((end1 - start1).count()) * 1e-9f, float((end2 - start2).count()) * 1e-9f);
+}
+
+void Terrain::Save(const std::string& name) {
+	std::vector<char*> files;
+	zip_t* zip = zip_open(name.c_str(), ZIP_DEFAULT_COMPRESSION_LEVEL, 'w');
+	zip_entry_open(zip, "MANIFEST.DAT");
+	{
+		using namespace std;
+		string TerrainName = "TERRAIN:"s + name;
+		zip_entry_write(zip, TerrainName.data(), TerrainName.size());
+		string normalMap = "NORMAL:";
+		zip_entry_write(zip, normalMap.data(), normalMap.size());
+		string specularMap = "SPECULAR:";
+		zip_entry_write(zip, specularMap.data(), specularMap.size());
+		zip_entry_close(zip);
+	}
+	zip_entry_close(zip);
+	zip_entry_open(zip, "terrain.fbx");
+	char* pBuffer;
+	size_t size;
+	Export("fbx", "", &size, &pBuffer);
+	zip_entry_write(zip, pBuffer, size);
+	zip_entry_close(zip);
+	zip_close(zip);
+	delete[] pBuffer;
 }
 
 void Terrain::CalculateTangentBitangent() {
