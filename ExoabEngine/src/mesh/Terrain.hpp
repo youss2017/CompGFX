@@ -50,6 +50,9 @@ public:
     void ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minHeight, float maxHeight, std::vector<TerrainHeightMap> heightMaps);
     void SetTransform(const glm::mat4& transform) { mModelTransform = transform;  }
     glm::mat4 GetTransform() { return mModelTransform; }
+    glm::mat4 GetToCenterTransform();
+    // scales the terrain to a 1x1x1 cube
+    glm::mat4 GetSquareTransform(float maxHeight);
    
     IBuffer2 GetVerticesBuffer() { return mVerticesBuffer; }
     IBuffer2 GetIndicesBuffer() { return mIndicesBuffer; }

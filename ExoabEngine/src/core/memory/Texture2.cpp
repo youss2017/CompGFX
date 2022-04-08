@@ -352,3 +352,19 @@ ITexture2 Texture2_CreateFromFile(const char* path, bool mipmaps)
 	stbi_image_free(pixels);
 	return texture;
 }
+
+void Texture2_RemoveAlphaChannel(uint32_t* srcPixels, char* dstPixels, int width, int height) {
+	struct Pixel24 {
+		char r;
+		char g;
+		char b;
+	};
+	Pixel24* dst = (Pixel24*)dstPixels;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			dst[y * width + x].r = (srcPixels[y * width + x] >> 16) & 0xff;
+			dst[y * width + x].g = (srcPixels[y * width + x] >> 8) & 0xff;
+			dst[y * width + x].b = (srcPixels[y * width + x] >> 0) & 0xff;
+		}
+	}
+}

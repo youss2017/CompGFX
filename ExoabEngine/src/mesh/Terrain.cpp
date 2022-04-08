@@ -191,6 +191,16 @@ void Terrain::ApplyHeightmap(int heightMapWidth, int heightMapHeight, float minH
 	Buffer2_UploadData(mVerticesBuffer, mVertices.data(), 0, VK_WHOLE_SIZE);
 }
 
+glm::mat4 Terrain::GetToCenterTransform() {
+	glm::mat4 center = glm::translate(glm::mat4(1.0), glm::vec3(-(float(mWidth - mSplitX) / 2.0f), 0.0, -(float(mHeight - mSplitY) / 2.0f)));
+	return center;
+}
+
+glm::mat4 Terrain::GetSquareTransform(float maxHeight) {
+	glm::mat4 scale = glm::scale(glm::mat4(1.0), glm::vec3(1.0f / float(mWidth - mSplitX), 1.0f / maxHeight, 1.0f / (float(mHeight - mSplitY))));
+	return scale;
+}
+
 std::vector<std::pair<std::string, std::string>> Terrain::GetFilters(std::vector<std::string>& extensionIDs)
 {
 	std::vector<std::pair<std::string, std::string>> filters;

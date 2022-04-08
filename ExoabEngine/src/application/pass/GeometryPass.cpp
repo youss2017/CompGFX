@@ -4,6 +4,7 @@
 #include "perlin_noise.hpp"
 #include <stb/stb_image_write.h>
 #include "../Globals.hpp"
+#include "../minimap.hpp"
 
 struct TerrainPushblock {
 	glm::mat4 u_Model;
@@ -13,7 +14,7 @@ struct TerrainPushblock {
 Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap) : Pass(Global::Context->defaultDevice, true), mCamera(camera), mLockedCamera(lockedCamera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
 	
 	mTerrainDrawCommands = (VkDrawIndexedIndirectCommand*)Gmalloc(terrain->GetSubmeshCount() * sizeof(VkDrawIndexedIndirectCommand), BufferType::BUFFER_TYPE_INDIRECT, false);
-	mTerrainDrawCount = (uint32_t*)Gmalloc(sizeof(uint32_t), BufferType::BUFFER_TYPE_INDIRECT, false);
+	mTerrainDrawCount = (uint32_t*)Gmalloc(4, BUFFER_TYPE_INDIRECT, true);
 
 	mFBO.m_width = width;
 	mFBO.m_height = height;
@@ -162,14 +163,13 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	
 	mMapSet = ShaderConnector_CreateSet(0, mPool, 5, terrainBindings);
 	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock)} });
-	Shader mapVertex = Shader(Global::Context, "assets/shaders/Terrain.vert");
-	Shader mapFragment = Shader(Global::Context, "assets/shaders/Terrain.frag");
+	Shader mapVertex = Shader(Global::Context, "assets/shaders/terrain/Terrain.vert");
+	Shader mapFragment = Shader(Global::Context, "assets/shaders/terrain/Terrain.frag");
 	mMapState = PipelineState_Create(Global::Context, mGeoState->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}
-
 }
 
 Application::GeometryPass::~GeometryPass() {
@@ -290,9 +290,12 @@ void Application::GeometryPass::CullTerrain(const glm::mat4& proj, const glm::ma
 			DrawCount++;
 		}
 	}
-	*mTerrainDrawCount = DrawCount;
+	memcpy(mTerrainDrawCount, &DrawCount, 4);
 	GverifyWrite(mTerrainDrawCommands);
-	GverifyWrite(mTerrainDrawCount);
+}
+
+ITexture2 Application::GeometryPass::CreateMinimap() {
+	return GenerateMinimap(mT0, { mSandTex }, mNormalMap);
 }
 
 void Application::GeometryPass::ReloadShaders() {
@@ -301,8 +304,8 @@ void Application::GeometryPass::ReloadShaders() {
 	PipelineState_Destroy(mMapState);
 	Shader geoVertex = Shader(Global::Context, "assets/shaders/vertex.vert");
 	Shader geoFragment = Shader(Global::Context, "assets/shaders/fragment.frag");
-	Shader mapVertex = Shader(Global::Context, "assets/shaders/Terrain.vert");
-	Shader mapFragment = Shader(Global::Context, "assets/shaders/Terrain.frag");
+	Shader mapVertex = Shader(Global::Context, "assets/shaders/terrain/Terrain.vert");
+	Shader mapFragment = Shader(Global::Context, "assets/shaders/terrain/Terrain.frag");
 	PipelineVertexInputDescription input;
 	mGeoState = PipelineState_Create(Global::Context, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
 	mMapState = PipelineState_Create(Global::Context, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
@@ -364,24 +367,8 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	renderingInfo.viewMask = 0;
 	renderingInfo.colorAttachmentCount = 1;
 
-	VkRenderingAttachmentInfo colorAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-	colorAttachment.imageView = mFBO.m_color_attachments[0].GetAttachment()->m_vk_views_per_frame[i];
-	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	colorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
-	colorAttachment.resolveImageView = nullptr;
-	colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.clearValue = mFBO.m_color_attachments[0].mClear;
-	VkRenderingAttachmentInfo depthAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-	depthAttachment.imageView = mFBO.m_depth_attachment->GetAttachment()->m_vk_views_per_frame[i];
-	depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	depthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
-	depthAttachment.resolveImageView = nullptr;
-	depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	depthAttachment.clearValue = mFBO.m_depth_attachment.value().mClear;
+	VkRenderingAttachmentInfo colorAttachment = mFBO.GetRenderingAttachmentInfo(FrameIndex, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE);
+	VkRenderingAttachmentInfo depthAttachment = mFBO.GetDepthRenderingAttachmentInfo(FrameIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE);
 
 	renderingInfo.pColorAttachments = &colorAttachment;
 	renderingInfo.pDepthAttachment = &depthAttachment;

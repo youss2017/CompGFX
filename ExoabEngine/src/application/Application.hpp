@@ -24,6 +24,7 @@
 #include "Globals.hpp"
 #include "OpenSaveDialog.hpp"
 #include "StringUtils.hpp"
+#include "minimap.hpp"
 
 namespace Application {
 
@@ -53,6 +54,7 @@ namespace Application {
 		VkSemaphore mBloomPassSemaphore[gFrameOverlapCount];
 		Terrain* mT0 = nullptr;
 		const uint32_t mInstanceCount = 500;
+		ITexture2 mMinimap;
 		ITexture2 mNoiseMapTexture;
 		ITexture2 mNoiseMapTexture1;
 		ITexture2 mNoiseMapTexture2;

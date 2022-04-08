@@ -2,7 +2,7 @@
 #include "Globals.hpp"
 #include <stb/stb_image.h>
 
-Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex) : Pass(Global::Context->defaultDevice, true) {
+Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, ITexture2 minimap) : Pass(Global::Context->defaultDevice, true), mMinimap(minimap) {
 	Shader vertex = Shader(Global::Context, "assets/shaders/ui/ui.vert");
 	Shader fragment = Shader(Global::Context, "assets/shaders/ui/ui.frag");
 	
@@ -13,6 +13,7 @@ Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex) : 
 	bindings[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	bindings[0].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
 	bindings[0].mTextures.push_back(mCursor);
+	bindings[0].mTextures.push_back(minimap);
 	bindings[0].mSampler = Global::DefaultSampler;
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
@@ -20,7 +21,7 @@ Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex) : 
 	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount, poolSizes);
 	mTextureSets.push_back(ShaderConnector_CreateSet(0, mPool, 1, bindings));
 
-	mLayout = ShaderConnector_CreatePipelineLayout(1, &mTextureSets[0], {{VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::vec3)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 16, 4}});
+	mLayout = ShaderConnector_CreatePipelineLayout(1, &mTextureSets[0], {{VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::vec3)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 16, 8}});
 	PipelineSpecification spec;
 	spec.m_CullMode = CullMode::CULL_NONE;
 	spec.m_DepthEnabled = false;
@@ -53,7 +54,7 @@ Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex) : 
 	blendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment);
-	mVertices = (UIVertex*)Gmalloc(sizeof(UIVertex) * 6 * 2, BUFFER_TYPE_VERTEX, true);
+	mVertices = (UIVertex*)Gmalloc(sizeof(UIVertex) * 6 * 3, BUFFER_TYPE_VERTEX, true);
 }
 
 Application::GameUI::~GameUI() {
@@ -74,6 +75,9 @@ void Application::GameUI::SetCursorPosition(const Ph::Ray& ray) {
 	vec2 direction = normalize((vec2(ray.mDirection) / windowSize) - pos);
 	pos = pos * 2.0f - 1.0f;
 	
+	vec2 magnitude = vec2(ray.mDirection - ray.mOrigin) / windowSize;
+	printf("Magnitude: (%.2f, %.2f)\n", magnitude.x, magnitude.y);
+
 	direction *= vec2(1.0f, -1.0f);
 
 	// Why doesn't glm support these?
@@ -105,7 +109,6 @@ void Application::GameUI::SetCursorPosition(const Ph::Ray& ray) {
 	mVertices[6 + 4].inTexCoord = vec2(1.0, 1.0);
 	mVertices[6 + 5].inPosition = (transform * (vec2(pos) + vec2(-cursorSizeHalf.x, cursorSizeHalf.y) + toCenter)) - toCenter;
 	mVertices[6 + 5].inTexCoord = vec2(0.0, 1.0);
-
 }
 
 void Application::GameUI::ReloadShaders() {
@@ -120,13 +123,21 @@ void Application::GameUI::ReloadShaders() {
 }
 
 VkCommandBuffer Application::GameUI::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
-	mVertices[0] = { glm::vec2(-1.0, 0.6) };
-	mVertices[1] = { glm::vec2(1.0, 1.0) };
-	mVertices[2] = { glm::vec2(-1.0, 1.0) };
+	mVertices[6 * 0 + 0] = { glm::vec2(-1.0, 0.6) };
+	mVertices[6 * 0 + 1] = { glm::vec2(1.0, 1.0) };
+	mVertices[6 * 0 + 2] = { glm::vec2(-1.0, 1.0) };
 
-	mVertices[3] = { glm::vec2(-1.0, 0.6) };
-	mVertices[4] = { glm::vec2(1.0, 0.6) };
-	mVertices[5] = { glm::vec2(1.0, 1.0) };
+	mVertices[6 * 0 + 3] = { glm::vec2(-1.0, 0.6) };
+	mVertices[6 * 0 + 4] = { glm::vec2(1.0, 0.6) };
+	mVertices[6 * 0 + 5] = { glm::vec2(1.0, 1.0) };
+
+	mVertices[6 * 2 + 0] = { glm::vec2(-1.0, 0.45), glm::vec2(0.0, 0.0)};
+	mVertices[6 * 2 + 1] = { glm::vec2(-0.5, 1.0), glm::vec2(1.0, 1.0)};
+	mVertices[6 * 2 + 2] = { glm::vec2(-1.0, 1.0), glm::vec2(0.0, 1.0)};
+
+	mVertices[6 * 2 + 3] = { glm::vec2(-1.0, 0.45), glm::vec2(0.0, 0.0)};
+	mVertices[6 * 2 + 4] = { glm::vec2(-0.5, 0.45), glm::vec2(1.0, 0.0) };
+	mVertices[6 * 2 + 5] = { glm::vec2(-0.5, 1.0), glm::vec2(1.0, 1.0)};
 	RecordCommands(FrameIndex);
 	return *mCmd;
 }
@@ -165,13 +176,26 @@ void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, &mTextureSets[0][FrameIndex], 0, nullptr);
 	vkCmdBindVertexBuffers(cmd, 0, 1, &Gbuffer(mVertices)->mBuffers[FrameIndex], pOffset);
 	glm::vec3 col = glm::vec3(0.1);
-	int UseTexture = 0;
+	struct {
+		int u_UseTexture;
+		int u_TextureID;
+	} pushblock;
+	pushblock.u_UseTexture = 0;
+	pushblock.u_TextureID = 0;
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(col), &col);
-	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, 4, &UseTexture);
+	
+	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
 	vkCmdDraw(cmd, 6, 1, 0, 0);
-	UseTexture = true;
-	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, 4, &UseTexture);
+	
+	pushblock.u_UseTexture = 1;
+	pushblock.u_TextureID = 0;
+	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
 	vkCmdDraw(cmd, 6, 1, 6, 0);
+	
+	pushblock.u_UseTexture = 1;
+	pushblock.u_TextureID = 1;
+	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
+	vkCmdDraw(cmd, 6, 1, 12, 0);
 
 	vkCmdEndRenderingKHR(cmd);
 	

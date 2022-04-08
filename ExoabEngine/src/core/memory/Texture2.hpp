@@ -33,6 +33,7 @@ void Texture2_ReadPixels(ITexture2 texture, VkAccessFlagBits finalAccessFlags, V
 void Texture2_Destroy(ITexture2 texture);
 
 ITexture2 Texture2_CreateFromFile(const char* path, bool mipmaps);
+void Texture2_RemoveAlphaChannel(uint32_t* srcPixels, char* dstPixels, int width, int height);
 
 // Converts "RGBA8" to TextureFormat::RGBA8
 //TextureFormat Textures_StringToTextureFormat(std::string& input);

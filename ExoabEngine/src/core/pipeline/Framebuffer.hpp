@@ -74,4 +74,30 @@ struct Framebuffer {
 			m_depth_attachment.value().Destroy();
 	}
 
+	VkRenderingAttachmentInfo GetRenderingAttachmentInfo(uint32_t FrameIndex, uint32_t colorAttachmentID, VkImageLayout layout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) {
+		VkRenderingAttachmentInfo info{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR};
+		info.imageView = m_color_attachments[colorAttachmentID].GetView(FrameIndex);
+		info.imageLayout = layout;
+		info.resolveMode = VK_RESOLVE_MODE_NONE_KHR;
+		info.resolveImageView = nullptr;
+		info.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		info.loadOp = loadOp;
+		info.storeOp = storeOp;
+		info.clearValue = m_color_attachments[colorAttachmentID].mClear;
+		return info;
+	}
+
+	VkRenderingAttachmentInfo GetDepthRenderingAttachmentInfo(uint32_t FrameIndex, VkImageLayout layout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) {
+		VkRenderingAttachmentInfo info{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
+		info.imageView = m_depth_attachment.value().GetView(FrameIndex);
+		info.imageLayout = layout;
+		info.resolveMode = VK_RESOLVE_MODE_NONE_KHR;
+		info.resolveImageView = nullptr;
+		info.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		info.loadOp = loadOp;
+		info.storeOp = storeOp;
+		info.clearValue = m_depth_attachment.value().mClear;
+		return info;
+	}
+
 };

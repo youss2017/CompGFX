@@ -16,8 +16,8 @@ public:
 	Camera();
 	Camera(glm::vec3 vPosition, glm::vec3 vLookDir = { 0, 0, 1 });
 
-	void Pitch(double dAngle, bool isDegree);
-	void Yaw(double dAngle, bool isDegree);
+	void Pitch(double dAngle, bool isDegree, bool ignoreClamps = false);
+	void Yaw(double dAngle, bool isDegree, bool ignoreClamps = false);
 
 	void Move(glm::vec3 pos);
 	void SetPosition(glm::vec3 pos);

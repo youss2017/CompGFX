@@ -5,24 +5,27 @@ Camera::Camera() : vPosition(glm::vec3(0.0)), vLookDir(glm::vec3(0.0, 0.0, 1.0f)
 
 Camera::Camera(glm::vec3 vPosition, glm::vec3 vLookDir) : vPosition(vPosition), vLookDir(vLookDir) {}
 
-void Camera::Pitch(double dAngle, bool isDegree) {
+void Camera::Pitch(double dAngle, bool isDegree, bool ignoreClamps) {
 	if (!isDegree) {
 		dAngle = (dAngle * 180.0) / 3.142;
 	}
 	const double dMaxPitchAngle = 90.0f * 0.995f;
 	dPitchAngle += dAngle;
-	dPitchAngle = glm::clamp<double>(dPitchAngle, -dMaxPitchAngle, dMaxPitchAngle);
+	if (!ignoreClamps)
+		dPitchAngle = glm::clamp<double>(dPitchAngle, -dMaxPitchAngle, dMaxPitchAngle);
 }
 
-void Camera::Yaw(double dAngle, bool isDegree) {
+void Camera::Yaw(double dAngle, bool isDegree, bool ignoreClamps) {
 	if (!isDegree) {
 		dAngle = (dAngle * 180.0) / 3.142;
 	}
 	dYawAngle += dAngle;
-	if (dYawAngle > 360.0)
-		dYawAngle = 0;
-	if (dYawAngle < -360.0)
-		dYawAngle = 0;
+	if (!ignoreClamps) {
+		if (dYawAngle > 360.0)
+			dYawAngle = 0;
+		if (dYawAngle < -360.0)
+			dYawAngle = 0;
+	}
 }
 
 void Camera::Move(glm::vec3 pos) {

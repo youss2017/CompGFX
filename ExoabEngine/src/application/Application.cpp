@@ -48,6 +48,7 @@ namespace Application
 		mSwapchain = mGfx->m_vswapchain;
 		Global::Window = mGfx->m_window;
 		Global::DefaultSampler = vk::Gfx_CreateSampler(Global::Context);
+		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), 0.5f, 10000.0f);
 		Shader::ConfigureShaderCache(s_ShaderCache);
 
 		if (s_EnableImGui)
@@ -98,7 +99,8 @@ namespace Application
 		mSkybox = new SkyboxPass("assets/textures/cubemap4.png", mGeoPass, &mCamera, true);
 		mDebugPass = new DebugPass(mGeoPass->GetFramebuffer());
 		mBloom = new BloomPass(mGeoPass->GetFramebuffer(), 0, 1.0);
-		mUI = new GameUI(mGeoPass->GetFramebuffer(), 0);
+		mMinimap = mGeoPass->CreateMinimap();
+		mUI = new GameUI(mGeoPass->GetFramebuffer(), 0, mMinimap);
 		UI::CubemapLODMax = mSkybox->GetMaxLOD();
 
 		for (int i = 0; i < gFrameOverlapCount; i++) {
@@ -177,18 +179,28 @@ namespace Application
 				}
 			);
 
-			Global::Window->RegisterCallback(EVENT_MOUSE_PRESS, [&](const Event& e) throw() -> void {
+			Global::Window->RegisterCallback(EVENT_MOUSE_PRESS | EVENT_MOUSE_RELEASE, [&](const Event& e) throw() -> void {
 				using namespace glm;
-				RayOrigin = mCamera.GetPosition();
-				RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY),
-					vec2(Global::Window->GetWidth(), Global::Window->GetHeight()));
-				cursorRay.mOrigin = vec3(e.mPayload.mClickX, e.mPayload.mClickY, 0.0f);
-				mUI->SetCursorPosition(cursorRay);
+				if (e.mEvents == EVENT_MOUSE_PRESS) {
+					RayOrigin = mCamera.GetPosition();
+					RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY),
+						vec2(Global::Window->GetWidth(), Global::Window->GetHeight()));
+					if (e.mDetails == EVENT_DETAIL_RIGHT_BUTTON) {
+						cursorRay.mOrigin = vec3(e.mPayload.mClickX, e.mPayload.mClickY, 0.0f);
+						mUI->SetCursorPosition(cursorRay);
+					}
+				}
+				else if (e.mEvents == EVENT_MOUSE_RELEASE) {
+					cursorRay.mOrigin = {};
+					mUI->SetCursorPosition({});
+				}
 			});
 
 			Global::Window->RegisterCallback(EVENT_MOUSE_MOVE, [&](const Event& e) throw() -> void {
-				cursorRay.mDirection = glm::vec3(e.mPayload.mPositionX, e.mPayload.mPositionY, 0.0);
-				mUI->SetCursorPosition(cursorRay);
+				if (cursorRay.mOrigin != glm::vec3(0.0)) {
+					cursorRay.mDirection = glm::vec3(e.mPayload.mPositionX, e.mPayload.mPositionY, 0.0);
+					mUI->SetCursorPosition(cursorRay);
+				}
 			});
 
 			IOInit = !IOInit;
@@ -416,6 +428,7 @@ namespace Application
 		PROFILE_FUNCTION();
 		Graphics3D_WaitGPUIdle(mGfx);
 		vkDestroySampler(Global::Context->defaultDevice, Global::DefaultSampler, nullptr);
+		Texture2_Destroy(mMinimap);
 		Texture2_Destroy(mNoiseMapTexture);
 		Texture2_Destroy(mNoiseMapTexture1);
 		Texture2_Destroy(mNoiseMapTexture2);

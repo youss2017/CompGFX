@@ -23,6 +23,7 @@ namespace Application {
 		void SetLightDirection(glm::vec3 lightDirection) { mLightDirection = glm::vec4(glm::normalize(lightDirection), 1.0); }
 		void SetLightSpace(glm::mat4 lightSpace) { mLightSpace = lightSpace; }
 		Framebuffer& GetFramebuffer() { return mFBO; }
+		ITexture2 CreateMinimap();
 
 	private:
 		void CullTerrain(const glm::mat4& proj, const glm::mat4& view);

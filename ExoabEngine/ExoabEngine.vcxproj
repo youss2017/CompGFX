@@ -120,6 +120,7 @@
     <ClInclude Include="src\application\ecs\EntityController.hpp" />
     <ClInclude Include="src\application\Globals.hpp" />
     <ClInclude Include="src\application\Layer.hpp" />
+    <ClInclude Include="src\application\minimap.hpp" />
     <ClInclude Include="src\application\pass\DebugPass.hpp" />
     <ClInclude Include="src\application\pass\FrustrumCullPass.hpp" />
     <ClInclude Include="src\application\pass\GeometryPass.hpp" />
@@ -202,6 +203,7 @@
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
     <ClCompile Include="src\application\ecs\EntityController.cpp" />
+    <ClCompile Include="src\application\minimap.cpp" />
     <ClCompile Include="src\application\pass\DebugPass.cpp" />
     <ClCompile Include="src\application\pass\FrustrumCullPass.cpp" />
     <ClCompile Include="src\application\pass\GeometryPass.cpp" />
