@@ -87,10 +87,10 @@ int main(int argc, char** argv)
         start = end;
         dElapsedTime /= 1000'000'000;
         dTimeFromStart += dElapsedTime;
-        if (UpdateUIInfo) {
+        if (Global::UpdateUIInfo) {
             Checkpoint = dTimeFromStart;
-            FrameRate = 1.0 / dElapsedTime;
-            UpdateUIInfo = false;
+            Global::FrameRate = 1.0 / dElapsedTime;
+            Global::UpdateUIInfo = false;
         }
     }
     PROFILE_END_SESSION();

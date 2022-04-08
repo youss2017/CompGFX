@@ -458,6 +458,7 @@
     <None Include="src\application\ecs\Entity.hpp" />
     <None Include="assets\shaders\ui\ui.vert" />
     <None Include="assets\shaders\ui\ui.frag" />
+    <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="external\VulkanMemoryAllocator\src\vk_mem_alloc.natvis" />

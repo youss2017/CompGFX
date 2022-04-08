@@ -23,13 +23,12 @@ namespace Application {
 
 		void ReloadShaders();
 		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
-		inline void SetMinimap(ITexture2 minimap) { mMinimap = minimap; }
+		void SetMinimap(ITexture2 minimap);
 
 	protected:
 		void RecordCommands(uint32_t FrameIndex);
 
 	private:
-		ITexture2 mMinimap;
 		ITexture2 mCursor;
 		VkDescriptorPool mPool;
 		std::vector<DescriptorSet> mTextureSets;

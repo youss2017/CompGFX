@@ -2,7 +2,7 @@
 #include "Globals.hpp"
 #include <stb/stb_image.h>
 
-Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, ITexture2 minimap) : Pass(Global::Context->defaultDevice, true), mMinimap(minimap) {
+Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, ITexture2 minimap) : Pass(Global::Context->defaultDevice, true) {
 	Shader vertex = Shader(Global::Context, "assets/shaders/ui/ui.vert");
 	Shader fragment = Shader(Global::Context, "assets/shaders/ui/ui.frag");
 	
@@ -18,7 +18,7 @@ Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, IT
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(1, bindings, poolSizes);
-	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount, poolSizes);
+	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount, poolSizes, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
 	mTextureSets.push_back(ShaderConnector_CreateSet(0, mPool, 1, bindings));
 
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mTextureSets[0], {{VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::vec3)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 16, 8}});
@@ -75,9 +75,6 @@ void Application::GameUI::SetCursorPosition(const Ph::Ray& ray) {
 	vec2 direction = normalize((vec2(ray.mDirection) / windowSize) - pos);
 	pos = pos * 2.0f - 1.0f;
 	
-	vec2 magnitude = vec2(ray.mDirection - ray.mOrigin) / windowSize;
-	printf("Magnitude: (%.2f, %.2f)\n", magnitude.x, magnitude.y);
-
 	direction *= vec2(1.0f, -1.0f);
 
 	// Why doesn't glm support these?
@@ -132,14 +129,26 @@ VkCommandBuffer Application::GameUI::Prepare(uint32_t FrameIndex, float dTime, f
 	mVertices[6 * 0 + 5] = { glm::vec2(1.0, 1.0) };
 
 	mVertices[6 * 2 + 0] = { glm::vec2(-1.0, 0.45), glm::vec2(0.0, 0.0)};
-	mVertices[6 * 2 + 1] = { glm::vec2(-0.5, 1.0), glm::vec2(1.0, 1.0)};
+	mVertices[6 * 2 + 1] = { glm::vec2(-0.55, 1.0), glm::vec2(1.0, 1.0)};
 	mVertices[6 * 2 + 2] = { glm::vec2(-1.0, 1.0), glm::vec2(0.0, 1.0)};
 
 	mVertices[6 * 2 + 3] = { glm::vec2(-1.0, 0.45), glm::vec2(0.0, 0.0)};
-	mVertices[6 * 2 + 4] = { glm::vec2(-0.5, 0.45), glm::vec2(1.0, 0.0) };
-	mVertices[6 * 2 + 5] = { glm::vec2(-0.5, 1.0), glm::vec2(1.0, 1.0)};
+	mVertices[6 * 2 + 4] = { glm::vec2(-0.55, 0.45), glm::vec2(1.0, 0.0) };
+	mVertices[6 * 2 + 5] = { glm::vec2(-0.55, 1.0), glm::vec2(1.0, 1.0)};
 	RecordCommands(FrameIndex);
 	return *mCmd;
+}
+
+void Application::GameUI::SetMinimap(ITexture2 minimap) {
+	BindingDescription bindings[1]{};
+	bindings[0].mBindingID = 0;
+	bindings[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	bindings[0].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	bindings[0].mTextures.push_back(mCursor);
+	bindings[0].mTextures.push_back(minimap);
+	bindings[0].mSampler = Global::DefaultSampler;
+	vkFreeDescriptorSets(Global::Context->defaultDevice, mPool, 3, &mTextureSets[0].mSets[0]);
+	mTextureSets[0] = ShaderConnector_CreateSet(0, mPool, 1, bindings);
 }
 
 void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
@@ -192,8 +201,14 @@ void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
 	vkCmdDraw(cmd, 6, 1, 6, 0);
 	
-	pushblock.u_UseTexture = 1;
+	pushblock.u_UseTexture = 0;
 	pushblock.u_TextureID = 1;
+	col = glm::vec3(0.0);
+	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(col), &col);
+	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
+	vkCmdDraw(cmd, 6, 1, 12, 0);
+
+	pushblock.u_UseTexture = 1;
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
 	vkCmdDraw(cmd, 6, 1, 12, 0);
 

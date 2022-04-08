@@ -246,6 +246,7 @@
     <ClCompile Include="src\window\PlatformWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\README.md" />
     <None Include="assets\shaders\ui\ui.frag" />
     <None Include="assets\shaders\ui\ui.vert" />
     <None Include="imgui.ini" />

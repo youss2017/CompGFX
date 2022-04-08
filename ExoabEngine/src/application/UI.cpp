@@ -89,7 +89,7 @@ void UI::RenderUI()
         ImGui::Begin("Information Overlay", nullptr, window_flags);
         ImGui::Text("Overlay");
         ImGui::Separator();
-        ImGui::Text("%.2f FPS", FrameRate);
+        ImGui::Text("%.2f FPS", Global::FrameRate);
         ImGui::SameLine();
         ImGui::Text("%.2f ms -- Frame Time", FrameTime);
         ImGui::SameLine();

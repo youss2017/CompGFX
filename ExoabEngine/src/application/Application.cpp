@@ -83,15 +83,22 @@ namespace Application
 
 		PROFILE_FUNCTION();
 
-		UI::Frequency[0] = 8.0;
+		UI::Frequency[0] = 2;
 		UI::Octave[0] = 2;
-		UI::Frequency[1] = 8.0;
-		UI::Octave[1] = 2;
+		UI::Frequency[1] = 2;
+		UI::Octave[1] = 4;
 		UI::Frequency[2] = 8.0;
-		UI::Octave[2] = 2;
+		UI::Octave[2] = 4;
+		UI::Contribution[0] = 1.0;
+		UI::Contribution[1] = 0.5;
+		UI::Contribution[2] = 0.2;
 		CreateTerrain();
 		mImGuiSampler = vk::Gfx_CreateSampler(Global::Context);
 		UI::UpdateNoiseMap(mNoiseMapTexture, mNoiseMapTexture1, mNoiseMapTexture2, mImGuiSampler);
+
+		mCamera.SetPosition(glm::vec3(0.0, -40.0, 0.0));
+		mCamera.Pitch(-70.0, true);
+		UI::LightPosition = glm::vec3(0.0f, 25.0f, 2.5f);
 
 		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera, 1024);
 		mCullPass = new FrustumCullPass(mECS, &mLockedCamera);
@@ -132,6 +139,8 @@ namespace Application
 		static bool UpKey = false;
 		static bool DownKey = false;
 		static Ph::Ray cursorRay = {};
+		static bool CameraMove = false;
+		static glm::vec2 Magnitude{};
 		static bool IOInit = true;
 
 		static glm::vec3 RayOrigin = glm::vec3(0.0);
@@ -186,20 +195,42 @@ namespace Application
 					RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY),
 						vec2(Global::Window->GetWidth(), Global::Window->GetHeight()));
 					if (e.mDetails == EVENT_DETAIL_RIGHT_BUTTON) {
+						CameraMove = true;
 						cursorRay.mOrigin = vec3(e.mPayload.mClickX, e.mPayload.mClickY, 0.0f);
 						mUI->SetCursorPosition(cursorRay);
 					}
 				}
 				else if (e.mEvents == EVENT_MOUSE_RELEASE) {
 					cursorRay.mOrigin = {};
+					CameraMove = false;
 					mUI->SetCursorPosition({});
 				}
 			});
 
+			auto SCurve = [](float x, float A) {
+				float invert = 1.0f;
+				if (x < 0.0) {
+					x *= -1.0f;
+					invert = -1.0f;
+				}
+				float v = 1.0f / (1.0 + exp(-A * x + (A / 2.0)));
+				return v * invert;
+			};
+
+			auto SCurve2 = [&](const glm::vec2& v) throw() -> glm::vec2 {
+				float A = 15.0f;
+				return glm::vec2(SCurve(v.x, A), SCurve(v.y, A));
+			};
+
 			Global::Window->RegisterCallback(EVENT_MOUSE_MOVE, [&](const Event& e) throw() -> void {
-				if (cursorRay.mOrigin != glm::vec3(0.0)) {
-					cursorRay.mDirection = glm::vec3(e.mPayload.mPositionX, e.mPayload.mPositionY, 0.0);
+				using namespace glm;
+				if (cursorRay.mOrigin != vec3(0.0)) {
+					cursorRay.mDirection = vec3(e.mPayload.mPositionX, e.mPayload.mPositionY, 0.0);
 					mUI->SetCursorPosition(cursorRay);
+					vec2 windowSize = vec2(Global::Window->GetWidth(), Global::Window->GetHeight());
+					vec2 MaxMagnitude = vec2(windowSize - vec2(cursorRay.mOrigin));
+					Magnitude = SCurve2(vec2(cursorRay.mDirection - cursorRay.mOrigin) / MaxMagnitude);
+					Magnitude *= vec2(1.0f, -1.0f);
 				}
 			});
 
@@ -216,6 +247,13 @@ namespace Application
 		if (XKey) mCamera.Pitch(Global::Time * RotateRate, true);
 		if (UpKey) mCamera.MoveAlongUpAxis(Global::Time * -22.0);
 		if (DownKey) mCamera.MoveAlongUpAxis(Global::Time * 22.0);
+		if (CameraMove) {
+			using namespace glm;
+			vec3 position = mCamera.GetPosition();
+			const float speed = 250.0f;
+			vec2 translation = vec2(speed) * float(Global::Time) * Magnitude;
+			mCamera.SetPosition(position + vec3(translation.x, 0.0, translation.y));
+		}
 
 		mCamera.UpdateViewMatrix();
 		auto position = mCamera.GetPosition();
@@ -493,13 +531,18 @@ namespace Application
 		}
 		if (!mT0) {
 			mT0 = new Terrain(w, h, w / 8, h / 8);
-			glm::mat4 transform = glm::scale(glm::mat4(1.0), glm::vec3(15.0, 2.5, 15.0)) * mT0->GetTransform();
+			glm::mat4 transform = glm::scale(glm::mat4(1.0), glm::vec3(5.0, 2.5, 5.0)) * mT0->GetTransform();
 			mT0->SetTransform(transform);
 		}
 		Texture2_ReadPixels(mNoiseMapTexture, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer.data());
 		Texture2_ReadPixels(mNoiseMapTexture1, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer1.data());
 		Texture2_ReadPixels(mNoiseMapTexture2, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer2.data());
 		mT0->ApplyHeightmap(hw, hh, -6.0, 25.0f, { {UI::Contribution[0], perlinBuffer.data() }, {UI::Contribution[1], perlinBuffer1.data() }, {UI::Contribution[2], perlinBuffer2.data() } });
+		if (mMinimap) {
+			Texture2_Destroy(mMinimap);
+			mMinimap = mGeoPass->CreateMinimap();
+			mUI->SetMinimap(mMinimap);
+		}
 	}
 
 }
