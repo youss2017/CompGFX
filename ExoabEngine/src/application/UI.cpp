@@ -49,6 +49,7 @@ namespace UI
     int ActiveNoiseMap = 0;
     float Contribution[3] = { 1.0 };
     bool SaveTerrain = false;
+    bool ShowStatistics = false;
 }
 
 void UI::Initalize(void* _context, void* _gfx)
@@ -72,38 +73,40 @@ void UI::RenderUI()
         corner = 1;
     else corner = 0;
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    const float PAD = 10.0f;
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
-    ImVec2 work_size = viewport->WorkSize;
-    ImVec2 window_pos, window_pos_pivot;
-    window_pos.x = (corner & 1) ? (work_pos.x + work_size.x - PAD) : (work_pos.x + PAD);
-    window_pos.y = (corner & 2) ? (work_pos.y + work_size.y - PAD) : (work_pos.y + PAD);
-    window_pos_pivot.x = (corner & 1) ? 1.0f : 0.0f;
-    window_pos_pivot.y = (corner & 2) ? 1.0f : 0.0f;
-    ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-    ImGui::SetNextWindowViewport(viewport->ID);
-    window_flags |= ImGuiWindowFlags_NoMove;
-    ImGui::Begin("Information Overlay", nullptr, window_flags);
-    ImGui::Text("Overlay");
-    ImGui::Separator();
-    ImGui::Text("%.2f FPS", FrameRate);
-    ImGui::SameLine();
-    ImGui::Text("%.2f ms -- Frame Time", FrameTime);
-    ImGui::SameLine();
-    if (ImGui::Checkbox("V-Sync", &VSync)) {
-        StateChanged = true;
+    if (ShowStatistics) {
+        const float PAD = 10.0f;
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
+        ImVec2 work_size = viewport->WorkSize;
+        ImVec2 window_pos, window_pos_pivot;
+        window_pos.x = (corner & 1) ? (work_pos.x + work_size.x - PAD) : (work_pos.x + PAD);
+        window_pos.y = (corner & 2) ? (work_pos.y + work_size.y - PAD) : (work_pos.y + PAD);
+        window_pos_pivot.x = (corner & 1) ? 1.0f : 0.0f;
+        window_pos_pivot.y = (corner & 2) ? 1.0f : 0.0f;
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        window_flags |= ImGuiWindowFlags_NoMove;
+        ImGui::Begin("Information Overlay", nullptr, window_flags);
+        ImGui::Text("Overlay");
+        ImGui::Separator();
+        ImGui::Text("%.2f FPS", FrameRate);
+        ImGui::SameLine();
+        ImGui::Text("%.2f ms -- Frame Time", FrameTime);
+        ImGui::SameLine();
+        if (ImGui::Checkbox("V-Sync", &VSync)) {
+            StateChanged = true;
+        }
+        double cpuTime = FrameTime - ShadowPassTime - FrustrumCullingTime - GeometryPassTime - DebugPassTime - BloomPassTime - NextFrameTime;
+        ImGui::Text("%.2f ms -- CPU Time", cpuTime);
+        ImGui::Text("%llu / %llu -- Vertex/Fragment Invocations", VertexInvocations, FragmentInvocations);
+        ImGui::Text("%.2f ms -- Shadow Map", ShadowPassTime);
+        ImGui::Text("%.2f ms / %llu -- (Geo) Frustrum Pass", FrustrumCullingTime, FrustrumInvocations);
+        ImGui::Text("%.2f ms -- Geometry Pass", GeometryPassTime);
+        ImGui::Text("%.2f ms -- Debug Pass", DebugPassTime);
+        ImGui::Text("%.2f ms -- Bloom Pass", BloomPassTime);
+        ImGui::Text("<%.2f, %.2f, %.2f>", CameraPosition[0], CameraPosition[1], CameraPosition[2]);
+        ImGui::End();
     }
-    double cpuTime = FrameTime - ShadowPassTime - FrustrumCullingTime - GeometryPassTime - DebugPassTime - BloomPassTime - NextFrameTime;
-    ImGui::Text("%.2f ms -- CPU Time", cpuTime);
-    ImGui::Text("%llu / %llu -- Vertex/Fragment Invocations", VertexInvocations, FragmentInvocations);
-    ImGui::Text("%.2f ms -- Shadow Map", ShadowPassTime);
-    ImGui::Text("%.2f ms / %llu -- (Geo) Frustrum Pass", FrustrumCullingTime, FrustrumInvocations);
-    ImGui::Text("%.2f ms -- Geometry Pass", GeometryPassTime);
-    ImGui::Text("%.2f ms -- Debug Pass", DebugPassTime);
-    ImGui::Text("%.2f ms -- Bloom Pass", BloomPassTime);
-    ImGui::Text("<%.2f, %.2f, %.2f>", CameraPosition[0], CameraPosition[1], CameraPosition[2]);
-    ImGui::End();
     ImGui::Begin("Control Panel");
     ImGui::SliderFloat3("Light", &LightPosition[0], -100.0, 100.0f);
     ImGui::SameLine();
@@ -130,6 +133,8 @@ void UI::RenderUI()
     }
     ImGui::SameLine();
     ImGui::Checkbox("Debug", &UIInDebugMode);
+    ImGui::SameLine();
+    ImGui::Checkbox("Show Metrics", &UI::ShowStatistics);
     if (ImGui::Button("Reload Shaders")) {
         StateChanged = true;
         ReloadShaders = true;

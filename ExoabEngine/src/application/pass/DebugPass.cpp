@@ -124,7 +124,7 @@ void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	renderingInfo.pNext = nullptr;
-	renderingInfo.flags = VK_RENDERING_RESUMING_BIT;
+	renderingInfo.flags = VK_RENDERING_RESUMING_BIT_KHR | VK_RENDERING_SUSPENDING_BIT_KHR;
 	renderingInfo.renderArea = { {0, 0}, { mFBO.m_width, mFBO.m_height } };
 	renderingInfo.layerCount = 1;
 	renderingInfo.viewMask = 0;
@@ -179,7 +179,6 @@ void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	}
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
-	vkCmdEndRenderingKHR(cmd);
 	vkCmdEndRenderingKHR(cmd);
 
 	vkEndCommandBuffer(cmd);

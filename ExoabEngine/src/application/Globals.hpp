@@ -17,4 +17,5 @@ namespace Global {
 	extern glm::mat4 Projection;
 	extern bool RenderDOC;
 	extern std::vector<Mesh::Geometry> Geomtry;
+	extern VkSampler DefaultSampler;
 }

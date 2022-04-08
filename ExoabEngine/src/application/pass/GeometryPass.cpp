@@ -28,7 +28,6 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &depthAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
 	
-	mSampler = vk::Gfx_CreateSampler(Global::Context);
 	mT0 = terrain;
 	mShadowSampler = vk::Gfx_CreateSampler(Global::Context,
 		VK_FILTER_LINEAR,
@@ -85,7 +84,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	geometryPassFragment[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	geometryPassFragment[0].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
 	geometryPassFragment[0].mTextures.push_back(mWoodTex);
-	geometryPassFragment[0].mSampler = mSampler;
+	geometryPassFragment[0].mSampler = Global::DefaultSampler;
 
 	geometryPassFragment[1].mBindingID = 1;
 	geometryPassFragment[1].mFlags = 0;
@@ -116,7 +115,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	terrainBindings[2].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	terrainBindings[2].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
 	terrainBindings[2].mTextures.push_back(mSandTex);
-	terrainBindings[2].mSampler = mSampler;
+	terrainBindings[2].mSampler = Global::DefaultSampler;
 
 	terrainBindings[3].mBindingID = 3;
 	terrainBindings[3].mFlags = 0;
@@ -130,7 +129,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	terrainBindings[4].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	terrainBindings[4].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
 	terrainBindings[4].mTextures.push_back(mNormalMap);
-	terrainBindings[4].mSampler = mSampler;
+	terrainBindings[4].mSampler = Global::DefaultSampler;
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(4, geometryPass, poolSizes);
@@ -186,7 +185,6 @@ Application::GeometryPass::~GeometryPass() {
 	vkDestroyPipelineLayout(mDevice, mMapLayout, nullptr);
 	PipelineState_Destroy(mGeoState);
 	PipelineState_Destroy(mMapState);
-	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroySampler(mDevice, mShadowSampler, nullptr);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyQueryPool(mDevice, mInvocationQuery, nullptr);
@@ -223,8 +221,8 @@ void Application::GeometryPass::CullTerrain(const glm::mat4& proj, const glm::ma
 	glm::mat4 transform = mT0->GetTransform();
 	// Thanks to https://stackoverflow.com/questions/58211003/about-view-matrix-and-frustum-culling
 	// and http://www.lighthouse3d.com/tutorials/view-frustum-culling/radar-approach-testing-points/
-#pragma message("@@@@@@@@@@Make Sure to remove this when done debugging@@@@@@@@@@@@@ In GeometryPass.cpp CullTerrain()")
-	mT0->SetTransform(glm::mat4(1.0));
+//#pragma message("@@@@@@@@@@Make Sure to remove this when done debugging@@@@@@@@@@@@@ In GeometryPass.cpp CullTerrain()")
+	//mT0->SetTransform(glm::mat4(1.0));
 	
 	glm::mat4 projT = glm::transpose(proj * view);
 	//glm::mat4 viewT = glm::transpose(view);
@@ -426,7 +424,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdDrawIndexedIndirect(cmd, mCullPass->mOutputDrawDataArray->mBuffers[FrameIndex], 0, mECS->GetDrawCount(), sizeof(ShaderTypes::DrawData));
 
 	TerrainPushblock pushblock;
-	pushblock.u_Model = glm::scale(glm::mat4(1.0), glm::vec3(2.0));
+	pushblock.u_Model = mT0->GetTransform();
 	pushblock.u_NormalModel = glm::mat3(glm::transpose(glm::inverse(pushblock.u_Model)));
 
 	VkDescriptorSet mapSet[1] = { mMapSet[FrameIndex] };

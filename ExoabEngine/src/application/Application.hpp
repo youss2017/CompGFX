@@ -16,6 +16,7 @@
 #include "pass/ShadowPass.hpp"
 #include "pass/DebugPass.hpp"
 #include "pass/postprocess/BloomPass.hpp"
+#include "pass/postprocess/GameUI.hpp"
 #include "perlin_noise.hpp"
 #include "../audio/Audio.hpp"
 #include "../assets/geometry.cfg"
@@ -47,6 +48,7 @@ namespace Application {
 		ShadowPass* mShadow;
 		DebugPass* mDebugPass;
 		BloomPass* mBloom;
+		GameUI* mUI;
 		VkSemaphore mShadowPassSemaphore[gFrameOverlapCount];
 		VkSemaphore mBloomPassSemaphore[gFrameOverlapCount];
 		Terrain* mT0 = nullptr;

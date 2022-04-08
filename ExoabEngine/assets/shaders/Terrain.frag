@@ -72,5 +72,5 @@ void main()
     float diffuse = dot(normal, u_LightDirection.xyz);
 
     // TODO: Support Specular Map
-    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), /*0.5*/1.0, 1.0) + ambient;
+    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), 0.5, 1.0) + ambient;
 }

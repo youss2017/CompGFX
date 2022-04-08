@@ -12,6 +12,11 @@ namespace Ph {
 	typedef glm::i16vec2 hvec2;
 	typedef float float16;
 
+	struct Ray {
+		glm::vec3 mOrigin;
+		glm::vec3 mDirection;
+	};
+
 	inline hvec4 HalfVec4(const glm::vec4& v) {
 		return hvec4(glm::detail::toFloat16(v.x), glm::detail::toFloat16(v.y), glm::detail::toFloat16(v.z), glm::detail::toFloat16(v.w));
 	}

@@ -6,14 +6,14 @@
 #include "../Globals.hpp"
 
 Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera, bool UsingDebugPass) : Pass(Global::Context->defaultDevice, true), mCubeMap(CubeMap_Create(environmentMapPath, VK_FORMAT_R8G8B8A8_UNORM)), mCamera(camera), mGeoPass(geoPass), mUsingDebugPass(UsingDebugPass) {
-	mSampler = vk::Gfx_CreateSampler(Global::Context, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+	//mSampler = vk::Gfx_CreateSampler(Global::Context, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 	BindingDescription bindings[1];
 	bindings[0].mBindingID = 0;
 	bindings[0].mFlags = 0;
 	bindings[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	bindings[0].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
 	bindings[0].mTextures.push_back(mCubeMap);
-	bindings[0].mSampler = mSampler;
+	bindings[0].mSampler = Global::DefaultSampler;
 	
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(1, bindings, poolSizes);
@@ -42,7 +42,6 @@ Application::SkyboxPass::~SkyboxPass()
 {
 	Super_Pass_Destroy();
 	Texture2_Destroy(mCubeMap);
-	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	ShaderConnector_DestroySet(mSet);

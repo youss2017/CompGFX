@@ -44,7 +44,6 @@ namespace Application {
 		IPipelineState mMapState;
 		VkQueryPool mQuery;
 		VkQueryPool mInvocationQuery;
-		VkSampler mSampler;
 		VkSampler mShadowSampler;
 		ITexture2 mWoodTex;
 		ITexture2 mStatueTex;

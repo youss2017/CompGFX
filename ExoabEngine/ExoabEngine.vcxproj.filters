@@ -228,6 +228,9 @@
     <ClInclude Include="external\zip\src\zip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\application\pass\postprocess\GameUI.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -437,6 +440,9 @@
     <ClCompile Include="external\zip\src\zip.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\application\pass\postprocess\GameUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\utils\common.inl">
@@ -444,6 +450,8 @@
     </None>
     <None Include="imgui.ini" />
     <None Include="src\application\ecs\Entity.hpp" />
+    <None Include="assets\shaders\ui\ui.vert" />
+    <None Include="assets\shaders\ui\ui.frag" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="external\VulkanMemoryAllocator\src\vk_mem_alloc.natvis" />

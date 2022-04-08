@@ -33,6 +33,7 @@ namespace UI
 	extern int ActiveNoiseMap;
 	extern float Contribution[3];
 	extern bool SaveTerrain;
+	extern bool ShowStatistics;
 
 	void Initalize(void* context, void* gfx);
 	void RenderUI();

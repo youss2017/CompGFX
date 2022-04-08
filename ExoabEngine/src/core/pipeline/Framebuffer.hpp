@@ -38,10 +38,10 @@ public:
 public:
 	VkClearValue mClear;
 	uint32_t m_width, m_height;
+	VkPipelineColorBlendAttachmentState m_blend_state;
 
 private:
 	VkFormat m_format;
-	VkPipelineColorBlendAttachmentState m_blend_state;
 	ITexture2 m_attachment;
 };
 

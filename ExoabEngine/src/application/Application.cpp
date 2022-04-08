@@ -15,6 +15,7 @@ namespace Global {
 	PlatformWindow* Window = nullptr;
 	glm::mat4 Projection;
 	std::vector<Mesh::Geometry> Geomtry;
+	VkSampler DefaultSampler;
 }
 
 namespace Application
@@ -46,6 +47,7 @@ namespace Application
 		Global::Context = ToVKContext(mGfx->m_context);
 		mSwapchain = mGfx->m_vswapchain;
 		Global::Window = mGfx->m_window;
+		Global::DefaultSampler = vk::Gfx_CreateSampler(Global::Context);
 		Shader::ConfigureShaderCache(s_ShaderCache);
 
 		if (s_EnableImGui)
@@ -90,12 +92,13 @@ namespace Application
 		mImGuiSampler = vk::Gfx_CreateSampler(Global::Context);
 		UI::UpdateNoiseMap(mNoiseMapTexture, mNoiseMapTexture1, mNoiseMapTexture2, mImGuiSampler);
 
-		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera, 2048);
+		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera, 1024);
 		mCullPass = new FrustumCullPass(mECS, &mLockedCamera);
 		mGeoPass = new GeometryPass(mVerticesSSBO, mIndicesBuffer, mT0, 1920, 1080, mCullPass, &mCamera, &mLockedCamera, mECS, mShadow->GetDepthAttachment());
 		mSkybox = new SkyboxPass("assets/textures/cubemap4.png", mGeoPass, &mCamera, true);
 		mDebugPass = new DebugPass(mGeoPass->GetFramebuffer());
 		mBloom = new BloomPass(mGeoPass->GetFramebuffer(), 0, 1.0);
+		mUI = new GameUI(mGeoPass->GetFramebuffer(), 0);
 		UI::CubemapLODMax = mSkybox->GetMaxLOD();
 
 		for (int i = 0; i < gFrameOverlapCount; i++) {
@@ -112,7 +115,7 @@ namespace Application
 		if (!Graphics3D_PollEvents(mGfx))
 			Global::Quit = true;
 
-		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), 0.5f, 1000.0f);
+		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), 0.5f, 10000.0f);
 		
 		/* Camera Controls */
 		double RotateRate = 45.0;
@@ -126,6 +129,7 @@ namespace Application
 		static bool XKey = false;
 		static bool UpKey = false;
 		static bool DownKey = false;
+		static Ph::Ray cursorRay = {};
 		static bool IOInit = true;
 
 		static glm::vec3 RayOrigin = glm::vec3(0.0);
@@ -178,7 +182,15 @@ namespace Application
 				RayOrigin = mCamera.GetPosition();
 				RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY),
 					vec2(Global::Window->GetWidth(), Global::Window->GetHeight()));
+				cursorRay.mOrigin = vec3(e.mPayload.mClickX, e.mPayload.mClickY, 0.0f);
+				mUI->SetCursorPosition(cursorRay);
 			});
+
+			Global::Window->RegisterCallback(EVENT_MOUSE_MOVE, [&](const Event& e) throw() -> void {
+				cursorRay.mDirection = glm::vec3(e.mPayload.mPositionX, e.mPayload.mPositionY, 0.0);
+				mUI->SetCursorPosition(cursorRay);
+			});
+
 			IOInit = !IOInit;
 		}
 
@@ -215,6 +227,7 @@ namespace Application
 				mShadow->ReloadShaders();
 				mDebugPass->ReloadShaders();
 				mBloom->ReloadShaders();
+				mUI->ReloadShaders();
 			}
 			mGeoPass->SetWireframeMode(UI::ShowWireframe);
 			if (UI::SaveTerrain) {
@@ -316,7 +329,7 @@ namespace Application
 		glm::vec3 origin = RayOrigin;// +v;
 		glm::vec3 ray = origin + (RayDirection * 100.0f);
 		mDebugPass->DrawCube(origin, glm::vec3(1.25f), glm::vec3(242, 128, 15) / glm::vec3(255.0f), 1);
-		mDebugPass->DrawCube(ray, glm::vec3(10.0f), glm::vec3(255.0f) / glm::vec3(255.0f), 1);
+		//mDebugPass->DrawCube(ray, glm::vec3(10.0f), glm::vec3(255.0f) / glm::vec3(255.0f), 1);
 
 		mSkybox->SetLOD(UI::CubemapLOD);
 		
@@ -372,13 +385,14 @@ namespace Application
 		VkCommandBuffer geoPassCmd = mGeoPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		VkCommandBuffer skyboxCmd = mSkybox->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		VkCommandBuffer debugPassCmd = mDebugPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
-		
+
 		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue,
 			{ geoPassCmd, skyboxCmd, debugPassCmd }, { mShadowPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT }, { mBloomPassSemaphore[FrameIndex] }, nullptr);
 		
+		VkCommandBuffer gameUICmd = mUI->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		VkCommandBuffer bloomCmd = mBloom->Prepare(FrameIndex, Global::Time, Global::TimeFromStart);
 		
-		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, { bloomCmd }, { mBloomPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { frame.m_PresentSemaphore }, frame.m_RenderFence);
+		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, { bloomCmd, gameUICmd }, { mBloomPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { frame.m_PresentSemaphore }, frame.m_RenderFence);
 		
 		if (s_EnableImGui)
 			UI::RenderUI();
@@ -401,6 +415,7 @@ namespace Application
 	void Application::OnDestroy() {
 		PROFILE_FUNCTION();
 		Graphics3D_WaitGPUIdle(mGfx);
+		vkDestroySampler(Global::Context->defaultDevice, Global::DefaultSampler, nullptr);
 		Texture2_Destroy(mNoiseMapTexture);
 		Texture2_Destroy(mNoiseMapTexture1);
 		Texture2_Destroy(mNoiseMapTexture2);
@@ -411,6 +426,7 @@ namespace Application
 		delete mShadow;
 		delete mDebugPass;
 		delete mBloom;
+		delete mUI;
 		for (int i = 0; i < gFrameOverlapCount; i++) {
 			vkDestroySemaphore(Global::Context->defaultDevice, mShadowPassSemaphore[i], nullptr);
 			vkDestroySemaphore(Global::Context->defaultDevice, mBloomPassSemaphore[i], nullptr);
@@ -462,9 +478,11 @@ namespace Application
 		if (UI::ActiveNoiseMap == 2 || !(mT0)) {
 			Texture2_UploadPixels(mNoiseMapTexture2, perlinBuffer2.data(), perlinBuffer2.size() * sizeof(float));
 		}
-		if (!mT0)
-			mT0 = new Terrain(w, h, w/8, h/8);
-		mT0->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
+		if (!mT0) {
+			mT0 = new Terrain(w, h, w / 8, h / 8);
+			glm::mat4 transform = glm::scale(glm::mat4(1.0), glm::vec3(15.0, 2.5, 15.0)) * mT0->GetTransform();
+			mT0->SetTransform(transform);
+		}
 		Texture2_ReadPixels(mNoiseMapTexture, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer.data());
 		Texture2_ReadPixels(mNoiseMapTexture1, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer1.data());
 		Texture2_ReadPixels(mNoiseMapTexture2, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sizeof(float), perlinBuffer2.data());

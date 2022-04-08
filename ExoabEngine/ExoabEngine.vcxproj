@@ -125,6 +125,7 @@
     <ClInclude Include="src\application\pass\GeometryPass.hpp" />
     <ClInclude Include="src\application\pass\postprocess\BloomPass.hpp" />
     <ClInclude Include="src\application\pass\postprocess\FXAAPass.hpp" />
+    <ClInclude Include="src\application\pass\postprocess\GameUI.hpp" />
     <ClInclude Include="src\application\pass\postprocess\SSAOPass.hpp" />
     <ClInclude Include="src\application\pass\Pass.hpp" />
     <ClInclude Include="src\application\pass\ShadowPass.hpp" />
@@ -205,6 +206,7 @@
     <ClCompile Include="src\application\pass\FrustrumCullPass.cpp" />
     <ClCompile Include="src\application\pass\GeometryPass.cpp" />
     <ClCompile Include="src\application\pass\postprocess\BloomPass.cpp" />
+    <ClCompile Include="src\application\pass\postprocess\GameUI.cpp" />
     <ClCompile Include="src\application\pass\ShadowPass.cpp" />
     <ClCompile Include="src\application\pass\SkyboxPass.cpp" />
     <ClCompile Include="src\audio\Audio.cpp" />
@@ -242,6 +244,8 @@
     <ClCompile Include="src\window\PlatformWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\shaders\ui\ui.frag" />
+    <None Include="assets\shaders\ui\ui.vert" />
     <None Include="imgui.ini" />
     <None Include="src\application\ecs\Entity.hpp" />
     <None Include="src\utils\common.inl" />

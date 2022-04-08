@@ -311,8 +311,10 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
     else {
         dynamicCreateInfo.pColorAttachmentFormats = nullptr;
     }
-    dynamicCreateInfo.depthAttachmentFormat = fbo.m_depth_attachment->GetFormat();
-    dynamicCreateInfo.stencilAttachmentFormat = fbo.m_depth_attachment->GetFormat();
+    if (fbo.m_depth_attachment.has_value()) {
+        dynamicCreateInfo.depthAttachmentFormat = fbo.m_depth_attachment->GetFormat();
+        dynamicCreateInfo.stencilAttachmentFormat = fbo.m_depth_attachment->GetFormat();
+    }
 
     VkGraphicsPipelineCreateInfo createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

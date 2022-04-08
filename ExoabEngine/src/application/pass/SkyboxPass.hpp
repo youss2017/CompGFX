@@ -29,7 +29,6 @@ namespace Application {
 		int mLod = 0;
 		Camera* mCamera;
 		GeometryPass* mGeoPass;
-		VkSampler mSampler;
 		ITexture2 mCubeMap;
 		VkPipelineLayout mLayout;
 		IPipelineState mState;

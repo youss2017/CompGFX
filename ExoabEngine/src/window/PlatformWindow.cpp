@@ -1,5 +1,6 @@
 #include "PlatformWindow.hpp"
 #include "../utils/MBox.hpp"
+#include "Logger.hpp"
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <atomic>
@@ -40,11 +41,11 @@ static void _Internal_WindowKeyCallback(GLFWwindow *window, int key, int scancod
         return;
     if (action == GLFW_REPEAT)
         action = GLFW_PRESS;
-    for (auto& callback : w->mCallbacks) {
-        if (callback.first & EVENT_KEY_PRESS || callback.first & EVENT_KEY_RELEASE) {
-            if (callback.first & EVENT_KEY_PRESS && action != GLFW_PRESS && !(callback.first & EVENT_KEY_RELEASE))
+    for (auto&[events, callback] : w->mCallbacks) {
+        if (events & EVENT_KEY_PRESS || events & EVENT_KEY_RELEASE) {
+            if (events & EVENT_KEY_PRESS && action != GLFW_PRESS && !(events & EVENT_KEY_RELEASE))
                 continue;
-            if (callback.first & EVENT_KEY_RELEASE && action != GLFW_RELEASE && !(callback.first & EVENT_KEY_PRESS))
+            if (events & EVENT_KEY_RELEASE && action != GLFW_RELEASE && !(events & EVENT_KEY_PRESS))
                 continue;
             Event e{};
             e.mEvents = action == GLFW_PRESS ? EVENT_KEY_PRESS : EVENT_KEY_RELEASE;
@@ -52,7 +53,7 @@ static void _Internal_WindowKeyCallback(GLFWwindow *window, int key, int scancod
             e.mPayload.NonASCIKey = key;
             e.mPayload.KeyLowerCase = tolower(key);
             e.mPayload.KeyUpperCase = toupper(key);
-            callback.second(e);
+            callback(e);
         }
     }
 }
@@ -69,11 +70,11 @@ void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int act
     PlatformWindow* w = _Internal_GetWindow(window);
     if (!w)
         return;
-    for (auto& callback : w->mCallbacks) {
-        if (callback.first & EVENT_MOUSE_PRESS || callback.first & EVENT_MOUSE_RELEASE) {
-            if (callback.first & EVENT_MOUSE_PRESS && action != GLFW_PRESS && !(callback.first & EVENT_MOUSE_RELEASE))
+    for (auto&[events, callback] : w->mCallbacks) {
+        if (events & EVENT_MOUSE_PRESS || events & EVENT_MOUSE_RELEASE) {
+            if (events & EVENT_MOUSE_PRESS && action != GLFW_PRESS && !(events & EVENT_MOUSE_RELEASE))
                 continue;
-            if (callback.first & EVENT_MOUSE_RELEASE && action != GLFW_RELEASE && !(callback.first & EVENT_MOUSE_PRESS))
+            if (events & EVENT_MOUSE_RELEASE && action != GLFW_RELEASE && !(events & EVENT_MOUSE_PRESS))
                 continue;
             Event e{};
             e.mEvents = action == GLFW_PRESS ? EVENT_MOUSE_PRESS : EVENT_MOUSE_RELEASE;;
@@ -95,7 +96,23 @@ void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int act
             glfwGetCursorPos(window, &xpos, &ypos);
             e.mPayload.mClickX = int(xpos);
             e.mPayload.mClickY = int(ypos);
-            callback.second(e);
+            callback(e);
+        }
+    }
+}
+
+void _Internal_WindowMouseMove(GLFWwindow* window, double xpos, double ypos) {
+    PlatformWindow* w = _Internal_GetWindow(window);
+    if (!w)
+        return;
+    for (auto&[events, callback] : w->mCallbacks) {
+        if (events & EVENT_MOUSE_MOVE) {
+            Event e{};
+            e.mEvents = EVENT_MOUSE_MOVE;
+            e.mDetails = EVENT_DETAIL_NORMAL_MOTION;
+            e.mPayload.mPositionX = xpos;
+            e.mPayload.mPositionY = ypos;
+            callback(e);
         }
     }
 }
@@ -110,6 +127,13 @@ PlatformWindow::PlatformWindow(std::string title, int width, int height)
     glfwSetWindowFocusCallback(m_window, _Internal_WindowFocusCallback);
     glfwSetKeyCallback(m_window, _Internal_WindowKeyCallback);
     glfwSetMouseButtonCallback(m_window, _Internal_WindowMouseButtonCallback);
+    glfwSetCursorPosCallback(m_window, _Internal_WindowMouseMove);
+    if (!glfwRawMouseMotionSupported()) {
+        log_error("RAW INPUT is not supported on your device?");
+    }
+    else {
+        //glfwSetInputMode(m_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
     s_Internal_Windows[m_window] = this;
 }
 

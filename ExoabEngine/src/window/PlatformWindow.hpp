@@ -163,4 +163,5 @@ private:
 	friend void _Internal_WindowKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	friend void _Internal_WindowFocusCallback(GLFWwindow* window, int focused);
 	friend void _Internal_WindowMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+	friend void _Internal_WindowMouseMove(GLFWwindow* window, double xpos, double ypos);
 };
