@@ -13,7 +13,7 @@
 class Shader
 {
 public:
-    Shader(GraphicsContext context, const char *ShaderPath, const char *EntryPointFunction = "main");
+    Shader(const char *ShaderPath, const char *EntryPointFunction = "main");
     ~Shader();
     const std::string &GetSource();
     inline uint32_t *GetBytecode() { return m_Bytecode.data(); }

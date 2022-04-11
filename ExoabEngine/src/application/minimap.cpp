@@ -9,8 +9,8 @@ ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> 
 {
 	auto transform = terrain->GetTransform();
 	terrain->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(0.10)) * terrain->GetToCenterTransform());
-	Shader vertex = Shader(Global::Context, "assets/shaders/terrain/minimap.vert");
-	Shader fragment = Shader(Global::Context, "assets/shaders/terrain/minimap.frag");
+	Shader vertex = Shader("assets/shaders/terrain/minimap.vert");
+	Shader fragment = Shader("assets/shaders/terrain/minimap.frag");
 	Framebuffer fbo;
 	fbo.m_width = 256;
 	fbo.m_height = 256;

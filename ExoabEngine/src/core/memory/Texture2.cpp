@@ -336,10 +336,28 @@ void Texture2_Destroy(ITexture2 texture)
 ITexture2 Texture2_CreateFromFile(const char* path, bool mipmaps)
 {
 	int w, h, c;
-	void* pixels = stbi_load(path, &w, &h, &c, 4);
+	unsigned int* pixels = (unsigned int*)stbi_load(path, &w, &h, &c, 4);
 	if (!pixels) {
 		logerror("Could not load texture from file!");
 		return nullptr;
+	}
+	struct Pixel {
+		unsigned char r;
+		unsigned char g;
+		unsigned char b;
+		unsigned char a;
+	};
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
+			Pixel p = *(Pixel*)&pixels[y * w + x];
+			//printf("%d %d %d before\n", r, g, b);
+			p.r = (int)(pow((float)p.r / 255.0f, 2.2f) * 255.0f);
+			p.g = (int)(pow((float)p.g / 255.0f, 2.2f) * 255.0f);
+			p.b = (int)(pow((float)p.b / 255.0f, 2.2f) * 255.0f);
+			//printf("%d %d %d after\n", r, g, b);
+			auto pixel = (Pixel*)&pixels[y * w + x];
+			*pixel = p;
+		}
 	}
 	Texture2DSpecification specification;
 	specification.m_Width = w;

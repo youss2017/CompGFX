@@ -18,4 +18,6 @@ namespace Global {
 	extern bool RenderDOC;
 	extern std::vector<Mesh::Geometry> Geomtry;
 	extern VkSampler DefaultSampler;
+	extern float zNear;
+	extern float zFar;
 }

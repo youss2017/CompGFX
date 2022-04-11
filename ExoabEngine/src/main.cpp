@@ -18,6 +18,7 @@
 #include "graphics/Graphics.hpp"
 #include "application/Application.hpp"
 #include <csignal>
+#include "jobs/Jobs.hpp"
 
 #ifdef _WIN32
 static void PrepareWin32(int argc, char** argv);
@@ -50,6 +51,7 @@ int main(int argc, char** argv)
 #else
     PreparePOSIX(argc, argv);
 #endif
+    job::OnStartup();
     /* Load Game Settings from settings.cfg */
     LoadConfiguration();
     bool rd = false;
@@ -97,6 +99,7 @@ int main(int argc, char** argv)
     PROFILE_BEGIN_SESSION("Cleanup", "Profiling-Cleanup.json");
     app->OnDestroy();
     delete app;
+    job::OnDestroy();
     PROFILE_END_SESSION();
     return 0;
 }
@@ -170,7 +173,7 @@ void PrepareDLLs();
 static void PrepareWin32(int argc, char** argv)
 {
     PrepareDLLs();
-    CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    CoInitializeEx(NULL, 0);
 #if 0
     if(timeBeginPeriod(1) == TIMERR_NOERROR)
         log_info("Succesfully increased windows timer resolution to 1 ms");

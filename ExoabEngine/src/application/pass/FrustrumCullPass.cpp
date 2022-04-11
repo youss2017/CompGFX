@@ -70,7 +70,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	mSet = ShaderConnector_CreateSet(0, mPool, 5, computeBindings);
 
 	mFrustrumLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
-	Shader computeShader = Shader(Global::Context, "assets/shaders/FrustrumCulling.comp");
+	Shader computeShader = Shader("assets/shaders/FrustrumCulling.comp");
 	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
@@ -101,7 +101,7 @@ Application::FrustumCullPass::~FrustumCullPass()
 
 void Application::FrustumCullPass::ReloadShaders() {
 	vkDestroyPipeline(mDevice, mFrustrum, nullptr);
-	Shader computeShader = Shader(Global::Context, "assets/shaders/FrustrumCulling.comp");
+	Shader computeShader = Shader("assets/shaders/FrustrumCulling.comp");
 	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);

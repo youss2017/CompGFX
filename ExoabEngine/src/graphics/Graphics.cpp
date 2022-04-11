@@ -3,6 +3,7 @@
 #include "../utils/common.hpp"
 #include "../utils/StringUtils.hpp"
 #include "../utils/MBox.hpp"
+#include "Globals.hpp"
 #include <backend/GUI.h>
 #include <GLFW/glfw3.h>
 #define DEBUG_PRINTF 0
@@ -114,6 +115,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                 },
                                                features, VK_API_VERSION_1_2);
     auto vcont = ToVKContext(gfx->m_context);
+    Global::Context = vcont;
     gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);
     
     for (int i = 0; i < gFrameOverlapCount; i++)

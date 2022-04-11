@@ -21,8 +21,8 @@ Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, Geome
 	mSet = ShaderConnector_CreateSet(0, mPool, 1, bindings);
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4} });
 
-	Shader skyboxVert = Shader(Global::Context, "assets/shaders/skybox.vert");
-	Shader skyboxFrag = Shader(Global::Context, "assets/shaders/skybox.frag");
+	Shader skyboxVert = Shader("assets/shaders/postprocess/skybox.vert");
+	Shader skyboxFrag = Shader("assets/shaders/postprocess/skybox.frag");
 
 	PipelineSpecification spec;
 	spec.m_CullMode = CullMode::CULL_BACK;
@@ -49,8 +49,8 @@ Application::SkyboxPass::~SkyboxPass()
 }
 
 void Application::SkyboxPass::ReloadShaders() {
-	Shader skyboxVert = Shader(Global::Context, "assets/shaders/skybox.vert");
-	Shader skyboxFrag = Shader(Global::Context, "assets/shaders/skybox.frag");
+	Shader skyboxVert = Shader("assets/shaders/postprocess/skybox.vert");
+	Shader skyboxFrag = Shader("assets/shaders/postprocess/skybox.frag");
 	PipelineSpecification spec = mState->m_spec;
 	PipelineVertexInputDescription input;
 	PipelineState_Destroy(mState);

@@ -4,6 +4,7 @@
 #include "../backend/VulkanLoader.h"
 #include "../../utils/common.hpp"
 #include "../shaders/Shader.hpp"
+#include "Globals.hpp"
 #include "GUI.h"
 #include <vector>
 #include <climits>
@@ -13,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <GLFW/glfw3.h>
+#include <glm/vec4.hpp>
 
 /*
     Written: 9/26/2021
@@ -25,6 +27,9 @@
 */
 
 #if defined(_DEBUG)
+#ifdef vkcheck
+#undef vkcheck
+#endif
 #define vkcheck(x)\
 {\
 	VkResult ___vk_i_result____ = x;\
@@ -36,6 +41,13 @@
 #else
 #define vkcheck(x) x
 #endif
+
+struct SwapchainPushblock {
+    glm::ivec2 u_ShowColor;
+    glm::vec2 zNear;
+    glm::vec2 zFar;
+    glm::vec2 u_Exposure;
+} static pushblock;
 
 static std::string __GetVkResultString(VkResult result)
 	{
@@ -86,97 +98,6 @@ static std::string __GetVkResultString(VkResult result)
 		if(VK_RESULT_MAX_ENUM == result) return std::string("VK_RESULT_MAX_ENUM");
 		return std::string("UNDEFEINED or UNDETECTED VKRESULT! VkGraphicsCard.cpp");
 	}
-
-static const char *s_VertexShaderSource =
-    "#version 450 core\n"
-    "const vec4 quad[] = \n"
-    "{\n"
-    "    // triangle 1\n"
-    "    vec4(-1, 1, 0, 1),\n"
-    "    vec4(1, -1, 1, 0),\n"
-    "    vec4(-1, -1, 0, 0),\n"
-    "    // triangle 2\n"
-    "    vec4(-1, 1, 0, 1),\n"
-    "    vec4(1, 1, 1, 1),\n"
-    "    vec4(1, -1, 1, 0)\n"
-    "};\n"
-    "layout (location = 0) out vec2 TexCoord;\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    vec4 Vertex = quad[gl_VertexIndex];\n"
-    "    gl_Position = vec4(Vertex.xy, 0.0, 1.0);\n"
-    "    TexCoord = Vertex.zw;	\n"
-    "}\n";
-
-static const char *s_FragmentShaderSource =
-    "#version 450 core\n"
-    "\n"
-    "layout (location = 0) in vec2 TexCoord;\n"
-    "layout (location = 0) out vec4 FragColor;\n"
-    "layout(set = 0, binding = 0) uniform sampler2D ColorPassTexture;\n"
-    "\n"
-    "// Do not use this function if the Output Texture is using an SRGBA format\n"
-    "vec4 GammaCorrection(vec4 color, float gamma)\n"
-    "{\n"
-    "    return pow(color, vec4(vec3(1.0 / gamma), 1.0));\n"
-    "}\n"
-    "    // from http://www.java-gaming.org/index.php?topic=35123.0\n"
-    "vec4 cubic(float v){\n"
-    "    vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;\n"
-    "    vec4 s = n * n * n;\n"
-    "    float x = s.x;\n"
-    "    float y = s.y - 4.0 * s.x;\n"
-    "    float z = s.z - 4.0 * s.y + 6.0 * s.x;\n"
-    "    float w = 6.0 - x - y - z;\n"
-    "    return vec4(x, y, z, w) * (1.0/6.0);\n"
-    "}\n"
-    "\n"
-    "vec4 textureBicubic(sampler2D samp, vec2 texCoords){\n"
-    "\n"
-    "   vec2 texSize = textureSize(samp, 0);\n"
-    "   vec2 invTexSize = 1.0 / texSize;\n"
-    "\n"
-    "   texCoords = texCoords * texSize - 0.5;\n"
-    "\n"
-    "\n"
-    "    vec2 fxy = fract(texCoords);\n"
-    "    texCoords -= fxy;\n"
-    "\n"
-    "    vec4 xcubic = cubic(fxy.x);\n"
-    "    vec4 ycubic = cubic(fxy.y);\n"
-    "\n"
-    "    vec4 c = texCoords.xxyy + vec2 (-0.5, +1.5).xyxy;\n"
-    "\n"
-    "    vec4 s = vec4(xcubic.xz + xcubic.yw, ycubic.xz + ycubic.yw);\n"
-    "    vec4 offset = c + vec4 (xcubic.yw, ycubic.yw) / s;\n"
-    "\n"
-    "    offset *= invTexSize.xxyy;\n"
-    "\n"
-    "    vec4 sample0 = texture(samp, offset.xz);\n"
-    "    vec4 sample1 = texture(samp, offset.yz);\n"
-    "    vec4 sample2 = texture(samp, offset.xw);\n"
-    "    vec4 sample3 = texture(samp, offset.yw);\n"
-    "\n"
-    "    float sx = s.x / (s.x + s.y);\n"
-    "    float sy = s.z / (s.z + s.w);\n"
-    "\n"
-    "    return mix(\n"
-    "       mix(sample3, sample2, sx), mix(sample1, sample0, sx)\n"
-    "    , sy);\n"
-    "}\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    vec4 Color = texture(ColorPassTexture, TexCoord);\n"
-    "    FragColor = Color;\n"
-    "}\n";
-
-constexpr bool ss_Compile_SourceCode = false;
-
-static uint32_t s_VertexShaderBytecode[] = {119734787, 66560, 851978, 47, 0, 131089, 1, 393227, 1, 1280527431, 1685353262, 808793134, 0, 196622, 0, 1, 524303, 0, 4, 1852399981, 0, 23, 33, 44, 262215, 23, 11, 42, 196679, 26, 24, 327752, 31, 0, 11, 0, 327752, 31, 1, 11, 1, 327752, 31, 2, 11, 3, 327752, 31, 3, 11, 4, 196679, 31, 2, 262215, 44, 30, 0, 131091, 2, 196641, 3, 2, 196630, 6, 32, 262167, 7, 6, 4, 262176, 8, 7, 7, 262165, 10, 32, 0, 262187, 10, 11, 6, 262172, 12, 7, 11, 262187, 6, 13, 3212836864, 262187, 6, 14, 1065353216, 262187, 6, 15, 0, 458796, 7, 16, 13, 14, 15, 14, 458796, 7, 17, 14, 13, 14, 15, 458796, 7, 18, 13, 13, 15, 15, 458796, 7, 19, 14, 14, 14, 14, 589868, 12, 20, 16, 17, 18, 16, 19, 17, 262165, 21, 32, 1, 262176, 22, 1, 21, 262203, 22, 23, 1, 262176, 25, 7, 12, 262187, 10, 29, 1, 262172, 30, 6, 29, 393246, 31, 7, 6, 30, 30, 262176, 32, 3, 31, 262203, 32, 33, 3, 262187, 21, 34, 0, 262167, 35, 6, 2, 262176, 41, 3, 7, 262176, 43, 3, 35, 262203, 43, 44, 3, 327734, 2, 4, 0, 3, 131320, 5, 327739, 25, 26, 7, 20, 262205, 21, 24, 23, 327745, 8, 27, 26, 24, 262205, 7, 28, 27, 327761, 6, 38, 28, 0, 327761, 6, 39, 28, 1, 458832, 7, 40, 38, 39, 15, 14, 327745, 41, 42, 33, 34, 196670, 42, 40, 458831, 35, 46, 28, 28, 2, 3, 196670, 44, 46, 65789, 65592};
-static uint32_t s_FragmentShaderBytecode[] = {119734787, 66560, 851978, 22, 0, 131089, 1, 393227, 1, 1280527431, 1685353262, 808793134, 0, 196622, 0, 1, 524303, 4, 4, 1852399981, 0, 13, 17, 21, 196624, 4, 7, 262215, 13, 34, 0, 262215, 13, 33, 0, 262215, 17, 30, 0, 262215, 21, 30, 0, 131091, 2, 196641, 3, 2, 196630, 6, 32, 262167, 7, 6, 4, 589849, 10, 6, 1, 0, 0, 0, 1, 0, 196635, 11, 10, 262176, 12, 0, 11, 262203, 12, 13, 0, 262167, 15, 6, 2, 262176, 16, 1, 15, 262203, 16, 17, 1, 262176, 20, 3, 7, 262203, 20, 21, 3, 327734, 2, 4, 0, 3, 131320, 5, 262205, 11, 14, 13, 262205, 15, 18, 17, 327767, 7, 19, 14, 18, 196670, 21, 19, 65789, 65592};
-static uint32_t s_Depth_FragmentShaderBytecode[] = {119734787, 66560, 851978, 24, 0, 131089, 1, 393227, 1, 1280527431, 1685353262, 808793134, 0, 196622, 0, 1, 524303, 4, 4, 1852399981, 0, 13, 17, 21, 196624, 4, 7, 262215, 13, 34, 0, 262215, 13, 33, 0, 262215, 17, 30, 0, 262215, 21, 30, 0, 131091, 2, 196641, 3, 2, 196630, 6, 32, 262167, 7, 6, 4, 589849, 10, 6, 1, 0, 0, 0, 1, 0, 196635, 11, 10, 262176, 12, 0, 11, 262203, 12, 13, 0, 262167, 15, 6, 2, 262176, 16, 1, 15, 262203, 16, 17, 1, 262176, 20, 3, 7, 262203, 20, 21, 3, 327734, 2, 4, 0, 3, 131320, 5, 262205, 11, 14, 13, 262205, 15, 18, 17, 327767, 7, 19, 14, 18, 589903, 7, 23, 19, 19, 0, 0, 0, 0, 196670, 21, 23, 65789, 65592};
 
 namespace vk
 {
@@ -265,40 +186,7 @@ namespace vk
         gfxswap.m_Swapchain = nullptr;
         gfxswap.CreateSwapchain(allocation_callback);
 
-        // 1) compile shader source code into spirv
-        uint32_t *pVSBytecode, *pFSBytecode;
-        uint32_t VSBytecodeSize, FSBytecodeSize;
-        if(ss_Compile_SourceCode) {
-            logalert("Compiling (Vulkan) Swapchain Shader Pass.");
-            Shader::CompileVulkanSPIRVText(s_VertexShaderSource, "VertexShaderSource.vert", shaderc_glsl_vertex_shader, (uint32_t **)&pVSBytecode, &VSBytecodeSize);
-            Shader::CompileVulkanSPIRVText(s_FragmentShaderSource, "FragmentShaderSource.frag", shaderc_glsl_fragment_shader, (uint32_t **)&pFSBytecode, &FSBytecodeSize);
-            FILE* temp__vs = fopen("swapchain_vertexbytecode.txt", "w");
-            FILE* temp__fs = fopen("swapchain_fragmentbytecode.txt", "w");
-            for(uint32_t i = 0; i < VSBytecodeSize / 4; i++) {
-                std::string output = std::to_string(pVSBytecode[i]) + ", ";
-                fwrite(output.c_str(), 1, output.size(), temp__vs);
-            }
-            for(uint32_t i = 0; i < FSBytecodeSize / 4; i++) {
-                std::string output = std::to_string(pFSBytecode[i]) + ", ";
-                fwrite(output.c_str(), 1, output.size(), temp__fs);
-            }
-            fclose(temp__vs);
-            fclose(temp__fs);
-        } else {
-            loginfo("Loading Cached (Vulkan) Swapchain Shader Pass.");
-            pVSBytecode = s_VertexShaderBytecode, VSBytecodeSize = sizeof(s_VertexShaderBytecode);
-            pFSBytecode = s_FragmentShaderBytecode, FSBytecodeSize = sizeof(s_FragmentShaderBytecode);
-        }
-
-        // 2) create pipeline
-        VkShaderModuleCreateInfo ModuleCreateInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-        ModuleCreateInfo.pCode = pVSBytecode;
-        ModuleCreateInfo.codeSize = VSBytecodeSize;
-        vkCreateShaderModule(Device, &ModuleCreateInfo, allocation_callback, &gfxswap.m_VertexModule);
-        ModuleCreateInfo.pCode = pFSBytecode;
-        ModuleCreateInfo.codeSize = FSBytecodeSize;
-        vkCreateShaderModule(Device, &ModuleCreateInfo, allocation_callback, &gfxswap.m_FragmentModule);
-
+        // 1) create pipeline
         VkDescriptorSetLayoutBinding SetLayoutBinding{};
         SetLayoutBinding.binding = 0;
         SetLayoutBinding.descriptorCount = 1;
@@ -313,6 +201,12 @@ namespace vk
         VkPipelineLayoutCreateInfo LayoutCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
         LayoutCreateInfo.setLayoutCount = 1;
         LayoutCreateInfo.pSetLayouts = &gfxswap.m_SetLayout;
+        LayoutCreateInfo.pushConstantRangeCount = 1;
+        VkPushConstantRange range{};
+        range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        range.offset = 0;
+        range.size = sizeof(pushblock);
+        LayoutCreateInfo.pPushConstantRanges = &range;
         vkCreatePipelineLayout(Device, &LayoutCreateInfo, allocation_callback, &gfxswap.m_Layout);
 
         // create descriptor pool
@@ -363,12 +257,6 @@ namespace vk
             vkCreateFence(Device, &fenceCreateInfo, nullptr, &gfxswap.m_CmdFences[i]);
         }
 
-        // cleanup/free memory
-        if (ss_Compile_SourceCode) {
-            delete[] pVSBytecode;
-            delete[] pFSBytecode;
-        }
-
         return gfxswap;
     }
 
@@ -401,7 +289,7 @@ namespace vk
 
         // Check SwapChain Surface Format is supported
         bool FormatSupported = false;
-        VkColorSpaceKHR ColorSpace;
+        VkColorSpaceKHR ColorSpace{};
         for (const auto &sf : surfaceFormats)
         {
             if (sf.format == m_Format)
@@ -584,14 +472,17 @@ namespace vk
     void GraphicsSwapchain::CreatePipeline(VkAllocationCallbacks *allocation_callback)
     {
         VkGraphicsPipelineCreateInfo pipelineCreateInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+        // 1) compile shader source code into spirv
+        Shader vertex = Shader("assets/shaders/postprocess/swapchain.vert");
+        Shader fragment = Shader("assets/shaders/postprocess/swapchain.frag");
 
         VkPipelineShaderStageCreateInfo ShaderStages[2]{};
         ShaderStages[0].sType = ShaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         ShaderStages[0].pName = "main";
-        ShaderStages[0].module = m_VertexModule;
+        ShaderStages[0].module = vertex.GetShader();
         ShaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
         ShaderStages[1].pName = "main";
-        ShaderStages[1].module = m_FragmentModule;
+        ShaderStages[1].module = fragment.GetShader();
         ShaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         pipelineCreateInfo.stageCount = 2;
@@ -658,31 +549,20 @@ namespace vk
 
         VkGraphicsPipelineCreateInfo pipelineDepthCreateInfo = pipelineCreateInfo;
 
-        VkShaderModuleCreateInfo depthModuleCreateInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-        depthModuleCreateInfo.codeSize = sizeof(s_Depth_FragmentShaderBytecode);
-        depthModuleCreateInfo.pCode = s_Depth_FragmentShaderBytecode;
-        VkShaderModule FragmentDepthModule;
-        vkCreateShaderModule(m_Device, &depthModuleCreateInfo, nullptr, &FragmentDepthModule);
-
         VkPipelineShaderStageCreateInfo ShaderDepthStages[2]{};
         ShaderDepthStages[0].sType = ShaderDepthStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         ShaderDepthStages[0].pName = "main";
-        ShaderDepthStages[0].module = m_VertexModule;
+        ShaderDepthStages[0].module = vertex.GetShader();
         ShaderDepthStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
         ShaderDepthStages[1].pName = "main";
-        ShaderDepthStages[1].module = FragmentDepthModule;
+        ShaderDepthStages[1].module = fragment.GetShader();
         ShaderDepthStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         pipelineDepthCreateInfo.pStages = ShaderDepthStages;
 
         if (m_PresentPipeline)
             vkDestroyPipeline(m_Device, m_PresentPipeline, nullptr);
-        if (m_PresentDepthPipeline)
-            vkDestroyPipeline(m_Device, m_PresentDepthPipeline, nullptr);
 
         vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, allocation_callback, &m_PresentPipeline);
-        vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineDepthCreateInfo, allocation_callback, &m_PresentDepthPipeline);
-        vkDestroyShaderModule(m_Device, FragmentDepthModule, nullptr);
-
     }
 
     VkResult GraphicsSwapchain::PrepareNextFrame(uint64_t TimeOut, VkSemaphore NextFrameReadySemaphore, VkFence NextFrameReadyFence, uint32_t* pOutImageIndex)
@@ -753,8 +633,18 @@ namespace vk
             }
 
             vkCmdBeginRenderPass(m_CommandBuffers[m_ImageIndex], &PassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(m_CommandBuffers[m_ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, DepthPipeline ? m_PresentDepthPipeline : m_PresentPipeline);
+            vkCmdBindPipeline(m_CommandBuffers[m_ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_PresentPipeline);
             vkCmdBindDescriptorSets(m_CommandBuffers[m_ImageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_Layout, 0, 1, &m_DescriptorSets[m_ImageIndex], 0, NULL);
+            if (DepthPipeline) {
+                pushblock.u_ShowColor[0] = 0;
+                pushblock.zNear[0] = Global::zNear;
+                pushblock.zFar[0] = Global::zFar;
+            }
+            else {
+                pushblock.u_ShowColor[0] = 1;
+                pushblock.u_Exposure[0] = mExposure;
+            }
+            vkCmdPushConstants(m_CommandBuffers[m_ImageIndex], m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushblock), &pushblock);
             vkCmdDraw(m_CommandBuffers[m_ImageIndex], 6, 1, 0, 0);
         }
 
@@ -821,10 +711,7 @@ namespace vk
     {
         PROFILE_FUNCTION();
         vkQueueWaitIdle(m_Queue); // make sure swapchain is not in-flight
-        vkDestroyShaderModule(m_Device, m_VertexModule, m_allocation_callback);
-        vkDestroyShaderModule(m_Device, m_FragmentModule, m_allocation_callback);
         vkDestroyPipeline(m_Device, m_PresentPipeline, m_allocation_callback);
-        vkDestroyPipeline(m_Device, m_PresentDepthPipeline, m_allocation_callback);
         vkDestroyRenderPass(m_Device, m_PresentPass, m_allocation_callback);
         vkDestroyDescriptorPool(m_Device, m_DescriptorPool, m_allocation_callback);
         vkDestroyDescriptorSetLayout(m_Device, m_SetLayout, m_allocation_callback);

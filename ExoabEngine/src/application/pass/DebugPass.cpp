@@ -4,8 +4,8 @@
 
 Application::DebugPass::DebugPass(const Framebuffer& fbo) : Pass(Global::Context->defaultDevice, true), mFBO(fbo), mProjView(glm::mat4(1.0)), mDebugObjectCount(0), mDebugBuffer(nullptr), mDebugObjectIndex(0), mDebugBufferPointer(0) {
 	mLayout = ShaderConnector_CreatePipelineLayout(0, nullptr, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugPushblock)}});
-	Shader vertexShader = Shader(Global::Context, "assets/shaders/debug/debugVertex.vert");
-	Shader fragmentShader = Shader(Global::Context, "assets/shaders/debug/debugFragment.frag");
+	Shader vertexShader = Shader("assets/shaders/debug/debugVertex.vert");
+	Shader fragmentShader = Shader("assets/shaders/debug/debugFragment.frag");
 	PipelineSpecification specification;
 	specification.m_CullMode = CullMode::CULL_BACK;
 	specification.m_DepthEnabled = true;
@@ -38,8 +38,8 @@ Application::DebugPass::~DebugPass() {
 }
 
 void Application::DebugPass::ReloadShaders() {
-	Shader vertexShader = Shader(Global::Context, "assets/shaders/debug/debugVertex.vert");
-	Shader fragmentShader = Shader(Global::Context, "assets/shaders/debug/debugFragment.frag");
+	Shader vertexShader = Shader("assets/shaders/debug/debugVertex.vert");
+	Shader fragmentShader = Shader("assets/shaders/debug/debugFragment.frag");
 	PipelineSpecification specification = mState->m_spec;
 	PipelineVertexInputDescription input;
 	PipelineState_Destroy(mState);

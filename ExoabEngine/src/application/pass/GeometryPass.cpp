@@ -142,8 +142,8 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 2, geometryPassFragment);
 	DescriptorSet GeoSets[2] = { mGeoSet0, mGeoSet1 };
 	mGeoLayout = ShaderConnector_CreatePipelineLayout(2, GeoSets, {});
-	Shader geoVertex = Shader(Global::Context, "assets/shaders/vertex.vert");
-	Shader geoFragment = Shader(Global::Context, "assets/shaders/fragment.frag");
+	Shader geoVertex = Shader("assets/shaders/vertex.vert");
+	Shader geoFragment = Shader("assets/shaders/fragment.frag");
 	PipelineSpecification spec;
 	spec.m_CullMode = CullMode::CULL_BACK;
 	spec.m_DepthEnabled = true;
@@ -163,8 +163,8 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	
 	mMapSet = ShaderConnector_CreateSet(0, mPool, 5, terrainBindings);
 	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock)} });
-	Shader mapVertex = Shader(Global::Context, "assets/shaders/terrain/Terrain.vert");
-	Shader mapFragment = Shader(Global::Context, "assets/shaders/terrain/Terrain.frag");
+	Shader mapVertex = Shader("assets/shaders/terrain/Terrain.vert");
+	Shader mapFragment = Shader("assets/shaders/terrain/Terrain.frag");
 	mMapState = PipelineState_Create(Global::Context, mGeoState->m_spec, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	
 	for (int i = 0; i < gFrameOverlapCount; i++) {
@@ -302,10 +302,10 @@ void Application::GeometryPass::ReloadShaders() {
 	PipelineSpecification specification = mGeoState->m_spec;
 	PipelineState_Destroy(mGeoState);
 	PipelineState_Destroy(mMapState);
-	Shader geoVertex = Shader(Global::Context, "assets/shaders/vertex.vert");
-	Shader geoFragment = Shader(Global::Context, "assets/shaders/fragment.frag");
-	Shader mapVertex = Shader(Global::Context, "assets/shaders/terrain/Terrain.vert");
-	Shader mapFragment = Shader(Global::Context, "assets/shaders/terrain/Terrain.frag");
+	Shader geoVertex = Shader("assets/shaders/vertex.vert");
+	Shader geoFragment = Shader("assets/shaders/fragment.frag");
+	Shader mapVertex = Shader("assets/shaders/terrain/Terrain.vert");
+	Shader mapFragment = Shader("assets/shaders/terrain/Terrain.frag");
 	PipelineVertexInputDescription input;
 	mGeoState = PipelineState_Create(Global::Context, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
 	mMapState = PipelineState_Create(Global::Context, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
@@ -322,13 +322,13 @@ void Application::GeometryPass::SetWireframeMode(bool mode)
 	PipelineSpecification specification = mGeoState->m_spec;
 	specification.m_PolygonMode = mode ? PolygonMode::LINE : PolygonMode::FILL;
 	PipelineState_Destroy(mGeoState);
-	Shader geoVertex = Shader(Global::Context, "assets/shaders/vertex.vert");
-	Shader geoFragment = Shader(Global::Context, "assets/shaders/fragment.frag");
+	Shader geoVertex = Shader("assets/shaders/vertex.vert");
+	Shader geoFragment = Shader("assets/shaders/fragment.frag");
 	PipelineVertexInputDescription input;
 	mGeoState = PipelineState_Create(Global::Context, specification, input, mFBO, mGeoLayout, &geoVertex, &geoFragment);
 	PipelineState_Destroy(mMapState);
-	Shader mapVertex = Shader(Global::Context, "assets/shaders/Terrain.vert");
-	Shader mapFragment = Shader(Global::Context, "assets/shaders/Terrain.frag");
+	Shader mapVertex = Shader("assets/shaders/terrain/Terrain.vert");
+	Shader mapFragment = Shader("assets/shaders/terrain/Terrain.frag");
 	mMapState = PipelineState_Create(Global::Context, specification, input, mFBO, mMapLayout, &mapVertex, &mapFragment);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		this->RecordCommands(i);

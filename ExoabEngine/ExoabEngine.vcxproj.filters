@@ -234,6 +234,9 @@
     <ClInclude Include="src\application\minimap.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\jobs\Jobs.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\application\Camera.cpp">
@@ -449,6 +452,9 @@
     <ClCompile Include="src\application\minimap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\jobs\Win32Jobs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\utils\common.inl">
@@ -456,9 +462,18 @@
     </None>
     <None Include="imgui.ini" />
     <None Include="src\application\ecs\Entity.hpp" />
-    <None Include="assets\shaders\ui\ui.vert" />
-    <None Include="assets\shaders\ui\ui.frag" />
+    <None Include="assets\shaders\postprocess\ui\ui.vert" />
+    <None Include="assets\shaders\postprocess\ui\ui.frag" />
     <None Include="..\README.md" />
+    <None Include="assets\shaders\postprocess\swapchain.vert" />
+    <None Include="assets\shaders\postprocess\swapchain.frag" />
+    <None Include="assets\shaders\postprocess\skybox.frag" />
+    <None Include="assets\shaders\postprocess\skybox.vert" />
+    <None Include="assets\shaders\postprocess\bloom\downsample.comp" />
+    <None Include="assets\shaders\postprocess\bloom\downsampleVertical.comp" />
+    <None Include="assets\shaders\postprocess\bloom\threshold.comp" />
+    <None Include="assets\shaders\postprocess\bloom\upsample.comp" />
+    <None Include="assets\shaders\postprocess\tonemapping.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="external\VulkanMemoryAllocator\src\vk_mem_alloc.natvis" />

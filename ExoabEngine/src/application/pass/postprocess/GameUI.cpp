@@ -3,8 +3,8 @@
 #include <stb/stb_image.h>
 
 Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, ITexture2 minimap) : Pass(Global::Context->defaultDevice, true) {
-	Shader vertex = Shader(Global::Context, "assets/shaders/ui/ui.vert");
-	Shader fragment = Shader(Global::Context, "assets/shaders/ui/ui.frag");
+	Shader vertex = Shader("assets/shaders/postprocess/ui/ui.vert");
+	Shader fragment = Shader("assets/shaders/postprocess/ui/ui.frag");
 	
 	mCursor = Texture2_CreateFromFile("assets/textures/cursor.png", false);
 
@@ -109,8 +109,8 @@ void Application::GameUI::SetCursorPosition(const Ph::Ray& ray) {
 }
 
 void Application::GameUI::ReloadShaders() {
-	Shader vertex = Shader(Global::Context, "assets/shaders/ui/ui.vert");
-	Shader fragment = Shader(Global::Context, "assets/shaders/ui/ui.frag");
+	Shader vertex = Shader("assets/shaders/postprocess/ui/ui.vert");
+	Shader fragment = Shader("assets/shaders/postprocess/ui/ui.frag");
 	PipelineSpecification spec = mState->m_spec;
 	PipelineVertexInputDescription input;
 	input.AddInputElement("inPosition", 0, 0, 2, true, false, false);

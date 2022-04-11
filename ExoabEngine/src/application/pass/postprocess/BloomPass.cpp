@@ -42,20 +42,20 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	mTextureHeight = spec.m_Height;
 	mKernalSizeX = 32;
 	mKernalSizeY = 32;
-	Shader thresholdShader = Shader(Global::Context, "assets/shaders/bloom/threshold.comp");
+	Shader thresholdShader = Shader("assets/shaders/postprocess/bloom/threshold.comp");
 	thresholdShader.SetSpecializationConstant<int>(0, fbo.m_width);
 	thresholdShader.SetSpecializationConstant<int>(1, fbo.m_height);
 	thresholdShader.SetSpecializationConstant<int>(2, mTextureWidth);
 	thresholdShader.SetSpecializationConstant<int>(3, mTextureHeight);
 	thresholdShader.SetSpecializationConstant<int>(4, mKernalSizeX);
 	thresholdShader.SetSpecializationConstant<int>(5, mKernalSizeY);
-	Shader downsampleShader = Shader(Global::Context, "assets/shaders/bloom/downsample.comp");
+	Shader downsampleShader = Shader("assets/shaders/postprocess/bloom/downsample.comp");
 	downsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader downsampleVerticalShader = Shader(Global::Context, "assets/shaders/bloom/downsampleVertical.comp");
+	Shader downsampleVerticalShader = Shader("assets/shaders/postprocess/bloom/downsampleVertical.comp");
 	downsampleVerticalShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleVerticalShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader upsampleShader = Shader(Global::Context, "assets/shaders/bloom/upsample.comp");
+	Shader upsampleShader = Shader("assets/shaders/postprocess/bloom/upsample.comp");
 	upsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	upsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
 	
@@ -164,20 +164,20 @@ Application::BloomPass::~BloomPass() {
 }
 
 void Application::BloomPass::ReloadShaders() {
-	Shader thresholdShader = Shader(Global::Context, "assets/shaders/bloom/threshold.comp");
+	Shader thresholdShader = Shader("assets/shaders/postprocess/bloom/threshold.comp");
 	thresholdShader.SetSpecializationConstant<int>(0, mFBO.m_width);
 	thresholdShader.SetSpecializationConstant<int>(1, mFBO.m_height);
 	thresholdShader.SetSpecializationConstant<int>(2, mTextureWidth);
 	thresholdShader.SetSpecializationConstant<int>(3, mTextureHeight);
 	thresholdShader.SetSpecializationConstant<int>(4, mKernalSizeX);
 	thresholdShader.SetSpecializationConstant<int>(5, mKernalSizeY);
-	Shader downsampleShader = Shader(Global::Context, "assets/shaders/bloom/downsample.comp");
+	Shader downsampleShader = Shader("assets/shaders/postprocess/bloom/downsample.comp");
 	downsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader downsampleVerticalShader = Shader(Global::Context, "assets/shaders/bloom/downsampleVertical.comp");
+	Shader downsampleVerticalShader = Shader("assets/shaders/postprocess/bloom/downsampleVertical.comp");
 	downsampleVerticalShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	downsampleVerticalShader.SetSpecializationConstant<int>(1, mKernalSizeY);
-	Shader upsampleShader = Shader(Global::Context, "assets/shaders/bloom/upsample.comp");
+	Shader upsampleShader = Shader("assets/shaders/postprocess/bloom/upsample.comp");
 	upsampleShader.SetSpecializationConstant<int>(0, mKernalSizeX);
 	upsampleShader.SetSpecializationConstant<int>(1, mKernalSizeY);
 	vkDestroyPipeline(mDevice, mThreshold, nullptr);

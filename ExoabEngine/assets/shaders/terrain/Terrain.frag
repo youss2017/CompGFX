@@ -64,13 +64,12 @@ void main()
 
     float BaseWeight = 1.0 - TextureWeights[0] + TextureWeights[1] + TextureWeights[2];
     vec4 BaseTexture = texture(TerrainTextures[0], TiledTexCoord) * BaseWeight;
-    vec4 Texture1 = (TextureIDs.x == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.x], TiledTexCoord) * TextureWeights[TextureIDs.x]);
-    vec4 Texture2 = (TextureIDs.y == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.y], TiledTexCoord) * TextureWeights[TextureIDs.y]);
-    vec4 Texture3 = (TextureIDs.z == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.z], TiledTexCoord) * TextureWeights[TextureIDs.z]);
+    vec4 Texture1 = (TextureIDs.x == 0) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.x], TiledTexCoord) * TextureWeights[TextureIDs.x]);
+    vec4 Texture2 = (TextureIDs.y == 0) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.y], TiledTexCoord) * TextureWeights[TextureIDs.y]);
+    vec4 Texture3 = (TextureIDs.z == 0) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.z], TiledTexCoord) * TextureWeights[TextureIDs.z]);
     vec4 FinalTexture = BaseTexture + Texture1 + Texture2 + Texture3;
-    float ambient = 0.01;
-    float diffuse = dot(normal, u_LightDirection.xyz);
+    float diffuse = max(dot(normal, u_LightDirection.xyz), 0.0) + 0.1;
 
     // TODO: Support Specular Map
-    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), 0.5, 1.0) + ambient;
+    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), 0.5, 1.0);
 }

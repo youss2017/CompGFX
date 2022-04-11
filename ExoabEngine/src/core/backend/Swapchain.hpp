@@ -17,12 +17,16 @@ namespace vk {
             void Present(VkImage ColorTexture, VkImageView ColorTextureView, VkImageLayout ImageLayout, uint32_t WaitSemaphoreCount, VkSemaphore* pWaitSemaphores, bool DepthPipeline);
             void Destroy();
 
+            void SetExposure(float exposure) {
+                mExposure = exposure;
+            }
+
             // Get Actual backbuffercount
             inline uint32_t GetBackBufferCount() { return m_BackBufferCount; }
 
         private:
-            VkShaderModule m_VertexModule, m_FragmentModule;
-            VkPipeline m_PresentPipeline, m_PresentDepthPipeline;
+            float mExposure = 1.0f;
+            VkPipeline m_PresentPipeline;
             VkRenderPass m_PresentPass;
             VkDescriptorSetLayout m_SetLayout;
             VkDescriptorPool m_DescriptorPool;

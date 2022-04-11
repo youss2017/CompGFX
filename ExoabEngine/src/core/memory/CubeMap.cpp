@@ -13,8 +13,27 @@
 ITexture2 CubeMap_Create(const std::string& path, VkFormat format)
 {
 	int width, height, channels;
+	struct Pixel {
+		unsigned char r;
+		unsigned char g;
+		unsigned char b;
+		unsigned char a;
+	};
 	uint32_t* pixels = (uint32_t*)stbi_load(path.c_str(), &width, &height, &channels, 4);
 	// 1) Get Individual cube faces
+	// Inverse Gamma Correction
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			Pixel p = *(Pixel*)& pixels[y * width + x];
+			//printf("%d %d %d before\n", r, g, b);
+			p.r = (int)(pow((float)p.r / 255.0f, 2.2f) * 255.0f);
+			p.g = (int)(pow((float)p.g / 255.0f, 2.2f) * 255.0f);
+			p.b = (int)(pow((float)p.b / 255.0f, 2.2f) * 255.0f);
+			//printf("%d %d %d after\n", r, g, b);
+			auto pixel = (Pixel*)&pixels[y * width + x];
+			*pixel = p;
+		}
+	}
 	int face_size = width / 4;
 
 	/*			

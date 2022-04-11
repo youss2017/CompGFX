@@ -50,6 +50,7 @@ namespace UI
     float Contribution[3] = { 1.0 };
     bool SaveTerrain = false;
     bool ShowStatistics = false;
+    float Exposure = 1.0f;
 }
 
 void UI::Initalize(void* _context, void* _gfx)
@@ -113,6 +114,7 @@ void UI::RenderUI()
     if (ImGui::Button("Reset")) {
         LightPosition = glm::vec3(0.0f);
     }
+    ImGui::SliderFloat("Exposure", &Exposure, 0.0, 10.0);
     ImGui::SliderInt("Cubemap LOD", &UI::CubemapLOD, 0, UI::CubemapLODMax);
     ImGui::SliderInt("Bloom Downsample", &UI::BloomDownsampleMip, 0, 7);
     const char* items[] = { "Color Buffer", "Depth Buffer", "Shadow Buffer", "Bloom Buffer" };

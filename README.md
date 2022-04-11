@@ -3,13 +3,14 @@
 <body>
 <h1>TODO</h1>
 <ul>
-	<li>Convert to Physically Based Rendering</li>
+	<li><span style="color:yellow;">Convert to Physically Based Rendering</span></li>
+	<li>Animation</li>
 	<li>Fix Bloom Pass</li>
 	<li>Cascaded Shadow Implementation</li>
 	<li>Fix Terrain Shadow</li>
 	<li>Terrain Culling</li>
 	<li>Physics Implementation</li>
-	<li><b>Maybe</b>Switch from :) VK_KHR_dynamic_renderpass to normal VkRenderPass :(</li>
+	<li><b>Maybe</b> Switch from :) VK_KHR_dynamic_renderpass to normal VkRenderPass :(</li>
 </ul>
 
 <h1>Build Instructions</h1>

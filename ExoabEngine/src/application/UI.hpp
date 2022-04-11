@@ -34,6 +34,7 @@ namespace UI
 	extern float Contribution[3];
 	extern bool SaveTerrain;
 	extern bool ShowStatistics;
+	extern float Exposure;
 
 	void Initalize(void* context, void* gfx);
 	void RenderUI();

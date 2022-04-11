@@ -16,6 +16,8 @@ namespace Global {
 	glm::mat4 Projection;
 	std::vector<Mesh::Geometry> Geomtry;
 	VkSampler DefaultSampler;
+	float zNear = 0.5;
+	float zFar = 10000.0;
 }
 
 namespace Application
@@ -48,8 +50,22 @@ namespace Application
 		mSwapchain = mGfx->m_vswapchain;
 		Global::Window = mGfx->m_window;
 		Global::DefaultSampler = vk::Gfx_CreateSampler(Global::Context);
-		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), 0.5f, 10000.0f);
+		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), Global::zNear, Global::zFar);
 		Shader::ConfigureShaderCache(s_ShaderCache);
+
+		{
+			int w, h, c;
+			unsigned char* p = (uint8_t*)stbi_load("assets/textures/idleCursor.png", &w, &h, &c, 4);
+			GLFWimage image;
+			image.width = w;
+			image.height = h;
+			image.pixels = p;
+			auto cursor = glfwCreateCursor(&image, 0, 0);
+			glfwSetCursor(Global::Window->GetWindow(), cursor);
+			glfwDestroyCursor(cursor);
+			glfwPollEvents();
+			free(p);
+		}
 
 		if (s_EnableImGui)
 			UI::Initalize(Global::Context, mGfx);
@@ -250,7 +266,7 @@ namespace Application
 		if (CameraMove) {
 			using namespace glm;
 			vec3 position = mCamera.GetPosition();
-			const float speed = 250.0f;
+			const float speed = 1000.0f;
 			vec2 translation = vec2(speed) * float(Global::Time) * Magnitude;
 			mCamera.SetPosition(position + vec3(translation.x, 0.0, translation.y));
 		}
@@ -400,13 +416,14 @@ namespace Application
 			mDebugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(227, 18, 60) / glm::vec3(255), false, mInstanceCount);
 		}
 
+#if 0
 		for (uint32_t i = 0; i < mInstanceCount; i++) {
 			glm::vec3 centerPos = mInstances[i].mModel * glm::vec4(Global::Geomtry[0].m_bounding_sphere_center, 1.0);
 			glm::vec3 radPos = glm::vec3(mInstances[i].mModel * glm::vec4(Global::Geomtry[0].m_bounding_sphere_center, 1.0)) + glm::vec3(Global::Geomtry[0].m_bounding_sphere_radius, 0, 0);
 			mDebugPass->DrawCube(centerPos, glm::vec3(0.25), glm::vec3(196, 26, 201) / glm::vec3(255), false, mInstanceCount);
 			mDebugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(26, 173, 63) / glm::vec3(255), false, mInstanceCount);
 		}
-
+#endif
 		/// <summary>
 		/// VkCMD
 		/// </summary>
@@ -426,12 +443,14 @@ namespace Application
 		vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 		vkResetFences(device, 1, &frame.m_RenderFence);
 		
+		// Culling and Shadow Pass
 		VkCommandBuffer cullPassShadowCmd = nullptr;
 		VkCommandBuffer cullPassCmd = mCullPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		VkCommandBuffer shadowPassCmd = mShadow->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		
 		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, { cullPassCmd, shadowPassCmd }, { frame.m_RenderSemaphore }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { mShadowPassSemaphore[FrameIndex] }, nullptr);
 		
+		// Geometry Pass
 		VkCommandBuffer geoPassCmd = mGeoPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		VkCommandBuffer skyboxCmd = mSkybox->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		VkCommandBuffer debugPassCmd = mDebugPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
@@ -439,6 +458,7 @@ namespace Application
 		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue,
 			{ geoPassCmd, skyboxCmd, debugPassCmd }, { mShadowPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT }, { mBloomPassSemaphore[FrameIndex] }, nullptr);
 		
+		// Postprocess Effects
 		VkCommandBuffer gameUICmd = mUI->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 		VkCommandBuffer bloomCmd = mBloom->Prepare(FrameIndex, Global::Time, Global::TimeFromStart);
 		
@@ -446,6 +466,7 @@ namespace Application
 		
 		if (s_EnableImGui)
 			UI::RenderUI();
+		mSwapchain.SetExposure(UI::Exposure);
 		if (UI::CurrentOutputBuffer == 0) {
 			mSwapchain.Present(mGeoPass->GetFramebuffer().m_color_attachments[0].GetImage(FrameIndex), mGeoPass->GetFramebuffer().m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
 		}

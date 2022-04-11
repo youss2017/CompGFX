@@ -20,6 +20,7 @@
 #include "perlin_noise.hpp"
 #include "../audio/Audio.hpp"
 #include "../assets/geometry.cfg"
+#include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
 #include "Globals.hpp"
 #include "OpenSaveDialog.hpp"

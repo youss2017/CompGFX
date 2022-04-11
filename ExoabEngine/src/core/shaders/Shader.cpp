@@ -3,6 +3,7 @@
 #include "../../utils/common.hpp"
 #include "../backend/VkGraphicsCard.hpp"
 #include "../../utils/StringUtils.hpp"
+#include "Globals.hpp"
 #include <spirv_cross/spirv_glsl.hpp>
 #include <chrono>
 #include <random>
@@ -29,9 +30,12 @@ static std::string Shader_Internal_GenerateIdentifier()
     return std::to_string(random_engine());
 }
 
-Shader::Shader(GraphicsContext context, const char *__ShaderPath, const char *EntryPointFunction)
-    : m_ApiType(*(char *)context), m_Context(context), m_EntryPointFunction(EntryPointFunction)
+Shader::Shader(const char *__ShaderPath, const char *EntryPointFunction)
+    : m_EntryPointFunction(EntryPointFunction)
 {
+    GraphicsContext context = Global::Context;
+    m_ApiType = (*(char*)context);
+    m_Context = context;
     std::filesystem::path ShaderPath;
     try {
         ShaderPath = std::filesystem::canonical(Utils::StrReplaceAll(std::string(__ShaderPath), "\\", "/"));

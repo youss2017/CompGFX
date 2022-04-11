@@ -135,6 +135,7 @@
     <ClInclude Include="src\core\backend\Command.hpp" />
     <ClInclude Include="src\core\memory\CubeMap.hpp" />
     <ClInclude Include="src\core\shaders\ShaderConnector.hpp" />
+    <ClInclude Include="src\jobs\Jobs.hpp" />
     <ClInclude Include="src\physics\PhysicsCore.hpp" />
     <ClInclude Include="src\utils\atomic.h" />
     <ClInclude Include="src\core\backend\backend_base.h" />
@@ -229,6 +230,7 @@
     <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
     <ClCompile Include="src\graphics\Font.cpp" />
     <ClCompile Include="src\graphics\Graphics.cpp" />
+    <ClCompile Include="src\jobs\Win32Jobs.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
     <ClCompile Include="src\mesh\SkinnedMesh.cpp" />
@@ -247,8 +249,17 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" />
-    <None Include="assets\shaders\ui\ui.frag" />
-    <None Include="assets\shaders\ui\ui.vert" />
+    <None Include="assets\shaders\postprocess\bloom\downsample.comp" />
+    <None Include="assets\shaders\postprocess\bloom\downsampleVertical.comp" />
+    <None Include="assets\shaders\postprocess\bloom\threshold.comp" />
+    <None Include="assets\shaders\postprocess\bloom\upsample.comp" />
+    <None Include="assets\shaders\postprocess\skybox.frag" />
+    <None Include="assets\shaders\postprocess\skybox.vert" />
+    <None Include="assets\shaders\postprocess\swapchain.frag" />
+    <None Include="assets\shaders\postprocess\swapchain.vert" />
+    <None Include="assets\shaders\postprocess\tonemapping.glsl" />
+    <None Include="assets\shaders\postprocess\ui\ui.frag" />
+    <None Include="assets\shaders\postprocess\ui\ui.vert" />
     <None Include="imgui.ini" />
     <None Include="src\application\ecs\Entity.hpp" />
     <None Include="src\utils\common.inl" />

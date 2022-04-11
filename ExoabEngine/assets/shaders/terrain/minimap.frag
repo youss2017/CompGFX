@@ -39,8 +39,8 @@ void main()
     vec4 Texture2 = (TextureIDs.y == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.y], TiledTexCoord) * TextureWeights[TextureIDs.y]);
     vec4 Texture3 = (TextureIDs.z == -1) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.z], TiledTexCoord) * TextureWeights[TextureIDs.z]);
     vec4 FinalTexture = BaseTexture + Texture1 + Texture2 + Texture3;
-    float ambient = 0.01;
     float diffuse = dot(normal, u_LightDirection.xyz);
 
-    FragColor = FinalTexture * diffuse + ambient;
+    vec4 color = FinalTexture * diffuse;
+    FragColor = vec4(pow(color.xyz, vec3(2.2)), color.w);
 }
