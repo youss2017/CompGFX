@@ -99,7 +99,6 @@ namespace Application
 		cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
 
 		PROFILE_FUNCTION();
-
 		UI::Frequency[0] = 2;
 		UI::Octave[0] = 2;
 		UI::Frequency[1] = 2;
@@ -269,6 +268,14 @@ namespace Application
 			vec3 position = mCamera.GetPosition();
 			const float speed = 1000.0f;
 			vec2 translation = vec2(speed) * float(Global::Time) * Magnitude;
+			// camera may have been rotated so we need to adjust for the yaw rotation
+			float yaw = radians(mCamera.GetYawDegrees());
+			mat2 adjustment;
+			adjustment[0][0] = cos(yaw);
+			adjustment[1][0] = sin(yaw);
+			adjustment[0][1] = -sin(yaw);
+			adjustment[1][1] = cos(yaw);
+			translation = adjustment * translation;
 			mCamera.SetPosition(position + vec3(translation.x, 0.0, translation.y));
 		}
 
