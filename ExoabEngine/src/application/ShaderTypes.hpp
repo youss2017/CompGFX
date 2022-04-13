@@ -2,7 +2,6 @@
 #define SHADER_STD140_ALIGN __declspec(align(16))
 #include <vulkan/vulkan_core.h>
 #include <glm/glm.hpp>
-#define MAX_BONES 100
 
 namespace ShaderTypes {
 
@@ -20,6 +19,7 @@ namespace ShaderTypes {
 		};
 
 		struct InstanceData {
+			float mSpecularStrength;
 			uint mTextureIndex;
 			mat4 mModel;
 			mat3 mNormalModel;
@@ -55,7 +55,13 @@ namespace ShaderTypes {
 			mat4 model;
 			mat4 view;
 			mat4 projection;
-			mat4 finalBoneTransformations[MAX_BONES];
+		};
+
+		struct Light {
+			glm::vec3 u_Position;
+			glm::vec3 u_Color;
+			float u_Range;
+			float u_AmbientStrength;
 		};
 
 	};

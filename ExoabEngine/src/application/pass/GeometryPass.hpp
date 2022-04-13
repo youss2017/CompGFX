@@ -13,8 +13,11 @@ namespace Application {
 
 	class GeometryPass : public Pass {
 	public:
-		GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap);
+		GeometryPass(uint32_t lightCount, ShaderTypes::Light* lights, IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap);
 		~GeometryPass();
+
+		// [Warning] This is an expensive operation, since we have to recreate the pipeline
+		//void ChangeLights(uint32_t lightCount, Light* lights);
 		
 		void ReloadShaders();
 		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
@@ -25,12 +28,14 @@ namespace Application {
 		Framebuffer& GetFramebuffer() { return mFBO; }
 		ITexture2 CreateMinimap();
 
-	private:
+	protected:
 		void CullTerrain(const glm::mat4& proj, const glm::mat4& view);
 		void RecordCommands(uint32_t FrameIndex);
 		IBuffer2 mIndicsSSBO;
 		FrustumCullPass* mCullPass;
 	private:
+		uint32_t mLightCount;
+		ShaderTypes::Light* mLights;
 		Camera* mCamera;
 		Camera* mLockedCamera;
 		EntityController* mECS;

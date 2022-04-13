@@ -43,6 +43,7 @@ namespace Application {
 		Camera mCamera;
 		Camera mLockedCamera;
 		
+		ShaderTypes::Light mLight;
 		EntityController* mECS;
 		FrustumCullPass* mCullPass;
 		GeometryPass* mGeoPass;

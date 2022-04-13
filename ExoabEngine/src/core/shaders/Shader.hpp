@@ -26,7 +26,6 @@ public:
     inline VkShaderModule GetShader() { return m_ShaderHandle; }
     inline const std::string& GetEntryPoint() { return m_EntryPointFunction; }
 
-    // Starting at constant_id = 0
     template<typename T>
     void SetSpecializationConstant(int id, T data) {
         VkSpecializationMapEntry entry;
@@ -41,6 +40,7 @@ public:
         mSpecializationConstants.push_back(entry);
     }
 
+    // Make sure to use the struct before Shader is destroyed.
     VkSpecializationInfo GetSpecializationInfo() {
         VkSpecializationInfo info;
         info.mapEntryCount = mSpecializationConstants.size();

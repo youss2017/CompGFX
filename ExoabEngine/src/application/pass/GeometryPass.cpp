@@ -11,7 +11,7 @@ struct TerrainPushblock {
 	glm::mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
 };
 
-Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap) : Pass(Global::Context->defaultDevice, true), mCamera(camera), mLockedCamera(lockedCamera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass) {
+Application::GeometryPass::GeometryPass(uint32_t lightCount, ShaderTypes::Light* lights, IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap) : Pass(Global::Context->defaultDevice, true), mCamera(camera), mLockedCamera(lockedCamera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass), mLightCount(lightCount), mLights(lights) {
 	
 	mTerrainDrawCommands = (VkDrawIndexedIndirectCommand*)Gmalloc(terrain->GetSubmeshCount() * sizeof(VkDrawIndexedIndirectCommand), BufferType::BUFFER_TYPE_INDIRECT, false);
 	mTerrainDrawCount = (uint32_t*)Gmalloc(4, BUFFER_TYPE_INDIRECT, true);
@@ -79,7 +79,7 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	geometryPass[3].mBuffer = cullPass->mOutputDrawDataArray;
 	geometryPass[3].mSharedResources = true;
 
-	BindingDescription geometryPassFragment[2];
+	BindingDescription geometryPassFragment[3];
 	geometryPassFragment[0].mBindingID = 0;
 	geometryPassFragment[0].mFlags = 0;
 	geometryPassFragment[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -93,6 +93,13 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 	geometryPassFragment[1].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
 	geometryPassFragment[1].mTextures.push_back(shadowMap);
 	geometryPassFragment[1].mSampler = mShadowSampler;
+
+	geometryPassFragment[2].mBindingID = 2;
+	geometryPassFragment[2].mFlags = BINDING_FLAG_CPU_VISIBLE | BINDING_FLAG_REQUIRE_COHERENT;
+	geometryPassFragment[2].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	geometryPassFragment[2].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+	geometryPassFragment[2].mBufferSize = sizeof(glm::vec3) + (lightCount * sizeof(ShaderTypes::Light));
+	geometryPassFragment[2].mBuffer = nullptr;
 
 	BindingDescription terrainBindings[5]{};
 	terrainBindings[0].mBindingID = 0;
@@ -134,16 +141,17 @@ Application::GeometryPass::GeometryPass(IBuffer2 verticesSSBO, IBuffer2 indicesS
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(4, geometryPass, poolSizes);
-	ShaderConnector_CalculateDescriptorPool(2, geometryPassFragment, poolSizes);
+	ShaderConnector_CalculateDescriptorPool(3, geometryPassFragment, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(5, terrainBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2 + (gFrameOverlapCount * 1), poolSizes);
 	
 	mGeoSet0 = ShaderConnector_CreateSet(0, mPool, 4, geometryPass);
-	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 2, geometryPassFragment);
+	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 3, geometryPassFragment);
 	DescriptorSet GeoSets[2] = { mGeoSet0, mGeoSet1 };
 	mGeoLayout = ShaderConnector_CreatePipelineLayout(2, GeoSets, {});
 	Shader geoVertex = Shader("assets/shaders/vertex.vert");
 	Shader geoFragment = Shader("assets/shaders/fragment.frag");
+	geoFragment.SetSpecializationConstant<int>(0, lightCount);
 	PipelineSpecification spec;
 	spec.m_CullMode = CullMode::CULL_BACK;
 	spec.m_DepthEnabled = true;
@@ -213,6 +221,18 @@ VkCommandBuffer Application::GeometryPass::Prepare(uint32_t FrameIndex, float dT
 	memcpy(ptr, &data, sizeof(data));
 	Buffer2_Flush(globalDataBuffer, 0, VK_WHOLE_SIZE);
 	CullTerrain(proj, mLockedCamera->GetViewMatrix());
+
+	// update light info
+	auto lightBuffer = mGeoSet1.GetBuffer2(2);
+	auto cameraPos = mCamera->GetPosition();
+	glm::vec3* lightPtr8 = (glm::vec3*)Buffer2_Map(lightBuffer);
+	memcpy(lightPtr8, &cameraPos, sizeof(glm::vec3));
+	ShaderTypes::Light* lightPtr = (ShaderTypes::Light*)(lightPtr8 + 1);
+	for (uint32_t i = 0; i < mLightCount; i++) {
+		memcpy(&lightPtr[i], &mLights[i], sizeof(ShaderTypes::Light));
+	}
+	Buffer2_Flush(lightBuffer, 0, VK_WHOLE_SIZE);
+
 	return *mCmd;
 }
 
@@ -297,6 +317,12 @@ void Application::GeometryPass::CullTerrain(const glm::mat4& proj, const glm::ma
 ITexture2 Application::GeometryPass::CreateMinimap() {
 	return GenerateMinimap(mT0, { mSandTex }, mNormalMap);
 }
+
+#if 0
+void Application::GeometryPass::ChangeLights(const std::vector<Light>& lights)
+{
+}
+#endif
 
 void Application::GeometryPass::ReloadShaders() {
 	PipelineSpecification specification = mGeoState->m_spec;

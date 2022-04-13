@@ -78,7 +78,7 @@ namespace Application
 
 		mECS = new EntityController(Global::Geomtry);
 
-		srand(140);
+		//srand(140);
 		uint32_t instanceSize = mInstanceCount * sizeof(ShaderTypes::InstanceData);
 		for (unsigned int i = 0; i < mInstanceCount; i++) {
 			float x = (rand() % 25) * 5;
@@ -89,6 +89,7 @@ namespace Application
 			mInstances[i].mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
 			mInstances[i].mNormalModel = ShaderTypes::CalculateNormalModel(mInstances[i].mModel);
 			mInstances[i].mTextureIndex = 0;
+			mInstances[i].mSpecularStrength = float(i) / float(mInstanceCount);
 		}
 
 		IEntity cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
@@ -118,7 +119,7 @@ namespace Application
 
 		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera, 1024);
 		mCullPass = new FrustumCullPass(mECS, &mLockedCamera);
-		mGeoPass = new GeometryPass(mVerticesSSBO, mIndicesBuffer, mT0, 1920, 1080, mCullPass, &mCamera, &mLockedCamera, mECS, mShadow->GetDepthAttachment());
+		mGeoPass = new GeometryPass(1, &mLight, mVerticesSSBO, mIndicesBuffer, mT0, 1920, 1080, mCullPass, &mCamera, &mLockedCamera, mECS, mShadow->GetDepthAttachment());
 		mSkybox = new SkyboxPass("assets/textures/cubemap4.png", mGeoPass, &mCamera, true);
 		mDebugPass = new DebugPass(mGeoPass->GetFramebuffer());
 		mBloom = new BloomPass(mGeoPass->GetFramebuffer(), 0, 1.0);
@@ -390,6 +391,10 @@ namespace Application
 		}
 		
 		glm::vec3 pos = UI::LightPosition;
+		mLight.u_AmbientStrength = 0.1;
+		mLight.u_Color = glm::vec3(1.0);
+		mLight.u_Position = pos;
+		mLight.u_Range = 100;
 		mDebugPass->SetProjectionView(Global::Projection, mCamera.GetViewMatrix());
 		glm::vec3 v = glm::normalize(mCamera.GetLookDir()) * 3.14f;
 		glm::vec3 origin = RayOrigin;// +v;

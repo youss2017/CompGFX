@@ -91,7 +91,7 @@ int main(int argc, char** argv)
         dTimeFromStart += dElapsedTime;
         if (Global::UpdateUIInfo) {
             Checkpoint = dTimeFromStart;
-            Global::FrameRate = 1.0 / dElapsedTime;
+            FrameRate = 1.0 / dElapsedTime;
             Global::UpdateUIInfo = false;
         }
     }

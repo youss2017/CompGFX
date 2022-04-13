@@ -15,6 +15,7 @@ struct Vertex
 };
 
 struct InstanceData {
+    float mSpecularStrength;
 	uint mTextureIndex;
     mat4 mModel;
     mat3 mNormalModel;

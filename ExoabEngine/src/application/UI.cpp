@@ -114,7 +114,14 @@ void UI::RenderUI()
     if (ImGui::Button("Reset")) {
         LightPosition = glm::vec3(0.0f);
     }
-    ImGui::SliderFloat("Exposure", &Exposure, 0.0, 10.0);
+    //ImGui::SliderFloat("Exposure", &Exposure, 0.0, 10.0);
+    static char buf[50]{ "1.0" };
+    ImGui::InputText("Exposure", buf, 50);
+    try {
+        float exposure = std::stof(std::string(buf));
+        UI::Exposure = exposure;
+    }
+    catch (std::exception& e) {}
     ImGui::SliderInt("Cubemap LOD", &UI::CubemapLOD, 0, UI::CubemapLODMax);
     ImGui::SliderInt("Bloom Downsample", &UI::BloomDownsampleMip, 0, 7);
     const char* items[] = { "Color Buffer", "Depth Buffer", "Shadow Buffer", "Bloom Buffer" };
