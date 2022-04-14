@@ -1618,6 +1618,9 @@ void Loader_LoadInstance(VkInstance instance)
 void Loader_LoadDevice(VkDevice device)
 {
 	assert(vkGetDeviceProcAddr);
+	if (device == NULL) {
+		return;
+	}
 	CurrentLoader = (PFN_LoaderType)vkGetDeviceProcAddr;
 	LoadVulkanFunctions(device);
 }

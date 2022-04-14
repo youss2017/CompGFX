@@ -1,24 +1,33 @@
 #version 450 core
+#include "../tonemapping.glsl"
 #extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_nonuniform_qualifier : require
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 #define HORIZONTAL_BLUR 0
 #define VERTICAL_BLUR 1
 #define BLOOM_FILTER 2
+#define BLOOM_DOWNSAMPLE 3
+#define BLOOM_UPSAMPLE 4
 
 // unions would be great in GLSL
 layout (scalar, push_constant) uniform SettingsPushblock {
 	int Option;
+	int LOD;
+	float BloomFilterThreshold;
+	vec3 BloomCurve;
 	ivec2 Size;
 	vec2 TexelSize;
 	ivec2 DstSize;
 	vec2 DstTexelSize;
-	float BloomFilterThreshold;
 };
 
-layout (binding = 0) uniform sampler2D SrcImage;
-layout (binding = 1, r11f_g11f_b10f) uniform image2D DstImage[];
+layout (binding = 0) uniform sampler2D BloomImage;
+layout (binding = 1) uniform sampler2D Texture;
+layout (binding = 2, r11f_g11f_b10f) uniform restrict writeonly image2D OutputImage[];
+
+layout (constant_id = 0) const int DISABLE_NORMAL_BLUR = 0;
 
 // Documentation
 /*
@@ -28,11 +37,75 @@ layout (binding = 1, r11f_g11f_b10f) uniform image2D DstImage[];
 		1) DstImage is mipmap image, prefilter results will be written mip 0
 		2) Size/TexelSize of Original image
 		3) Group SizeX/Y should be determined using the dst image size.
+	For Bloom Downsample:
+		1) Group SizeX/Y should be determined using the dst image size
+		2) LOD Refers to the LOD of Texture, blur is written to OutputImage[LOD + 1]
 */
 
 // the center texel is (11 / 2) + 1 ignore the decimal
 
 const int blurCoffCenter = (11 / 2) + 1;
+
+// following code from HAZEL
+vec3 DownsampleBox13(sampler2D tex, float lod, vec2 uv, inout vec2 texelSize)
+{
+    vec3 A = textureLod(tex, uv, lod).xyz;
+    texelSize *= 0.5;
+    vec3 B = textureLod(tex, uv + (texelSize * vec2(-1.0)), lod).xyz;
+    vec3 C = textureLod(tex, uv + (texelSize * vec2(-1.0, 1.0)), lod).xyz;
+    vec3 D = textureLod(tex, uv + (texelSize * vec2(1.0)), lod).xyz;
+    vec3 E = textureLod(tex, uv + (texelSize * vec2(1.0, -1.0)), lod).xyz;
+    vec3 F = textureLod(tex, uv + (texelSize * vec2(-2.0)), lod).xyz;
+    vec3 G = textureLod(tex, uv + (texelSize * vec2(-2.0, 0.0)), lod).xyz;
+    vec3 H = textureLod(tex, uv + (texelSize * vec2(0.0, 2.0)), lod).xyz;
+    vec3 I = textureLod(tex, uv + (texelSize * vec2(2.0)), lod).xyz;
+    vec3 J = textureLod(tex, uv + (texelSize * vec2(2.0)), lod).xyz;
+    vec3 K = textureLod(tex, uv + (texelSize * vec2(2.0, 0.0)), lod).xyz;
+    vec3 L = textureLod(tex, uv + (texelSize * vec2(-2.0)), lod).xyz;
+    vec3 M = textureLod(tex, uv + (texelSize * vec2(0.0, -2.0)), lod).xyz;
+    vec3 result = vec3(0.0);
+    result += ((((B + C) + D) + E) * 0.5);
+    result += ((((F + G) + A) + M) * 0.125);
+    result += ((((G + H) + I) + A) * 0.125);
+    result += ((((A + I) + J) + K) * 0.125);
+    result += ((((M + A) + K) + L) * 0.125);
+    result *= 0.25;
+    return result;
+}
+
+vec3 QuadraticThreshold(inout vec3 color, float threshold, vec3 curve)
+{
+    float brightness = max(max(color.x, color.y), color.z);
+    float rq = clamp(brightness - curve.x, 0.0, curve.y);
+    rq = (rq * rq) * curve.z;
+    color *= (max(rq, brightness - threshold) / max(brightness, 9.9999997473787516355514526367188e-05));
+    return color;
+}
+
+vec3 Prefilter(inout vec3 color, vec2 uv)
+{
+    float clampValue = 20.0;
+    color = min(vec3(clampValue), color);
+    color = QuadraticThreshold(color, BloomFilterThreshold, BloomCurve);
+    return color;
+}
+
+
+vec3 UpsampleTent9(sampler2D tex, float lod, vec2 uv, vec2 texelSize, float radius)
+{
+    vec4 offset = (texelSize.xyxy * vec4(1.0, 1.0, -1.0, 0.0)) * radius;
+    vec3 result = textureLod(tex, uv, lod).xyz * 4.0;
+    result += textureLod(tex, uv - offset.xy, lod).xyz;
+    result += (textureLod(tex, uv - offset.wy, lod).xyz * 2.0);
+    result += textureLod(tex, uv - offset.zy, lod).xyz;
+    result += (textureLod(tex, uv + offset.zw, lod).xyz * 2.0);
+    result += (textureLod(tex, uv + offset.xw, lod).xyz * 2.0);
+    result += textureLod(tex, uv + offset.zy, lod).xyz;
+    result += (textureLod(tex, uv + offset.wy, lod).xyz * 2.0);
+    result += textureLod(tex, uv + offset.xy, lod).xyz;
+    return result * 0.0625;
+}
+// END OF Code Import
 
 void main() {
 	// more efficent inside the function
@@ -64,29 +137,37 @@ void main() {
 		+5.0
 	};
 	
-	uint x = gl_GlobalInvocationID.x;
-	uint y = gl_GlobalInvocationID.y;
+	// This is removed in the compilation stage, since this is SPIR-V Constant
+	if(DISABLE_NORMAL_BLUR == 0) {
+		if(Option == HORIZONTAL_BLUR) {
+			vec2 pos = vec2(gl_GlobalInvocationID.xy) / Size;
+			vec4 color = vec4(0.0);
+			for(int i = 0; i < 11; i++) {
+				color += texture(BloomImage, pos + vec2(texelOffets[i] / TexelSize.x, 0.0)) * blurCoeff[i];
+			};
+			imageStore(OutputImage[0], ivec2(gl_GlobalInvocationID.xy), color);
+		} else if (Option == VERTICAL_BLUR) {
+			vec2 pos = vec2(gl_GlobalInvocationID.xy) / Size;
+			vec4 color = vec4(0.0);
+			for(int i = 0; i < 11; i++) {
+				color += texture(BloomImage, pos + vec2(0.0, texelOffets[i] / TexelSize.y)) * blurCoeff[i];
+			};
+			imageStore(OutputImage[0], ivec2(gl_GlobalInvocationID.xy), color);
+		}
+	}
+	
+	if (Option == BLOOM_FILTER) {
+		vec2 texel = vec2(gl_GlobalInvocationID.xy) / DstSize;
+		vec2 texelSize = DstTexelSize;
+		vec3 color = DownsampleBox13(BloomImage, LOD, texel, texelSize);
+		color = Prefilter(color, texel);
+		imageStore(OutputImage[0], ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
+	} else if (Option == BLOOM_DOWNSAMPLE) {
+		vec2 texel = DstTexelSize;
+		vec3 color = DownsampleBox13(Texture, LOD, vec2(gl_GlobalInvocationID.xy) / DstSize, texel);
+		imageStore(OutputImage[LOD + 1], ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
+	} else if (Option == BLOOM_UPSAMPLE) {
 
-	if(Option == HORIZONTAL_BLUR) {
-		vec2 pos = vec2(x, y) / Size;
-		vec4 color = vec4(0.0);
-		for(int i = 0; i < 11; i++) {
-			color += texture(SrcImage, pos + vec2(texelOffets[i] / TexelSize.x, 0.0)) * blurCoeff[i];
-		};
-
-		imageStore(DstImage[0], ivec2(x, y), color);
-	} else if (Option == VERTICAL_BLUR) {
-		vec2 pos = vec2(x, y) / Size;
-		vec4 color = vec4(0.0);
-		for(int i = 0; i < 11; i++) {
-			color += texture(SrcImage, pos + vec2(0.0, texelOffets[i] / TexelSize.y)) * blurCoeff[i];
-		};
-
-		imageStore(DstImage[0], ivec2(x, y), color);
-	} else if (Option == BLOOM_FILTER) {
-		vec2 texel = vec2(x, y) / DstSize;
-		vec4 color = texture(SrcImage, texel) - vec4(BloomFilterThreshold);
-		imageStore(DstImage[0], ivec2(texel.xy) * DstSize, color);
 	}
 
 }

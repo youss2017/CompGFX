@@ -53,7 +53,7 @@ void main() {
 		vec3 viewDirection = normalize(u_CameraPosition - FragPos);
 		vec3 reflectDir = reflect(-lightDirection, Normal);
 
-		float spec = pow(max(dot(viewDirection, reflectDir), 0.0), 64);
+		float spec = pow(max(dot(viewDirection, reflectDir), 0.0), 16);
 		vec3 specular = max(SpecularStrength * spec * u_Lights[i].u_Color, vec3(0.0));
 
 		FragColor = vec4((ambient + diffuse + specular), 1.0) * objectColor;

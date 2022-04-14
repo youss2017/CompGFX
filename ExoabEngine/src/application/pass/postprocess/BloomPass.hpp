@@ -24,7 +24,7 @@ namespace Application {
 		void RecordCommands(uint32_t FrameIndex);
 
 	private:
-		uint32_t mColorAttachmentIndex;
+		glm::ivec2 mSourceSize;
 		float mThresholdValue;
 		VkQueryPool mQuery;
 		VkSampler mSampler;

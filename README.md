@@ -6,7 +6,7 @@
 to prevent the application form enabling that feature, this will allow RenderDOC to work with the cost of validation errors.</p>
 <h1>TODO</h1>
 <ul>
-	<li><span style="color:yellow;">Convert to Physically Based Rendering</span></li>
+	<li>Convert to Physically Based Rendering</li>
 	<li>Animation</li>
 	<li>Fix Bloom Pass</li>
 	<li>Cascaded Shadow Implementation</li>

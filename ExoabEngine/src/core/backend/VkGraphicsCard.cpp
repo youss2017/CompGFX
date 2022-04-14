@@ -153,6 +153,7 @@ namespace vk
 		strcpy(context->card.name, card.name);
 		loginfo(card.name);
 		/* Create Default Vulkan Logical Device */
+		context->defaultDevice = nullptr;
 		context->defaultDevice = Gfx_CreateDevice(card,
 												  LogicalDeviceExtensions,
 												  (int *)&context->defaultQueueFamilyIndex,

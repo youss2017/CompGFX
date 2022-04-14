@@ -89,7 +89,7 @@ namespace Application
 			mInstances[i].mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
 			mInstances[i].mNormalModel = ShaderTypes::CalculateNormalModel(mInstances[i].mModel);
 			mInstances[i].mTextureIndex = 0;
-			mInstances[i].mSpecularStrength = float(i) / float(mInstanceCount);
+			mInstances[i].mSpecularStrength = 1.0;
 		}
 
 		IEntity cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
