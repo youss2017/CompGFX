@@ -167,7 +167,10 @@ void main() {
 		vec3 color = DownsampleBox13(Texture, LOD, vec2(gl_GlobalInvocationID.xy) / DstSize, texel);
 		imageStore(OutputImage[LOD + 1], ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
 	} else if (Option == BLOOM_UPSAMPLE) {
-
+		vec2 texel = vec2(gl_GlobalInvocationID.xy) / Size;
+		float sampleScale = 1.0;
+		vec3 color = UpsampleTent9(Texture, LOD, texel, DstTexelSize, sampleScale);
+		imageStore(OutputImage[0], ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0));
 	}
 
 }

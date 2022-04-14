@@ -107,6 +107,7 @@ void Application::BloomPass::ReloadShaders() {
 }
 
 VkCommandBuffer  Application::BloomPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
+#pragma warning("REMOVE THIS IN BloomPass.cpp")
 	RecordCommands(FrameIndex);
 	return *mCmd;
 }
@@ -150,8 +151,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 	vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	
-	// 2) Downsample Blur
-	for (int i = 0; i < mBlurTexture->mMipCount - 1; i++) {
+	auto barrier = [FrameIndex, &cmd, this]() throw() -> void {
 		VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 		barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
     	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -164,8 +164,13 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.layerCount= VK_REMAINING_ARRAY_LAYERS;
-		barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+		barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;;
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	};
+
+	// 2) Downsample Blur
+	for (uint32_t i = 0; i < mBlurTexture->mMipCount - 1; i++) {
+		barrier();
 		BloomSettingsPushblock pushblock{};
 		pushblock.Option = BLOOM_DOWNSAMPLE;
 		pushblock.Size = ivec2(mBlurTexture->m_specification.m_Width >> i, mBlurTexture->m_specification.m_Height >> i);
@@ -182,8 +187,25 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	}
-
 	// 3) Upsample
+	for(uint32_t i = 1; i < mBlurTexture->mMipCount - 1; i++) {
+		barrier();
+		BloomSettingsPushblock pushblock{};
+		pushblock.Option = BLOOM_UPSAMPLE;
+		pushblock.Size = ivec2(mBlurTexture->m_specification.m_Width, mBlurTexture->m_specification.m_Height);
+		pushblock.TexelSize = 1.0f / vec2(pushblock.Size);
+		pushblock.DstSize = ivec2(mBlurTexture->m_specification.m_Width >> i, mBlurTexture->m_specification.m_Height >> i);
+		pushblock.DstTexelSize = 1.0f / vec2(pushblock.DstSize);
+		pushblock.BloomFilterThreshold = 0.5;
+		pushblock.BloomCurve = vec3(0.9, 0.2, 1.5);
+		pushblock.LOD = i;
+
+		int groupSizeX = (pushblock.Size[0] + (localSizeX - 1)) / localSizeX;
+		int groupSizeY = (pushblock.Size[1] + (localSizeY - 1)) / localSizeY;
+
+		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
+		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
+	}
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
 	vkEndCommandBuffer(cmd);

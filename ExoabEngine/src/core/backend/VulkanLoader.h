@@ -518,3 +518,13 @@ extern PFN_vkAllocationFunction vkAllocationFunction;
 #ifdef __cplusplus
 }
 #endif
+
+#if defined(_DEBUG)
+// VkDebugUtilsLabelEXT* pLabelInfo
+#define DvkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo) vkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo)
+#define DvkCmdEndDebugUtilsLabelEXT(commandBuffer) vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+#else
+#pragma message("vkCmdBeginDebugUtilsLabelEXT has been disabled since _DEBUG macro is not defined. Check VulkanLoader.h")
+#define DvkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo)
+#define DvkCmdEndDebugUtilsLabelEXT(commandBuffer) 
+#endif
