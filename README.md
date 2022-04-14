@@ -1,6 +1,9 @@
 <html>
 
 <body>
+<h1>Note on debugging with RenderDOC</h1>
+<p>Because VK_KHR_buffer_device_address (GPU Pointers) are used renderdoc does not support debugging this feature by default, therefore use debug commandline parameters,
+to prevent the application form enabling that feature, this will allow RenderDOC to work with the cost of validation errors.</p>
 <h1>TODO</h1>
 <ul>
 	<li><span style="color:yellow;">Convert to Physically Based Rendering</span></li>

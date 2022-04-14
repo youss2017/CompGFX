@@ -129,6 +129,8 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	
 	pushblock.Option = BLOOM_FILTER;
 	pushblock.BloomFilterThreshold = 0.5;
+	pushblock.DstSize = pushblock.Size;
+	pushblock.DstTexelSize = pushblock.TexelSize;
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 	vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 
