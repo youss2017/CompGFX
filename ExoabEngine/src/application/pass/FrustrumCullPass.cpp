@@ -75,7 +75,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = Pipeline_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = PipelineState_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
 
 	mOutputGeometryDataArray = mSet.GetBuffer2(1);
 	mOutputDrawDataArray = mSet.GetBuffer2(3);
@@ -106,7 +106,7 @@ void Application::FrustumCullPass::ReloadShaders() {
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = Pipeline_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = PipelineState_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}

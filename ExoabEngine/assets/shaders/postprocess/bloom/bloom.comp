@@ -1,0 +1,92 @@
+#version 450 core
+#extension GL_EXT_scalar_block_layout : require
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#define HORIZONTAL_BLUR 0
+#define VERTICAL_BLUR 1
+#define BLOOM_FILTER 2
+
+// unions would be great in GLSL
+layout (scalar, push_constant) uniform SettingsPushblock {
+	int Option;
+	ivec2 Size;
+	vec2 TexelSize;
+	ivec2 DstSize;
+	vec2 DstTexelSize;
+	float BloomFilterThreshold;
+};
+
+layout (binding = 0) uniform sampler2D SrcImage;
+layout (binding = 1, r11f_g11f_b10f) uniform image2D DstImage[];
+
+// Documentation
+/*
+	Horizontal and Vertical Blur:
+		1) You only need to write to first element of the array
+	Prefilter Stage Assumations:
+		1) DstImage is mipmap image, prefilter results will be written mip 0
+		2) Size/TexelSize of Original image
+		3) Group SizeX/Y should be determined using the dst image size.
+*/
+
+// the center texel is (11 / 2) + 1 ignore the decimal
+
+const int blurCoffCenter = (11 / 2) + 1;
+
+void main() {
+	// more efficent inside the function
+	const float blurCoeff[11] = {
+	  6.113723995416264e-8,
+	  0.000006592991739990433,
+	  0.00030586440947854876,
+	  0.006147391918855132,
+	  0.05394431555828316,
+	  0.20827835565081915,
+	  0.3559983127233936,
+	  0.2701177290586754,
+	  0.09085170101242186,
+	  0.013474875589968145,
+	  0.0008747999491249901
+	};
+
+	const float texelOffets[11] = {
+		-5.0,
+		-4.0,
+		-3.0,
+		-2.0,
+		-1.0,
+		+0.0,
+		+1.0,
+		+2.0,
+		+3.0,
+		+4.0,
+		+5.0
+	};
+	
+	uint x = gl_GlobalInvocationID.x;
+	uint y = gl_GlobalInvocationID.y;
+
+	if(Option == HORIZONTAL_BLUR) {
+		vec2 pos = vec2(x, y) / Size;
+		vec4 color = vec4(0.0);
+		for(int i = 0; i < 11; i++) {
+			color += texture(SrcImage, pos + vec2(texelOffets[i] / TexelSize.x, 0.0)) * blurCoeff[i];
+		};
+
+		imageStore(DstImage[0], ivec2(x, y), color);
+	} else if (Option == VERTICAL_BLUR) {
+		vec2 pos = vec2(x, y) / Size;
+		vec4 color = vec4(0.0);
+		for(int i = 0; i < 11; i++) {
+			color += texture(SrcImage, pos + vec2(0.0, texelOffets[i] / TexelSize.y)) * blurCoeff[i];
+		};
+
+		imageStore(DstImage[0], ivec2(x, y), color);
+	} else if (Option == BLOOM_FILTER) {
+		vec2 texel = vec2(x, y) / DstSize;
+		vec4 color = texture(SrcImage, texel) - vec4(BloomFilterThreshold);
+		imageStore(DstImage[0], ivec2(texel.xy) * DstSize, color);
+	}
+
+}

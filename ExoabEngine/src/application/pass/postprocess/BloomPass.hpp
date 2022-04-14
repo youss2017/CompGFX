@@ -18,7 +18,7 @@ namespace Application {
 		VkCommandBuffer Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart);
 
 		void GetStatistics(bool Wait, uint32_t FrameIndex, double& dTime);
-		ITexture2 GetDownsampleTexture() { return mDownsampleTexture; }
+		ITexture2 GetDownsampleTexture() { return mBlurTexture; }
 
 	private:
 		void RecordCommands(uint32_t FrameIndex);
@@ -29,25 +29,11 @@ namespace Application {
 		VkQueryPool mQuery;
 		VkSampler mSampler;
 		VkDescriptorPool mPool;
-		uint32_t mTextureWidth;
-		uint32_t mTextureHeight;
-		uint32_t mKernalSizeX;
-		uint32_t mKernalSizeY;
-		ITexture2 mDownsampleTexture;
-		VkPipelineLayout mThresholdLayout;
-		VkPipeline mThreshold;
-		DescriptorSet mThresholdSet;
-		VkPipelineLayout mDownsampleLayout;
-		VkPipelineLayout mDownsampleVerticalLayout;
-		VkPipelineLayout mUpsampleLayout;
-		VkPipeline mDownsample;
-		VkPipeline mDownsampleVertical;
-		VkPipeline mUpsample;
-		DescriptorSet mDownsampleSet;
+		DescriptorSet mSet;
+		ITexture2 mBlurTexture;
 
-		DescriptorSet mCombineSet;
-		VkPipelineLayout mCombineLayout;
-		VkPipeline mCombine;
+		VkPipelineLayout mLayout;
+		VkPipeline mPipeline;
 
 	private:
 		Framebuffer mFBO;

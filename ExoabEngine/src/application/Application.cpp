@@ -404,7 +404,7 @@ namespace Application
 		mLight.u_Range = 100;
 		mDebugPass->SetProjectionView(Global::Projection, mCamera.GetViewMatrix());
 		glm::vec3 v = glm::normalize(mCamera.GetLookDir()) * 3.14f;
-		glm::vec3 origin = RayOrigin;// +v;
+		glm::vec3 origin = RayOrigin;
 		glm::vec3 ray = origin + (RayDirection * 100.0f);
 		mDebugPass->DrawCube(origin, glm::vec3(1.25f), glm::vec3(242, 128, 15) / glm::vec3(255.0f), 1);
 		//mDebugPass->DrawCube(ray, glm::vec3(10.0f), glm::vec3(255.0f) / glm::vec3(255.0f), 1);

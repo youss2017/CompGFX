@@ -51,7 +51,7 @@ int main(int argc, char** argv)
 #else
     PreparePOSIX(argc, argv);
 #endif
-    job::OnStartup();
+    //job::OnStartup();
     /* Load Game Settings from settings.cfg */
     LoadConfiguration();
     bool rd = false;
@@ -99,7 +99,7 @@ int main(int argc, char** argv)
     PROFILE_BEGIN_SESSION("Cleanup", "Profiling-Cleanup.json");
     app->OnDestroy();
     delete app;
-    job::OnDestroy();
+    //job::OnDestroy();
     PROFILE_END_SESSION();
     return 0;
 }

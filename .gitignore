@@ -1,7 +1,7 @@
 .vs/*
 bin/*
 ExoabEngine/external/bin/*
-ExoabEngine/assets/materials/shaders/spirv_cache/*
+ExoabEngine/assets/shaders/spirv_cache/spirv_caching_catalog.txt
 ExoabEngine/*.json
 *.dll
 *.lib
