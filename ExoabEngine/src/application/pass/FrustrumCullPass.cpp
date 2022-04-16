@@ -75,7 +75,7 @@ Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* cam
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = PipelineState_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = PipelineState_CreateCompute(&computeShader, mFrustrumLayout, 0);
 
 	mOutputGeometryDataArray = mSet.GetBuffer2(1);
 	mOutputDrawDataArray = mSet.GetBuffer2(3);
@@ -106,7 +106,7 @@ void Application::FrustumCullPass::ReloadShaders() {
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
 	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = PipelineState_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = PipelineState_CreateCompute(&computeShader, mFrustrumLayout, 0);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}
@@ -154,6 +154,7 @@ void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Frustrum Culling(Geometry)", 1.0);
 	vkCmdResetQueryPool(cmd, mQuery, (i * 2), 2);
 	vkCmdResetQueryPool(cmd, mInvocationQuery, i, 1);
 
@@ -180,7 +181,7 @@ void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 1);
 	vkCmdEndQuery(cmd, mInvocationQuery, i);
-
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
 	vkEndCommandBuffer(cmd);
 }
 

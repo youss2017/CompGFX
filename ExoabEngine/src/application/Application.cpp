@@ -480,7 +480,7 @@ namespace Application
 			UI::RenderUI();
 		mSwapchain.SetExposure(UI::Exposure);
 		if (UI::CurrentOutputBuffer == 0) {
-			mSwapchain.Present(mGeoPass->GetFramebuffer().m_color_attachments[0].GetImage(FrameIndex), mGeoPass->GetFramebuffer().m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
+			mSwapchain.Present(mGeoPass->GetFramebuffer().m_color_attachments[0].GetImage(FrameIndex), mGeoPass->GetFramebuffer().m_color_attachments[0].GetView(FrameIndex), VK_IMAGE_LAYOUT_GENERAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, false);
 		}
 		else if (UI::CurrentOutputBuffer == 1) {
 			mSwapchain.Present(mGeoPass->GetFramebuffer().m_depth_attachment.value().GetImage(FrameIndex), mGeoPass->GetFramebuffer().m_depth_attachment.value().GetView(FrameIndex), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, (VkSemaphore*)&frame.m_PresentSemaphore, true);

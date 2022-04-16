@@ -25,7 +25,7 @@ Application::GeometryPass::GeometryPass(uint32_t lightCount, ShaderTypes::Light*
 
 	/* Transition Framebuffer Textures into SHADER_READ_ONLY layout which is what the render pass is expecting */
 	auto transitionCmd = vk::Gfx_CreateSingleUseCmdBuffer(Global::Context);
-	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &colorAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &colorAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	vk::Framebuffer_TransistionAttachment(transitionCmd.cmd, &depthAttachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(transitionCmd);
 	
@@ -381,6 +381,8 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	mCmdPool->Reset(FrameIndex);
 	vkBeginCommandBuffer(cmd, &beginInfo);
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Geometry Pass", 1.0, 1.0);
+
 	vkCmdResetQueryPool(cmd, mQuery, FrameIndex * 2, 2);
 	vkCmdResetQueryPool(cmd, mInvocationQuery, FrameIndex, 1);
 
@@ -404,7 +406,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	VkImageMemoryBarrier renderBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	renderBarrier.srcAccessMask = VK_ACCESS_NONE;
 	renderBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	renderBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	renderBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 	renderBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	renderBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	renderBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -451,7 +453,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	presentBarrier.dstAccessMask = VK_ACCESS_NONE;
 	presentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	presentBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	presentBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 	presentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	presentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	presentBarrier.image = mFBO.m_color_attachments[0].GetImage(i);
@@ -464,5 +466,6 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdEndQuery(cmd, mInvocationQuery, FrameIndex);
 
 	vkCmdEndRenderingKHR(cmd);
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
 	vkEndCommandBuffer(cmd);
 }

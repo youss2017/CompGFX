@@ -39,7 +39,7 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	spec.mCreateViewPerMip = true;
 	mBlurTexture = Texture2_Create(spec);
 	Shader bloomShader = Shader("assets/shaders/postprocess/bloom/bloom.comp");
-	bloomShader.SetSpecializationConstant<int>(0, true);
+	bloomShader.SetSpecializationConstant<int>(0, 1);
 
 	mSampler = vk::Gfx_CreateSampler(Global::Context);
 	mSourceSize = ivec2(fbo.m_width, fbo.m_height);
@@ -52,6 +52,7 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	bloomDescription[0].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
 	bloomDescription[0].mTextures.push_back(fbo.m_color_attachments[colorAttachmentIndex].GetAttachment());
 	bloomDescription[0].mSampler = mSampler;
+	bloomDescription[0].mCustomImageLayouts.insert({ 0, VK_IMAGE_LAYOUT_GENERAL });
 
 	bloomDescription[1].mBindingID = 1;
 	bloomDescription[1].mFlags = 0;
@@ -67,12 +68,34 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	bloomDescription[2].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
 	bloomDescription[2].mTextures.push_back(mBlurTexture);
 
+	BindingDescription combineBindings[2]{};
+	combineBindings[0].mBindingID = 0;
+	combineBindings[0].mFlags = BINDING_FLAG_USING_ONLY_FIRST_MIP;
+	combineBindings[0].mType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	combineBindings[0].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	combineBindings[0].mTextures.push_back(mBlurTexture);
+	combineBindings[0].mSampler = mSampler;
+	combineBindings[0].mCustomImageLayouts.insert({ 0, VK_IMAGE_LAYOUT_GENERAL });
+
+	combineBindings[1].mBindingID = 1;
+	combineBindings[1].mFlags = BINDING_FLAG_USING_ONLY_FIRST_MIP;
+	combineBindings[1].mType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	combineBindings[1].mStages = VK_SHADER_STAGE_COMPUTE_BIT;
+	combineBindings[1].mTextures.push_back(fbo.m_color_attachments[colorAttachmentIndex].GetAttachment());
+	combineBindings[1].mCustomImageLayouts.insert({ 0, VK_IMAGE_LAYOUT_GENERAL });
+
 	ShaderConnector_CalculateDescriptorPool(3, bloomDescription, poolSizes);
-	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount, poolSizes);
+	ShaderConnector_CalculateDescriptorPool(2, combineBindings, poolSizes);
+	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2, poolSizes);
 
 	mSet = ShaderConnector_CreateSet(0, mPool, 3, bloomDescription);
 	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {{ VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock) }} );
-	mPipeline = PipelineState_CreateCompute(Global::Context, &bloomShader, mLayout, 0);
+	mPipeline = PipelineState_CreateCompute(&bloomShader, mLayout, 0);
+
+	Shader combineShader = Shader("assets/shaders/postprocess/bloom/combine.comp");
+	mCombineSet = ShaderConnector_CreateSet(0, mPool, 2, combineBindings);
+	mCombineLayout = ShaderConnector_CreatePipelineLayout(1, &mCombineSet, {});
+	mCombinePipeline = PipelineState_CreateCompute(&combineShader, mCombineLayout, 0);
 
 	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 
@@ -100,7 +123,10 @@ void Application::BloomPass::ReloadShaders() {
 	Shader bloomShader = Shader("assets/shaders/postprocess/bloom/bloom.comp");
 	bloomShader.SetSpecializationConstant<int>(0, true);
 	vkDestroyPipeline(Global::Context->defaultDevice, mPipeline, nullptr);
-	mPipeline = PipelineState_CreateCompute(Global::Context, &bloomShader, mLayout, 0);
+	mPipeline = PipelineState_CreateCompute(&bloomShader, mLayout, 0);
+	Shader combineShader = Shader("assets/shaders/postprocess/bloom/combine.comp");
+	vkDestroyPipeline(Global::Context->defaultDevice, mCombinePipeline, nullptr);
+	mCombinePipeline = PipelineState_CreateCompute(&combineShader, mCombineLayout, 0);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}
@@ -125,6 +151,8 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "[PostProcess] Bloom Pass", 1.0);
+
 	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2));
 
@@ -136,6 +164,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	const int localSizeY = 16;
 
 	// 1) Filter Pass
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Prefilter", 0.0, 1.0);
 	BloomSettingsPushblock pushblock{};
 	pushblock.Option = BLOOM_FILTER;
 	pushblock.Size = mSourceSize;
@@ -150,14 +179,25 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 	vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
-	
-	auto barrier = [FrameIndex, &cmd, this]() throw() -> void {
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
+
+	auto barrier = [FrameIndex, &cmd, this](int def = 0) throw() -> void {
 		VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 		barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
     	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-    	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		if (def == 0) {
+			barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		}
+		else if (def == 1) {
+			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		}
+		else if (def == 2) {
+			barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.image = mBlurTexture->m_vk_images_per_frame[FrameIndex];
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -169,6 +209,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	};
 
 	// 2) Downsample Blur
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Downsample Blur", 1.0, 0.0);
 	for (uint32_t i = 0; i < mBlurTexture->mMipCount - 1; i++) {
 		barrier();
 		BloomSettingsPushblock pushblock{};
@@ -187,6 +228,8 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	}
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Upsample", 1.0, 0.0);
 	// 3) Upsample
 	for(uint32_t i = 1; i < mBlurTexture->mMipCount - 1; i++) {
 		barrier();
@@ -206,7 +249,17 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	}
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
+
+	// 4) Combine
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Apply Bloom", 0.0, 1.0);
+	barrier();
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mCombinePipeline);
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mCombineLayout, 0, 1, &mCombineSet[FrameIndex], 0, nullptr);
+	vkCmdDispatch(cmd, (mSourceSize[0] + 31) / 32, (mSourceSize[1] + 31) / 32, 1);
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
 	vkEndCommandBuffer(cmd);
 }

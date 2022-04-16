@@ -35,6 +35,10 @@ namespace Application {
 		VkPipelineLayout mLayout;
 		VkPipeline mPipeline;
 
+		DescriptorSet mCombineSet;
+		VkPipelineLayout mCombineLayout;
+		VkPipeline mCombinePipeline;
+
 	private:
 		Framebuffer mFBO;
 	};

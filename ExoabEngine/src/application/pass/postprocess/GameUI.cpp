@@ -156,7 +156,9 @@ void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
 	VkCommandBuffer cmd = *mCmd;
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "[PostProcess] Game UI", 0.0, 0.0, 1.0);
+
+
 	VkRenderingInfo renderingInfo{VK_STRUCTURE_TYPE_RENDERING_INFO};
 	renderingInfo.flags = VK_RENDERING_RESUMING_BIT_KHR;
 	renderingInfo.renderArea.extent = {mFBO.m_width, mFBO.m_height};
@@ -213,6 +215,6 @@ void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
 	vkCmdDraw(cmd, 6, 1, 12, 0);
 
 	vkCmdEndRenderingKHR(cmd);
-	
+	DvkCmdEndDebugUtilsLabelEXT(cmd);
 	vkEndCommandBuffer(cmd);
 }

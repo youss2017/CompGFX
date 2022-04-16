@@ -250,6 +250,7 @@
   <ItemGroup>
     <None Include="..\README.md" />
     <None Include="assets\shaders\postprocess\bloom\bloom.comp" />
+    <None Include="assets\shaders\postprocess\bloom\combine.comp" />
     <None Include="assets\shaders\postprocess\skybox.frag" />
     <None Include="assets\shaders\postprocess\skybox.vert" />
     <None Include="assets\shaders\postprocess\swapchain.frag" />

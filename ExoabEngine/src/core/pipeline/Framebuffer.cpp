@@ -99,4 +99,15 @@ namespace vk {
 		Framebuffer_TransistionImage(cmd, attachment->GetAttachment(), aspect, frameIndex, dstAccess, newLayout, oldLayout, srcAccess, srcStage, dstStage);
 	}
 
+	void Gfx_InsertDebugLabel(VkCommandBuffer cmd, int FrameIndex, const std::string& debugLabelText, float r, float g, float b) {
+#if defined(_DEBUG)
+		std::string labelName = "[" + std::to_string(FrameIndex) + "]" + debugLabelText;
+		VkDebugUtilsLabelEXT debugLabel{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+		debugLabel.pLabelName = labelName.c_str();
+		float debugColor[4] = { r, g, b, 1.0 };
+		memcpy(&debugLabel.color[0], &debugColor[0], sizeof(float) * 4);
+		DvkCmdBeginDebugUtilsLabelEXT(cmd, &debugLabel);
+#endif
+	}
+
 }

@@ -1,9 +1,10 @@
 #include "PipelineCS.hpp"
 #include <backend/VkGraphicsCard.hpp>
+#include "Globals.hpp"
 
-VkPipeline PipelineState_CreateCompute(GraphicsContext _context, Shader* computeShader, VkPipelineLayout layout, VkPipelineCreateFlags flags)
+VkPipeline PipelineState_CreateCompute(Shader* computeShader, VkPipelineLayout layout, VkPipelineCreateFlags flags)
 {
-	vk::VkContext context = ToVKContext(_context);
+	vk::VkContext context = ToVKContext(Global::Context);
 	VkDevice device = context->defaultDevice;
 
 	VkComputePipelineCreateInfo createInfo;

@@ -605,6 +605,7 @@ namespace vk
             CmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
             vkResetCommandBuffer(m_CommandBuffers[m_ImageIndex], 0);
             vkBeginCommandBuffer(m_CommandBuffers[m_ImageIndex], &CmdBeginInfo);
+            vk::Gfx_InsertDebugLabel(m_CommandBuffers[m_ImageIndex], m_ImageIndex, "Swapchain Present", 1.0, 1.0, 1.0);
 
             VkRenderPassBeginInfo PassBeginInfo;
             PassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -646,12 +647,15 @@ namespace vk
             }
             vkCmdPushConstants(m_CommandBuffers[m_ImageIndex], m_Layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushblock), &pushblock);
             vkCmdDraw(m_CommandBuffers[m_ImageIndex], 6, 1, 0, 0);
+            DvkCmdEndDebugUtilsLabelEXT(m_CommandBuffers[m_ImageIndex]);
         }
 
         {
             PROFILE_SCOPE("[Vulkan] Swapchain ImGui Recording.");
+            vk::Gfx_InsertDebugLabel(m_CommandBuffers[m_ImageIndex], m_ImageIndex, "ImGui Commands", 0.0, 1.0);
             if (m_UsingImGui)
                 Gui_VKEndGUIFrame(m_CommandBuffers[m_ImageIndex]);
+            DvkCmdEndDebugUtilsLabelEXT(m_CommandBuffers[m_ImageIndex]);
         }
 
         vkCmdEndRenderPass(m_CommandBuffers[m_ImageIndex]);
