@@ -320,11 +320,11 @@ void Terrain::Save(const std::string& name) {
 	zip_entry_open(zip, "MANIFEST.DAT");
 	{
 		using namespace std;
-		string TerrainName = "TERRAIN:"s + name;
+		string TerrainName = "TERRAIN:"s + name + "\n";
 		zip_entry_write(zip, TerrainName.data(), TerrainName.size());
-		string normalMap = "NORMAL:";
+		string normalMap = "NORMAL:\n";
 		zip_entry_write(zip, normalMap.data(), normalMap.size());
-		string specularMap = "SPECULAR:";
+		string specularMap = "SPECULAR:\n";
 		zip_entry_write(zip, specularMap.data(), specularMap.size());
 		zip_entry_close(zip);
 	}
@@ -341,6 +341,7 @@ void Terrain::Save(const std::string& name) {
 
 void Terrain::CalculateTangentBitangent() {
 	using namespace Ph;
+	//SmoothNormals();
 	for (auto& submesh : mSubmeshes) {
 		auto vertices = &mVertices[submesh.mFirstVertex];
 		auto indices = &mIndices[submesh.mFirstIndex];
@@ -364,6 +365,26 @@ void Terrain::CalculateTangentBitangent() {
 			T0->inNormal16 = T1->inNormal16 = T2->inNormal16 = HalfVec3(glm::cross(deltaPos1, deltaPos2));
 			T0->inTangent16 = T1->inTangent16 = T2->inTangent16 = HalfVec3(tangent * -1.0f);
 			//T0->inBiTangent8 = T1->inBiTangent8 = T2->inBiTangent8 = Normal32To8(bitangent);
+		}
+	}
+}
+
+void Terrain::SmoothNormals() {
+	using namespace glm;
+	using namespace Ph;
+	for (auto& submesh : mSubmeshes) {
+		TerrainVertex* vertices = &mVertices[submesh.mFirstVertex];
+		uint32_t* indices = &mIndices[submesh.mFirstIndex];
+		for (int i = 0; i < submesh.mIndicesCount; i+=3) {
+			TerrainVertex* v0 = &vertices[indices[i + 0]];
+			TerrainVertex* v1 = &vertices[indices[i + 1]];
+			TerrainVertex* v2 = &vertices[indices[i + 2]];
+			
+			vec3 n0 = FullVec3(v0->inNormal16);
+			vec3 n1 = FullVec3(v1->inNormal16);
+			vec3 n2 = FullVec3(v2->inNormal16);
+			vec3 normal = normalize(n0 + n1 + n2);
+			v0->inNormal16 = v1->inNormal16 = v2->inNormal16 = HalfVec3(normal);
 		}
 	}
 }

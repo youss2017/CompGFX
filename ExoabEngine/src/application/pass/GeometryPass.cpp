@@ -101,7 +101,7 @@ Application::GeometryPass::GeometryPass(uint32_t lightCount, ShaderTypes::Light*
 	geometryPassFragment[2].mBufferSize = sizeof(glm::vec3) + (lightCount * sizeof(ShaderTypes::Light));
 	geometryPassFragment[2].mBuffer = nullptr;
 
-	BindingDescription terrainBindings[5]{};
+	BindingDescription terrainBindings[6]{};
 	terrainBindings[0].mBindingID = 0;
 	terrainBindings[0].mFlags = 0;
 	terrainBindings[0].mType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -139,14 +139,23 @@ Application::GeometryPass::GeometryPass(uint32_t lightCount, ShaderTypes::Light*
 	terrainBindings[4].mTextures.push_back(mNormalMap);
 	terrainBindings[4].mSampler = Global::DefaultSampler;
 
+	terrainBindings[5].mBindingID = 5;
+	terrainBindings[5].mFlags = 0;
+	terrainBindings[5].mType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	terrainBindings[5].mStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(4, geometryPass, poolSizes);
 	ShaderConnector_CalculateDescriptorPool(3, geometryPassFragment, poolSizes);
-	ShaderConnector_CalculateDescriptorPool(5, terrainBindings, poolSizes);
+	ShaderConnector_CalculateDescriptorPool(6, terrainBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2 + (gFrameOverlapCount * 1), poolSizes);
 	
 	mGeoSet0 = ShaderConnector_CreateSet(0, mPool, 4, geometryPass);
 	mGeoSet1 = ShaderConnector_CreateSet(1, mPool, 3, geometryPassFragment);
+	
+	terrainBindings[5].mBuffer = mGeoSet1.GetBuffer2(2);
+	terrainBindings[5].mSharedResources = true;
+
 	DescriptorSet GeoSets[2] = { mGeoSet0, mGeoSet1 };
 	mGeoLayout = ShaderConnector_CreatePipelineLayout(2, GeoSets, {});
 	Shader geoVertex = Shader("assets/shaders/vertex.vert");
@@ -169,7 +178,7 @@ Application::GeometryPass::GeometryPass(uint32_t lightCount, ShaderTypes::Light*
 
 	terrainBindings[1].mBuffer = mGeoSet0.GetBuffer2(1);
 	
-	mMapSet = ShaderConnector_CreateSet(0, mPool, 5, terrainBindings);
+	mMapSet = ShaderConnector_CreateSet(0, mPool, 6, terrainBindings);
 	mMapLayout = ShaderConnector_CreatePipelineLayout(1, &mMapSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TerrainPushblock)} });
 	Shader mapVertex = Shader("assets/shaders/terrain/Terrain.vert");
 	Shader mapFragment = Shader("assets/shaders/terrain/Terrain.frag");
@@ -381,7 +390,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	mCmdPool->Reset(FrameIndex);
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Geometry Pass", 1.0, 1.0);
+	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Geometry Pass", 0.0, 1.0);
 
 	vkCmdResetQueryPool(cmd, mQuery, FrameIndex * 2, 2);
 	vkCmdResetQueryPool(cmd, mInvocationQuery, FrameIndex, 1);

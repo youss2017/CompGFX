@@ -4,11 +4,15 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_debug_printf : disable
 
+const layout (constant_id = 0) int pcfCount = 1;
+const layout (constant_id = 1) int MAX_LIGHTS = 1;
+
 layout (location = 0) in flat uvec3 TextureIDs;
 layout (location = 1) in vec3 TextureWeights;
 layout (location = 2) in vec2 TexCoord;
 layout (location = 3) in vec4 LightSpacePos;
-layout (location = 4) in mat3 TBN;
+layout (location = 4) in vec3 FragPos;
+layout (location = 5) in mat3 TBN;
 
 layout (scalar, binding = 1) uniform GlobalDataUBO
 {
@@ -26,8 +30,18 @@ layout (binding = 2) uniform sampler2D TerrainTextures[];
 layout (binding = 3) uniform sampler2D shadowMap;
 layout (binding = 4) uniform sampler2D normalMap;
 
+struct Light {
+	vec3 u_Position;
+	vec3 u_Color;
+	float u_Range;
+	float u_AmbientStrength;
+};
 
-layout (constant_id = 0) const int pcfCount = 1;
+layout (scalar, binding = 5) uniform LightData {
+	vec3 u_CameraPosition;
+	Light u_Lights[MAX_LIGHTS];
+};
+
 
 float ShadowCalculation()
 {
@@ -67,9 +81,28 @@ void main()
     vec4 Texture1 = (TextureIDs.x == 0) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.x], TiledTexCoord) * TextureWeights[TextureIDs.x]);
     vec4 Texture2 = (TextureIDs.y == 0) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.y], TiledTexCoord) * TextureWeights[TextureIDs.y]);
     vec4 Texture3 = (TextureIDs.z == 0) ? vec4(0.0) : (texture(TerrainTextures[TextureIDs.z], TiledTexCoord) * TextureWeights[TextureIDs.z]);
-    vec4 FinalTexture = BaseTexture + Texture1 + Texture2 + Texture3;
-    float diffuse = max(dot(normal, u_LightDirection.xyz), 0.0) + 0.1;
+    vec4 objectColor = BaseTexture + Texture1 + Texture2 + Texture3;
+    const float SpecularStrength = 0.1;
 
-    // TODO: Support Specular Map
-    FragColor = FinalTexture * diffuse * clamp(ShadowCalculation(), 0.5, 1.0);
+    vec4 color = vec4(0.0);
+    float shadowRatio = 0.0;
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+		vec3 ambient = u_Lights[i].u_Color * u_Lights[i].u_AmbientStrength;
+		shadowRatio += length(ambient);
+
+		vec3 lightDirection = normalize(u_Lights[i].u_Position - FragPos);
+		float diffuseFactor = max(dot(normal, lightDirection), 0.0);
+		vec3 diffuse = u_Lights[i].u_Color * diffuseFactor;
+
+		// from frag position to camera position
+		vec3 viewDirection = normalize(u_CameraPosition - FragPos);
+		vec3 reflectDir = reflect(-lightDirection, normal);
+
+		float spec = pow(max(dot(viewDirection, reflectDir), 0.0), 16);
+		vec3 specular = max(SpecularStrength * spec * u_Lights[i].u_Color, vec3(0.0));
+
+		color += vec4((ambient + diffuse + specular), 1.0) * objectColor;
+    }
+    
+    FragColor = color * clamp(ShadowCalculation(), shadowRatio, 1.0);
 }

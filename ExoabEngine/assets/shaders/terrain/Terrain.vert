@@ -36,7 +36,8 @@ layout (location = 0) out flat uvec3 TextureIDs;
 layout (location = 1) out vec3 TextureWeights;
 layout (location = 2) out vec2 TexCoord;
 layout (location = 3) out vec4 LightSpacePos;
-layout (location = 4) out mat3 TBN;
+layout (location = 4) out vec3 FragPos;
+layout (location = 5) out mat3 TBN;
 
 #define vertex u_Vertices[gl_VertexIndex]
 
@@ -57,6 +58,6 @@ void main()
     vec4 position = u_Model * vec4(vec3(vertex.inPosition), 1.0);
     
     LightSpacePos = u_LightSpace * position;
-
+    FragPos = position.xyz;
     gl_Position = u_ProjView * position;
 }

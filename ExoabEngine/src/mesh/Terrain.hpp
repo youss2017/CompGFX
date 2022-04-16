@@ -66,6 +66,7 @@ public:
 
 private:
     void CalculateTangentBitangent();
+    void SmoothNormals();
 
 private:
     uint32_t mWidth;

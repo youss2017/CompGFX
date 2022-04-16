@@ -41,8 +41,9 @@ layout (location = 0) out vec4 FragColor;
 
 void main() {
 	
+	vec4 objectColor = texture(textures[TextureID], TexCoord);
+	vec4 color = vec4(0.0);
 	for(int i = 0; i < MAX_LIGHTS; i++) {
-		vec4 objectColor = texture(textures[TextureID], TexCoord);
 		vec3 ambient = u_Lights[i].u_Color * u_Lights[i].u_AmbientStrength;
 		
 		vec3 lightDirection = normalize(u_Lights[i].u_Position - FragPos);
@@ -55,8 +56,8 @@ void main() {
 
 		float spec = pow(max(dot(viewDirection, reflectDir), 0.0), 16);
 		vec3 specular = max(SpecularStrength * spec * u_Lights[i].u_Color, vec3(0.0));
-
-		FragColor = vec4((ambient + diffuse + specular), 1.0) * objectColor;
+		color += vec4((ambient + diffuse + specular), 1.0) * objectColor;
 	}
+	FragColor = color;
 
 }	

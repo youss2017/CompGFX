@@ -313,7 +313,7 @@ namespace Application
 					if (!Utils::StrContains(path, "."))
 						path += filters[choosenFilter].second.data() + 1;
 					mT0->Export(assimpIDs[choosenFilter].data(), path);
-					mT0->Save("output.zip");
+					mT0->Save(path + ".zip");
 				}
 			}
 		}
@@ -400,7 +400,7 @@ namespace Application
 		glm::vec3 pos = UI::LightPosition;
 		mLight.u_AmbientStrength = 0.1;
 		mLight.u_Color = glm::vec3(1.0);
-		mLight.u_Position = pos;
+		mLight.u_Position = mCamera.GetPosition();
 		mLight.u_Range = 100;
 		mDebugPass->SetProjectionView(Global::Projection, mCamera.GetViewMatrix());
 		glm::vec3 v = glm::normalize(mCamera.GetLookDir()) * 3.14f;

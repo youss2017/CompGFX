@@ -41,7 +41,13 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	Shader bloomShader = Shader("assets/shaders/postprocess/bloom/bloom.comp");
 	bloomShader.SetSpecializationConstant<int>(0, 1);
 
-	mSampler = vk::Gfx_CreateSampler(Global::Context);
+	mSampler = vk::Gfx_CreateSampler(Global::Context,
+		VK_FILTER_LINEAR,
+		VK_FILTER_LINEAR,
+		VK_SAMPLER_MIPMAP_MODE_LINEAR,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 	mSourceSize = ivec2(fbo.m_width, fbo.m_height);
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
@@ -112,10 +118,13 @@ Application::BloomPass::~BloomPass() {
 	Super_Pass_Destroy();
 	Texture2_Destroy(mBlurTexture);
 	ShaderConnector_DestroySet(mSet);
+	ShaderConnector_DestroySet(mCombineSet);
 	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipeline(Global::Context->defaultDevice, mPipeline, nullptr);
 	vkDestroyPipelineLayout(Global::Context->defaultDevice, mLayout, nullptr);
+	vkDestroyPipeline(Global::Context->defaultDevice, mCombinePipeline, nullptr);
+	vkDestroyPipelineLayout(Global::Context->defaultDevice, mCombineLayout, nullptr);
 	vkDestroyQueryPool(Global::Context->defaultDevice, mQuery, nullptr);
 }
 
@@ -181,25 +190,15 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	DvkCmdEndDebugUtilsLabelEXT(cmd);
 
-	auto barrier = [FrameIndex, &cmd, this](int def = 0) throw() -> void {
+	auto barrier = [FrameIndex, &cmd, this](VkImage image = nullptr) throw() -> void {
 		VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 		barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
     	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		if (def == 0) {
-			barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		}
-		else if (def == 1) {
-			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		}
-		else if (def == 2) {
-			barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		}
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = mBlurTexture->m_vk_images_per_frame[FrameIndex];
+        barrier.image = image ? image : mBlurTexture->m_vk_image->m_image;
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.baseMipLevel = 0;
@@ -252,12 +251,13 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	DvkCmdEndDebugUtilsLabelEXT(cmd);
 
 	// 4) Combine
+#if 0
 	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Apply Bloom", 0.0, 1.0);
-	barrier();
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mCombinePipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, mCombineLayout, 0, 1, &mCombineSet[FrameIndex], 0, nullptr);
 	vkCmdDispatch(cmd, (mSourceSize[0] + 31) / 32, (mSourceSize[1] + 31) / 32, 1);
 	DvkCmdEndDebugUtilsLabelEXT(cmd);
+#endif
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
 	DvkCmdEndDebugUtilsLabelEXT(cmd);

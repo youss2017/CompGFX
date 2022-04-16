@@ -10,8 +10,10 @@ void main() {
 	if(gl_GlobalInvocationID.x >= size.x || gl_GlobalInvocationID.y >= size.y)
 		return;
 
-	const vec3 srcColor = imageLoad(Target, ivec2(gl_GlobalInvocationID.xy)).rgb;
-	const vec3 dstColor = texture(BloomSource, vec2(gl_GlobalInvocationID) / vec2(size)).rgb;
+	const vec3 srcColor = imageLoad(Target, ivec2(gl_GlobalInvocationID)).rgb;
+	const vec3 dstColor = textureLod(BloomSource, vec2(gl_GlobalInvocationID) / vec2(size), 0).rgb;
 
-	imageStore(Target, ivec2(gl_GlobalInvocationID.xy), vec4(srcColor + dstColor, 1.0));
+	vec4 color = vec4(srcColor + dstColor, 1.0);
+
+	imageStore(Target, ivec2(gl_GlobalInvocationID.xy), color);
 }
