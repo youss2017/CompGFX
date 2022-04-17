@@ -22,6 +22,7 @@ namespace Global {
 
 namespace Application
 {
+	Ph::DynamicObject* testObj;
 	bool Application::OnInitalize()
 	{
 		PROFILE_FUNCTION();
@@ -44,6 +45,12 @@ namespace Application
 			log_error("Vulkan is not supported, try updating your graphics driver.");
 			return false;
 		}
+
+		mCamera.SetPosition(glm::vec3(0.0, -40.0, 0.0));
+		mCamera.Pitch(-70.0, true);
+
+		mCamera.ResetCamera();
+		mCamera.SetPosition({ 0, -150, -10 });
 
 		mGfx = Graphics3D_Create(&Global::Configuration, Global::Configuration.WindowTitle.c_str(), s_DebugMode, s_EnableImGui, Global::RenderDOC);
 		Global::Context = ToVKContext(mGfx->m_context);
@@ -95,8 +102,18 @@ namespace Application
 		IEntity cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
 		cube->m_geometryID = ENTITY_GEOMETRY_CUBE;
 		cube->mInstanceCount = mInstanceCount;
-		cube->mInstanceBuffer = Buffer2_CreatePreInitalized(BUFFER_TYPE_STORAGE, &mInstances[0], instanceSize, BufferMemoryType::CPU_TO_GPU, true, false);
+		cube->mInstanceBuffer = Gbuffer(Gmalloc(instanceSize, BufferType::BUFFER_TYPE_STORAGE, false));
 		cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
+		
+		mEngine = new Ph::PhysicsEngine(glm::vec3(1.0), glm::vec3(0.0, 9.8, 0.0), 1.0e-6 /* time step: 1.0 millisecond */);
+		testObj = new Ph::DynamicObject(Ph::Orientation::Init(glm::vec3(0.0, -150, 0.0), glm::vec3(0.0), { Global::Geomtry[0].box_min, Global::Geomtry[0].box_max }), 100, glm::vec3(0.0), glm::vec3(0.0, 0.0001, 0.0));
+		mEngine->AddDynamicObject(testObj);
+		mEngine->AddPlane({ {0.0, -1.0, 0.0}, 5.0 });
+
+		memcpy(Gpointer(cube->mInstanceBuffer), mInstances, instanceSize);
+
+		delete[] mInstances;
+		mInstances = (ShaderTypes::InstanceData*)Gpointer(cube->mInstanceBuffer);
 
 		PROFILE_FUNCTION();
 		UI::Frequency[0] = 2;
@@ -112,8 +129,6 @@ namespace Application
 		mImGuiSampler = vk::Gfx_CreateSampler(Global::Context);
 		UI::UpdateNoiseMap(mNoiseMapTexture, mNoiseMapTexture1, mNoiseMapTexture2, mImGuiSampler);
 
-		mCamera.SetPosition(glm::vec3(0.0, -40.0, 0.0));
-		mCamera.Pitch(-70.0, true);
 		UI::LightPosition = glm::vec3(0.0f, 25.0f, 2.5f);
 
 		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera, 1024);
@@ -142,7 +157,12 @@ namespace Application
 
 		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), 0.5f, 10000.0f);
 		
-		/* Camera Controls */
+		mEngine->Update();
+		Ph::Orientation o = testObj->GetUpdatedStatus();
+		mInstances[0].mModel = glm::translate(glm::mat4(1.0), o.mPosition);
+		mInstances[0].mNormalModel = glm::mat3(glm::transpose(glm::inverse(mInstances[0].mModel)));
+		printf("(%2.2f, %2.2f, %2.2f)\n", o.mPosition.x, o.mPosition.y, o.mPosition.z);
+		
 		double RotateRate = 45.0;
 		static bool WKey = false;
 		static bool SKey = false;
@@ -516,7 +536,7 @@ namespace Application
 			vkDestroySemaphore(Global::Context->defaultDevice, mBloomPassSemaphore[i], nullptr);
 		}
 		vkDestroySampler(Global::Context->defaultDevice, mImGuiSampler, nullptr);
-		Buffer2_Destroy(mECS->GetEntity(ENTITY_GEOMETRY_CUBE)->mInstanceBuffer);
+		Gfree(Gpointer(mECS->GetEntity(ENTITY_GEOMETRY_CUBE)->mInstanceBuffer));
 		Buffer2_Destroy(mECS->GetEntity(ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
 		Buffer2_Destroy(mVerticesSSBO);
 		Buffer2_Destroy(mIndicesBuffer);

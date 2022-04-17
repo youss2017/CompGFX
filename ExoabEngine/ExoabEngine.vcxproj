@@ -137,6 +137,7 @@
     <ClInclude Include="src\core\shaders\ShaderConnector.hpp" />
     <ClInclude Include="src\jobs\Jobs.hpp" />
     <ClInclude Include="src\physics\PhysicsCore.hpp" />
+    <ClInclude Include="src\physics\PhysicsEngine.hpp" />
     <ClInclude Include="src\utils\atomic.h" />
     <ClInclude Include="src\core\backend\backend_base.h" />
     <ClInclude Include="src\core\backend\Swapchain.hpp" />
@@ -235,6 +236,7 @@
     <ClCompile Include="src\mesh\geometry.cpp" />
     <ClCompile Include="src\mesh\SkinnedMesh.cpp" />
     <ClCompile Include="src\physics\PhysicsCore.cpp" />
+    <ClCompile Include="src\physics\PhysicsEngine.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />
     <ClCompile Include="src\application\UI.cpp" />
     <ClCompile Include="src\mesh\Terrain.cpp" />

@@ -26,6 +26,7 @@
 #include "OpenSaveDialog.hpp"
 #include "StringUtils.hpp"
 #include "minimap.hpp"
+#include "../physics/PhysicsEngine.hpp"
 
 namespace Application {
 
@@ -61,7 +62,9 @@ namespace Application {
 		ITexture2 mNoiseMapTexture1;
 		ITexture2 mNoiseMapTexture2;
 		VkSampler mImGuiSampler;
+
 		ShaderTypes::InstanceData* mInstances = new ShaderTypes::InstanceData[mInstanceCount];
+		Ph::PhysicsEngine* mEngine;
 	};
 
 }

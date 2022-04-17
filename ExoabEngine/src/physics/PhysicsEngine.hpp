@@ -1,22 +1,33 @@
 #pragma once
 #include "PhysicsCore.hpp"
+#include <vector>
 
 namespace Ph {
+
+    // Plane Equation --> Ax + By + Cz + D = 0
+    struct Plane {
+        vec3 mNormal;
+        float mD;
+    };
 
     struct Orientation {
         vec3 mPosition;
         vec3 mRotation;
         BoundingBox mBox;
+
+        static Orientation Init(vec3 position, vec3 rotation, BoundingBox box) {
+            return { position, rotation, box };
+        }
     };
 
     class DynamicObject {
 
     public:
-        DynamicObject(const Orientation orientation, float massKilograms, vec3 initalSpeedMetersPerSecond, vec3 initalVelocityMetersPerSecond, vec3 initalAcclerationMetersPerSecond);
+        DynamicObject(const Orientation orientation, float massKilograms, vec3 initalVelocityMetersPerSecond, vec3 initalAcclerationMetersPerSecond);
         ~DynamicObject();
 
-        DynamicObject(const DynamicObject& copy) = 0;
-        DynamicObject(const DynamicObject&& move) = 0;
+        DynamicObject(const DynamicObject& copy) = delete;
+        DynamicObject(const DynamicObject&& move) = delete;
 
         // Call this before PhysicsEngine::Update()
         void ApplyForce(vec3 forceInNewtons);
@@ -27,7 +38,6 @@ namespace Ph {
         friend class PhysicsEngine;
         Orientation mOrientation;
         float mMass;
-        vec3 mSpeed;
         vec3 mVelocity;
         vec3 mAcceleration;
         vec3 mForce;
@@ -39,16 +49,20 @@ namespace Ph {
         PhysicsEngine(vec3 Cube1x1MeterPixelScale, vec3 gravity, float timeStepInSeconds);
         ~PhysicsEngine();
 
-        PhysicsEngine(const PhysicsEngine& copy) = 0;
-        PhysicsEngine(const PhysicsEngine&& move) = 0;
+        PhysicsEngine(const PhysicsEngine& copy) = delete;
+        PhysicsEngine(const PhysicsEngine&& move) = delete;
 
         void AddDynamicObject(DynamicObject* obj);
+        void AddPlane(const Plane& plane);
 
         void Update();
 
     private:
-
-
+        vec3 mCubeScale;
+        vec3 mGravity;
+        float mTimeStep;
+        std::vector<Plane> mPlanes;
+        std::vector<DynamicObject*> mDynamicObjects;
     };
 
 }

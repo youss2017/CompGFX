@@ -40,3 +40,5 @@ void GverifyRead(void* ptr);
 void GverifyWrite(void* ptr);
 void Gfree(void* ptr);
 IBuffer2 Gbuffer(void* ptr);
+// Must have been allocated with Gmalloc
+void* Gpointer(IBuffer2 buffer);

@@ -20,7 +20,8 @@
                 "D:/GFX Apis/ExoabEngine/ExoabEngine/external/assimp/include/",
                 "D:/GFX Apis/ExoabEngine/ExoabEngine/external/glfw/include/",
                 "D:/GFX Apis/ExoabEngine/ExoabEngine/external/PhysX/physx/include/",
-                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/PhysX/pxshared/include/"
+                "D:/GFX Apis/ExoabEngine/ExoabEngine/external/PhysX/pxshared/include/",
+                "${workspaceFolder}/src/application"
             ],
             "defines": [
                 "_DEBUG",
