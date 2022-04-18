@@ -269,7 +269,7 @@ void Shader::InitalizeVulkan()
     createInfo.codeSize = this->GetByteSize();
     createInfo.pCode = this->GetBytecode();
     VkShaderModule m;
-    vkcheck(vkCreateShaderModule(context->defaultDevice, &createInfo, context->m_allocation_callback, &m));
+    vkcheck(vkCreateShaderModule(context->defaultDevice, &createInfo, 0, &m));
     m_ShaderHandle = m;
 }
 
@@ -355,7 +355,7 @@ void Shader::EvaluateCaching(std::filesystem::path shader_path, bool &UsingCache
 Shader::~Shader()
 {
     auto context = ToVKContext(m_Context);
-    vkDestroyShaderModule(context->defaultDevice, (VkShaderModule)m_ShaderHandle, context->m_allocation_callback);
+    vkDestroyShaderModule(context->defaultDevice, (VkShaderModule)m_ShaderHandle, 0);
 }
 
 const std::string &Shader::GetSource()

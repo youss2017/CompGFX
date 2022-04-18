@@ -23,8 +23,8 @@ namespace Utils {
 #if 0
 		uint8_t* imageBuffer = new uint8_t[width * height];
 #endif
-		for (int y = 0; y < h; y++) {
-			for (int x = 0; x < w; x++) {
+		for (uint32_t y = 0; y < h; y++) {
+			for (uint32_t x = 0; x < w; x++) {
 				double noise = perlin.octave2D_01((x * fx), (y * fy), octaves);
 #if 0
 				imageBuffer[y * w + x] = uint8_t(noise * 255.0);

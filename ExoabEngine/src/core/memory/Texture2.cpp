@@ -186,8 +186,8 @@ void Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size)
 	vk::Gfx_SubmitCmdBuffers(context->defaultQueue, { cmd_buffer }, {}, {}, {}, fence);
 	vkWaitForFences(context->defaultDevice, 1, &fence, true, UINT64_MAX);
 	// cleanup
-	vkDestroyCommandPool(context->defaultDevice, pool, context->m_allocation_callback);
-	vkDestroyFence(context->defaultDevice, fence, context->m_allocation_callback);
+	vkDestroyCommandPool(context->defaultDevice, pool, 0);
+	vkDestroyFence(context->defaultDevice, fence, 0);
 	Buffer2_Destroy(staging_buffer);
 
 	if (texture->m_specification.m_GenerateMipMapLevels)
@@ -288,8 +288,8 @@ void Texture2_UpdateMipmaps(ITexture2 texture)
 	vk::Gfx_SubmitCmdBuffers(context->defaultQueue, { cmd }, {}, {}, {}, fence);
 	vkWaitForFences(context->defaultDevice, 1, &fence, true, 5000'0000'000);
 
-	vkDestroyFence(context->defaultDevice, fence, context->m_allocation_callback);
-	vkDestroyCommandPool(context->defaultDevice, pool, context->m_allocation_callback);
+	vkDestroyFence(context->defaultDevice, fence, 0);
+	vkDestroyCommandPool(context->defaultDevice, pool, 0);
 }
 
 void Texture2_ReadPixels(ITexture2 texture, VkAccessFlagBits finalAccessFlags, VkImageLayout currentLayout, uint32_t pixelSize, void* buffer) {

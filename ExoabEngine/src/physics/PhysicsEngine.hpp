@@ -23,7 +23,7 @@ namespace Ph {
     class DynamicObject {
 
     public:
-        DynamicObject(const Orientation orientation, float massKilograms, vec3 initalVelocityMetersPerSecond, vec3 initalAcclerationMetersPerSecond);
+        DynamicObject(const Orientation orientation, float massKilograms, vec3 initalVelocityMetersPerSecond);
         ~DynamicObject();
 
         DynamicObject(const DynamicObject& copy) = delete;
@@ -31,6 +31,7 @@ namespace Ph {
 
         // Call this before PhysicsEngine::Update()
         void ApplyForce(vec3 forceInNewtons);
+        void ApplyAcceleration(vec3 accelerationInMPerSeconds);
 
         Orientation GetUpdatedStatus();
 
@@ -39,14 +40,13 @@ namespace Ph {
         Orientation mOrientation;
         float mMass;
         vec3 mVelocity;
-        vec3 mAcceleration;
         vec3 mForce;
     };
 
     class PhysicsEngine {
 
     public:
-        PhysicsEngine(vec3 Cube1x1MeterPixelScale, vec3 gravity, float timeStepInSeconds);
+        PhysicsEngine(float Cube1x1MeterPixelScale, vec3 gravity);
         ~PhysicsEngine();
 
         PhysicsEngine(const PhysicsEngine& copy) = delete;
@@ -56,11 +56,10 @@ namespace Ph {
         void AddPlane(const Plane& plane);
 
         void Update();
-
+                
     private:
-        vec3 mCubeScale;
+        float mCubeScale;
         vec3 mGravity;
-        float mTimeStep;
         std::vector<Plane> mPlanes;
         std::vector<DynamicObject*> mDynamicObjects;
     };

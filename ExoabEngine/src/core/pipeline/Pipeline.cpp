@@ -339,7 +339,7 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
 
     auto vcont = ToVKContext(context);
     VkPipeline pipeline;
-    vkcheck(vkCreateGraphicsPipelines(vcont->defaultDevice, nullptr, 1, &createInfo, vcont->m_allocation_callback, &pipeline));
+    vkcheck(vkCreateGraphicsPipelines(vcont->defaultDevice, nullptr, 1, &createInfo, 0, &pipeline));
 
     PipelineState *state = new PipelineState();
     state->m_ApiType = 0;
@@ -354,6 +354,6 @@ IPipelineState PipelineState_Create(GraphicsContext _context, const PipelineSpec
 void PipelineState_Destroy(IPipelineState state)
 {
     auto vcont = ToVKContext(state->m_context);
-    vkDestroyPipeline(vcont->defaultDevice, (VkPipeline)state->m_pipeline, vcont->m_allocation_callback);
+    vkDestroyPipeline(vcont->defaultDevice, (VkPipeline)state->m_pipeline, 0);
     delete state;
 }

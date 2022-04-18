@@ -461,6 +461,9 @@
     <ClCompile Include="src\physics\PhysicsEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\backend\GraphicsCardFeatureValidation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\utils\common.inl">

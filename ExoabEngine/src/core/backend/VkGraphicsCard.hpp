@@ -75,7 +75,6 @@ namespace vk {
 		uint32_t m_MaxMSAASamples;
 		bool debugEnabled;
 		VkAlloc::CONTEXT m_future_memory_context;
-		VkAllocationCallbacks* m_allocation_callback;
 		uint32_t mFrameIndex = 0;
 	} typedef* VkContext;
 
@@ -86,7 +85,7 @@ namespace vk {
 	void Gfx_DestroyContext(VkContext context);
 
 	std::vector<GraphicsCard> Gfx_GetAllGraphicsCards(VkContext context);
-	GraphicsCard Gfx_GetDefaultCard(VkContext context, bool ForceIntegratedGPU);
+	GraphicsCard Gfx_GetDefaultCard(VkContext context, bool ForceIntegratedGPU, VkPhysicalDeviceFeatures2 requiredFeatures);
 
 	VkDevice Gfx_CreateDevice
 	(GraphicsCard& card, std::vector<const char*> enabledExtensions, int* FamilyQueueIndex, VkQueueFlags queueFlags, int queueCount, VkPhysicalDeviceFeatures2 enabledFeatures);

@@ -142,8 +142,6 @@ void Application::BloomPass::ReloadShaders() {
 }
 
 VkCommandBuffer  Application::BloomPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
-#pragma warning("REMOVE THIS IN BloomPass.cpp")
-	RecordCommands(FrameIndex);
 	return *mCmd;
 }
 
@@ -180,7 +178,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	pushblock.TexelSize = 1.0f / vec2(mSourceSize);
 	pushblock.DstSize = ivec2(mBlurTexture->m_specification.m_Width, mBlurTexture->m_specification.m_Height);
 	pushblock.DstTexelSize = 1.0f / vec2(pushblock.DstSize);
-	pushblock.BloomFilterThreshold = 0.5;
+	pushblock.BloomFilterThreshold = mThresholdValue;
 	pushblock.BloomCurve = vec3(0.9, 0.2, 1.5);
 
 	int groupSizeX = (pushblock.DstSize[0] + (localSizeX - 1)) / localSizeX;
@@ -217,7 +215,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		pushblock.TexelSize = 1.0f / vec2(pushblock.Size);
 		pushblock.DstSize = ivec2(mBlurTexture->m_specification.m_Width >> (i + 1), mBlurTexture->m_specification.m_Height >> (i + 1));
 		pushblock.DstTexelSize = 1.0f / vec2(pushblock.DstSize);
-		pushblock.BloomFilterThreshold = 0.5;
+		pushblock.BloomFilterThreshold = mThresholdValue;
 		pushblock.BloomCurve = vec3(0.9, 0.2, 1.5);
 		pushblock.LOD = i;
 
@@ -238,7 +236,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		pushblock.TexelSize = 1.0f / vec2(pushblock.Size);
 		pushblock.DstSize = ivec2(mBlurTexture->m_specification.m_Width >> i, mBlurTexture->m_specification.m_Height >> i);
 		pushblock.DstTexelSize = 1.0f / vec2(pushblock.DstSize);
-		pushblock.BloomFilterThreshold = 0.5;
+		pushblock.BloomFilterThreshold = mThresholdValue;
 		pushblock.BloomCurve = vec3(0.9, 0.2, 1.5);
 		pushblock.LOD = i;
 

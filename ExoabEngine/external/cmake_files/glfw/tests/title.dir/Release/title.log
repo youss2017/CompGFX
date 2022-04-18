@@ -1,2 +1,0 @@
-﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppCommon.targets(1087,5): error MSB6006: "link.exe" exited with code 1181.
-LINK : fatal error LNK1181: cannot open input file '..\src\Release\glfw3dll.lib'

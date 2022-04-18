@@ -14,6 +14,8 @@ constexpr bool ShowVulkanExtensions = false;
 constexpr bool ShowVulkanLayers = false;
 constexpr bool ShowVulkanErrorBox = true;
 
+VkBool32 GraphicsCardFeatureValidation_Check(VkPhysicalDevice device, VkPhysicalDeviceFeatures2 requiredFeatures);
+
 namespace vk
 {
 
@@ -148,7 +150,7 @@ namespace vk
 		context->instance = instance;
 		context->window = Window;
 
-		GraphicsCard card = Gfx_GetDefaultCard(context, ForceIntegeratedGPU);
+		GraphicsCard card = Gfx_GetDefaultCard(context, ForceIntegeratedGPU, GraphicsCardFeatures);
 		memcpy(&context->card, &card, sizeof(GraphicsCard)); // because of c++ struct constructor stuff
 		strcpy(context->card.name, card.name);
 		loginfo(card.name);
@@ -204,16 +206,6 @@ namespace vk
 			context->m_MaxMSAASamples = 1;
 		}
 
-		/* Allocation Callbacks */
-		// VkAllocationCallbacks* allocation_callback = new VkAllocationCallbacks;
-		// allocation_callback->pUserData = NULL; // void*
-		// allocation_callback->pfnAllocation = NULL; // PFN_vkAllocationFunction
-		// allocation_callback->pfnReallocation = NULL; // PFN_vkReallocationFunction
-		// allocation_callback->pfnFree = NULL; // PFN_vkFreeFunction
-		// allocation_callback->pfnInternalAllocation = NULL; // PFN_vkInternalAllocationNotification
-		// allocation_callback->pfnInternalFree = NULL; // PFN_vkInternalFreeNotification
-		context->m_allocation_callback = NULL;
-
 		context->m_future_memory_context = VkAlloc::CreateContext(context->instance, context->defaultDevice, context->card.handle, /* 64 mb*/ 64 * (1024 * 1024));
 
 		return context;
@@ -223,12 +215,10 @@ namespace vk
 	{
 		vkDeviceWaitIdle(context->defaultDevice);
 		VkAlloc::DestroyContext(context->m_future_memory_context);
-		vkDestroyDevice(context->defaultDevice, context->m_allocation_callback);
+		vkDestroyDevice(context->defaultDevice, 0);
 		if (context->debugEnabled)
 			DestroyDebugUtilsMessengerEXT(context->instance, context->debugMessenger, nullptr);
 		vkDestroyInstance(context->instance, nullptr);
-		if (context->m_allocation_callback)
-			delete context->m_allocation_callback;
 		// For some reason this is broken?
 		//delete context;
 	}
@@ -262,39 +252,19 @@ namespace vk
 		return cards;
 	}
 
-	GraphicsCard Gfx_GetDefaultCard(VkContext context, bool forceIntegratedGPU)
+	GraphicsCard Gfx_GetDefaultCard(VkContext context, bool forceIntegratedGPU, VkPhysicalDeviceFeatures2 requiredFeatures)
 	{
 		std::vector<GraphicsCard> cards = Gfx_GetAllGraphicsCards(context);
 		GraphicsCard card = cards[0];
-		if (!forceIntegratedGPU)
-		{
 			for (const auto &t : cards)
 			{
-				if (t.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-				{
-					if (card.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-					{
-						if (card.memorySize < t.memorySize)
-							card = t;
-					}
-					else
-					{
-						card = t;
-					}
+				if (!GraphicsCardFeatureValidation_Check(t.handle, requiredFeatures)) {
+					continue;
 				}
+				
+				card = t;
 			}
-		}
-		else
-		{
-			for (const auto &t : cards)
-			{
-				if (t.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-				{
-					card = t;
-					break;
-				}
-			}
-		}
+	
 		if (card.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
 		{
 			logalert("Selected an Integrated GPU");
@@ -387,7 +357,7 @@ namespace vk
 		createInfo.pSubpasses = subpasses.data();
 
 		VkRenderPass renderPass;
-		vkcheck(vkCreateRenderPass(context->defaultDevice, &createInfo, context->m_allocation_callback, &renderPass));
+		vkcheck(vkCreateRenderPass(context->defaultDevice, &createInfo, 0, &renderPass));
 		return renderPass;
 	}
 
@@ -396,7 +366,7 @@ namespace vk
 		VkFenceCreateInfo createInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
 		createInfo.flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
 		VkFence fence;
-		vkcheck(vkCreateFence(context->defaultDevice, &createInfo, context->m_allocation_callback, &fence));
+		vkcheck(vkCreateFence(context->defaultDevice, &createInfo, 0, &fence));
 		return fence;
 	}
 
@@ -413,7 +383,7 @@ namespace vk
 		createInfo.pNext = TimelineSemaphore ? &timelineCreateInfo : nullptr;
 		createInfo.flags = 0;
 		VkSemaphore semaphore;
-		vkcheck(vkCreateSemaphore(context->defaultDevice, &createInfo, context->m_allocation_callback, &semaphore));
+		vkcheck(vkCreateSemaphore(context->defaultDevice, &createInfo, 0, &semaphore));
 		return semaphore;
 	}
 
@@ -433,7 +403,7 @@ namespace vk
 			createInfo.flags |= VK_COMMAND_POOL_CREATE_PROTECTED_BIT;
 		}
 		VkCommandPool pool;
-		vkCreateCommandPool(context->defaultDevice, &createInfo, context->m_allocation_callback, &pool);
+		vkCreateCommandPool(context->defaultDevice, &createInfo, 0, &pool);
 		return pool;
 	}
 
@@ -541,7 +511,7 @@ namespace vk
 		createInfo.poolSizeCount = poolSizes.size();
 		createInfo.pPoolSizes = poolSizes.data();
 		VkDescriptorPool pool;
-		vkcheck(vkCreateDescriptorPool(context->defaultDevice, &createInfo, context->m_allocation_callback, &pool));
+		vkcheck(vkCreateDescriptorPool(context->defaultDevice, &createInfo, 0, &pool));
 		return pool;
 	}
 

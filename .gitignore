@@ -14,3 +14,6 @@ ExoabEngine/*.json
 *.ilk
 *.db
 *.suo
+*.obj
+*.log
+*.tlog

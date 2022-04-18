@@ -1,6 +1,0 @@
-﻿  Building Custom Rule D:/GFX Apis/ExoabEngine/ExoabEngine/external/glfw/examples/CMakeLists.txt
-  particles.c
-  tinycthread.c
-  getopt.c
-  Generating Code...
-  particles.vcxproj -> D:\GFX Apis\ExoabEngine\ExoabEngine\external\cmake_files\glfw\examples\Debug\particles.exe

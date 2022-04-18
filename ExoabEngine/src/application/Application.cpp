@@ -105,8 +105,8 @@ namespace Application
 		cube->mInstanceBuffer = Gbuffer(Gmalloc(instanceSize, BufferType::BUFFER_TYPE_STORAGE, false));
 		cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
 		
-		mEngine = new Ph::PhysicsEngine(glm::vec3(1.0), glm::vec3(0.0, 9.8, 0.0), 1.0e-6 /* time step: 1.0 millisecond */);
-		testObj = new Ph::DynamicObject(Ph::Orientation::Init(glm::vec3(0.0, -150, 0.0), glm::vec3(0.0), { Global::Geomtry[0].box_min, Global::Geomtry[0].box_max }), 100, glm::vec3(0.0), glm::vec3(0.0, 0.0001, 0.0));
+		mEngine = new Ph::PhysicsEngine(50, glm::vec3(0.1, 9.8, 0.0));
+		testObj = new Ph::DynamicObject(Ph::Orientation::Init(glm::vec3(0.0, -150, 0.0), glm::vec3(0.0), { Global::Geomtry[0].box_min, Global::Geomtry[0].box_max }), 50000, glm::vec3(0.0));
 		mEngine->AddDynamicObject(testObj);
 		mEngine->AddPlane({ {0.0, -1.0, 0.0}, 5.0 });
 
@@ -174,6 +174,10 @@ namespace Application
 		static bool XKey = false;
 		static bool UpKey = false;
 		static bool DownKey = false;
+		static bool TKey = false;
+		static bool YKey = false;
+		static bool GKey = false;
+		static bool HKey = false;
 		static Ph::Ray cursorRay = {};
 		static bool CameraMove = false;
 		static glm::vec2 Magnitude{};
@@ -209,6 +213,18 @@ namespace Application
 				case 'x':
 					XKey = e.mEvents & EVENT_KEY_PRESS;
 					break;
+				case 't':
+					TKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'y':
+					YKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'g':
+					GKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
+				case 'h':
+					HKey = e.mEvents & EVENT_KEY_PRESS;
+					break;
 				};
 				switch (e.mPayload.NonASCIKey) {
 				case GLFW_KEY_UP:
@@ -223,6 +239,7 @@ namespace Application
 				}
 				}
 			);
+
 
 			Global::Window->RegisterCallback(EVENT_MOUSE_PRESS | EVENT_MOUSE_RELEASE, [&](const Event& e) throw() -> void {
 				using namespace glm;
@@ -272,6 +289,23 @@ namespace Application
 
 			IOInit = !IOInit;
 		}
+
+		if (TKey) {
+			testObj->ApplyAcceleration(glm::vec3(0.0, 1.0, 0.0));
+		}
+
+		if (YKey) {
+			testObj->ApplyAcceleration(glm::vec3(0.0, -9.8 + -1.5, 0.0));
+		}
+
+		if (GKey) {
+			testObj->ApplyAcceleration(glm::vec3(1.5, 0.0, 0.0));
+		}
+
+		if (HKey) {
+			testObj->ApplyAcceleration(glm::vec3(-1.5, 0.0, 0.0));
+		}
+
 
 		if (WKey) mCamera.MoveForward(Global::Time * 22.0);
 		if (SKey) mCamera.MoveForward(Global::Time * -22.0);

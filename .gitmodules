@@ -29,3 +29,6 @@
 [submodule "ExoabEngine/external/zip"]
 	path = ExoabEngine/external/zip
 	url = https://github.com/kuba--/zip
+[submodule "ExoabEngine/external/PhysX"]
+	path = ExoabEngine/external/PhysX
+	url = https://github.com/NVIDIAGameWorks/PhysX

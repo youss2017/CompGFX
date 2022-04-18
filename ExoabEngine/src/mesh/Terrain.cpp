@@ -375,7 +375,7 @@ void Terrain::SmoothNormals() {
 	for (auto& submesh : mSubmeshes) {
 		TerrainVertex* vertices = &mVertices[submesh.mFirstVertex];
 		uint32_t* indices = &mIndices[submesh.mFirstIndex];
-		for (int i = 0; i < submesh.mIndicesCount; i+=3) {
+		for (uint32_t i = 0; i < submesh.mIndicesCount; i+=3) {
 			TerrainVertex* v0 = &vertices[indices[i + 0]];
 			TerrainVertex* v1 = &vertices[indices[i + 1]];
 			TerrainVertex* v2 = &vertices[indices[i + 2]];

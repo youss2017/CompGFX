@@ -91,8 +91,8 @@ void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset, size_t size
 	vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, {cmd}, {}, {}, {}, fence);
 	vkWaitForFences(Global::Context->defaultDevice, 1, &fence, true, 5e9);
 	Buffer2_Destroy(intermediate);
-	vkDestroyFence(Global::Context->defaultDevice, fence, Global::Context->m_allocation_callback);
-	vkDestroyCommandPool(Global::Context->defaultDevice, pool, Global::Context->m_allocation_callback);
+	vkDestroyFence(Global::Context->defaultDevice, fence, 0);
+	vkDestroyCommandPool(Global::Context->defaultDevice, pool, 0);
 }
 
 void* Buffer2_Map(IBuffer2 buffer)

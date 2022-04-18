@@ -116,7 +116,7 @@ IGraphics3D Graphics3D_Create(ConfigurationSettings *config, const char *Title, 
                                                features, VK_API_VERSION_1_2);
     auto vcont = ToVKContext(gfx->m_context);
     Global::Context = vcont;
-    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);
+    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, 0, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);
     
     for (int i = 0; i < gFrameOverlapCount; i++)
     {
@@ -152,7 +152,7 @@ void Graphics3D_SetSyncInterval(IGraphics3D gfx, int SyncInterval)
     Graphics3D_WaitGPUIdle(gfx); // this is much easier than trying to synchronize and not wait idle.
     gfx->m_vswapchain.Destroy();
     auto vcont = ToVKContext(gfx->m_context);
-    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, vcont->m_allocation_callback, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, gfx->m_window, gFrameOverlapCount, SyncInterval, true);
+    gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont->instance, 0, vcont->card.handle, vcont->defaultDevice, vcont->defaultQueue, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, gfx->m_window, gFrameOverlapCount, SyncInterval, true);
 }
 
 void Graphics3D_Destroy(IGraphics3D gfx)
