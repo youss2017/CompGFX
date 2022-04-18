@@ -30,7 +30,7 @@ to prevent the application form enabling that feature, this will allow RenderDOC
 			<li>assimp-->properties-->General set "OutputDirectory" to $(ProjectDir)..\..\..\bin\</li>
 			<li>assimp-->properties-->linker-->All Options set "Import Library" to $(ProjectDir)..\..\..\bin\debug\assimp-vc143-mt.lib</li>
 			<li>assimp-->properties-->linker-->All Options set "Generate Program Database File" to $(ProjectDir)..\..\..\bin\assimp-vc143-mt.pdb</li>
-		<li>Compile "ALL_BUILD" in both debug and release mode.</li>
+		<li>Compile "ALL_BUILD" in release mode.</li>
 	</ul>
 	<li>Compiling GLFW</li>
 	<ul>
@@ -40,7 +40,7 @@ to prevent the application form enabling that feature, this will allow RenderDOC
 		<li>glfw-->properties-->General set "OutputDirectory" to $(ProjectDir)..\..\..\bin\</li>
 		<li>glfw-->properties-->linker-->All Options set "Import Library" to $(ProjectDir)..\..\..\bin\release\glfw3dll.lib</li>
 		<li>glfw-->properties-->linker-->All Options set "Generate Program Database File" to $(ProjectDir)..\..\..\bin\release\glfw3.pdb</li>
-		<li>Compile "ALL_BUILD" in both debug and release mode.</li>
+		<li>Compile "ALL_BUILD" in release mode.</li>
 	</ul>
 </ol>
 </p>
