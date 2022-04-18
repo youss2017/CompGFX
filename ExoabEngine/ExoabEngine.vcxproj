@@ -72,7 +72,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mtd.dll;shaderc_shared.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -95,7 +95,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;shaderc_shared.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
