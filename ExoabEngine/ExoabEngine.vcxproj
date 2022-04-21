@@ -16,6 +16,7 @@
     <ProjectGuid>{05ce23e3-835e-4d04-a6ec-2a098411e16a}</ProjectGuid>
     <RootNamespace>ExoabEngine</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Application</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -58,9 +59,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions> GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir)external\zip\src\;$(ProjectDir)src\application\;$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\cmake_files\assimp\include\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)src\application\;$(solutiondir)vendor\imgui\backends\;$(solutiondir)vendor\imgui\;$(solutiondir)vendor\zip\src\;$(solutiondir)vendor\glfw\include\;$(solutiondir)vendor\VulkanMemoryAllocator\include\;$(SolutionDir)vendor\meshoptimizer\src\;$(SolutionDir)vendor\stb\;$(SolutionDir)vendor\cmake_files\assimp\include\;$(SolutionDir)vendor\assimp\include;$(SolutionDir)vendor\glm;$(SolutionDir)GraphicsEngine\utils;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -71,8 +72,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(projectdir);$(solutiondir)vendor\bin\;$(SolutionDir)vendor\bin\debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -81,9 +82,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions> GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;VK_NO_PROTOTYPES;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir)external\zip\src\;$(ProjectDir)src\application\;$(SolutionDir)$(ProjectName)\;$(SolutionDir)$(ProjectName)\external\cmake_files\assimp\include\;$(SolutionDir)$(ProjectName)\external\VulkanMemoryAllocator\include\;$(SolutionDir)$(ProjectName)\external\meshoptimizer\src\;$(SolutionDir)$(ProjectName)\src\core\;$(SolutionDir)$(ProjectName)\src\graphics\;$(SolutionDir)$(ProjectName)\src\utils\;$(SolutionDir)$(ProjectName)\external\imgui\;$(SolutionDir)$(ProjectName)\external\imgui\backends;$(SolutionDir)$(ProjectName)\external\;$(SolutionDir)$(ProjectName)\external\glm;$(SolutionDir)$(ProjectName)\external\stb;$(SolutionDir)$(ProjectName)\external\glad\include;$(SolutionDir)$(ProjectName)\external\assimp\include;$(SolutionDir)$(ProjectName)\external\glfw\include;$(SolutionDir)$(ProjectName)\external\PhysX\physx\include;$(SolutionDir)$(ProjectName)\external\PhysX\pxshared\include;$(SolutionDir)$(ProjectName)\external\shaderc\libshaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross\include;$(SolutionDir)$(ProjectName)\external\shaderc\include;$(SolutionDir)$(ProjectName)\external\SPIRV-Cross;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)src\application\;$(solutiondir)vendor\imgui\backends\;$(solutiondir)vendor\imgui\;$(solutiondir)vendor\zip\src\;$(solutiondir)vendor\glfw\include\;$(solutiondir)vendor\VulkanMemoryAllocator\include\;$(SolutionDir)vendor\meshoptimizer\src\;$(SolutionDir)vendor\stb\;$(SolutionDir)vendor\cmake_files\assimp\include\;$(SolutionDir)vendor\assimp\include;$(SolutionDir)vendor\glm;$(SolutionDir)GraphicsEngine\utils;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -94,26 +95,14 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)$(ProjectName)\external\bin\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>glfw3.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(projectdir);$(solutiondir)vendor\bin\;$(SolutionDir)vendor\bin\release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="external\glad\include\glad\glad.h" />
     <ClInclude Include="external\glad\include\KHR\khrplatform.h" />
-    <ClInclude Include="external\imgui\backends\imgui_impl_glfw.h" />
-    <ClInclude Include="external\imgui\backends\imgui_impl_opengl3.h" />
-    <ClInclude Include="external\imgui\backends\imgui_impl_vulkan.h" />
-    <ClInclude Include="external\imgui\imconfig.h" />
-    <ClInclude Include="external\imgui\imgui.h" />
-    <ClInclude Include="external\imgui\imgui_internal.h" />
-    <ClInclude Include="external\imgui\imstb_rectpack.h" />
-    <ClInclude Include="external\imgui\imstb_textedit.h" />
-    <ClInclude Include="external\imgui\imstb_truetype.h" />
     <ClInclude Include="external\meshoptimizer\src\meshoptimizer.h" />
-    <ClInclude Include="external\VulkanMemoryAllocator\include\vk_mem_alloc.h" />
-    <ClInclude Include="external\VulkanMemoryAllocator\src\Common.h" />
-    <ClInclude Include="external\VulkanMemoryAllocator\src\VmaUsage.h" />
     <ClInclude Include="external\zip\src\miniz.h" />
     <ClInclude Include="external\zip\src\zip.h" />
     <ClInclude Include="src\application\Camera.hpp" />
@@ -133,76 +122,28 @@
     <ClInclude Include="src\application\pass\ShadowPass.hpp" />
     <ClInclude Include="src\application\pass\SkyboxPass.hpp" />
     <ClInclude Include="src\audio\Audio.hpp" />
-    <ClInclude Include="src\core\backend\Command.hpp" />
-    <ClInclude Include="src\core\memory\CubeMap.hpp" />
-    <ClInclude Include="src\core\shaders\ShaderConnector.hpp" />
     <ClInclude Include="src\jobs\Jobs.hpp" />
     <ClInclude Include="src\physics\PhysicsCore.hpp" />
     <ClInclude Include="src\physics\PhysicsEngine.hpp" />
-    <ClInclude Include="src\utils\atomic.h" />
-    <ClInclude Include="src\core\backend\backend_base.h" />
-    <ClInclude Include="src\core\backend\Swapchain.hpp" />
-    <ClInclude Include="src\core\backend\VkGraphicsCard.hpp" />
-    <ClInclude Include="src\core\backend\VulkanLoader.h" />
-    <ClInclude Include="src\core\EngineBase.h" />
-    <ClInclude Include="src\core\backend\GUI.h" />
-    <ClInclude Include="src\core\memory\Buffer2.hpp" />
-    <ClInclude Include="src\core\memory\cvector.h" />
-    <ClInclude Include="src\core\memory\Texture2.hpp" />
-    <ClInclude Include="src\core\memory\vulkan_memory_allocator.hpp" />
-    <ClInclude Include="src\core\pipeline\Framebuffer.hpp" />
-    <ClInclude Include="src\core\pipeline\Pipeline.hpp" />
-    <ClInclude Include="src\core\pipeline\PipelineCS.hpp" />
-    <ClInclude Include="src\core\shaders\Shader.hpp" />
-    <ClInclude Include="src\core\shaders\ShaderReflection.hpp" />
-    <ClInclude Include="src\graphics\Font.hpp" />
-    <ClInclude Include="src\graphics\Graphics.hpp" />
+    <ClInclude Include="src\Font.hpp" />
     <ClInclude Include="src\mesh\entity.hpp" />
     <ClInclude Include="src\mesh\geometry.hpp" />
     <ClInclude Include="src\mesh\SkinnedMesh.hpp" />
     <ClInclude Include="src\application\ShaderTypes.hpp" />
     <ClInclude Include="src\application\UI.hpp" />
     <ClInclude Include="src\mesh\Terrain.hpp" />
-    <ClInclude Include="src\utils\common.hpp" />
-    <ClInclude Include="src\utils\defines.h" />
-    <ClInclude Include="src\utils\Logger.hpp" />
-    <ClInclude Include="src\utils\MBox.hpp" />
-    <ClInclude Include="src\utils\OpenSaveDialog.hpp" />
-    <ClInclude Include="src\utils\perlin_noise.hpp" />
-    <ClInclude Include="src\utils\Profiling.hpp" />
-    <ClInclude Include="src\utils\StringUtils.hpp" />
-    <ClInclude Include="src\window\Event.hpp" />
-    <ClInclude Include="src\window\NMB.h" />
-    <ClInclude Include="src\window\PlatformWindow.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="external\imgui\backends\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="external\imgui\backends\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="external\imgui\imgui.cpp" />
-    <ClCompile Include="external\imgui\imgui_demo.cpp" />
-    <ClCompile Include="external\imgui\imgui_draw.cpp" />
-    <ClCompile Include="external\imgui\imgui_tables.cpp" />
-    <ClCompile Include="external\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\allocator.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\clusterizer.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\indexcodec.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\indexgenerator.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\overdrawanalyzer.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\overdrawoptimizer.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\simplifier.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\spatialorder.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\stripifier.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\vcacheanalyzer.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\vcacheoptimizer.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\vertexcodec.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\vertexfilter.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\vfetchanalyzer.cpp" />
-    <ClCompile Include="external\meshoptimizer\src\vfetchoptimizer.cpp" />
-    <ClCompile Include="external\stb.cpp" />
-    <ClCompile Include="external\VulkanMemoryAllocator\src\Common.cpp" />
-    <ClCompile Include="external\VulkanMemoryAllocator\src\VmaUsage.cpp" />
-    <ClCompile Include="external\zip\src\zip.c" />
+    <ClCompile Include="..\GraphicsEngine\core\backend\VulkanLoader.c" />
+    <ClCompile Include="..\vendor\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\vendor\imgui\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\vendor\stb.cpp" />
+    <ClCompile Include="..\vendor\zip\src\zip.c" />
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
     <ClCompile Include="src\application\ecs\EntityController.cpp" />
@@ -216,23 +157,7 @@
     <ClCompile Include="src\application\pass\SkyboxPass.cpp" />
     <ClCompile Include="src\audio\Audio.cpp" />
     <ClCompile Include="src\audio\Win32Audio.cpp" />
-    <ClCompile Include="src\core\backend\GraphicsCardFeatureValidation.cpp" />
-    <ClCompile Include="src\core\backend\Swapchain.cpp" />
-    <ClCompile Include="src\core\backend\VkGraphicsCard.cpp" />
-    <ClCompile Include="src\core\backend\VulkanLoader.c" />
-    <ClCompile Include="src\core\backend\GUI.cpp" />
-    <ClCompile Include="src\core\memory\Buffer2.cpp" />
-    <ClCompile Include="src\core\memory\CubeMap.cpp" />
-    <ClCompile Include="src\core\memory\Texture2.cpp" />
-    <ClCompile Include="src\core\memory\vulkan_memory_allocator.cpp" />
-    <ClCompile Include="src\core\pipeline\Framebuffer.cpp" />
-    <ClCompile Include="src\core\pipeline\Pipeline.cpp" />
-    <ClCompile Include="src\core\pipeline\PipelineCS.cpp" />
-    <ClCompile Include="src\core\shaders\Shader.cpp" />
-    <ClCompile Include="src\core\shaders\ShaderConnector.cpp" />
-    <ClCompile Include="src\core\shaders\ShaderReflection.cpp" />
-    <ClCompile Include="src\graphics\Font.cpp" />
-    <ClCompile Include="src\graphics\Graphics.cpp" />
+    <ClCompile Include="src\Font.cpp" />
     <ClCompile Include="src\jobs\Win32Jobs.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
@@ -242,14 +167,6 @@
     <ClCompile Include="src\PrepareDLLs.cpp" />
     <ClCompile Include="src\application\UI.cpp" />
     <ClCompile Include="src\mesh\Terrain.cpp" />
-    <ClCompile Include="src\utils\commonn.cpp" />
-    <ClCompile Include="src\utils\Logger.cpp" />
-    <ClCompile Include="src\utils\MBox.cpp" />
-    <ClCompile Include="src\utils\OpenSaveDialog.cpp" />
-    <ClCompile Include="src\utils\perlin_noise.cpp" />
-    <ClCompile Include="src\utils\Profiling.cpp" />
-    <ClCompile Include="src\utils\StringUtils.cpp" />
-    <ClCompile Include="src\window\PlatformWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" />
@@ -264,10 +181,6 @@
     <None Include="assets\shaders\postprocess\ui\ui.vert" />
     <None Include="imgui.ini" />
     <None Include="src\application\ecs\Entity.hpp" />
-    <None Include="src\utils\common.inl" />
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="external\VulkanMemoryAllocator\src\vk_mem_alloc.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

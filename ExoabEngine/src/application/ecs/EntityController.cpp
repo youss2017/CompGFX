@@ -1,5 +1,6 @@
 #include "EntityController.hpp"
 #include <backend/VkGraphicsCard.hpp>
+#include "Globals.hpp"
 
 EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
 : mGeometry(geometry)
@@ -29,8 +30,8 @@ EntityController::EntityController(const std::vector<Mesh::Geometry>& geometry)
 		mGeoData.push_back(geoData);
 	}
 
-	mInputDrawData = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mDraws.data(), mDraws.size() * sizeof(ShaderTypes::DrawData), BufferMemoryType::CPU_TO_GPU, true, true);
-	mInputGeometryData = Buffer2_CreatePreInitalized(BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mGeoData.data(), mGeoData.size() * sizeof(ShaderTypes::GeometryData), BufferMemoryType::CPU_TO_GPU, true, true);
+	mInputDrawData = Buffer2_CreatePreInitalized(Global::Context, BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mDraws.data(), mDraws.size() * sizeof(ShaderTypes::DrawData), BufferMemoryType::CPU_TO_GPU, true, true);
+	mInputGeometryData = Buffer2_CreatePreInitalized(Global::Context, BufferType(BUFFER_TYPE_STORAGE | BUFFER_TYPE_TRANSFER_DST | BUFFER_TYPE_INDIRECT), mGeoData.data(), mGeoData.size() * sizeof(ShaderTypes::GeometryData), BufferMemoryType::CPU_TO_GPU, true, true);
 
 	for (auto& e : mEntites) {
 		e.second->mInstanceCount = 0;

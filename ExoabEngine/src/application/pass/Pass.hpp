@@ -3,6 +3,7 @@
 #include <backend/backend_base.h>
 #include <backend/VulkanLoader.h>
 #include <backend/Command.hpp>
+#include "Globals.hpp"
 
 namespace Application {
 
@@ -10,7 +11,7 @@ namespace Application {
 		
 	public:
 		Pass(VkDevice device, bool primary) : mDevice(device) {
-			mCmdPool = new CommandPool();
+			mCmdPool = new CommandPool(Global::Context);
 			mCmd = new CommandBuffer(mCmdPool, primary);
 		}
 		

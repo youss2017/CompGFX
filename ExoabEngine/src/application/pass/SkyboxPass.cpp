@@ -2,10 +2,10 @@
 #include "shaders/Shader.hpp"
 #include <backend/VkGraphicsCard.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "../../window/PlatformWindow.hpp"
+#include "window/PlatformWindow.hpp"
 #include "../Globals.hpp"
 
-Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera, bool UsingDebugPass) : Pass(Global::Context->defaultDevice, true), mCubeMap(CubeMap_Create(environmentMapPath, VK_FORMAT_R8G8B8A8_UNORM)), mCamera(camera), mGeoPass(geoPass), mUsingDebugPass(UsingDebugPass) {
+Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, GeometryPass* geoPass, Camera* camera, bool UsingDebugPass) : Pass(Global::Context->defaultDevice, true), mCubeMap(CubeMap_Create(Global::Context, environmentMapPath, VK_FORMAT_R8G8B8A8_UNORM)), mCamera(camera), mGeoPass(geoPass), mUsingDebugPass(UsingDebugPass) {
 	//mSampler = vk::Gfx_CreateSampler(Global::Context, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 	BindingDescription bindings[1];
 	bindings[0].mBindingID = 0;
@@ -18,11 +18,11 @@ Application::SkyboxPass::SkyboxPass(const std::string& environmentMapPath, Geome
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(1, bindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount, poolSizes);
-	mSet = ShaderConnector_CreateSet(0, mPool, 1, bindings);
-	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4} });
+	mSet = ShaderConnector_CreateSet(Global::Context, 0, mPool, 1, bindings);
+	mLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &mSet, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4} });
 
-	Shader skyboxVert = Shader("assets/shaders/postprocess/skybox.vert");
-	Shader skyboxFrag = Shader("assets/shaders/postprocess/skybox.frag");
+	Shader skyboxVert = Shader(Global::Context, "assets/shaders/postprocess/skybox.vert");
+	Shader skyboxFrag = Shader(Global::Context, "assets/shaders/postprocess/skybox.frag");
 
 	PipelineSpecification spec;
 	spec.m_CullMode = CullMode::CULL_BACK;
@@ -44,13 +44,13 @@ Application::SkyboxPass::~SkyboxPass()
 	Texture2_Destroy(mCubeMap);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
-	ShaderConnector_DestroySet(mSet);
+	ShaderConnector_DestroySet(Global::Context->defaultDevice, mSet);
 	PipelineState_Destroy(mState);
 }
 
 void Application::SkyboxPass::ReloadShaders() {
-	Shader skyboxVert = Shader("assets/shaders/postprocess/skybox.vert");
-	Shader skyboxFrag = Shader("assets/shaders/postprocess/skybox.frag");
+	Shader skyboxVert = Shader(Global::Context, "assets/shaders/postprocess/skybox.vert");
+	Shader skyboxFrag = Shader(Global::Context, "assets/shaders/postprocess/skybox.frag");
 	PipelineSpecification spec = mState->m_spec;
 	PipelineVertexInputDescription input;
 	PipelineState_Destroy(mState);

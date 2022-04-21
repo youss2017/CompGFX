@@ -19,6 +19,7 @@
 #include "application/Application.hpp"
 #include <csignal>
 #include "jobs/Jobs.hpp"
+#include <core/Entry.hpp>
 
 #ifdef _WIN32
 static void PrepareWin32(int argc, char** argv);
@@ -51,6 +52,7 @@ int main(int argc, char** argv)
 #else
     PreparePOSIX(argc, argv);
 #endif
+    GraphicsEngine_Initalize();
     //job::OnStartup();
     /* Load Game Settings from settings.cfg */
     LoadConfiguration();
@@ -99,6 +101,7 @@ int main(int argc, char** argv)
     PROFILE_BEGIN_SESSION("Cleanup", "Profiling-Cleanup.json");
     app->OnDestroy();
     delete app;
+    GraphicsEngine_Destroy();
     //job::OnDestroy();
     PROFILE_END_SESSION();
     return 0;

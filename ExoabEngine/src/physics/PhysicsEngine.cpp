@@ -1,5 +1,9 @@
 #include "PhysicsEngine.hpp"
 #include "Globals.hpp"
+//#include "PxPhysics.h"
+//#include "PxPhysicsAPI.h"
+//#include "PxFoundation.h"
+//#include "extensions/PxDefaultAllocator.h"
 
 // F = ma
 // F : N --> (kg * m) / s^2
@@ -40,6 +44,9 @@ namespace Ph {
     {
         mCubeScale = Cube1x1MeterPixelScale;
         mGravity = gravity;
+        //physx::PxDefaultErrorCallback gDefaultErrorCallback;
+        //physx::PxDefaultAllocator gDefaultAllocatorCallback;
+        //physx::PxFoundation* mFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
     }
 
     PhysicsEngine::~PhysicsEngine()

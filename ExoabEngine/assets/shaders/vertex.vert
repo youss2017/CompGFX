@@ -1,7 +1,7 @@
 #version 450
 #include "types.h"
 #extension GL_EXT_buffer_reference : enable
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_buffer_reference_uvec2 : require
 
 #extension GL_EXT_shader_explicit_arithmetic_types_int8 : disable
 #extension GL_EXT_debug_printf : disable

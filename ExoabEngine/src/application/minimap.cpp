@@ -2,15 +2,15 @@
 #include "Globals.hpp"
 #include "pipeline/Pipeline.hpp"
 #include <glm/gtc/matrix_transform.hpp>
-#include <stb/stb_image_write.h>
+#include <stb_image_write.h>
 #include "Camera.hpp"
 
 ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> terrainTextures, ITexture2 normalMap)
 {
 	auto transform = terrain->GetTransform();
 	terrain->SetTransform(glm::scale(glm::mat4(1.0), glm::vec3(0.10)) * terrain->GetToCenterTransform());
-	Shader vertex = Shader("assets/shaders/terrain/minimap.vert");
-	Shader fragment = Shader("assets/shaders/terrain/minimap.frag");
+	Shader vertex = Shader(Global::Context, "assets/shaders/terrain/minimap.vert");
+	Shader fragment = Shader(Global::Context, "assets/shaders/terrain/minimap.frag");
 	Framebuffer fbo;
 	fbo.m_width = 256;
 	fbo.m_height = 256;
@@ -57,14 +57,14 @@ ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> 
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(4, bindings, poolSizes);
 	VkDescriptorPool pool = vk::Gfx_CreateDescriptorPool(Global::Context, 3, poolSizes);
-	DescriptorSet set = ShaderConnector_CreateSet(0, pool, 4, bindings);
+	DescriptorSet set = ShaderConnector_CreateSet(Global::Context, 0, pool, 4, bindings);
 	struct {
 		glm::mat4 u_Model;
 		glm::mat3 u_NormalModel;
 	} pushblock;
 	pushblock.u_Model = terrain->GetTransform();
 	pushblock.u_NormalModel = glm::mat3(glm::transpose(glm::inverse(pushblock.u_Model)));
-	VkPipelineLayout layout = ShaderConnector_CreatePipelineLayout(1, &set, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock)} });
+	VkPipelineLayout layout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &set, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushblock)} });
 
 	ShaderTypes::GlobalData* data = (ShaderTypes::GlobalData*)Buffer2_Map(set.GetBuffer2(1));
 	memset(data, 0, sizeof(ShaderTypes::GlobalData));
@@ -129,7 +129,7 @@ ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> 
 
 	vkDestroyPipelineLayout(Global::Context->defaultDevice, layout, nullptr);
 	vkDestroyDescriptorPool(Global::Context->defaultDevice, pool, nullptr);
-	ShaderConnector_DestroySet(set);
+	ShaderConnector_DestroySet(Global::Context->defaultDevice, set);
 	PipelineState_Destroy(state);
 
 	terrain->SetTransform(transform);
@@ -142,7 +142,7 @@ ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> 
 	tspec.m_Samples = TextureSamples::MSAA_1;
 	tspec.m_Format = VK_FORMAT_R8G8B8A8_UNORM;
 	tspec.m_GenerateMipMapLevels = false;
-	ITexture2 minimap = Texture2_Create(tspec);
+	ITexture2 minimap = Texture2_Create(Global::Context, tspec);
 	Texture2_UploadPixels(minimap, pixelBuffer, sizeof(int)* fbo.m_width* fbo.m_height);
 	free(pixelBuffer);
 	return minimap;

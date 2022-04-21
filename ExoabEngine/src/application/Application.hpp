@@ -1,5 +1,5 @@
 #pragma once
-#include <Graphics.hpp>
+#include <graphics/Graphics.hpp>
 #include "Layer.hpp"
 #include "UI.hpp"
 #include "Camera.hpp"
@@ -19,9 +19,9 @@
 #include "pass/postprocess/GameUI.hpp"
 #include "perlin_noise.hpp"
 #include "../audio/Audio.hpp"
-#include "../assets/geometry.cfg"
-#include <stb/stb_image.h>
-#include <stb/stb_image_write.h>
+#include "assets/geometry.cfg"
+#include <stb_image.h>
+#include <stb_image_write.h>
 #include "Globals.hpp"
 #include "OpenSaveDialog.hpp"
 #include "StringUtils.hpp"

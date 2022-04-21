@@ -1,6 +1,6 @@
 #include "ShadowPass.hpp"
 #include <backend/VkGraphicsCard.hpp>
-#include "../../window/PlatformWindow.hpp"
+#include "window/PlatformWindow.hpp"
 #include <shaders/Shader.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/glm.hpp>
@@ -87,8 +87,8 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	vk::Framebuffer_TransistionAttachment(cmd.cmd, &depthAtachment, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(cmd);
 
-	Shader vertex = Shader("assets/shaders/shadow/shadow.vert");
-	Shader fragment = Shader("assets/shaders/shadow/shadow.frag");
+	Shader vertex = Shader(Global::Context, "assets/shaders/shadow/shadow.vert");
+	Shader fragment = Shader(Global::Context, "assets/shaders/shadow/shadow.frag");
 
 	BindingDescription bindings[4]{};
 	bindings[0].mBindingID = 0;
@@ -141,8 +141,8 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	ShaderConnector_CalculateDescriptorPool(4, bindings, poolSize);
 	ShaderConnector_CalculateDescriptorPool(2, shadowTBindings, poolSize);
 	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2, poolSize);
-	mSet = ShaderConnector_CreateSet(0, mPool, 4, bindings);
-	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {});
+	mSet = ShaderConnector_CreateSet(Global::Context, 0, mPool, 4, bindings);
+	mLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &mSet, {});
 
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec;
@@ -157,11 +157,11 @@ Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Ter
 	spec.m_FarField = 1.0f;
 	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment);
 
-	Shader shadowT = Shader("assets/shaders/shadow/shadowT.vert");
+	Shader shadowT = Shader(Global::Context, "assets/shaders/shadow/shadowT.vert");
 	shadowTBindings[1].mBuffer = mSet.GetBuffer2(3);
 	shadowTBindings[1].mSharedResources = true;
-	mTerrainSet = ShaderConnector_CreateSet(0, mPool, 2, shadowTBindings);
-	mTerrainLayout = ShaderConnector_CreatePipelineLayout(1, &mTerrainSet, {});
+	mTerrainSet = ShaderConnector_CreateSet(Global::Context, 0, mPool, 2, shadowTBindings);
+	mTerrainLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &mTerrainSet, {});
 
 	spec.m_CullMode = CullMode::CULL_BACK;
 	mTerrainState = PipelineState_Create(Global::Context, spec, input, mFBO, mTerrainLayout, &shadowT, &fragment);
@@ -177,8 +177,8 @@ Application::ShadowPass::~ShadowPass() {
 	mFBO.DestroyAllBoundAttachments();
 	PipelineState_Destroy(mState);
 	PipelineState_Destroy(mTerrainState);
-	ShaderConnector_DestroySet(mSet);
-	ShaderConnector_DestroySet(mTerrainSet);
+	ShaderConnector_DestroySet(Global::Context->defaultDevice, mSet);
+	ShaderConnector_DestroySet(Global::Context->defaultDevice, mTerrainSet);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipelineLayout(mDevice, mLayout, nullptr);
@@ -186,8 +186,8 @@ Application::ShadowPass::~ShadowPass() {
 }
 
 void Application::ShadowPass::ReloadShaders() {
-	Shader vertex = Shader("assets/shaders/shadow/shadow.vert");
-	Shader fragment = Shader("assets/shaders/shadow/shadow.frag");
+	Shader vertex = Shader(Global::Context, "assets/shaders/shadow/shadow.vert");
+	Shader fragment = Shader(Global::Context, "assets/shaders/shadow/shadow.frag");
 	PipelineVertexInputDescription input;
 	PipelineSpecification spec = mState->m_spec;
 	PipelineState_Destroy(mState);

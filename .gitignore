@@ -2,8 +2,11 @@
 bin/*
 ExoabEngine/external/bin/*
 ExoabEngine/assets/shaders/spirv_cache/spirv_caching_catalog.txt
+ExoabEngine/external/include/*
+ExoabEngine/external/include
 ExoabEngine/*.json
 *.dll
+*.exp
 *.lib
 *.spv
 *.png

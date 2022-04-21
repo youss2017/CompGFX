@@ -1,12 +1,12 @@
 #include "GameUI.hpp"
 #include "Globals.hpp"
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
 Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, ITexture2 minimap) : Pass(Global::Context->defaultDevice, true) {
-	Shader vertex = Shader("assets/shaders/postprocess/ui/ui.vert");
-	Shader fragment = Shader("assets/shaders/postprocess/ui/ui.frag");
+	Shader vertex = Shader(Global::Context, "assets/shaders/postprocess/ui/ui.vert");
+	Shader fragment = Shader(Global::Context, "assets/shaders/postprocess/ui/ui.frag");
 	
-	mCursor = Texture2_CreateFromFile("assets/textures/cursor.png", false);
+	mCursor = Texture2_CreateFromFile(Global::Context, "assets/textures/cursor.png", false);
 
 	BindingDescription bindings[1]{};
 	bindings[0].mBindingID = 0;
@@ -19,9 +19,9 @@ Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, IT
 	std::vector<VkDescriptorPoolSize> poolSizes;
 	ShaderConnector_CalculateDescriptorPool(1, bindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount, poolSizes, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
-	mTextureSets.push_back(ShaderConnector_CreateSet(0, mPool, 1, bindings));
+	mTextureSets.push_back(ShaderConnector_CreateSet(Global::Context, 0, mPool, 1, bindings));
 
-	mLayout = ShaderConnector_CreatePipelineLayout(1, &mTextureSets[0], {{VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::vec3)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 16, 8}});
+	mLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &mTextureSets[0], {{VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::vec3)}, {VK_SHADER_STAGE_FRAGMENT_BIT, 16, 8}});
 	PipelineSpecification spec;
 	spec.m_CullMode = CullMode::CULL_NONE;
 	spec.m_DepthEnabled = false;
@@ -54,7 +54,7 @@ Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, IT
 	blendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment);
-	mVertices = (UIVertex*)Gmalloc(sizeof(UIVertex) * 6 * 3, BUFFER_TYPE_VERTEX, true);
+	mVertices = (UIVertex*)Gmalloc(Global::Context, sizeof(UIVertex) * 6 * 3, BUFFER_TYPE_VERTEX, true);
 }
 
 Application::GameUI::~GameUI() {
@@ -63,7 +63,7 @@ Application::GameUI::~GameUI() {
 	vkDestroyPipelineLayout(Global::Context->defaultDevice, mLayout, nullptr);
 	Texture2_Destroy(mCursor);
 	for (auto& set : mTextureSets)
-		ShaderConnector_DestroySet(set);
+		ShaderConnector_DestroySet(Global::Context->defaultDevice, set);
 	vkDestroyDescriptorPool(Global::Context->defaultDevice, mPool, nullptr);
 	PipelineState_Destroy(mState);
 }
@@ -109,8 +109,8 @@ void Application::GameUI::SetCursorPosition(const Ph::Ray& ray) {
 }
 
 void Application::GameUI::ReloadShaders() {
-	Shader vertex = Shader("assets/shaders/postprocess/ui/ui.vert");
-	Shader fragment = Shader("assets/shaders/postprocess/ui/ui.frag");
+	Shader vertex = Shader(Global::Context, "assets/shaders/postprocess/ui/ui.vert");
+	Shader fragment = Shader(Global::Context, "assets/shaders/postprocess/ui/ui.frag");
 	PipelineSpecification spec = mState->m_spec;
 	PipelineVertexInputDescription input;
 	input.AddInputElement("inPosition", 0, 0, 2, true, false, false);
@@ -148,7 +148,7 @@ void Application::GameUI::SetMinimap(ITexture2 minimap) {
 	bindings[0].mTextures.push_back(minimap);
 	bindings[0].mSampler = Global::DefaultSampler;
 	vkFreeDescriptorSets(Global::Context->defaultDevice, mPool, 3, &mTextureSets[0].mSets[0]);
-	mTextureSets[0] = ShaderConnector_CreateSet(0, mPool, 1, bindings);
+	mTextureSets[0] = ShaderConnector_CreateSet(Global::Context, 0, mPool, 1, bindings);
 }
 
 void Application::GameUI::RecordCommands(uint32_t FrameIndex) {

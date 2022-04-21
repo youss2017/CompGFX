@@ -9,7 +9,7 @@ layout (location = 0) out vec3 color;
 
 layout (push_constant) uniform pushblock {
 	mat4 u_ProjView;
-	uint64_t u_DebugObjectPtr;
+	uvec2 u_DebugObjectPtr;
 	uint u_DebugInstanceOffset; 
 };
 

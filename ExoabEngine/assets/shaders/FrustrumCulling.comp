@@ -1,6 +1,7 @@
 #version 450
 #include "types.h"
 #extension GL_EXT_debug_printf : disable
+#extension GL_EXT_buffer_reference_uvec2 : require
 
 // TODO: try this https://stackoverflow.com/questions/5348163/checking-for-bounding-box-intersections-collisions-with-a-view-frustum
 

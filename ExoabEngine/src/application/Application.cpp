@@ -1,4 +1,6 @@
 #include "Application.hpp"
+#include <imgui.h>
+#include <imgui_impl_vulkan.h>
 
 #ifdef _DEBUG
 static constexpr bool s_DebugMode = true;
@@ -35,11 +37,6 @@ namespace Application
 		//}
 		//buffer->Play();
 		log_configure(true, true);
-		if (!glfwInit())
-		{
-			log_error("Could not initalize GLFW, are you missing DLLs");
-			return false;
-		}
 		if (!Graphics3D_CheckVulkanSupport())
 		{
 			log_error("Vulkan is not supported, try updating your graphics driver.");
@@ -52,8 +49,33 @@ namespace Application
 		mCamera.ResetCamera();
 		mCamera.SetPosition({ 0, -150, -10 });
 
-		mGfx = Graphics3D_Create(&Global::Configuration, Global::Configuration.WindowTitle.c_str(), s_DebugMode, s_EnableImGui, Global::RenderDOC);
-		Global::Context = ToVKContext(mGfx->m_context);
+		mGfx = Graphics3D_Create(&Global::Configuration, Global::zNear, Global::zFar, Global::Configuration.WindowTitle.c_str(), s_DebugMode, s_EnableImGui, Global::RenderDOC);
+		Global::Context = (mGfx->m_context);
+		Loader_LoadVulkan();
+		Loader_LoadInstance(Global::Context->instance);
+		Loader_LoadDevice(Global::Context->defaultDevice);
+
+		struct ImGUI_LoadFunctions_UserData
+		{
+			VkInstance instance;
+			VkDevice device;
+		};
+		ImGUI_LoadFunctions_UserData ImGui_Load_UserData;
+		ImGui_Load_UserData.instance = Global::Context->instance;
+		ImGui_Load_UserData.device = Global::Context->defaultDevice;
+		ImGui_ImplVulkan_LoadFunctions(
+			[](const char* function_name, void* user_data) throw()->PFN_vkVoidFunction
+			{
+				ImGUI_LoadFunctions_UserData* pUserData = (ImGUI_LoadFunctions_UserData*)user_data;
+				PFN_vkVoidFunction proc = (PFN_vkVoidFunction)vkGetDeviceProcAddr(pUserData->device, function_name);
+				if (!proc)
+					return vkGetInstanceProcAddr(pUserData->instance, function_name);
+				else
+					return proc;
+			},
+			&ImGui_Load_UserData);
+
+		ImGui::SetCurrentContext((ImGuiContext*)Graphics3D_GetCurrentImGuiContext());
 		mSwapchain = mGfx->m_vswapchain;
 		Global::Window = mGfx->m_window;
 		Global::DefaultSampler = vk::Gfx_CreateSampler(Global::Context);
@@ -102,8 +124,8 @@ namespace Application
 		IEntity cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
 		cube->m_geometryID = ENTITY_GEOMETRY_CUBE;
 		cube->mInstanceCount = mInstanceCount;
-		cube->mInstanceBuffer = Gbuffer(Gmalloc(instanceSize, BufferType::BUFFER_TYPE_STORAGE, false));
-		cube->mCulledInstanceBuffer = Buffer2_Create(BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
+		cube->mInstanceBuffer = Gbuffer(Gmalloc(Global::Context, instanceSize, BufferType::BUFFER_TYPE_STORAGE, false));
+		cube->mCulledInstanceBuffer = Buffer2_Create(Global::Context, BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
 		
 		mEngine = new Ph::PhysicsEngine(50, glm::vec3(0.1, 9.8, 0.0));
 		testObj = new Ph::DynamicObject(Ph::Orientation::Init(glm::vec3(0.0, -150, 0.0), glm::vec3(0.0), { Global::Geomtry[0].box_min, Global::Geomtry[0].box_max }), 50000, glm::vec3(0.0));
@@ -128,7 +150,7 @@ namespace Application
 		CreateTerrain();
 		mImGuiSampler = vk::Gfx_CreateSampler(Global::Context);
 		UI::UpdateNoiseMap(mNoiseMapTexture, mNoiseMapTexture1, mNoiseMapTexture2, mImGuiSampler);
-
+		
 		UI::LightPosition = glm::vec3(0.0f, 25.0f, 2.5f);
 
 		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera, 1024);
@@ -603,9 +625,9 @@ namespace Application
 			specifcation.mTextureSwizzling.r = VK_COMPONENT_SWIZZLE_R;
 			specifcation.mTextureSwizzling.g = VK_COMPONENT_SWIZZLE_R;
 			specifcation.mTextureSwizzling.b = VK_COMPONENT_SWIZZLE_R;
-			mNoiseMapTexture = Texture2_Create(specifcation);
-			mNoiseMapTexture1 = Texture2_Create(specifcation);
-			mNoiseMapTexture2 = Texture2_Create(specifcation);
+			mNoiseMapTexture = Texture2_Create (Global::Context, specifcation);
+			mNoiseMapTexture1 = Texture2_Create(Global::Context, specifcation);
+			mNoiseMapTexture2 = Texture2_Create(Global::Context, specifcation);
 		}
 		if (UI::ActiveNoiseMap == 0 || !(mT0)) {
 			Texture2_UploadPixels(mNoiseMapTexture, perlinBuffer.data(), perlinBuffer.size() * sizeof(float));

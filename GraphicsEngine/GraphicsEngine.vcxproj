@@ -1,0 +1,243 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{575154ce-dfef-4ee3-a301-3617cf259cb1}</ProjectGuid>
+    <RootNamespace>GraphicsEngine</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)vendor\bin\debug\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)vendor\bin\release\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>BUILD_GRAPHICS_DLL;_CRT_SECURE_NO_WARNINGS;VK_NO_PROTOTYPES;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include\;$(ProjectDir);$(ProjectDir)core\;$(ProjectDir)utils\;$(SolutionDir)vendor\imgui\;$(SolutionDir)vendor\imgui\backends;$(SolutionDir)vendor\glfw\include\;$(SolutionDir)vendor\glm\;$(SolutionDir)vendor\stb\;$(SolutionDir)vendor\VulkanMemoryAllocator\include\</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4267;4244;</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)ExoabEngine\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>spirv-cross-cored.lib;spirv-cross-cppd.lib;spirv-cross-glsld.lib;shaderc_shared.lib;glfw3dll.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>BUILD_GRAPHICS_DLL;_CRT_SECURE_NO_WARNINGS;VK_NO_PROTOTYPES;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include\;$(ProjectDir);$(ProjectDir)core\;$(ProjectDir)utils\;$(SolutionDir)vendor\imgui\;$(SolutionDir)vendor\imgui\backends;$(SolutionDir)vendor\glfw\include\;$(SolutionDir)vendor\glm\;$(SolutionDir)vendor\stb\;$(SolutionDir)vendor\VulkanMemoryAllocator\include\</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4267;4244;</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)ExoabEngine\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>spirv-cross-core.lib;spirv-cross-cpp.lib;spirv-cross-glsl.lib;shaderc_shared.lib;glfw3dll.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\vendor\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\vendor\imgui\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\vendor\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\vendor\VulkanMemoryAllocator\src\VmaUsage.cpp" />
+    <ClCompile Include="core\backend\GraphicsCardFeatureValidation.cpp" />
+    <ClCompile Include="core\backend\GUI.cpp" />
+    <ClCompile Include="core\backend\Swapchain.cpp" />
+    <ClCompile Include="core\backend\VkGraphicsCard.cpp" />
+    <ClCompile Include="core\backend\VulkanLoader.c" />
+    <ClCompile Include="core\Entry.cpp" />
+    <ClCompile Include="core\memory\Buffer2.cpp" />
+    <ClCompile Include="core\memory\CubeMap.cpp" />
+    <ClCompile Include="core\memory\Texture2.cpp" />
+    <ClCompile Include="core\memory\vulkan_memory_allocator.cpp" />
+    <ClCompile Include="core\pipeline\Framebuffer.cpp" />
+    <ClCompile Include="core\pipeline\Pipeline.cpp" />
+    <ClCompile Include="core\pipeline\PipelineCS.cpp" />
+    <ClCompile Include="core\shaders\Shader.cpp" />
+    <ClCompile Include="core\shaders\ShaderConnector.cpp" />
+    <ClCompile Include="core\shaders\ShaderReflection.cpp" />
+    <ClCompile Include="core\stb.cpp" />
+    <ClCompile Include="graphics\Graphics.cpp" />
+    <ClCompile Include="utils\commonn.cpp" />
+    <ClCompile Include="utils\Logger.cpp" />
+    <ClCompile Include="utils\MBox.cpp" />
+    <ClCompile Include="utils\OpenSaveDialog.cpp" />
+    <ClCompile Include="utils\perlin_noise.cpp" />
+    <ClCompile Include="utils\Profiling.cpp" />
+    <ClCompile Include="utils\StringUtils.cpp" />
+    <ClCompile Include="window\PlatformWindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\vendor\imgui\backends\imgui_impl_glfw.h" />
+    <ClInclude Include="..\vendor\imgui\backends\imgui_impl_vulkan.h" />
+    <ClInclude Include="..\vendor\imgui\imconfig.h" />
+    <ClInclude Include="..\vendor\imgui\imgui.h" />
+    <ClInclude Include="..\vendor\imgui\imgui_internal.h" />
+    <ClInclude Include="..\vendor\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\vendor\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\vendor\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\vendor\VulkanMemoryAllocator\src\VmaUsage.h" />
+    <ClInclude Include="core\backend\backend_base.h" />
+    <ClInclude Include="core\backend\GUI.h" />
+    <ClInclude Include="core\backend\Swapchain.hpp" />
+    <ClInclude Include="core\backend\VkGraphicsCard.hpp" />
+    <ClInclude Include="core\backend\VulkanLoader.h" />
+    <ClInclude Include="core\backend\Command.hpp" />
+    <ClInclude Include="core\EngineBase.h" />
+    <ClInclude Include="core\Entry.hpp" />
+    <ClInclude Include="core\memory\Buffer2.hpp" />
+    <ClInclude Include="core\memory\CubeMap.hpp" />
+    <ClInclude Include="core\memory\cvector.h" />
+    <ClInclude Include="core\memory\Texture2.hpp" />
+    <ClInclude Include="core\memory\vulkan_memory_allocator.hpp" />
+    <ClInclude Include="core\pipeline\Framebuffer.hpp" />
+    <ClInclude Include="core\pipeline\Pipeline.hpp" />
+    <ClInclude Include="core\pipeline\PipelineCS.hpp" />
+    <ClInclude Include="core\shaders\Shader.hpp" />
+    <ClInclude Include="core\shaders\ShaderConnector.hpp" />
+    <ClInclude Include="core\shaders\ShaderReflection.hpp" />
+    <ClInclude Include="graphics\Graphics.hpp" />
+    <ClInclude Include="utils\atomic.h" />
+    <ClInclude Include="utils\common.hpp" />
+    <ClInclude Include="utils\defines.h" />
+    <ClInclude Include="utils\Logger.hpp" />
+    <ClInclude Include="utils\MBox.hpp" />
+    <ClInclude Include="utils\OpenSaveDialog.hpp" />
+    <ClInclude Include="utils\perlin_noise.hpp" />
+    <ClInclude Include="utils\Profiling.hpp" />
+    <ClInclude Include="utils\StringUtils.hpp" />
+    <ClInclude Include="VulkanMemoryAllocator\include\vk_mem_alloc.h" />
+    <ClInclude Include="VulkanMemoryAllocator\src\Common.h" />
+    <ClInclude Include="VulkanMemoryAllocator\src\VmaUsage.h" />
+    <ClInclude Include="window\Event.hpp" />
+    <ClInclude Include="window\NMB.h" />
+    <ClInclude Include="window\PlatformWindow.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="utils\common.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -11,7 +11,7 @@
 namespace UI
 {
 	static ImFont* s_Font0; // CascadiaCode
-    static GraphicsContext s_Context;
+    static vk::VkContext s_Context;
     static Graphics3D* s_Gfx;
 
     extern bool StateChanged = false;
@@ -55,8 +55,8 @@ namespace UI
 
 void UI::Initalize(void* _context, void* _gfx)
 {
-	vk::VkContext context = ToVKContext(_context);
-    s_Context = _context;
+	vk::VkContext context = (vk::VkContext)(_context);
+    s_Context = context;
     s_Gfx = (Graphics3D*)_gfx;
 }
 

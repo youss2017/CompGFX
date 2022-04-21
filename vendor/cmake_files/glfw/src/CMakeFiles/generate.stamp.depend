@@ -1,0 +1,4 @@
+# CMake generation dependency list for this directory.
+D:/GFX Apis/ExoabEngine/vendor/glfw/CMake/glfw3.pc.in
+D:/GFX Apis/ExoabEngine/vendor/glfw/src/CMakeLists.txt
+D:/GFX Apis/ExoabEngine/vendor/glfw/src/glfw.rc.in

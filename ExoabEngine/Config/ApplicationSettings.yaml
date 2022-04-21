@@ -1,6 +1,0 @@
-ApplicationSettings:
-  Scripting:
-    DebuggerListenPort: 2550
-  ContentBrowser:
-    ShowAssetTypes: true
-    ThumbnailSize: 128

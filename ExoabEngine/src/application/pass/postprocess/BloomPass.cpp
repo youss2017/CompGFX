@@ -37,8 +37,8 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	spec.m_CreatePerFrame = true;
 	spec.m_LazilyAllocate = false;
 	spec.mCreateViewPerMip = true;
-	mBlurTexture = Texture2_Create(spec);
-	Shader bloomShader = Shader("assets/shaders/postprocess/bloom/bloom.comp");
+	mBlurTexture = Texture2_Create(Global::Context, spec);
+	Shader bloomShader = Shader(Global::Context, "assets/shaders/postprocess/bloom/bloom.comp");
 	bloomShader.SetSpecializationConstant<int>(0, 1);
 
 	mSampler = vk::Gfx_CreateSampler(Global::Context,
@@ -94,14 +94,14 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 	ShaderConnector_CalculateDescriptorPool(2, combineBindings, poolSizes);
 	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, gFrameOverlapCount * 2, poolSizes);
 
-	mSet = ShaderConnector_CreateSet(0, mPool, 3, bloomDescription);
-	mLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, {{ VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock) }} );
-	mPipeline = PipelineState_CreateCompute(&bloomShader, mLayout, 0);
+	mSet = ShaderConnector_CreateSet(Global::Context, 0, mPool, 3, bloomDescription);
+	mLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &mSet, {{ VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock) }} );
+	mPipeline = PipelineState_CreateCompute(Global::Context, &bloomShader, mLayout, 0);
 
-	Shader combineShader = Shader("assets/shaders/postprocess/bloom/combine.comp");
-	mCombineSet = ShaderConnector_CreateSet(0, mPool, 2, combineBindings);
-	mCombineLayout = ShaderConnector_CreatePipelineLayout(1, &mCombineSet, {});
-	mCombinePipeline = PipelineState_CreateCompute(&combineShader, mCombineLayout, 0);
+	Shader combineShader = Shader(Global::Context, "assets/shaders/postprocess/bloom/combine.comp");
+	mCombineSet = ShaderConnector_CreateSet(Global::Context, 0, mPool, 2, combineBindings);
+	mCombineLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &mCombineSet, {});
+	mCombinePipeline = PipelineState_CreateCompute(Global::Context, &combineShader, mCombineLayout, 0);
 
 	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 
@@ -117,8 +117,8 @@ Application::BloomPass::BloomPass(Framebuffer& fbo, int colorAttachmentIndex, fl
 Application::BloomPass::~BloomPass() {
 	Super_Pass_Destroy();
 	Texture2_Destroy(mBlurTexture);
-	ShaderConnector_DestroySet(mSet);
-	ShaderConnector_DestroySet(mCombineSet);
+	ShaderConnector_DestroySet(Global::Context->defaultDevice, mSet);
+	ShaderConnector_DestroySet(Global::Context->defaultDevice, mCombineSet);
 	vkDestroySampler(mDevice, mSampler, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
 	vkDestroyPipeline(Global::Context->defaultDevice, mPipeline, nullptr);
@@ -129,13 +129,13 @@ Application::BloomPass::~BloomPass() {
 }
 
 void Application::BloomPass::ReloadShaders() {
-	Shader bloomShader = Shader("assets/shaders/postprocess/bloom/bloom.comp");
+	Shader bloomShader = Shader(Global::Context, "assets/shaders/postprocess/bloom/bloom.comp");
 	bloomShader.SetSpecializationConstant<int>(0, true);
 	vkDestroyPipeline(Global::Context->defaultDevice, mPipeline, nullptr);
-	mPipeline = PipelineState_CreateCompute(&bloomShader, mLayout, 0);
-	Shader combineShader = Shader("assets/shaders/postprocess/bloom/combine.comp");
+	mPipeline = PipelineState_CreateCompute(Global::Context, &bloomShader, mLayout, 0);
+	Shader combineShader = Shader(Global::Context, "assets/shaders/postprocess/bloom/combine.comp");
 	vkDestroyPipeline(Global::Context->defaultDevice, mCombinePipeline, nullptr);
-	mCombinePipeline = PipelineState_CreateCompute(&combineShader, mCombineLayout, 0);
+	mCombinePipeline = PipelineState_CreateCompute(Global::Context, &combineShader, mCombineLayout, 0);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}

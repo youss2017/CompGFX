@@ -31,8 +31,8 @@ struct GeometryData
 {
 	vec3 bounding_sphere_center;
 	float bounding_sphere_radius;
-    uint64_t mInstancePtr;
-    uint64_t mCulledInstancePtr;
+    uvec2 mInstancePtr;
+    uvec2 mCulledInstancePtr;
 };
 
 struct DrawData

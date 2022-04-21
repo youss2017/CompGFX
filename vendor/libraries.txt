@@ -1,0 +1,8 @@
+glfw
+glm
+vma
+stb
+imgui
+meshoptimizer
+zip
+assimp

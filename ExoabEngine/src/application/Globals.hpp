@@ -1,7 +1,7 @@
 #pragma once
 #include <backend/VkGraphicsCard.hpp>
 #include <../window/PlatformWindow.hpp>
-#include <Graphics.hpp>
+#include <graphics/Graphics.hpp>
 #include <glm/mat4x4.hpp>
 #include "../mesh/geometry.hpp"
 
