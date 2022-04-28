@@ -117,7 +117,7 @@ void _Internal_WindowMouseMove(GLFWwindow* window, double xpos, double ypos) {
     }
 }
 
-PlatformWindow::PlatformWindow(std::string title, int width, int height)
+GRAPHICS_API PlatformWindow::PlatformWindow(std::string title, int width, int height)
     : m_width(width), m_height(height)
 {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -137,29 +137,29 @@ PlatformWindow::PlatformWindow(std::string title, int width, int height)
     s_Internal_Windows[m_window] = this;
 }
 
-PlatformWindow::~PlatformWindow()
+GRAPHICS_API PlatformWindow::~PlatformWindow()
 {
     s_Internal_Windows.erase(m_window);
     glfwDestroyWindow(m_window);
 }
 
-void PlatformWindow::Poll()
+GRAPHICS_API void PlatformWindow::Poll()
 {
     glfwPollEvents();
 }
 
-bool PlatformWindow::ShouldClose()
+GRAPHICS_API bool PlatformWindow::ShouldClose()
 {
     return glfwWindowShouldClose(m_window);
 }
 
-bool PlatformWindow::IsWindowMinimized()
+GRAPHICS_API bool PlatformWindow::IsWindowMinimized()
 {
     int w, h;
     glfwGetWindowSize(m_window, &w, &h);
     return !(w && h);
 }
 
-void PlatformWindow::RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func) {
+GRAPHICS_API void PlatformWindow::RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func) {
     mCallbacks.push_back(std::make_pair(events, func));
 }

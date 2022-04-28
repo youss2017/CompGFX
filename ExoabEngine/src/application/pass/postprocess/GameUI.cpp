@@ -1,6 +1,6 @@
 #include "GameUI.hpp"
 #include "Globals.hpp"
-#include <stb_image.h>
+#include <stb/stb_image.h>
 
 Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, ITexture2 minimap) : Pass(Global::Context->defaultDevice, true) {
 	Shader vertex = Shader(Global::Context, "assets/shaders/postprocess/ui/ui.vert");
@@ -156,7 +156,7 @@ void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
 	VkCommandBuffer cmd = *mCmd;
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "[PostProcess] Game UI", 0.0, 0.0, 1.0);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "[PostProcess] Game UI", 0.0, 0.0, 1.0);
 
 
 	VkRenderingInfo renderingInfo{VK_STRUCTURE_TYPE_RENDERING_INFO};

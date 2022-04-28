@@ -15,7 +15,7 @@ ShaderReflection::ShaderReflection(Shader *shader)
     spirv_cross::ShaderResources resources;
     spirv_cross::Compiler *compiler = nullptr;
     spirv_cross::Compiler setID_compiler = spirv_cross::Compiler(shader->GetBytecode(), shader->GetWordCount());
-    if (shader->m_ApiType == 0)
+    if (shader->GetByteSize() > 0)
     {
         compiler = new spirv_cross::Compiler(shader->GetBytecode(), shader->GetWordCount());
         resources = compiler->get_shader_resources();
@@ -38,7 +38,7 @@ ShaderReflection::ShaderReflection(Shader *shader)
         for (size_t i = 0; i < resources.stage_inputs.size(); i++)
         {
             auto input = resources.stage_inputs[i];
-            auto type = compiler->get_type(input.base_type_id);
+            spirv_cross::SPIRType type = compiler->get_type(input.base_type_id);
             VertexAttribute attribute;
             attribute.m_name = input.name;
             attribute.m_type = type.basetype;
@@ -153,7 +153,7 @@ ShaderReflection::ShaderReflection(Shader *shader)
     for (uint32_t i = 0; i < resources.storage_buffers.size(); i++)
     {
         auto& ssbo = resources.storage_buffers[i];
-        auto type = compiler->get_type(ssbo.type_id);
+        spirv_cross::SPIRType type = compiler->get_type(ssbo.type_id);
         uint32_t size = compiler->get_declared_struct_size(type);
         uint32_t member_count = type.member_types.size();
         uint32_t set = setID_compiler.get_decoration(ssbo.id, spv::DecorationDescriptorSet);

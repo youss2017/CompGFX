@@ -137,22 +137,22 @@
 
 struct GLFWwindow;
 
-class GRAPHICS_API PlatformWindow {
+class PlatformWindow {
 
 public:
-	 PlatformWindow(std::string title, int width, int height);
-	~PlatformWindow();
+	GRAPHICS_API PlatformWindow(std::string title, int width, int height);
+	GRAPHICS_API ~PlatformWindow();
 
-	static void Poll();
+	GRAPHICS_API static void Poll();
 	
-	inline GLFWwindow* GetWindow() { return m_window; }
-	bool ShouldClose();
-	inline int GetWidth() { return m_width; }
-	inline int GetHeight() { return m_height; }
-	inline bool IsWindowFocus() { return m_focus; }
-	bool IsWindowMinimized();
+	GRAPHICS_API inline GLFWwindow* GetWindow() { return m_window; }
+	GRAPHICS_API bool ShouldClose();
+	GRAPHICS_API inline int GetWidth() { return m_width; }
+	GRAPHICS_API inline int GetHeight() { return m_height; }
+	GRAPHICS_API inline bool IsWindowFocus() { return m_focus; }
+	GRAPHICS_API bool IsWindowMinimized();
 
-	void RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func);
+	GRAPHICS_API void RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func);
 
 	int m_width, m_height;
 private:

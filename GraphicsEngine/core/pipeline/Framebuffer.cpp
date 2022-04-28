@@ -99,14 +99,37 @@ namespace vk {
 		Framebuffer_TransistionImage(cmd, attachment->GetAttachment(), aspect, frameIndex, dstAccess, newLayout, oldLayout, srcAccess, srcStage, dstStage);
 	}
 
-	void GRAPHICS_API Gfx_InsertDebugLabel(VkCommandBuffer cmd, int FrameIndex, const std::string& debugLabelText, float r, float g, float b) {
+	void GRAPHICS_API Gfx_InsertDebugLabel(VkDevice device, VkCommandBuffer cmd, int FrameIndex, const std::string& debugLabelText, float r, float g, float b) {
 #if defined(_DEBUG)
 		std::string labelName = "[" + std::to_string(FrameIndex) + "]" + debugLabelText;
 		VkDebugUtilsLabelEXT debugLabel{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
 		debugLabel.pLabelName = labelName.c_str();
 		float debugColor[4] = { r, g, b, 1.0 };
 		memcpy(&debugLabel.color[0], &debugColor[0], sizeof(float) * 4);
+#ifndef VK_NO_PROTOTYPES
+		static PFN_vkCmdBeginDebugUtilsLabelEXT beginUtilsLabelEXT = nullptr;
+		if (!beginUtilsLabelEXT) {
+			beginUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
+		}
+		beginUtilsLabelEXT(cmd, &debugLabel);
+#else
 		DvkCmdBeginDebugUtilsLabelEXT(cmd, &debugLabel);
+#endif
+#endif
+	}
+
+	void GRAPHICS_API Gfx_EndDebugLabel(VkDevice device, VkCommandBuffer cmd)
+	{
+#if defined(_DEBUG)
+#ifndef VK_NO_PROTOTYPES
+		static PFN_vkCmdEndDebugUtilsLabelEXT endUtilsLabelEXT = nullptr;
+		if (!endUtilsLabelEXT) {
+			endUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
+		}
+		endUtilsLabelEXT(cmd);
+#else
+		DvkCmdEndDebugUtilsLabelEXT(cmd);
+#endif
 #endif
 	}
 

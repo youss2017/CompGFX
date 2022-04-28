@@ -20,28 +20,12 @@ to prevent the application form enabling that feature, this will allow RenderDOC
 <h1>Build Instructions</h1>
 <p>
 <ol>
+	<li>Install CMake, Python</li>
 	<li>git clone --recursive https://github.com/youss2017/ExoabEngine</li>
 	<li>Go to ExoabEngine/ExoabEngine/external/</li>
+	<li>Move all dependices (dll, lib) to bin/dep for the following items.</li>
 	<li>Compiling Assimp</li>
-	<ul>
-			<li>Open CMake-GUI, To compile assimp set output dir to cmake_files/assimp and check BUILD_SHARED_LIBS</li>
-			<li>Open Project and set the following configurations</li>
-			<li><b>Select Release Mode</b></li>
-			<li>assimp-->properties-->General set "OutputDirectory" to $(ProjectDir)..\..\..\bin\</li>
-			<li>assimp-->properties-->linker-->All Options set "Import Library" to $(ProjectDir)..\..\..\bin\assimp-vc143-mt.lib</li>
-			<li>assimp-->properties-->linker-->All Options set "Generate Program Database File" to $(ProjectDir)..\..\..\bin\assimp-vc143-mt.pdb</li>
-		<li>Compile "ALL_BUILD" in release mode.</li>
-	</ul>
 	<li>Compiling GLFW</li>
-	<ul>
-		<li>Open CMake-GUI, To compile assimp set output dir to cmake_files/glfw and <b>***UNCHECK***</b> GLFW_BUILD_DOCS, GLFW_BUILD_EXAMPLES, GLFW_BUILD_TESTS. <b>***CHECK***</b>BUILD_SHARED_LIBS</li>
-		<li>Open Project set the following configurations</li>
-		<li><b>Select Release Mode</b></li>
-		<li>glfw-->properties-->General set "OutputDirectory" to $(ProjectDir)..\..\..\bin\</li>
-		<li>glfw-->properties-->linker-->All Options set "Import Library" to $(ProjectDir)..\..\..\bin\glfw3dll.lib</li>
-		<li>glfw-->properties-->linker-->All Options set "Generate Program Database File" to $(ProjectDir)..\..\..\bin\glfw3.pdb</li>
-		<li>Compile "ALL_BUILD" in release mode.</li>
-	</ul>
 </ol>
 </p>
 </body>

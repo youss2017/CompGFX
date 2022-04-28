@@ -9,6 +9,7 @@
 #include <alloca.h>
 #endif
 #include "VulkanLoader.h"
+#pragma comment(lib, "vulkan-1.lib")
 
 constexpr bool ShowVulkanExtensions = false;
 constexpr bool ShowVulkanLayers = false;
@@ -60,10 +61,10 @@ namespace vk
 
 	static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
 	{
-		vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-		if (vkCreateDebugUtilsMessengerEXT != nullptr)
+		PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+		if (func != nullptr)
 		{
-			return vkCreateDebugUtilsMessengerEXT(instance, pCreateInfo, pAllocator, pDebugMessenger);
+			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
 		}
 		else
 		{

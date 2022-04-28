@@ -2,7 +2,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "window/PlatformWindow.hpp"
 #include "perlin_noise.hpp"
-#include <stb_image_write.h>
+#include <stb/stb_image_write.h>
 #include "../Globals.hpp"
 #include "../minimap.hpp"
 
@@ -390,7 +390,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	mCmdPool->Reset(FrameIndex);
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Geometry Pass", 0.0, 1.0);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "Geometry Pass", 0.0, 1.0);
 
 	vkCmdResetQueryPool(cmd, mQuery, FrameIndex * 2, 2);
 	vkCmdResetQueryPool(cmd, mInvocationQuery, FrameIndex, 1);

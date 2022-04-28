@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{575154ce-dfef-4ee3-a301-3617cf259cb1}</ProjectGuid>
-    <RootNamespace>GraphicsEngine</RootNamespace>
+    <ProjectGuid>{ef3a0271-9428-4948-a6f1-1798ce4cc591}</ProjectGuid>
+    <RootNamespace>Audio</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -82,7 +82,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)vendor\bin\release\</OutDir>
+    <OutDir>$(SolutionDir)bin\dep\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -116,19 +116,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>VK_NO_PROTOTYPES;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include\;$(ProjectDir);$(ProjectDir)core\;$(ProjectDir)utils\;$(ProjectDir)include\glfw\include\;$(ProjectDir)include\glm\;$(ProjectDir)include\imgui\;$(ProjectDir)include\stb\;$(ProjectDir)include\VulkanMemoryAllocator\include\</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4267;4244;</DisableSpecificWarnings>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/D SOLUTION_DIR=R"($(SolutionDir))" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(projectdir)bin\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>spirv-cross-cored.lib;spirv-cross-cppd.lib;spirv-cross-glsld.lib;shaderc_shared.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,98 +130,22 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>VK_NO_PROTOTYPES;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include\;$(ProjectDir);$(ProjectDir)core\;$(ProjectDir)utils\;$(ProjectDir)include\glfw\include\;$(ProjectDir)include\glm\;$(ProjectDir)include\imgui\;$(ProjectDir)include\stb\;$(ProjectDir)include\VulkanMemoryAllocator\include\</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4267;4244;</DisableSpecificWarnings>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(projectdir)bin\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>spirv-cross-core.lib;spirv-cross-cpp.lib;spirv-cross-glsl.lib;shaderc_shared.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="core\backend\GraphicsCardFeatureValidation.cpp" />
-    <ClCompile Include="core\backend\GUI.cpp" />
-    <ClCompile Include="core\backend\Swapchain.cpp" />
-    <ClCompile Include="core\backend\VkGraphicsCard.cpp" />
-    <ClCompile Include="core\backend\VulkanLoader.c" />
-    <ClCompile Include="core\Entry.cpp" />
-    <ClCompile Include="core\memory\Buffer2.cpp" />
-    <ClCompile Include="core\memory\CubeMap.cpp" />
-    <ClCompile Include="core\memory\Texture2.cpp" />
-    <ClCompile Include="core\memory\vulkan_memory_allocator.cpp" />
-    <ClCompile Include="core\pipeline\Framebuffer.cpp" />
-    <ClCompile Include="core\pipeline\Pipeline.cpp" />
-    <ClCompile Include="core\pipeline\PipelineCS.cpp" />
-    <ClCompile Include="core\shaders\Shader.cpp" />
-    <ClCompile Include="core\shaders\ShaderConnector.cpp" />
-    <ClCompile Include="core\shaders\ShaderReflection.cpp" />
-    <ClCompile Include="core\stb.cpp" />
-    <ClCompile Include="graphics\Graphics.cpp" />
-    <ClCompile Include="include\imgui\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="include\imgui\backends\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="include\imgui\imgui.cpp" />
-    <ClCompile Include="include\imgui\imgui_demo.cpp" />
-    <ClCompile Include="include\imgui\imgui_draw.cpp" />
-    <ClCompile Include="include\imgui\imgui_tables.cpp" />
-    <ClCompile Include="include\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="include\VulkanMemoryAllocator\src\Common.cpp" />
-    <ClCompile Include="include\VulkanMemoryAllocator\src\VmaUsage.cpp" />
-    <ClCompile Include="utils\commonn.cpp" />
-    <ClCompile Include="utils\Logger.cpp" />
-    <ClCompile Include="utils\MBox.cpp" />
-    <ClCompile Include="utils\OpenSaveDialog.cpp" />
-    <ClCompile Include="utils\perlin_noise.cpp" />
-    <ClCompile Include="utils\Profiling.cpp" />
-    <ClCompile Include="utils\StringUtils.cpp" />
-    <ClCompile Include="window\PlatformWindow.cpp" />
+    <ClCompile Include="audio\Audio.cpp" />
+    <ClCompile Include="audio\Win32Audio.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="core\backend\backend_base.h" />
-    <ClInclude Include="core\backend\GUI.h" />
-    <ClInclude Include="core\backend\Swapchain.hpp" />
-    <ClInclude Include="core\backend\VkGraphicsCard.hpp" />
-    <ClInclude Include="core\backend\VulkanLoader.h" />
-    <ClInclude Include="core\backend\Command.hpp" />
-    <ClInclude Include="core\EngineBase.h" />
-    <ClInclude Include="core\Entry.hpp" />
-    <ClInclude Include="core\memory\Buffer2.hpp" />
-    <ClInclude Include="core\memory\CubeMap.hpp" />
-    <ClInclude Include="core\memory\cvector.h" />
-    <ClInclude Include="core\memory\Texture2.hpp" />
-    <ClInclude Include="core\memory\vulkan_memory_allocator.hpp" />
-    <ClInclude Include="core\pipeline\Framebuffer.hpp" />
-    <ClInclude Include="core\pipeline\Pipeline.hpp" />
-    <ClInclude Include="core\pipeline\PipelineCS.hpp" />
-    <ClInclude Include="core\shaders\Shader.hpp" />
-    <ClInclude Include="core\shaders\ShaderConnector.hpp" />
-    <ClInclude Include="core\shaders\ShaderReflection.hpp" />
-    <ClInclude Include="graphics\Graphics.hpp" />
-    <ClInclude Include="utils\atomic.h" />
-    <ClInclude Include="utils\common.hpp" />
-    <ClInclude Include="utils\defines.h" />
-    <ClInclude Include="utils\Logger.hpp" />
-    <ClInclude Include="utils\MBox.hpp" />
-    <ClInclude Include="utils\OpenSaveDialog.hpp" />
-    <ClInclude Include="utils\perlin_noise.hpp" />
-    <ClInclude Include="utils\Profiling.hpp" />
-    <ClInclude Include="utils\StringUtils.hpp" />
-    <ClInclude Include="VulkanMemoryAllocator\include\vk_mem_alloc.h" />
-    <ClInclude Include="VulkanMemoryAllocator\src\Common.h" />
-    <ClInclude Include="VulkanMemoryAllocator\src\VmaUsage.h" />
-    <ClInclude Include="window\Event.hpp" />
-    <ClInclude Include="window\NMB.h" />
-    <ClInclude Include="window\PlatformWindow.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="utils\common.inl" />
+    <ClInclude Include="audio\Audio.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

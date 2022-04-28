@@ -12,7 +12,7 @@ constexpr bool OptimizeShaders = false;
 #else
 constexpr bool OptimizeShaders = true;
 #endif
-constexpr bool PrintGLSLShader = false;
+constexpr bool PrintGLSLShader = true;
 constexpr shaderc_spirv_version SPIRVCompilationLevel = shaderc_spirv_version_1_5;
 
 /* SPIR-V Catalog Format
@@ -32,7 +32,6 @@ static std::string Shader_Internal_GenerateIdentifier()
 GRAPHICS_API Shader::Shader(vk::VkContext context, const char *__ShaderPath, const char *EntryPointFunction)
     : m_EntryPointFunction(EntryPointFunction)
 {
-    m_ApiType = (*(char*)context);
     m_Context = context;
     std::filesystem::path ShaderPath;
     try {
@@ -366,7 +365,7 @@ GRAPHICS_API const std::string& Shader::GetSource()
     return m_Source;
 }
 
-void Shader::CompileVulkanSPIRVText(const char *source_code, const char *filename, shaderc_shader_kind shader_type, uint32_t **pOutCode, uint32_t *pOutSize, const char *EntryPointFunction)
+GRAPHICS_API void Shader::CompileVulkanSPIRVText(const char *source_code, const char *filename, shaderc_shader_kind shader_type, uint32_t **pOutCode, uint32_t *pOutSize, const char *EntryPointFunction)
 {
     assert(pOutCode && pOutSize);
 
@@ -394,7 +393,7 @@ void Shader::CompileVulkanSPIRVText(const char *source_code, const char *filenam
 }
 
 std::string Shader::s_CacheDirectory;
-bool Shader::ConfigureShaderCache(std::string SpirvCahceFolder)
+GRAPHICS_API bool Shader::ConfigureShaderCache(std::string SpirvCahceFolder)
 {
     if (SpirvCahceFolder.size() == 0)
     {

@@ -22,6 +22,13 @@
 #endif
 
 #pragma comment(lib, "GraphicsEngine.lib")
+#pragma comment(lib, "Audio.lib")
+
+/*
+	***********************[WARNING]***********************
+	!!! Make sure DLLs are in the same folder as the executable.
+*/
+#include <string>
 
 void PrepareDLLs()
 {
@@ -31,11 +38,6 @@ void PrepareDLLs()
 	typedef void* (__stdcall AddDLL)(PCWSTR path);
 	AddDLL* addDll = (AddDLL*)GetProcAddress(kernel, "AddDllDirectory");
 	SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-	addDll(L"vendor/bin/");
-#ifdef _DEBUG
-	addDll(L"vendor/bin/debug/");
-#else
-	AddDllDirectory(L"vendor/bin/release/");
-#endif
-
+	addDll(L"D:\\GFX Apis\\ExoabEngine\\bin\\dep\\");
+	int d = 0;
 }

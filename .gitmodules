@@ -1,0 +1,25 @@
+[submodule "GraphicsEngine/include/repos/glfw"]
+	path = GraphicsEngine/include/glfw/
+	url = https://github.com/glfw/glfw
+[submodule "GraphicsEngine/include/stb"]
+	path = GraphicsEngine/include/stb
+	url = https://github.com/nothings/stb
+[submodule "GraphicsEngine/include/glm"]
+	path = GraphicsEngine/include/glm
+	url = https://github.com/g-truc/glm
+[submodule "GraphicsEngine/include/VulkanMemoryAllocator"]
+	path = GraphicsEngine/include/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "ExoabEngine/include/zip"]
+	path = ExoabEngine/include/zip
+	url = https://github.com/kuba--/zip
+[submodule "ExoabEngine/include/meshoptimizer"]
+	path = ExoabEngine/include/meshoptimizer
+	url = https://github.com/zeux/meshoptimizer
+[submodule "ExoabEngine/include/assimp"]
+	path = ExoabEngine/include/assimp
+	url = https://github.com/assimp/assimp
+[submodule "GraphicsEngine/include/imgui"]
+	path = GraphicsEngine/include/imgui
+	url = https://github.com/ocornut/imgui
+	branch = docking

@@ -158,7 +158,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "[PostProcess] Bloom Pass", 1.0);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "[PostProcess] Bloom Pass", 1.0);
 
 	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2));
@@ -171,7 +171,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	const int localSizeY = 16;
 
 	// 1) Filter Pass
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Prefilter", 0.0, 1.0);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "Prefilter", 0.0, 1.0);
 	BloomSettingsPushblock pushblock{};
 	pushblock.Option = BLOOM_FILTER;
 	pushblock.Size = mSourceSize;
@@ -186,7 +186,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 	vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
-	DvkCmdEndDebugUtilsLabelEXT(cmd);
+	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 
 	auto barrier = [FrameIndex, &cmd, this](VkImage image = nullptr) throw() -> void {
 		VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
@@ -206,7 +206,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 	};
 
 	// 2) Downsample Blur
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Downsample Blur", 1.0, 0.0);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "Downsample Blur", 1.0, 0.0);
 	for (uint32_t i = 0; i < mBlurTexture->mMipCount - 1; i++) {
 		barrier();
 		BloomSettingsPushblock pushblock{};
@@ -225,8 +225,8 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	}
-	DvkCmdEndDebugUtilsLabelEXT(cmd);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Upsample", 1.0, 0.0);
+	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "Upsample", 1.0, 0.0);
 	// 3) Upsample
 	for(uint32_t i = 1; i < mBlurTexture->mMipCount - 1; i++) {
 		barrier();
@@ -246,7 +246,7 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BloomSettingsPushblock), &pushblock);
 		vkCmdDispatch(cmd, groupSizeX, groupSizeY, 1);
 	}
-	DvkCmdEndDebugUtilsLabelEXT(cmd);
+	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 
 	// 4) Combine
 #if 0
@@ -258,6 +258,6 @@ void Application::BloomPass::RecordCommands(uint32_t FrameIndex) {
 #endif
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
-	DvkCmdEndDebugUtilsLabelEXT(cmd);
+	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 	vkEndCommandBuffer(cmd);
 }

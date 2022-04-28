@@ -18,10 +18,10 @@
 #include "pass/postprocess/BloomPass.hpp"
 #include "pass/postprocess/GameUI.hpp"
 #include "perlin_noise.hpp"
-#include "../audio/Audio.hpp"
+#include <audio/Audio.hpp>
 #include "assets/geometry.cfg"
-#include <stb_image.h>
-#include <stb_image_write.h>
+#include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
 #include "Globals.hpp"
 #include "OpenSaveDialog.hpp"
 #include "StringUtils.hpp"

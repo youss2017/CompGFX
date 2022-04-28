@@ -9,8 +9,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-	// Loads DLL/SO and Loads VKCreateInstanceStuff
+	// Loads DLL/SO and Loads VKCreateInstance...
 #ifdef VK_NO_PROTOTYPES
 	void Loader_LoadVulkan();
 	void Loader_LoadInstance(VkInstance instance);
@@ -521,6 +520,7 @@ extern "C" {
 }
 #endif
 
+#ifdef VK_NO_PROTOTYPES
 #if defined(_DEBUG)
 // VkDebugUtilsLabelEXT* pLabelInfo
 #define DvkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo) vkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo)
@@ -529,4 +529,5 @@ extern "C" {
 #pragma message("vkCmdBeginDebugUtilsLabelEXT has been disabled since _DEBUG macro is not defined. Check VulkanLoader.h")
 #define DvkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo)
 #define DvkCmdEndDebugUtilsLabelEXT(commandBuffer) 
+#endif
 #endif

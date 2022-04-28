@@ -240,7 +240,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Shadow Pass(Directional)");
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "Shadow Pass(Directional)");
 	
 	vkCmdResetQueryPool(cmd, mQuery, (FrameIndex * 2), 2);
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, mQuery, (FrameIndex * 2));
@@ -306,6 +306,6 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
 	vkCmdEndRenderingKHR(cmd);
-	DvkCmdEndDebugUtilsLabelEXT(cmd);
+	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 	vkEndCommandBuffer(cmd);
 }

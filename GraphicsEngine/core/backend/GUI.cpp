@@ -1,6 +1,7 @@
 #include "GUI.h"
 #include "backend/VkGraphicsCard.hpp"
-#include <imgui_impl_glfw.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_vulkan.h>
 
 static VkDescriptorPool ImGuiPool;
 static VkDevice g_Device;
@@ -55,7 +56,7 @@ void Gui_VKInitalizeImGui(VkInstance Instance, VkAllocationCallbacks *allocation
     ImGui::StyleColorsDark();
     ImGuiIO& io = ImGui::GetIO();
     //ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiBackendFlags_PlatformHasViewports + ImGuiBackendFlags_RendererHasViewports set by the respective backends)
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
+    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
 
     VkQueue queue;
     vkGetDeviceQueue(device, QueueFamilyIndex, 0, &queue);
@@ -119,8 +120,8 @@ void Gui_VKBeginGUIFrame()
 void Gui_VKEndGUIFrame(VkCommandBuffer cmd)
 {
     ImGui::Render();
-    ImGui::UpdatePlatformWindows();
-    ImGui::RenderPlatformWindowsDefault();
+    //ImGui::UpdatePlatformWindows();
+    //ImGui::RenderPlatformWindowsDefault();
     auto draw_data = ImGui::GetDrawData();
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 }

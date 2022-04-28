@@ -1,12 +1,15 @@
 #pragma once
 #include <stdint.h>
 
-#ifndef GRAPHICS_API
+#undef GRAPHICS_API
 #ifdef BUILD_GRAPHICS_DLL
+#if BUILD_GRAPHICS_DLL == 1
 #define GRAPHICS_API _declspec(dllexport)
 #else
 #define GRAPHICS_API _declspec(dllimport)
 #endif
+#else
+#define GRAPHICS_API
 #endif
 
 namespace Utils {

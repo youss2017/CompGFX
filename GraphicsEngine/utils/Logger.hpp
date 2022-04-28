@@ -9,9 +9,13 @@
 #endif
 
 #ifdef BUILD_GRAPHICS_DLL
+#if BUILD_GRAPHICS_DLL == 1
 #define GRAPHICS_API _declspec(dllexport)
 #else
 #define GRAPHICS_API _declspec(dllimport)
+#endif
+#else
+#define GRAPHICS_API
 #endif
 
 extern GRAPHICS_API void log_configure(bool EnableLogger, bool UseDateTime, bool EnableFileLogging = false, const char* customFileName = 0);

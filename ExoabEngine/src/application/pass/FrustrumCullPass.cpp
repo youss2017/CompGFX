@@ -154,7 +154,7 @@ void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Frustrum Culling(Geometry)", 1.0);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "Frustrum Culling(Geometry)", 1.0);
 	vkCmdResetQueryPool(cmd, mQuery, (i * 2), 2);
 	vkCmdResetQueryPool(cmd, mInvocationQuery, i, 1);
 
@@ -181,7 +181,7 @@ void Application::FrustumCullPass::RecordCommands(uint32_t FrameIndex)
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, mQuery, (i * 2) + 1);
 	vkCmdEndQuery(cmd, mInvocationQuery, i);
-	DvkCmdEndDebugUtilsLabelEXT(cmd);
+	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 	vkEndCommandBuffer(cmd);
 }
 

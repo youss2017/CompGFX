@@ -72,7 +72,7 @@ void Application::SkyboxPass::RecordCommands(uint32_t FrameIndex)
 	VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	VkCommandBuffer cmd = mCmd->mCmds[FrameIndex];
 	vkBeginCommandBuffer(cmd, &beginInfo);
-	vk::Gfx_InsertDebugLabel(cmd, FrameIndex, "Skybox", 0.0, 0.0, 1.0);
+	vk::Gfx_InsertDebugLabel(Global::Context->defaultDevice, cmd, FrameIndex, "Skybox", 0.0, 0.0, 1.0);
 
 	VkRenderingInfo renderingInfo;
 	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -117,6 +117,6 @@ void Application::SkyboxPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdDraw(cmd, 36, 1, 0, 0);
 
 	vkCmdEndRenderingKHR(cmd);
-	DvkCmdEndDebugUtilsLabelEXT(cmd);
+	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 	vkEndCommandBuffer(cmd);
 }

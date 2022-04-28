@@ -2,7 +2,7 @@
 #include "Globals.hpp"
 #include "pipeline/Pipeline.hpp"
 #include <glm/gtc/matrix_transform.hpp>
-#include <stb_image_write.h>
+#include <stb/stb_image_write.h>
 #include "Camera.hpp"
 
 ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> terrainTextures, ITexture2 normalMap)

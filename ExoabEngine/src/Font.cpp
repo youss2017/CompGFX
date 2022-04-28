@@ -4,7 +4,7 @@
 #include <cassert>
 #include <stdio.h>
 #include <iostream>
-#include <stb_image.h>
+#include <stb/stb_image.h>
 
 Font::Font(const char* fntFile, const char* fntTextureDirectory)
 {
