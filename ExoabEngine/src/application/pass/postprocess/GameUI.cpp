@@ -2,6 +2,11 @@
 #include "Globals.hpp"
 #include <stb/stb_image.h>
 
+#define QUAD0_OFFSET (6 * 0)
+#define QUAD1_OFFSET (6 * 1)
+#define QUAD2_OFFSET (6 * 2)
+#define LINEQUAD_OFFEST (6 * 3)
+
 Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, ITexture2 minimap) : Pass(Global::Context->defaultDevice, true) {
 	Shader vertex = Shader(Global::Context, "assets/shaders/postprocess/ui/ui.vert");
 	Shader fragment = Shader(Global::Context, "assets/shaders/postprocess/ui/ui.frag");
@@ -53,8 +58,8 @@ Application::GameUI::GameUI(Framebuffer& targetFBO, int colorAttachmentIndex, IT
 	blendState.alphaBlendOp = VK_BLEND_OP_ADD;
 	blendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment);
-	mVertices = (UIVertex*)Gmalloc(Global::Context, sizeof(UIVertex) * 6 * 3, BUFFER_TYPE_VERTEX, true);
+	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment, { VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY, VK_DYNAMIC_STATE_LINE_WIDTH });
+	mVertices = (UIVertex*)Gmalloc(Global::Context, sizeof(UIVertex) * 6 * 3 + (sizeof(UIVertex) * 8), BUFFER_TYPE_VERTEX, true);
 }
 
 Application::GameUI::~GameUI() {
@@ -93,19 +98,19 @@ void Application::GameUI::SetCursorPosition(const Ph::Ray& ray) {
 
 	vec2 cursorSize = vec2(mCursor->m_specification.m_Width, mCursor->m_specification.m_Height) / windowSize;
 	vec2 cursorSizeHalf = cursorSize / 2.0f;
-	mVertices[6 + 0].inPosition = (transform * (vec2(pos) + vec2(-cursorSizeHalf.x, -cursorSizeHalf.y) + toCenter)) - toCenter;
-	mVertices[6 + 0].inTexCoord = vec2(0.0, 0.0);
-	mVertices[6 + 1].inPosition = (transform * (vec2(pos) + vec2(cursorSizeHalf.x, -cursorSizeHalf.y) + toCenter)) - toCenter;
-	mVertices[6 + 1].inTexCoord = vec2(1.0, 0.0);
-	mVertices[6 + 2].inPosition = (transform * (vec2(pos) + vec2(cursorSizeHalf.x, cursorSizeHalf.y) + toCenter)) - toCenter;
-	mVertices[6 + 2].inTexCoord = vec2(1.0, 1.0);
+	mVertices[QUAD1_OFFSET + 0].inPosition = (transform * (vec2(pos) + vec2(-cursorSizeHalf.x, -cursorSizeHalf.y) + toCenter)) - toCenter;
+	mVertices[QUAD1_OFFSET + 0].inTexCoord = vec2(0.0, 0.0);
+	mVertices[QUAD1_OFFSET + 1].inPosition = (transform * (vec2(pos) + vec2(cursorSizeHalf.x, -cursorSizeHalf.y) + toCenter)) - toCenter;
+	mVertices[QUAD1_OFFSET + 1].inTexCoord = vec2(1.0, 0.0);
+	mVertices[QUAD1_OFFSET + 2].inPosition = (transform * (vec2(pos) + vec2(cursorSizeHalf.x, cursorSizeHalf.y) + toCenter)) - toCenter;
+	mVertices[QUAD1_OFFSET + 2].inTexCoord = vec2(1.0, 1.0);
 
-	mVertices[6 + 3].inPosition = (transform * (vec2(pos) + vec2(-cursorSizeHalf.x, -cursorSizeHalf.y) + toCenter)) - toCenter;
-	mVertices[6 + 3].inTexCoord = vec2(0.0, 0.0);
-	mVertices[6 + 4].inPosition = (transform * (vec2(pos) + vec2(cursorSizeHalf.x, cursorSizeHalf.y) + toCenter)) - toCenter;
-	mVertices[6 + 4].inTexCoord = vec2(1.0, 1.0);
-	mVertices[6 + 5].inPosition = (transform * (vec2(pos) + vec2(-cursorSizeHalf.x, cursorSizeHalf.y) + toCenter)) - toCenter;
-	mVertices[6 + 5].inTexCoord = vec2(0.0, 1.0);
+	mVertices[QUAD1_OFFSET + 3].inPosition = (transform * (vec2(pos) + vec2(-cursorSizeHalf.x, -cursorSizeHalf.y) + toCenter)) - toCenter;
+	mVertices[QUAD1_OFFSET + 3].inTexCoord = vec2(0.0, 0.0);
+	mVertices[QUAD1_OFFSET + 4].inPosition = (transform * (vec2(pos) + vec2(cursorSizeHalf.x, cursorSizeHalf.y) + toCenter)) - toCenter;
+	mVertices[QUAD1_OFFSET + 4].inTexCoord = vec2(1.0, 1.0);
+	mVertices[QUAD1_OFFSET + 5].inPosition = (transform * (vec2(pos) + vec2(-cursorSizeHalf.x, cursorSizeHalf.y) + toCenter)) - toCenter;
+	mVertices[QUAD1_OFFSET + 5].inTexCoord = vec2(0.0, 1.0);
 }
 
 void Application::GameUI::ReloadShaders() {
@@ -116,25 +121,44 @@ void Application::GameUI::ReloadShaders() {
 	input.AddInputElement("inPosition", 0, 0, 2, true, false, false);
 	input.AddInputElement("inTexCoord", 1, 0, 2, true, false, false);
 	PipelineState_Destroy(mState);
-	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment);
+	mState = PipelineState_Create(Global::Context, spec, input, mFBO, mLayout, &vertex, &fragment, { VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY, VK_DYNAMIC_STATE_LINE_WIDTH });
 }
 
 VkCommandBuffer Application::GameUI::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
-	mVertices[6 * 0 + 0] = { glm::vec2(-1.0, 0.6) };
-	mVertices[6 * 0 + 1] = { glm::vec2(1.0, 1.0) };
-	mVertices[6 * 0 + 2] = { glm::vec2(-1.0, 1.0) };
+	using namespace glm;
+	mVertices[QUAD0_OFFSET + 0] = { vec2(-1.0, 0.6) };
+	mVertices[QUAD0_OFFSET + 1] = { vec2(1.0, 1.0) };
+	mVertices[QUAD0_OFFSET + 2] = { vec2(-1.0, 1.0) };
 
-	mVertices[6 * 0 + 3] = { glm::vec2(-1.0, 0.6) };
-	mVertices[6 * 0 + 4] = { glm::vec2(1.0, 0.6) };
-	mVertices[6 * 0 + 5] = { glm::vec2(1.0, 1.0) };
+	mVertices[QUAD0_OFFSET + 3] = { vec2(-1.0, 0.6) };
+	mVertices[QUAD0_OFFSET + 4] = { vec2(1.0, 0.6) };
+	mVertices[QUAD0_OFFSET + 5] = { vec2(1.0, 1.0) };
 
-	mVertices[6 * 2 + 0] = { glm::vec2(-1.0, 0.45), glm::vec2(0.0, 0.0)};
-	mVertices[6 * 2 + 1] = { glm::vec2(-0.55, 1.0), glm::vec2(1.0, 1.0)};
-	mVertices[6 * 2 + 2] = { glm::vec2(-1.0, 1.0), glm::vec2(0.0, 1.0)};
+	mVertices[QUAD2_OFFSET + 0] = { vec2(-1.0, 0.45), vec2(0.0, 0.0)};
+	mVertices[QUAD2_OFFSET + 1] = { vec2(-0.55, 1.0), vec2(1.0, 1.0)};
+	mVertices[QUAD2_OFFSET + 2] = { vec2(-1.0, 1.0), vec2(0.0, 1.0)};
 
-	mVertices[6 * 2 + 3] = { glm::vec2(-1.0, 0.45), glm::vec2(0.0, 0.0)};
-	mVertices[6 * 2 + 4] = { glm::vec2(-0.55, 0.45), glm::vec2(1.0, 0.0) };
-	mVertices[6 * 2 + 5] = { glm::vec2(-0.55, 1.0), glm::vec2(1.0, 1.0)};
+	mVertices[QUAD2_OFFSET + 3] = { vec2(-1.0, 0.45), vec2(0.0, 0.0)};
+	mVertices[QUAD2_OFFSET + 4] = { vec2(-0.55, 0.45), vec2(1.0, 0.0) };
+	mVertices[QUAD2_OFFSET + 5] = { vec2(-0.55, 1.0), vec2(1.0, 1.0)};
+
+	if (sMouseSelect.bEnable) {
+		const vec2& A = sMouseSelect.A;
+		const vec2& B = sMouseSelect.B;
+		// --
+		mVertices[LINEQUAD_OFFEST + 0].inPosition = vec2(A.x, A.y);
+		mVertices[LINEQUAD_OFFEST + 1].inPosition = vec2(B.x, A.y);
+		// ..|
+		mVertices[LINEQUAD_OFFEST + 2].inPosition = vec2(B.x, A.y);
+		mVertices[LINEQUAD_OFFEST + 3].inPosition = vec2(B.x, B.y);
+		// __
+		mVertices[LINEQUAD_OFFEST + 4].inPosition = vec2(A.x, B.y);
+		mVertices[LINEQUAD_OFFEST + 5].inPosition = vec2(B.x, B.y);
+		// |..
+		mVertices[LINEQUAD_OFFEST + 6].inPosition = vec2(A.x, A.y);
+		mVertices[LINEQUAD_OFFEST + 7].inPosition = vec2(A.x, B.y);
+	}
+
 	RecordCommands(FrameIndex);
 	return *mCmd;
 }
@@ -180,12 +204,14 @@ void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
 	renderingInfo.pDepthAttachment = nullptr;
 	renderingInfo.pStencilAttachment = nullptr;
 
-	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
+	vkCmdBeginRendering(cmd, &renderingInfo);
 
 	VkDeviceSize pOffset[1] = {0};
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, &mTextureSets[0][FrameIndex], 0, nullptr);
 	vkCmdBindVertexBuffers(cmd, 0, 1, &Gbuffer(mVertices)->mBuffers[FrameIndex], pOffset);
+	vkCmdSetPrimitiveTopology(cmd, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	vkCmdSetLineWidth(cmd, 5.0f);
 	glm::vec3 col = glm::vec3(0.1);
 	struct {
 		int u_UseTexture;
@@ -196,25 +222,33 @@ void Application::GameUI::RecordCommands(uint32_t FrameIndex) {
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(col), &col);
 	
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
-	vkCmdDraw(cmd, 6, 1, 0, 0);
+	vkCmdDraw(cmd, 6, 1, QUAD0_OFFSET, 0);
 	
 	pushblock.u_UseTexture = 1;
 	pushblock.u_TextureID = 0;
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
-	vkCmdDraw(cmd, 6, 1, 6, 0);
+	vkCmdDraw(cmd, 6, 1, QUAD1_OFFSET, 0);
 	
 	pushblock.u_UseTexture = 0;
 	pushblock.u_TextureID = 1;
 	col = glm::vec3(0.0);
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(col), &col);
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
-	vkCmdDraw(cmd, 6, 1, 12, 0);
+	vkCmdDraw(cmd, 6, 1, QUAD2_OFFSET, 0);
 
-	pushblock.u_UseTexture = 1;
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
-	vkCmdDraw(cmd, 6, 1, 12, 0);
+	vkCmdDraw(cmd, 6, 1, QUAD2_OFFSET, 0);
 
-	vkCmdEndRenderingKHR(cmd);
+	if (sMouseSelect.bEnable) {
+		pushblock.u_UseTexture = 0;
+		col = glm::vec3(14, 250, 36) / glm::vec3(255.0f);
+		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(col), &col);
+		vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 16, sizeof(pushblock), &pushblock);
+		vkCmdSetPrimitiveTopology(cmd, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+		vkCmdDraw(cmd, 8, 1, LINEQUAD_OFFEST, 0);
+	}
+
+	vkCmdEndRendering(cmd);
 	DvkCmdEndDebugUtilsLabelEXT(cmd);
 	vkEndCommandBuffer(cmd);
 }

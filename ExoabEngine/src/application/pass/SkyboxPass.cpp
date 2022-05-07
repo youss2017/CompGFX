@@ -105,7 +105,7 @@ void Application::SkyboxPass::RecordCommands(uint32_t FrameIndex)
 	renderingInfo.pColorAttachments = &colorAttachment;
 	renderingInfo.pDepthAttachment = &depthAttachment;
 	renderingInfo.pStencilAttachment = nullptr;
-	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
+	vkCmdBeginRendering(cmd, &renderingInfo);
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mLayout, 0, 1, &mSet[FrameIndex], 0, nullptr);
@@ -116,7 +116,7 @@ void Application::SkyboxPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdPushConstants(cmd, mLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 64, 4, &mLod);
 	vkCmdDraw(cmd, 36, 1, 0, 0);
 
-	vkCmdEndRenderingKHR(cmd);
+	vkCmdEndRendering(cmd);
 	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 	vkEndCommandBuffer(cmd);
 }

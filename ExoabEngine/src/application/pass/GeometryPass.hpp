@@ -13,7 +13,7 @@ namespace Application {
 
 	class GeometryPass : public Pass {
 	public:
-		GeometryPass(uint32_t lightCount, ShaderTypes::Light* lights, IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap);
+		GeometryPass(uint32_t lightCount, ShaderTypes::Light* lights, IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, ecs::EntityController* ecs, ITexture2 shadowMap);
 		~GeometryPass();
 
 		// [Warning] This is an expensive operation, since we have to recreate the pipeline
@@ -38,7 +38,7 @@ namespace Application {
 		ShaderTypes::Light* mLights;
 		Camera* mCamera;
 		Camera* mLockedCamera;
-		EntityController* mECS;
+		ecs::EntityController* mECS;
 		glm::vec4 mLightDirection;
 		glm::mat4 mLightSpace;
 	private:

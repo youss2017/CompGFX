@@ -59,7 +59,15 @@ GRAPHICS_API IBuffer2 Buffer2_Create(vk::VkContext context, BufferType type, siz
 GRAPHICS_API IBuffer2 Buffer2_CreatePreInitalized(vk::VkContext context, BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
 {
 	IBuffer2 buffer = Buffer2_Create(context, type, size, memoryType, pointerUsage, requireCoherent, intermediateBuffer);
-	Buffer2_UploadData(buffer, (char8_t*)pData, 0, VK_WHOLE_SIZE);
+	if (pData) {
+		Buffer2_UploadData(buffer, (char8_t*)pData, 0, VK_WHOLE_SIZE);
+	}
+	else {
+		pData = new char[size];
+		memset(pData, 0, size * sizeof(char));
+		Buffer2_UploadData(buffer, (char8_t*)pData, 0, VK_WHOLE_SIZE);
+		delete[] (char*)pData;
+	}
 	return buffer;
 }
 
@@ -72,6 +80,7 @@ GRAPHICS_API void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset
 	{
 		void *ptr = Buffer2_Map(buffer);
 		memcpy(ptr, pData, size);
+		Buffer2_Flush(buffer, offset, size);
 		Buffer2_Unmap(buffer);
 		return;
 	}

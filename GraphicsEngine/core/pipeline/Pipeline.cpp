@@ -330,7 +330,7 @@ IPipelineState GRAPHICS_API PipelineState_Create(vk::VkContext _context, const P
     createInfo.pMultisampleState = &MultisampleState;
     createInfo.pDepthStencilState = &DepthStencilState;
     createInfo.pColorBlendState = &ColorBlendState;
-    createInfo.pDynamicState = nullptr;
+    createInfo.pDynamicState = &DynamicState;
     createInfo.layout = layout;
     createInfo.renderPass = nullptr;
     createInfo.subpass = 0;

@@ -61,7 +61,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>VK_NO_PROTOTYPES;GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)include\;$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -73,8 +73,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)bin\dep\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.204.1\Lib;$(SolutionDir)bin\dep\;$(SolutionDir)bin\dep\debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>assimp-vc143-mt.dll;PhysXCommon_64.dll;PhysXCooking_64.dll;PhysXFoundation_64.dll;PhysXGpu_64.dll;PhysX_64.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -85,7 +85,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>VK_NO_PROTOTYPES;GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)include\;$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -124,6 +124,7 @@
     <ClInclude Include="src\application\pass\ShadowPass.hpp" />
     <ClInclude Include="src\application\pass\SkyboxPass.hpp" />
     <ClInclude Include="src\jobs\Jobs.hpp" />
+    <ClInclude Include="src\MT.hpp" />
     <ClInclude Include="src\physics\PhysicsCore.hpp" />
     <ClInclude Include="src\physics\PhysicsEngine.hpp" />
     <ClInclude Include="src\Font.hpp" />
@@ -139,6 +140,7 @@
     <ClCompile Include="include\zip\src\zip.c" />
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
+    <ClCompile Include="src\application\ecs\Entity.cpp" />
     <ClCompile Include="src\application\ecs\EntityController.cpp" />
     <ClCompile Include="src\application\minimap.cpp" />
     <ClCompile Include="src\application\pass\DebugPass.cpp" />
@@ -153,6 +155,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mesh\geometry.cpp" />
     <ClCompile Include="src\mesh\SkinnedMesh.cpp" />
+    <ClCompile Include="src\MT.cpp" />
     <ClCompile Include="src\physics\PhysicsCore.cpp" />
     <ClCompile Include="src\physics\PhysicsEngine.cpp" />
     <ClCompile Include="src\PrepareDLLs.cpp" />

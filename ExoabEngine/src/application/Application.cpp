@@ -105,9 +105,12 @@ namespace Application
 		if (!MeshLoadStatus)
 			return false;
 
-		mECS = new EntityController(Global::Geomtry);
+		mECS = new ecs::EntityController(Global::Geomtry);
 
 		//srand(140);
+#if 1
+		ecs::IEntityGeometry cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
+		ECS_ConfigureEntityGeometry(cube, mInstanceCount);
 		uint32_t instanceSize = mInstanceCount * sizeof(ShaderTypes::InstanceData);
 		for (unsigned int i = 0; i < mInstanceCount; i++) {
 			float x = (rand() % 25) * 5;
@@ -115,27 +118,19 @@ namespace Application
 			float z = (rand() % 25) * 5;
 			glm::vec3 offset = glm::vec3(x, y, z + 2);
 			offset = offset - (offset / glm::vec3(2.0));
-			mInstances[i].mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
-			mInstances[i].mNormalModel = ShaderTypes::CalculateNormalModel(mInstances[i].mModel);
-			mInstances[i].mTextureIndex = 0;
-			mInstances[i].mSpecularStrength = 1.0;
+			ecs::Entity* e = new ecs::Entity(cube);
+			e->sData.mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
+			e->sData.mNormalModel = ShaderTypes::CalculateNormalModel(e->sData.mModel);
+			e->sData.mTextureIndex = 0;
+			e->sData.mSpecularStrength = 1.0;
 		}
+#endif
 
-		IEntity cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
-		cube->m_geometryID = ENTITY_GEOMETRY_CUBE;
-		cube->mInstanceCount = mInstanceCount;
-		cube->mInstanceBuffer = Gbuffer(Gmalloc(Global::Context, instanceSize, BufferType::BUFFER_TYPE_STORAGE, false));
-		cube->mCulledInstanceBuffer = Buffer2_Create(Global::Context, BUFFER_TYPE_STORAGE, instanceSize, BufferMemoryType::GPU_ONLY, true, false);
 		
 		mEngine = new Ph::PhysicsEngine(50, glm::vec3(0.1, 9.8, 0.0));
 		testObj = new Ph::DynamicObject(Ph::Orientation::Init(glm::vec3(0.0, -150, 0.0), glm::vec3(0.0), { Global::Geomtry[0].box_min, Global::Geomtry[0].box_max }), 50000, glm::vec3(0.0));
 		mEngine->AddDynamicObject(testObj);
 		mEngine->AddPlane({ {0.0, -1.0, 0.0}, 5.0 });
-
-		memcpy(Gpointer(cube->mInstanceBuffer), mInstances, instanceSize);
-
-		delete[] mInstances;
-		mInstances = (ShaderTypes::InstanceData*)Gpointer(cube->mInstanceBuffer);
 
 		PROFILE_FUNCTION();
 		UI::Frequency[0] = 2;
@@ -181,10 +176,12 @@ namespace Application
 		
 		mEngine->Update();
 		Ph::Orientation o = testObj->GetUpdatedStatus();
-		mInstances[0].mModel = glm::translate(glm::mat4(1.0), o.mPosition);
-		mInstances[0].mNormalModel = glm::mat3(glm::transpose(glm::inverse(mInstances[0].mModel)));
-		printf("(%2.2f, %2.2f, %2.2f)\n", o.mPosition.x, o.mPosition.y, o.mPosition.z);
+		//mInstances[0].mModel = glm::translate(glm::mat4(1.0), o.mPosition);
+		//mInstances[0].mNormalModel = glm::mat3(glm::transpose(glm::inverse(mInstances[0].mModel)));
+		//printf("(%2.2f, %2.2f, %2.2f)\n", o.mPosition.x, o.mPosition.y, o.mPosition.z);
 		
+		mECS->PrepareDataForFrame();
+
 		double RotateRate = 45.0;
 		static bool WKey = false;
 		static bool SKey = false;
@@ -204,6 +201,11 @@ namespace Application
 		static bool CameraMove = false;
 		static glm::vec2 Magnitude{};
 		static bool IOInit = true;
+		struct {
+			bool bSelect = false;
+			glm::ivec2 iA{};
+			glm::ivec2 iB{};
+		} static sMouseSelect;
 
 		static glm::vec3 RayOrigin = glm::vec3(0.0);
 		static glm::vec3 RayDirection = glm::vec3(0.0, 0.0, 1.0f);
@@ -274,11 +276,17 @@ namespace Application
 						cursorRay.mOrigin = vec3(e.mPayload.mClickX, e.mPayload.mClickY, 0.0f);
 						mUI->SetCursorPosition(cursorRay);
 					}
+					else if (e.mDetails == EVENT_DETAIL_LEFT_BUTTON) {
+						sMouseSelect.bSelect = true;
+						sMouseSelect.iA = ivec2(e.mPayload.mClickX, e.mPayload.mClickY);
+						sMouseSelect.iA = sMouseSelect.iB;
+					}
 				}
 				else if (e.mEvents == EVENT_MOUSE_RELEASE) {
 					cursorRay.mOrigin = {};
 					CameraMove = false;
 					mUI->SetCursorPosition({});
+					sMouseSelect.bSelect = false;
 				}
 			});
 
@@ -307,6 +315,7 @@ namespace Application
 					Magnitude = SCurve2(vec2(cursorRay.mDirection - cursorRay.mOrigin) / MaxMagnitude);
 					Magnitude *= vec2(1.0f, -1.0f);
 				}
+				sMouseSelect.iB = ivec2(e.mPayload.mPositionX, e.mPayload.mPositionY);
 			});
 
 			IOInit = !IOInit;
@@ -491,6 +500,8 @@ namespace Application
 		mGeoPass->SetLightDirection(-1.0f * glm::normalize(pos));
 		mGeoPass->SetLightSpace(mShadow->GetLightSpace());
 
+		mUI->SetSelectBox(sMouseSelect.bSelect, sMouseSelect.iA, sMouseSelect.iB, Global::Window->GetWidth(), Global::Window->GetHeight());
+
 		srand(0x42);
 		glm::vec3 color = glm::vec3(rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX);
 		color *= 5.0f;
@@ -512,9 +523,6 @@ namespace Application
 			mDebugPass->DrawCube(radPos, glm::vec3(0.25), glm::vec3(26, 173, 63) / glm::vec3(255), false, mInstanceCount);
 		}
 #endif
-		/// <summary>
-		/// VkCMD
-		/// </summary>
 
 		VkDevice device = Global::Context->defaultDevice;
 		uint32_t FrameIndex = frame.m_FrameIndex;
@@ -592,8 +600,6 @@ namespace Application
 			vkDestroySemaphore(Global::Context->defaultDevice, mBloomPassSemaphore[i], nullptr);
 		}
 		vkDestroySampler(Global::Context->defaultDevice, mImGuiSampler, nullptr);
-		Gfree(Gpointer(mECS->GetEntity(ENTITY_GEOMETRY_CUBE)->mInstanceBuffer));
-		Buffer2_Destroy(mECS->GetEntity(ENTITY_GEOMETRY_CUBE)->mCulledInstanceBuffer);
 		Buffer2_Destroy(mVerticesSSBO);
 		Buffer2_Destroy(mIndicesBuffer);
 		delete mECS;

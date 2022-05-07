@@ -12,7 +12,7 @@ namespace Application {
 	public:
 
 		// This camera will be used as a pointer, make sure to allocate camera on heap
-		FrustumCullPass(EntityController *ecs, Camera* camera);
+		FrustumCullPass(ecs::EntityController *ecs, Camera* camera);
 		~FrustumCullPass();
 
 		void ReloadShaders();
@@ -24,7 +24,7 @@ namespace Application {
 
 	private:
 		Camera* mCamera;
-		EntityController* mECS;
+		ecs::EntityController* mECS;
 	private:
 		VkDescriptorPool mPool;
 		DescriptorSet mSet;

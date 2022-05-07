@@ -11,7 +11,7 @@ struct TerrainPushblock {
 	glm::mat3 u_NormalModel; // transpose(inverse(u_Model)) (no offsets)
 };
 
-Application::GeometryPass::GeometryPass(uint32_t lightCount, ShaderTypes::Light* lights, IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, EntityController* ecs, ITexture2 shadowMap) : Pass(Global::Context->defaultDevice, true), mCamera(camera), mLockedCamera(lockedCamera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass), mLightCount(lightCount), mLights(lights) {
+Application::GeometryPass::GeometryPass(uint32_t lightCount, ShaderTypes::Light* lights, IBuffer2 verticesSSBO, IBuffer2 indicesSSBO, Terrain* terrain, int width, int height, FrustumCullPass* cullPass, Camera* camera, Camera* lockedCamera, ecs::EntityController* ecs, ITexture2 shadowMap) : Pass(Global::Context->defaultDevice, true), mCamera(camera), mLockedCamera(lockedCamera), mECS(ecs), mIndicsSSBO(indicesSSBO), mCullPass(cullPass), mLightCount(lightCount), mLights(lights) {
 	
 	mTerrainDrawCommands = (VkDrawIndexedIndirectCommand*)Gmalloc(Global::Context, terrain->GetSubmeshCount() * sizeof(VkDrawIndexedIndirectCommand), BufferType::BUFFER_TYPE_INDIRECT, false);
 	mTerrainDrawCount = (uint32_t*)Gmalloc(Global::Context, 4, BUFFER_TYPE_INDIRECT, true);
@@ -212,7 +212,6 @@ Application::GeometryPass::~GeometryPass() {
 }
 
 VkCommandBuffer Application::GeometryPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
-	mECS->PrepareDataForFrame(FrameIndex);
 	glm::mat4 proj = Global::Projection;
 	glm::mat4 view = mCamera->GetViewMatrix();
 
@@ -410,7 +409,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	renderingInfo.pColorAttachments = &colorAttachment;
 	renderingInfo.pDepthAttachment = &depthAttachment;
 	renderingInfo.pStencilAttachment = nullptr;
-	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
+	vkCmdBeginRendering(cmd, &renderingInfo);
 
 	VkImageMemoryBarrier renderBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	renderBarrier.srcAccessMask = VK_ACCESS_NONE;
@@ -474,7 +473,7 @@ void Application::GeometryPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
 	vkCmdEndQuery(cmd, mInvocationQuery, FrameIndex);
 
-	vkCmdEndRenderingKHR(cmd);
+	vkCmdEndRendering(cmd);
 	DvkCmdEndDebugUtilsLabelEXT(cmd);
 	vkEndCommandBuffer(cmd);
 }

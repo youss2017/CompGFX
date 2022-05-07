@@ -152,7 +152,7 @@ void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	renderingInfo.pColorAttachments = &colorAttachment;
 	renderingInfo.pDepthAttachment = &depthAttachment;
 	renderingInfo.pStencilAttachment = nullptr;
-	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
+	vkCmdBeginRendering(cmd, &renderingInfo);
 
 	if (mCubesCount > 0) {
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, mState->m_pipeline);
@@ -179,7 +179,7 @@ void Application::DebugPass::RecordCommands(uint32_t FrameIndex) {
 	}
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
-	vkCmdEndRenderingKHR(cmd);
+	vkCmdEndRendering(cmd);
 
 	vkEndCommandBuffer(cmd);
 }

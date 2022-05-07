@@ -75,7 +75,7 @@ std::vector<float> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm:
 
 
 // TODO: Perform frustrm culling.
-Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, EntityController* ecs, Camera* camera, int size) : Pass(Global::Context->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
+Application::ShadowPass::ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, ecs::EntityController* ecs, Camera* camera, int size) : Pass(Global::Context->defaultDevice, true), mVerticesSSBO(verticesSSBO), mIndices(indices), mECS(ecs), mSize(size), mCamera(camera) {
 	mT0 = terrain;
 	VkClearValue clear{};
 	clear.depthStencil.depth = 1.0;
@@ -266,7 +266,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	renderingInfo.pColorAttachments = nullptr;
 	renderingInfo.pDepthAttachment = &attachmentInfo;
 	renderingInfo.pStencilAttachment = nullptr;
-	vkCmdBeginRenderingKHR(cmd, &renderingInfo);
+	vkCmdBeginRendering(cmd, &renderingInfo);
 
 	VkImageMemoryBarrier barrier0{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier0.srcAccessMask = VK_ACCESS_NONE;
@@ -305,7 +305,7 @@ void Application::ShadowPass::RecordCommands(uint32_t FrameIndex)
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier0);
 
 	vkCmdWriteTimestamp(cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mQuery, (FrameIndex * 2) + 1);
-	vkCmdEndRenderingKHR(cmd);
+	vkCmdEndRendering(cmd);
 	vk::Gfx_EndDebugLabel(Global::Context->defaultDevice, cmd);
 	vkEndCommandBuffer(cmd);
 }

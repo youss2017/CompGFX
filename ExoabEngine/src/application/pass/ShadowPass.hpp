@@ -13,7 +13,7 @@ namespace Application {
 	class ShadowPass : public Pass {
 
 	public:
-		ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, EntityController* ecs, Camera* camera, int size);
+		ShadowPass(IBuffer2 verticesSSBO, IBuffer2 indices, Terrain* terrain, ecs::EntityController* ecs, Camera* camera, int size);
 		~ShadowPass();
 
 		void ReloadShaders();
@@ -55,7 +55,7 @@ namespace Application {
 	private:
 		Terrain* mT0;
 		Camera* mCamera;
-		EntityController* mECS;
+		ecs::EntityController* mECS;
 		IBuffer2 mVerticesSSBO;
 		IBuffer2 mIndices;
 		unsigned int mSize;

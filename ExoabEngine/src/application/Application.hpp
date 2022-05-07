@@ -45,7 +45,7 @@ namespace Application {
 		Camera mLockedCamera;
 		
 		ShaderTypes::Light mLight;
-		EntityController* mECS;
+		ecs::EntityController* mECS;
 		FrustumCullPass* mCullPass;
 		GeometryPass* mGeoPass;
 		SkyboxPass* mSkybox;
@@ -56,14 +56,13 @@ namespace Application {
 		VkSemaphore mShadowPassSemaphore[gFrameOverlapCount];
 		VkSemaphore mBloomPassSemaphore[gFrameOverlapCount];
 		Terrain* mT0 = nullptr;
-		const uint32_t mInstanceCount = 500;
+		const uint32_t mInstanceCount = 10;
 		ITexture2 mMinimap;
 		ITexture2 mNoiseMapTexture;
 		ITexture2 mNoiseMapTexture1;
 		ITexture2 mNoiseMapTexture2;
 		VkSampler mImGuiSampler;
 
-		ShaderTypes::InstanceData* mInstances = new ShaderTypes::InstanceData[mInstanceCount];
 		Ph::PhysicsEngine* mEngine;
 	};
 

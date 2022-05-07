@@ -23,7 +23,7 @@ namespace Application {
 	};
 }
 
-Application::FrustumCullPass::FrustumCullPass(EntityController* ecs, Camera* camera) : Pass(Global::Context->defaultDevice, true), mECS(ecs), mCamera(camera)
+Application::FrustumCullPass::FrustumCullPass(ecs::EntityController* ecs, Camera* camera) : Pass(Global::Context->defaultDevice, true), mECS(ecs), mCamera(camera)
 {
 	BindingDescription computeBindings[5]{};
 	computeBindings[0].mBindingID = 0;

@@ -13,7 +13,7 @@
 
 constexpr bool ShowVulkanExtensions = false;
 constexpr bool ShowVulkanLayers = false;
-constexpr bool ShowVulkanErrorBox = true;
+constexpr bool ShowVulkanErrorBox = false;
 
 VkBool32 GraphicsCardFeatureValidation_Check(VkPhysicalDevice device, VkPhysicalDeviceFeatures2 requiredFeatures);
 

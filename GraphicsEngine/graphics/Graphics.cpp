@@ -82,6 +82,7 @@ GRAPHICS_API IGraphics3D Graphics3D_Create(ConfigurationSettings *config, float 
     features.features.sampleRateShading = VK_TRUE;
     features.features.multiDrawIndirect = VK_TRUE;
     features.features.shaderInt64 = VK_FALSE;
+    features.features.wideLines = VK_TRUE;
 
     // unnecessary features.
     features.features.pipelineStatisticsQuery = VK_TRUE;
@@ -106,13 +107,11 @@ GRAPHICS_API IGraphics3D Graphics3D_Create(ConfigurationSettings *config, float 
     gfx->m_context = vk::Gfx_CreateContext(Window, DebugMode, ForceIntegeratedGPU, layers, layer_extensions,
                                                {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
-                                                VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
-                                                VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 #if DEBUG_PRINTF
                                                 VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
 #endif
                                                 },
-                                               features, VK_API_VERSION_1_2);
+                                               features, VK_API_VERSION_1_3);
     auto vcont = gfx->m_context;
     gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont, zNear, zFar, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);
     

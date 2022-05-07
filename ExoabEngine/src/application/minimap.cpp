@@ -105,7 +105,7 @@ ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> 
 	renderingInfo.pColorAttachments = &colorInfo;
 	renderingInfo.pDepthAttachment = &depthInfo;
 
-	vkCmdBeginRenderingKHR(cmd.cmd, &renderingInfo);
+	vkCmdBeginRendering(cmd.cmd, &renderingInfo);
 
 	vkCmdBindPipeline(cmd.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, state->m_pipeline);
 	vkCmdBindDescriptorSets(cmd.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &set[0], 0, nullptr);
@@ -119,7 +119,7 @@ ITexture2 Application::GenerateMinimap(Terrain* terrain, std::vector<ITexture2> 
 
 	vk::Framebuffer_TransistionImage(cmd.cmd, colorAttachment.GetAttachment(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
-	vkCmdEndRenderingKHR(cmd.cmd);
+	vkCmdEndRendering(cmd.cmd);
 
 	vk::Gfx_SubmitSingleUseCmdBufferAndDestroy(cmd);
 	

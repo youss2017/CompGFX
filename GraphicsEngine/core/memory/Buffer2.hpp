@@ -21,6 +21,7 @@ struct GPUBuffer2
 } typedef* IBuffer2;
 
 GRAPHICS_API IBuffer2 Buffer2_Create(vk::VkContext context, BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
+// pData == nullptr means initalize to 0, intermediateBuffer means will you use this as an intermediate buffer BUFFER_TYPE_TRANSFER*
 GRAPHICS_API IBuffer2 Buffer2_CreatePreInitalized(vk::VkContext context, BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
 GRAPHICS_API void Buffer2_UploadData(IBuffer2 buffer, void* pData, size_t offset, size_t size);
 GRAPHICS_API void* Buffer2_Map(IBuffer2 buffer);
