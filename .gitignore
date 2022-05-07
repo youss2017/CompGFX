@@ -3,7 +3,6 @@ bin/*
 Application/assets/shaders/spirv_cache/spirv_caching_catalog.txt
 Application/*.json
 Application/include/physx/
-GraphicsEngine/include/glfw
 *.dll
 *.exp
 *.lib
