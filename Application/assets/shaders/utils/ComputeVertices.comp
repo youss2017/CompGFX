@@ -1,0 +1,96 @@
+#version 450
+#include "types.h"
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_debug_printf : disable
+
+// local_size_x is indices count (including instances) for all instance across all DrawData
+// local_size_y is DrawData count
+layout (local_size_x = 64, local_size_y = 8, local_size_z = 1) in;
+
+layout (scalar, binding = 0) readonly buffer VerticesSSBO
+{
+	Vertex u_Vertices[];
+};
+
+layout (scalar, binding = 1) readonly buffer IndicesSSBO {
+    uint u_Indices[];
+};
+
+layout (scalar, binding = 2) uniform GlobalDataUBO
+{
+	float u_DeltaTime;
+	float u_TimeFromStart;
+    vec3 u_CameraForward;
+	mat4 u_View;
+	mat4 u_Projection;
+	mat4 u_ProjView;
+};
+
+layout (scalar, binding = 3) readonly buffer ObjectDataSSBO
+{
+	GeometryData u_GeoData[];
+};
+
+layout (scalar, binding = 4) readonly buffer DrawSSBO
+{
+	DrawData u_Draws[];
+};
+
+struct OutputVertex {
+    vec4 position;
+    vec3 normal;
+    vec2 texcoord;
+    uint textureID;
+};
+
+layout (scalar, binding = 5) writeonly buffer VerticesOutput {
+    OutputVertex u_OutVertices[];
+};
+
+layout (scalar, binding = 6) buffer VerticesCount {
+    uint u_VerticesCount;
+};
+
+void main() {
+    /*
+        uint indexCount;
+        uint instanceCount;
+        uint firstIndex;
+        int  vertexOffset;
+        uint firstInstance;
+        uint mGeometryDataIndex;
+    */
+    DrawData draw = u_Draws[gl_GlobalInvocationID.y];
+    /*
+    	vec3 bounding_sphere_center;
+        float bounding_sphere_radius;
+        uint64_t mInstancePtr;
+        uint64_t mCulledInstancePtr;
+    */
+    GeometryData geoData = u_GeoData[draw.mGeometryDataIndex];
+    // First Instance is assumed to be 0
+    // 1) Find which instance where working on
+    uint gIDx = gl_GlobalInvocationID.x;
+    uint vertexIndexPosition = gIDx - (gl_WorkGroupID.x * gl_WorkGroupSize.x);
+    uint instanceIndex = 0;
+    for(; instanceIndex < draw.instanceCount; instanceIndex++) {
+        if(vertexIndexPosition < draw.indexCount) {
+            break;
+        }
+        vertexIndexPosition -= draw.indexCount;
+    }
+    uint vertexIndex = u_Indices[draw.firstIndex + vertexIndexPosition];
+    Vertex vertex = u_Vertices[draw.vertexOffset + vertexIndex];
+    // !!!===!!! VERTEX SHADER!!!===!!!
+    InstanceData instance = InstanceData_T(geoData.mCulledInstancePtr).v[instanceIndex];
+    OutputVertex outVertex;
+    outVertex.position = u_ProjView * instance.mModel * vertex.position;
+    outVertex.textureID = instance.TexIndex;
+    outVertex.normal = vertex.normal;
+    outVertex.texcoord = vertex.texcoord;
+    // !!!===!!! VERTEX SHADER!!!===!!!
+    // TODO: There is a way to determine outVertexIndex without using ssbo and atomic access
+    // but im just trying to get it to work for now.
+    uint outVertexIndex = atomicAdd(u_VerticesCount, 1);
+    u_OutVertices[outVertexIndex] = outVertex;
+}
