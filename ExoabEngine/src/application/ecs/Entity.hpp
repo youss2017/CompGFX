@@ -6,7 +6,7 @@
 
 namespace ecs {
 
-	class Entity;
+	struct Entity;
 
 	struct EntityGeometry
 	{
@@ -15,7 +15,7 @@ namespace ecs {
 		int m_geometryID;
 		uint32_t mInstanceCount;
 		bool* bInstanceSlots;
-		std::vector<Entity*> vEnts;
+		std::vector<Entity> vEnts;
 		int nAllocatedInstanceCount;
 		// This buffer should be the same size as InstanceBuffer however you do not write to this buffer
 		// instead the compute shader culls the instances and writes to this buffer. This instance buffer
@@ -34,12 +34,11 @@ namespace ecs {
 		inline uint64_t GetCulledGPUPointer() {
 			return nCulledPointer;
 		}
-
-	private:
-		friend ecs::Entity;
-		friend void ProcessEntityGeometry(EntityGeometry* EG);
 		void AddEntity(Entity* e);
 		void RemoveEntity(Entity* e);
+
+	private:
+		friend void ProcessEntityGeometry(EntityGeometry* EG);
 	private:
 		friend class EntityController;
 		friend void ECS_ConfigureEntityGeometry(EntityGeometry* eg, int nMaxInstanceCount);
@@ -53,14 +52,10 @@ namespace ecs {
 
 	void ECS_ConfigureEntityGeometry(EntityGeometry* eg, int nMaxInstanceCount);
 
-	class Entity {
-
-	public:
-		Entity(IEntityGeometry eg);
-		~Entity();
-		Entity(const Entity& e) = delete;
-		Entity(const Entity&& e) = delete;
-
+	struct Entity {
+		Entity() : pEG(nullptr), pSlotIndex(nullptr) {}
+		Entity(IEntityGeometry eg) : pEG(eg), pSlotIndex(nullptr) { sData = {}; }
+		Entity(IEntityGeometry eg, const ShaderTypes::InstanceData& data) : pEG(eg), pSlotIndex(nullptr) { sData = {data}; }
 		IEntityGeometry pEG;
 		int* pSlotIndex;
 		ShaderTypes::InstanceData sData;

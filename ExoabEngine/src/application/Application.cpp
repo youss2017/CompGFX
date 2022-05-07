@@ -28,14 +28,17 @@ namespace Application
 	bool Application::OnInitalize()
 	{
 		PROFILE_FUNCTION();
-		//Audio* audio = new Audio();
-		//AudioBuffer* buffer = new AudioBuffer(audio, 44100, 15.0);
-		//float* fbuf = buffer->GetBuffer();
-		//float step = 1.0 / (44100 * 2);
-		//for (int i = 0; i < (44100 * 2 * 15); i++) {
-		//	fbuf[i] = sinf(step * i * 50.0 * 2.0 * 3.14);
-		//}
-		//buffer->Play();
+		loginfo(__FUNCSIG__);
+#if 0
+		Audio* audio = new Audio();
+		AudioBuffer* buffer = new AudioBuffer(audio, 44100, 15.0);
+		float* fbuf = buffer->GetBuffer();
+		float step = 1.0 / (44100 * 2);
+		for (int i = 0; i < (44100 * 2 * 15); i++) {
+			fbuf[i] = sinf(step * i * 50.0 * 2.0 * 3.14);
+		}
+		buffer->Play();
+#endif
 		log_configure(true, true);
 		if (!Graphics3D_CheckVulkanSupport())
 		{
@@ -118,11 +121,12 @@ namespace Application
 			float z = (rand() % 25) * 5;
 			glm::vec3 offset = glm::vec3(x, y, z + 2);
 			offset = offset - (offset / glm::vec3(2.0));
-			ecs::Entity* e = new ecs::Entity(cube);
-			e->sData.mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
-			e->sData.mNormalModel = ShaderTypes::CalculateNormalModel(e->sData.mModel);
-			e->sData.mTextureIndex = 0;
-			e->sData.mSpecularStrength = 1.0;
+			ecs::Entity e{ cube };
+			e.sData.mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
+			e.sData.mNormalModel = ShaderTypes::CalculateNormalModel(e.sData.mModel);
+			e.sData.mTextureIndex = 0;
+			e.sData.mSpecularStrength = 1.0;
+			cube->AddEntity(&e);
 		}
 #endif
 
