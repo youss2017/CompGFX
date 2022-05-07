@@ -10,14 +10,14 @@
 [submodule "GraphicsEngine/include/VulkanMemoryAllocator"]
 	path = GraphicsEngine/include/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
-[submodule "ExoabEngine/include/zip"]
-	path = ExoabEngine/include/zip
+[submodule "Application/include/zip"]
+	path = Application/include/zip
 	url = https://github.com/kuba--/zip
-[submodule "ExoabEngine/include/meshoptimizer"]
-	path = ExoabEngine/include/meshoptimizer
+[submodule "Application/include/meshoptimizer"]
+	path = Application/include/meshoptimizer
 	url = https://github.com/zeux/meshoptimizer
-[submodule "ExoabEngine/include/assimp"]
-	path = ExoabEngine/include/assimp
+[submodule "Application/include/assimp"]
+	path = Application/include/assimp
 	url = https://github.com/assimp/assimp
 [submodule "GraphicsEngine/include/imgui"]
 	path = GraphicsEngine/include/imgui

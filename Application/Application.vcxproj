@@ -61,7 +61,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>VK_NO_PROTOTYPES;GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)include\;$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)include\physx\;$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -85,7 +85,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>VK_NO_PROTOTYPES;GLM_FORCE_XYZW_ONLY;WIN32_LEAN_AND_MEAN;SHADERC_IMPLEMENTATION;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)include\;$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.204.1\Include;$(ProjectDir);$(ProjectDir)include\physx\;$(projectdir)include\zip\src\;$(projectdir)include\meshoptimizer\src\;$(projectdir)include\assimp\include\;$(ProjectDir)src\application\;$(solutiondir)Audio\;$(solutionDir)GraphicsEngine\include\VulkanMemoryAllocator\include\;$(solutiondir)GraphicsEngine\include\;$(solutiondir)GraphicsEngine\include\glm\;$(solutiondir)GraphicsEngine\include\glfw\include\;$(SolutionDir)GraphicsEngine\utils;$(solutiondir)GraphicsEngine\include\imgui\;$(SolutionDir)GraphicsEngine\core;$(SolutionDir)GraphicsEngine\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

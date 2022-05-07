@@ -1,10 +1,9 @@
 .vs/*
 bin/*
-ExoabEngine/external/bin/*
-ExoabEngine/assets/shaders/spirv_cache/spirv_caching_catalog.txt
-ExoabEngine/external/include/*
-ExoabEngine/external/include
-ExoabEngine/*.json
+Application/assets/shaders/spirv_cache/spirv_caching_catalog.txt
+Application/*.json
+Application/include/physx/
+GraphicsEngine/include/glfw
 *.dll
 *.exp
 *.lib
@@ -20,3 +19,4 @@ ExoabEngine/*.json
 *.obj
 *.log
 *.tlog
+.vscode
