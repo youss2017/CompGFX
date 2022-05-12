@@ -24,7 +24,6 @@ namespace Global {
 
 namespace Application
 {
-	Ph::DynamicObject* testObj;
 	bool Application::OnInitalize()
 	{
 		PROFILE_FUNCTION();
@@ -50,7 +49,7 @@ namespace Application
 		mCamera.Pitch(-70.0, true);
 
 		mCamera.ResetCamera();
-		mCamera.SetPosition({ 0, -150, -10 });
+		mCamera.SetPosition({ 0, -25, -10 });
 
 		mGfx = Graphics3D_Create(&Global::Configuration, Global::zNear, Global::zFar, Global::Configuration.WindowTitle.c_str(), s_DebugMode, s_EnableImGui, Global::RenderDOC);
 		Global::Context = (mGfx->m_context);
@@ -110,31 +109,29 @@ namespace Application
 
 		mECS = new ecs::EntityController(Global::Geomtry);
 
+		mEngine = new Ph::PhysicsEngine(50, glm::vec3(0.1, 9.8, 0.0));
 		//srand(140);
 #if 1
 		ecs::IEntityGeometry cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
 		ECS_ConfigureEntityGeometry(cube, mInstanceCount);
 		uint32_t instanceSize = mInstanceCount * sizeof(ShaderTypes::InstanceData);
+		int m0 = mEngine->CreateMaterial(3.0, 2.0, 0.0);
 		for (unsigned int i = 0; i < mInstanceCount; i++) {
 			float x = (rand() % 25) * 5;
 			float y = (rand() % 25) * 5;
 			float z = (rand() % 25) * 5;
 			glm::vec3 offset = glm::vec3(x, y, z + 2);
 			offset = offset - (offset / glm::vec3(2.0));
-			ecs::Entity e{ cube };
-			e.sData.mModel = glm::translate(glm::scale(glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)), glm::vec3(1)), offset);
-			e.sData.mNormalModel = ShaderTypes::CalculateNormalModel(e.sData.mModel);
-			e.sData.mTextureIndex = 0;
-			e.sData.mSpecularStrength = 1.0;
-			cube->AddEntity(&e);
+			ShaderTypes::InstanceData sData;
+			sData.mModel = glm::translate(glm::mat4(1.0), offset);
+			sData.mNormalModel = ShaderTypes::CalculateNormalModel(sData.mModel);
+			sData.mTextureIndex = 0;
+			sData.mSpecularStrength = 1.0;
+			vEnts.push_back(mEngine->CreateRigidEntity(cube, sData, m0, true));
 		}
 #endif
 
 		
-		mEngine = new Ph::PhysicsEngine(50, glm::vec3(0.1, 9.8, 0.0));
-		testObj = new Ph::DynamicObject(Ph::Orientation::Init(glm::vec3(0.0, -150, 0.0), glm::vec3(0.0), { Global::Geomtry[0].box_min, Global::Geomtry[0].box_max }), 50000, glm::vec3(0.0));
-		mEngine->AddDynamicObject(testObj);
-		mEngine->AddPlane({ {0.0, -1.0, 0.0}, 5.0 });
 
 		PROFILE_FUNCTION();
 		UI::Frequency[0] = 2;
@@ -178,11 +175,12 @@ namespace Application
 
 		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), 0.5f, 10000.0f);
 		
-		mEngine->Update();
-		Ph::Orientation o = testObj->GetUpdatedStatus();
-		//mInstances[0].mModel = glm::translate(glm::mat4(1.0), o.mPosition);
-		//mInstances[0].mNormalModel = glm::mat3(glm::transpose(glm::inverse(mInstances[0].mModel)));
-		//printf("(%2.2f, %2.2f, %2.2f)\n", o.mPosition.x, o.mPosition.y, o.mPosition.z);
+		mEngine->Start();
+		mEngine->End();
+
+		for (auto ent : vEnts) {
+			ent->Update();
+		}
 		
 		mECS->PrepareDataForFrame();
 
@@ -324,23 +322,6 @@ namespace Application
 
 			IOInit = !IOInit;
 		}
-
-		if (TKey) {
-			testObj->ApplyAcceleration(glm::vec3(0.0, 1.0, 0.0));
-		}
-
-		if (YKey) {
-			testObj->ApplyAcceleration(glm::vec3(0.0, -9.8 + -1.5, 0.0));
-		}
-
-		if (GKey) {
-			testObj->ApplyAcceleration(glm::vec3(1.5, 0.0, 0.0));
-		}
-
-		if (HKey) {
-			testObj->ApplyAcceleration(glm::vec3(-1.5, 0.0, 0.0));
-		}
-
 
 		if (WKey) mCamera.MoveForward(Global::Time * 22.0);
 		if (SKey) mCamera.MoveForward(Global::Time * -22.0);

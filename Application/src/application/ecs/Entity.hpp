@@ -15,7 +15,7 @@ namespace ecs {
 		int m_geometryID;
 		uint32_t mInstanceCount;
 		bool* bInstanceSlots;
-		std::vector<Entity> vEnts;
+		std::vector<Entity*> vEnts;
 		int nAllocatedInstanceCount;
 		// This buffer should be the same size as InstanceBuffer however you do not write to this buffer
 		// instead the compute shader culls the instances and writes to this buffer. This instance buffer
@@ -39,9 +39,8 @@ namespace ecs {
 
 	private:
 		friend void ProcessEntityGeometry(EntityGeometry* EG);
-	private:
-		friend class EntityController;
 		friend void ECS_ConfigureEntityGeometry(EntityGeometry* eg, int nMaxInstanceCount);
+		friend class EntityController;
 		IBuffer2 mInstanceBuffer;
 		void* pInstanceMapped;
 		uint64_t nPointer;

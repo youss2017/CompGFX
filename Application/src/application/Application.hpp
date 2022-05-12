@@ -64,6 +64,7 @@ namespace Application {
 		VkSampler mImGuiSampler;
 
 		Ph::PhysicsEngine* mEngine;
+		std::vector<Ph::PhysicsEntity*> vEnts;
 	};
 
 }

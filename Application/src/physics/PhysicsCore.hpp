@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/detail/type_half.hpp>
 #include <vector>
+#include <glm/gtc/quaternion.hpp>
 
 namespace Ph {
 
@@ -84,5 +85,11 @@ namespace Ph {
 	BoundingSphere CalculateBoundingSphere(void* pVertices, uint32_t* pIndices, uint32_t indicesCount, uint32_t verticesStride);
 
 	vec3 GenerateRayFromScreenCoordinates(const mat4& proj, const mat4& view, const vec2& xy, const vec2& windowSize);
+
+	quat ExtractRotation(const mat4& matrix);
+	vec3 ExtractPosition(const mat4& matrix);
+	vec3 ExtractScale(const mat4& matrix);
+	void DecomposeMatrix(mat4& matrix, vec3& localPosition, quat& localRotation, vec3& localScale);
+	mat4 QuatToMatrix(quat& q);
 
 }

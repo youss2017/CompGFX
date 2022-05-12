@@ -1,5 +1,10 @@
 #pragma once
 #include "PhysicsCore.hpp"
+#include "ecs/Entity.hpp"
+#include "PxPhysics.h"
+#include "PxFoundation.h"
+#include "cooking/PxCooking.h"
+#include "extensions/PxDefaultCpuDispatcher.h"
 #include <vector>
 
 namespace Ph {
@@ -10,37 +15,23 @@ namespace Ph {
         float mD;
     };
 
-    struct Orientation {
-        vec3 mPosition;
-        vec3 mRotation;
-        BoundingBox mBox;
-
-        static Orientation Init(vec3 position, vec3 rotation, BoundingBox box) {
-            return { position, rotation, box };
-        }
-    };
-
-    class DynamicObject {
-
+    bool BBPlaneIntersect(const Plane& plane, const BoundingBox& box);
+    
+    class PhysicsEntity : public ecs::Entity {
     public:
-        DynamicObject(const Orientation orientation, float massKilograms, vec3 initalVelocityMetersPerSecond);
-        ~DynamicObject();
+        void Update();
+        
+    public:
+        const bool bDynamic;
 
-        DynamicObject(const DynamicObject& copy) = delete;
-        DynamicObject(const DynamicObject&& move) = delete;
-
-        // Call this before PhysicsEngine::Update()
-        void ApplyForce(vec3 forceInNewtons);
-        void ApplyAcceleration(vec3 accelerationInMPerSeconds);
-
-        Orientation GetUpdatedStatus();
-
-    private:
+    protected:
         friend class PhysicsEngine;
-        Orientation mOrientation;
-        float mMass;
-        vec3 mVelocity;
-        vec3 mForce;
+        PhysicsEntity(bool bDynamic, physx::PxShape* shape, physx::PxRigidActor* actor) : bDynamic(bDynamic), mSphereShape(shape), mActor(actor) {}
+        ~PhysicsEntity();
+
+        physx::PxSphereGeometry mBoundingSphere;
+        physx::PxShape* mSphereShape;
+        physx::PxRigidActor* mActor;
     };
 
     class PhysicsEngine {
@@ -52,16 +43,25 @@ namespace Ph {
         PhysicsEngine(const PhysicsEngine& copy) = delete;
         PhysicsEngine(const PhysicsEngine&& move) = delete;
 
-        void AddDynamicObject(DynamicObject* obj);
-        void AddPlane(const Plane& plane);
+        // This is managed by PhysicsEngine, will be deleted inside deconstructor
+        // a material describes the physical properties of the actor, returns -1 on failure
+        int CreateMaterial(float staticFriction, float dynamicFriction, float restitution);
+        PhysicsEntity* CreateRigidEntity(ecs::IEntityGeometry eg, const ShaderTypes::InstanceData& data, int nMaterialID, bool bDynamic);
+        void DestroyRigidEntity(PhysicsEntity* e);
 
-        void Update();
-                
+        void Start();
+        void End();
+
     private:
-        float mCubeScale;
-        vec3 mGravity;
-        std::vector<Plane> mPlanes;
-        std::vector<DynamicObject*> mDynamicObjects;
+        physx::PxTolerancesScale mScale;
+        physx::PxPhysics* mPhysics;
+        physx::PxFoundation* mFoundation;
+        physx::PxPvd* mPVD;
+        physx::PxCooking* mCooking;
+        physx::PxDefaultCpuDispatcher* mCpuDispatcher;
+        // Everything goes in this scene.
+        physx::PxScene* mMasterScene;
+        std::vector<physx::PxMaterial*> vMaterials;
     };
 
 }

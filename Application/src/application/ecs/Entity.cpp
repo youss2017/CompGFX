@@ -6,7 +6,7 @@ namespace ecs {
 	void ProcessEntityGeometry(EntityGeometry* EG)
 	{
 		for (int i = 0; i < EG->nAllocatedInstanceCount; i++) {
-			Entity* e = &EG->vEnts[i];
+			Entity* e = EG->vEnts[i];
 			memcpy((char*)EG->pInstanceMapped + (i * sizeof(ShaderTypes::InstanceData)), &e->sData, sizeof(ShaderTypes::InstanceData));
 		}
 		Buffer2_Flush(EG->mInstanceBuffer, 0, sizeof(ShaderTypes::InstanceData) * EG->nAllocatedInstanceCount);
@@ -32,7 +32,7 @@ namespace ecs {
 			if (bInstanceSlots[i]) {
 				bInstanceSlots[i] = false;
 				e->pSlotIndex = new int{ i };
-				vEnts[i] = *e;
+				vEnts[i] = e;
 				nAllocatedInstanceCount++;
 				break;
 			}
@@ -51,9 +51,9 @@ namespace ecs {
 		// ex ====> [ENT][ENT][...][ENT][ENT(N)][...][...][...]...
 		// ex ====> [ENT][ENT][ENT(N)][ENT][...][...][...][...]...
 		if (nAllocatedInstanceCount > 1) {
-			Entity* EntN = &vEnts[nAllocatedInstanceCount - 1];
+			Entity* EntN = vEnts[nAllocatedInstanceCount - 1];
 			bInstanceSlots[nAllocatedInstanceCount - 1] = true;
-			vEnts[slotIndex] = *EntN;
+			vEnts[slotIndex] = EntN;
 			*EntN->pSlotIndex = slotIndex;
 		}
 		nAllocatedInstanceCount--;

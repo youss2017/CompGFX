@@ -1,111 +1,133 @@
 #include "PhysicsEngine.hpp"
 #include "Globals.hpp"
-#include "PxPhysics.h"
 #include "PxPhysicsAPI.h"
-#include "PxFoundation.h"
 #include "extensions/PxDefaultAllocator.h"
+#include "pvd/PxPvd.h"
+#include "Globals.hpp"
+#include "extensions/PxDefaultSimulationFilterShader.h"
 
 // F = ma
 // F : N --> (kg * m) / s^2
 // m : kg
 // a : m / s^2
 
-
 namespace Ph {
 
-    DynamicObject::DynamicObject(const Orientation orientation, float massKilograms, vec3 initalVelocityMetersPerSecond)
-    {
-        assert(massKilograms > 0);
-        mOrientation = orientation;
-        mMass = massKilograms;
-        mVelocity = initalVelocityMetersPerSecond;
-        mForce = vec3(0.0);
-    }
+	static physx::PxDefaultErrorCallback gDefaultErrorCallback;
+	static physx::PxDefaultAllocator gDefaultAllocatorCallback;
 
-    DynamicObject::~DynamicObject()
-    {}
-    
-    // Call this before PhysicsEngine::Update()
-    void DynamicObject::ApplyForce(vec3 forceInNewtons)
-    {
-        mForce = forceInNewtons;
-    }
+	PhysicsEngine::PhysicsEngine(float Cube1x1MeterPixelScale, vec3 gravity)
+	{
+		mFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
+		mScale.length = 100;
+		mScale.speed = 981;
+		bool trackMemoryAllocation = false;
+#if defined(_DEBUG)
+		mPVD = physx::PxCreatePvd(*mFoundation);
+		const char* PVD_HOST = "127.0.0.1";
+		physx::PxPvdTransport* transport = physx::PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
+		mPVD->connect(*transport, physx::PxPvdInstrumentationFlag::eALL);
+		trackMemoryAllocation = true;
+#endif
+		mPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *mFoundation, mScale, trackMemoryAllocation, mPVD);
+		physx::PxCookingParams cookParameters(mScale);
+		mCooking = PxCreateCooking(PX_PHYSICS_VERSION, *mFoundation, cookParameters);
+		physx::PxSceneDesc desc(mScale);
+		desc.gravity = physx::PxVec3(0.0f, -9.81f, 0.0f);
+		mCpuDispatcher = physx::PxDefaultCpuDispatcherCreate(1);
+		desc.cpuDispatcher = mCpuDispatcher;
+		desc.filterShader = physx::PxDefaultSimulationFilterShader;
+		mMasterScene = mPhysics->createScene(desc);
+	}
 
-    void DynamicObject::ApplyAcceleration(vec3 accelerationInMPerSeconds)
-    {
-        mForce += accelerationInMPerSeconds * mMass;
-    }
+	PhysicsEngine::~PhysicsEngine()
+	{
+		for (auto material : vMaterials)
+			material->release();
+		mCooking->release();
+		mMasterScene->release();
+		mPVD->release();
+		mCpuDispatcher->release();
+		mPhysics->release();
+		mFoundation->release();
+	}
 
-    Orientation DynamicObject::GetUpdatedStatus() { 
-        return mOrientation;
-    }
+	int PhysicsEngine::CreateMaterial(float staticFriction, float dynamicFriction, float restitution)
+	{
+		auto m = mPhysics->createMaterial(staticFriction, dynamicFriction, restitution);
+		if (m == nullptr)
+			return -1;
+		vMaterials.push_back(m);
+		return vMaterials.size() - 1;
+	}
 
-    PhysicsEngine::PhysicsEngine(float Cube1x1MeterPixelScale, vec3 gravity)
-    {
-        mCubeScale = Cube1x1MeterPixelScale;
-        mGravity = gravity;
-        physx::PxDefaultErrorCallback gDefaultErrorCallback;
-        physx::PxDefaultAllocator gDefaultAllocatorCallback;
-        physx::PxFoundation* mFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
-    }
+	PhysicsEntity* PhysicsEngine::CreateRigidEntity(ecs::IEntityGeometry eg, const ShaderTypes::InstanceData& data, int nMaterialID, bool bDynamic) {
+		assert(nMaterialID >= 0 && nMaterialID < vMaterials.size() && "Material ID Out of Bounds");
+		const Mesh::Geometry& geo = Global::Geomtry[eg->m_geometryID];
+		auto rotation = ExtractRotation(*(glm::mat4*)&data.mModel);
+		auto pos = Ph::ExtractPosition(data.mModel);
+		physx::PxTransform transform = physx::PxTransform(pos.x, pos.y, pos.z, *(physx::PxQuat*)&rotation);
+		physx::PxRigidActor* actor = nullptr;
+		if (bDynamic) {
+			actor = mPhysics->createRigidDynamic(transform);
+		}
+		else {
+			actor = mPhysics->createRigidStatic(transform);
+		}
+		physx::PxSphereGeometry BoundingSphere;
+		BoundingSphere.radius = geo.m_bounding_sphere_radius;
+		auto shape = physx::PxRigidActorExt::createExclusiveShape(*actor, BoundingSphere, *vMaterials[nMaterialID]);
+		//actor->attachShape(*shape);
+		mMasterScene->addActor(*actor);
+		PhysicsEntity* e = new PhysicsEntity(bDynamic, shape, actor);
+		e->pEG = eg;
+		e->sData = data;
+		e->mBoundingSphere = BoundingSphere;
+		eg->AddEntity(e);
+		return e;
+	}
 
-    PhysicsEngine::~PhysicsEngine()
-    {}
+	void PhysicsEngine::DestroyRigidEntity(PhysicsEntity* e) {
+		e->pEG->RemoveEntity(e);
+		delete e;
+	}
 
-    void PhysicsEngine::AddPlane(const Plane& plane)
-    {
-        mPlanes.push_back(plane);
-    }
+	void PhysicsEngine::Start()
+	{
+		float dTime = Global::Time;
+		mMasterScene->simulate(1.0 / 30.0);
+	}
 
-    void PhysicsEngine::AddDynamicObject(DynamicObject* obj)
-    {
-        mDynamicObjects.push_back(obj);
-    }
+	void PhysicsEngine::End() {
+		mMasterScene->fetchResults(true);
+	}
 
-    void PhysicsEngine::Update()
-    {
-        float dTime = Global::Time;
-        
-        auto BBPlaneIntersect = [](const Plane& plane, const BoundingBox& box) throw() -> bool {
-            vec3 points[8];
-            points[0] = vec3(box.mBoxMin.x, box.mBoxMin.y, box.mBoxMin.z);
-            points[1] = vec3(box.mBoxMax.x, box.mBoxMin.y, box.mBoxMin.z);
-            points[2] = vec3(box.mBoxMax.x, box.mBoxMin.y, box.mBoxMax.z);
-            points[3] = vec3(box.mBoxMin.x, box.mBoxMin.y, box.mBoxMax.z);
-            points[4] = vec3(box.mBoxMax.x, box.mBoxMax.y, box.mBoxMax.z);
-            points[5] = vec3(box.mBoxMin.x, box.mBoxMax.y, box.mBoxMax.z);
-            points[6] = vec3(box.mBoxMin.x, box.mBoxMax.y, box.mBoxMin.z);
-            points[7] = vec3(box.mBoxMax.x, box.mBoxMax.y, box.mBoxMin.z);
-            for(int i = 0; i < 8; i++)
-                if (dot(plane.mNormal, points[i]) + plane.mD < 0)
-                    return true;
-            return false;
-        };
-        
-        for(DynamicObject* obj : mDynamicObjects) {
-            vec3& force = obj->mForce;
-            vec3 acceleration = vec3(0);
-            acceleration += force / obj->mMass;
-            force = vec3(0);
-            /* apply gravity force */
-            acceleration += mGravity;
-            // apply acceleration
-            vec3& velocity = obj->mVelocity;
-            velocity += acceleration;
-            vec3& position = obj->mOrientation.mPosition;
-            // convert position to meters scale
-            vec3 movement = (velocity * (float)Global::Time) / mCubeScale;
-            position += movement;
-            for(auto& plane : mPlanes) {
-                BoundingBox box = obj->mOrientation.mBox;
-                box.mBoxMin += position;
-                box.mBoxMax += position;
-                if (BBPlaneIntersect(plane, box)) {
-                    position -= movement;
-                }
-            }
-            // convert position from meters scale to world space
-        }
-    }
+	bool BBPlaneIntersect(const Plane& plane, const BoundingBox& box)
+	{
+		vec3 points[8];
+		points[0] = vec3(box.mBoxMin.x, box.mBoxMin.y, box.mBoxMin.z);
+		points[1] = vec3(box.mBoxMax.x, box.mBoxMin.y, box.mBoxMin.z);
+		points[2] = vec3(box.mBoxMax.x, box.mBoxMin.y, box.mBoxMax.z);
+		points[3] = vec3(box.mBoxMin.x, box.mBoxMin.y, box.mBoxMax.z);
+		points[4] = vec3(box.mBoxMax.x, box.mBoxMax.y, box.mBoxMax.z);
+		points[5] = vec3(box.mBoxMin.x, box.mBoxMax.y, box.mBoxMax.z);
+		points[6] = vec3(box.mBoxMin.x, box.mBoxMax.y, box.mBoxMin.z);
+		points[7] = vec3(box.mBoxMax.x, box.mBoxMax.y, box.mBoxMin.z);
+		for (int i = 0; i < 8; i++)
+			if (dot(plane.mNormal, points[i]) + plane.mD < 0)
+				return true;
+		return false;
+	}
+
+
+	void PhysicsEntity::Update() {
+		physx::PxTransform t = mActor->getGlobalPose();
+		sData.mModel = translate(mat4(1.0), vec3(t.p.x, t.p.y, t.p.z));
+	}
+
+	PhysicsEntity::~PhysicsEntity() {
+		this->mSphereShape->release();
+	}
+
 
 }
