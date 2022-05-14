@@ -45,12 +45,6 @@ namespace Application
 			return false;
 		}
 
-		mCamera.SetPosition(glm::vec3(0.0, -40.0, 0.0));
-		mCamera.Pitch(-70.0, true);
-
-		mCamera.ResetCamera();
-		mCamera.SetPosition({ 0, -25, -10 });
-
 		mGfx = Graphics3D_Create(&Global::Configuration, Global::zNear, Global::zFar, Global::Configuration.WindowTitle.c_str(), s_DebugMode, s_EnableImGui, Global::RenderDOC);
 		Global::Context = (mGfx->m_context);
 		Loader_LoadVulkan();
@@ -109,13 +103,13 @@ namespace Application
 
 		mECS = new ecs::EntityController(Global::Geomtry);
 
-		mEngine = new Ph::PhysicsEngine(50, glm::vec3(0.1, 9.8, 0.0));
+		mEngine = new Ph::PhysicsEngine(50, glm::vec3(0.1, -9.8, 0.0));
 		//srand(140);
 #if 1
 		ecs::IEntityGeometry cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
 		ECS_ConfigureEntityGeometry(cube, mInstanceCount);
 		uint32_t instanceSize = mInstanceCount * sizeof(ShaderTypes::InstanceData);
-		int m0 = mEngine->CreateMaterial(3.0, 2.0, 0.0);
+		int m0 = mEngine->CreateMaterial(3.1, 2.0, 0.0);
 		for (unsigned int i = 0; i < mInstanceCount; i++) {
 			float x = (rand() % 25) * 5;
 			float y = (rand() % 25) * 5;
@@ -127,10 +121,19 @@ namespace Application
 			sData.mNormalModel = ShaderTypes::CalculateNormalModel(sData.mModel);
 			sData.mTextureIndex = 0;
 			sData.mSpecularStrength = 1.0;
+			sData.nSelectedData = 0;
 			vEnts.push_back(mEngine->CreateRigidEntity(cube, sData, m0, true));
 		}
 #endif
-
+		int m1 = mEngine->CreateMaterial(0.5, 0.6, 0.5);
+		/* Prevent Objects from getting out of the world */
+		float worldSize = 500.0f;
+		mEngine->AddPlane(glm::vec4(+0.0, +1.0, +0.0, +1.0), m1);
+		mEngine->AddPlane(glm::vec4(+0.0, -1.0, +0.0, worldSize), m1);
+		mEngine->AddPlane(glm::vec4(+1.0, +0.0, +0.0, worldSize), m1);
+		mEngine->AddPlane(glm::vec4(-1.0, +0.0, +0.0, worldSize), m1);
+		mEngine->AddPlane(glm::vec4(+0.0, +0.0, +1.0, worldSize), m1);
+		mEngine->AddPlane(glm::vec4(+0.0, +0.0, -1.0, worldSize), m1);
 		
 
 		PROFILE_FUNCTION();
@@ -149,15 +152,18 @@ namespace Application
 		
 		UI::LightPosition = glm::vec3(0.0f, 25.0f, 2.5f);
 
-		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera, 1024);
-		mCullPass = new FrustumCullPass(mECS, &mLockedCamera);
-		mGeoPass = new GeometryPass(1, &mLight, mVerticesSSBO, mIndicesBuffer, mT0, 1920, 1080, mCullPass, &mCamera, &mLockedCamera, mECS, mShadow->GetDepthAttachment());
-		mSkybox = new SkyboxPass("assets/textures/cubemap4.png", mGeoPass, &mCamera, true);
+		mCamera = new CameraControl(Global::Window);
+
+		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera->mCamera, 1024);
+		mCullPass = new FrustumCullPass(mECS, &mCamera->mLockedCamera);
+		mGeoPass = new GeometryPass(1, &mLight, mVerticesSSBO, mIndicesBuffer, mT0, 1920, 1080, mCullPass, &mCamera->mCamera, &mCamera->mLockedCamera, mECS, mShadow->GetDepthAttachment());
+		mSkybox = new SkyboxPass("assets/textures/cubemap4.png", mGeoPass, &mCamera->mCamera, true);
 		mDebugPass = new DebugPass(mGeoPass->GetFramebuffer());
 		mBloom = new BloomPass(mGeoPass->GetFramebuffer(), 0, 1.0);
 		mMinimap = mGeoPass->CreateMinimap();
 		mUI = new GameUI(mGeoPass->GetFramebuffer(), 0, mMinimap);
 		UI::CubemapLODMax = mSkybox->GetMaxLOD();
+		mCamera->SetGameUI(mUI);
 
 		for (int i = 0; i < gFrameOverlapCount; i++) {
 			mShadowPassSemaphore[i] = vk::Gfx_CreateSemaphore(Global::Context, false);
@@ -174,184 +180,19 @@ namespace Application
 			Global::Quit = true;
 
 		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), 0.5f, 10000.0f);
-		
+		mCamera->LoadViewMatrix();
 		mEngine->Start();
 		mEngine->End();
 
 		for (auto ent : vEnts) {
 			ent->Update();
+			/*
+				Determine selected units
+			*/
+
 		}
 		
 		mECS->PrepareDataForFrame();
-
-		double RotateRate = 45.0;
-		static bool WKey = false;
-		static bool SKey = false;
-		static bool AKey = false;
-		static bool DKey = false;
-		static bool QKey = false;
-		static bool EKey = false;
-		static bool ZKey = false;
-		static bool XKey = false;
-		static bool UpKey = false;
-		static bool DownKey = false;
-		static bool TKey = false;
-		static bool YKey = false;
-		static bool GKey = false;
-		static bool HKey = false;
-		static Ph::Ray cursorRay = {};
-		static bool CameraMove = false;
-		static glm::vec2 Magnitude{};
-		static bool IOInit = true;
-		struct {
-			bool bSelect = false;
-			glm::ivec2 iA{};
-			glm::ivec2 iB{};
-		} static sMouseSelect;
-
-		static glm::vec3 RayOrigin = glm::vec3(0.0);
-		static glm::vec3 RayDirection = glm::vec3(0.0, 0.0, 1.0f);
-
-		if (IOInit) {
-			Global::Window->RegisterCallback(EVENT_KEY_PRESS | EVENT_KEY_RELEASE, [&](const Event& e) throw() -> void {
-				switch (e.mPayload.KeyLowerCase) {
-				case 'w':
-					WKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 's':
-					SKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'a':
-					AKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'd':
-					DKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'q':
-					QKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'e':
-					EKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'z':
-					ZKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'x':
-					XKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 't':
-					TKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'y':
-					YKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'g':
-					GKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case 'h':
-					HKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				};
-				switch (e.mPayload.NonASCIKey) {
-				case GLFW_KEY_UP:
-					UpKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case GLFW_KEY_DOWN:
-					DownKey = e.mEvents & EVENT_KEY_PRESS;
-					break;
-				case GLFW_KEY_ESCAPE:
-					Global::Quit = e.mEvents & EVENT_KEY_RELEASE;
-					break;
-				}
-				}
-			);
-
-
-			Global::Window->RegisterCallback(EVENT_MOUSE_PRESS | EVENT_MOUSE_RELEASE, [&](const Event& e) throw() -> void {
-				using namespace glm;
-				if (e.mEvents == EVENT_MOUSE_PRESS) {
-					RayOrigin = mCamera.GetPosition();
-					RayDirection = Ph::GenerateRayFromScreenCoordinates(Global::Projection, mCamera.GetViewMatrix(), vec2(e.mPayload.mClickX, e.mPayload.mClickY),
-						vec2(Global::Window->GetWidth(), Global::Window->GetHeight()));
-					if (e.mDetails == EVENT_DETAIL_RIGHT_BUTTON) {
-						CameraMove = true;
-						cursorRay.mOrigin = vec3(e.mPayload.mClickX, e.mPayload.mClickY, 0.0f);
-						mUI->SetCursorPosition(cursorRay);
-					}
-					else if (e.mDetails == EVENT_DETAIL_LEFT_BUTTON) {
-						sMouseSelect.bSelect = true;
-						sMouseSelect.iA = ivec2(e.mPayload.mClickX, e.mPayload.mClickY);
-						sMouseSelect.iA = sMouseSelect.iB;
-					}
-				}
-				else if (e.mEvents == EVENT_MOUSE_RELEASE) {
-					cursorRay.mOrigin = {};
-					CameraMove = false;
-					mUI->SetCursorPosition({});
-					sMouseSelect.bSelect = false;
-				}
-			});
-
-			auto SCurve = [](float x, float A) {
-				float invert = 1.0f;
-				if (x < 0.0) {
-					x *= -1.0f;
-					invert = -1.0f;
-				}
-				float v = 1.0f / (1.0 + exp(-A * x + (A / 2.0)));
-				return v * invert;
-			};
-
-			auto SCurve2 = [&](const glm::vec2& v) throw() -> glm::vec2 {
-				float A = 15.0f;
-				return glm::vec2(SCurve(v.x, A), SCurve(v.y, A));
-			};
-
-			Global::Window->RegisterCallback(EVENT_MOUSE_MOVE, [&](const Event& e) throw() -> void {
-				using namespace glm;
-				if (cursorRay.mOrigin != vec3(0.0)) {
-					cursorRay.mDirection = vec3(e.mPayload.mPositionX, e.mPayload.mPositionY, 0.0);
-					mUI->SetCursorPosition(cursorRay);
-					vec2 windowSize = vec2(Global::Window->GetWidth(), Global::Window->GetHeight());
-					vec2 MaxMagnitude = vec2(windowSize - vec2(cursorRay.mOrigin));
-					Magnitude = SCurve2(vec2(cursorRay.mDirection - cursorRay.mOrigin) / MaxMagnitude);
-					Magnitude *= vec2(1.0f, -1.0f);
-				}
-				sMouseSelect.iB = ivec2(e.mPayload.mPositionX, e.mPayload.mPositionY);
-			});
-
-			IOInit = !IOInit;
-		}
-
-		if (WKey) mCamera.MoveForward(Global::Time * 22.0);
-		if (SKey) mCamera.MoveForward(Global::Time * -22.0);
-		if (AKey) mCamera.MoveSideways(Global::Time * -22.0);
-		if (DKey) mCamera.MoveSideways(Global::Time * 22.0);
-		if (QKey) mCamera.Yaw(Global::Time * -RotateRate, true);
-		if (EKey) mCamera.Yaw(Global::Time * RotateRate, true);
-		if (ZKey) mCamera.Pitch(Global::Time * -RotateRate, true);
-		if (XKey) mCamera.Pitch(Global::Time * RotateRate, true);
-		if (UpKey) mCamera.MoveAlongUpAxis(Global::Time * -22.0);
-		if (DownKey) mCamera.MoveAlongUpAxis(Global::Time * 22.0);
-		if (CameraMove) {
-			using namespace glm;
-			vec3 position = mCamera.GetPosition();
-			const float speed = 1000.0f;
-			vec2 translation = vec2(speed) * float(Global::Time) * Magnitude;
-			// camera may have been rotated so we need to adjust for the yaw rotation
-			float yaw = radians(mCamera.GetYawDegrees());
-			mat2 adjustment;
-			adjustment[0][0] = cos(yaw);
-			adjustment[1][0] = sin(yaw);
-			adjustment[0][1] = -sin(yaw);
-			adjustment[1][1] = cos(yaw);
-			translation = adjustment * translation;
-			mCamera.SetPosition(position + vec3(translation.x, 0.0, translation.y));
-		}
-
-		mCamera.UpdateViewMatrix();
-		auto position = mCamera.GetPosition();
-		UI::CameraPosition = position;
 
 		if (UI::StateChanged)
 		{
@@ -393,8 +234,11 @@ namespace Application
 			CreateTerrain();
 		}
 
-		if (!UI::LockFrustrum) {
-			memcpy(&mLockedCamera, &mCamera, sizeof(Camera));
+		if (UI::LockFrustrum) {
+			mCamera->LockCamera();
+		}
+		else {
+			mCamera->UnlockCamera();
 		}
 
 		const auto& frame = Graphics3D_GetFrame(mGfx);
@@ -417,7 +261,7 @@ namespace Application
 			float width = Global::Window->GetWidth();
 			float height = Global::Window->GetHeight();
 			glm::mat4 proj = Global::Projection;
-			glm::mat4 view = mLockedCamera.GetViewMatrix();
+			glm::mat4 view = mCamera->ReadLockedViewMatrix();
 		
 			//(-1, -1, -1) (1, -1, -1) (1, 1, -1) (-1, 1, -1) // near plane
 			//(-1, -1, 1) (1, -1, 1) (1, 1, 1) (-1, 1, 1) // far plane
@@ -470,14 +314,9 @@ namespace Application
 		glm::vec3 pos = UI::LightPosition;
 		mLight.u_AmbientStrength = 0.1;
 		mLight.u_Color = glm::vec3(1.0);
-		mLight.u_Position = mCamera.GetPosition();
+		mLight.u_Position = mCamera->mCamera.GetPosition();
 		mLight.u_Range = 100;
-		mDebugPass->SetProjectionView(Global::Projection, mCamera.GetViewMatrix());
-		glm::vec3 v = glm::normalize(mCamera.GetLookDir()) * 3.14f;
-		glm::vec3 origin = RayOrigin;
-		glm::vec3 ray = origin + (RayDirection * 100.0f);
-		mDebugPass->DrawCube(origin, glm::vec3(1.25f), glm::vec3(242, 128, 15) / glm::vec3(255.0f), 1);
-		//mDebugPass->DrawCube(ray, glm::vec3(10.0f), glm::vec3(255.0f) / glm::vec3(255.0f), 1);
+		mDebugPass->SetProjectionView(Global::Projection, mCamera->ReadViewMatrix());
 
 		mSkybox->SetLOD(UI::CubemapLOD);
 		
@@ -485,7 +324,7 @@ namespace Application
 		mGeoPass->SetLightDirection(-1.0f * glm::normalize(pos));
 		mGeoPass->SetLightSpace(mShadow->GetLightSpace());
 
-		mUI->SetSelectBox(sMouseSelect.bSelect, sMouseSelect.iA, sMouseSelect.iB, Global::Window->GetWidth(), Global::Window->GetHeight());
+		mUI->SetSelectBox(mCamera->sMouseSelect.bSelect, mCamera->sMouseSelect.iA, mCamera->sMouseSelect.iB, Global::Window->GetWidth(), Global::Window->GetHeight());
 
 		srand(0x42);
 		glm::vec3 color = glm::vec3(rand() / (float)RAND_MAX, rand() / (float)RAND_MAX, rand() / (float)RAND_MAX);
@@ -567,6 +406,11 @@ namespace Application
 	void Application::OnDestroy() {
 		PROFILE_FUNCTION();
 		Graphics3D_WaitGPUIdle(mGfx);
+		delete mCamera;
+		for (auto e : vEnts)
+			mEngine->DestroyRigidEntity(e);
+		delete mEngine;
+
 		vkDestroySampler(Global::Context->defaultDevice, Global::DefaultSampler, nullptr);
 		Texture2_Destroy(mMinimap);
 		Texture2_Destroy(mNoiseMapTexture);

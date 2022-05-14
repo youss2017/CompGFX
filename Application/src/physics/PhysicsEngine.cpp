@@ -67,7 +67,7 @@ namespace Ph {
 		auto rotation = ExtractRotation(*(glm::mat4*)&data.mModel);
 		auto pos = Ph::ExtractPosition(data.mModel);
 		physx::PxTransform transform = physx::PxTransform(pos.x, pos.y, pos.z, *(physx::PxQuat*)&rotation);
-		physx::PxRigidActor* actor = nullptr;
+		physx::PxRigidActor* actor;
 		if (bDynamic) {
 			actor = mPhysics->createRigidDynamic(transform);
 		}
@@ -77,8 +77,8 @@ namespace Ph {
 		physx::PxSphereGeometry BoundingSphere;
 		BoundingSphere.radius = geo.m_bounding_sphere_radius;
 		auto shape = physx::PxRigidActorExt::createExclusiveShape(*actor, BoundingSphere, *vMaterials[nMaterialID]);
-		//actor->attachShape(*shape);
 		mMasterScene->addActor(*actor);
+		physx::PxRigidBodyExt::setMassAndUpdateInertia(*(physx::PxRigidDynamic*)actor, 850);
 		PhysicsEntity* e = new PhysicsEntity(bDynamic, shape, actor);
 		e->pEG = eg;
 		e->sData = data;
@@ -92,10 +92,16 @@ namespace Ph {
 		delete e;
 	}
 
+	void PhysicsEngine::AddPlane(vec4 plane, int nMaterialID) {
+		auto p = physx::PxCreatePlane(*mPhysics, *(physx::PxPlane*)&plane, *vMaterials[nMaterialID]);
+		mMasterScene->addActor(*p);
+		vPlanes.push_back(p);
+	}
+
 	void PhysicsEngine::Start()
 	{
 		float dTime = Global::Time;
-		mMasterScene->simulate(1.0 / 30.0);
+		mMasterScene->simulate(1.0 / 60.0);
 	}
 
 	void PhysicsEngine::End() {
@@ -122,7 +128,8 @@ namespace Ph {
 
 	void PhysicsEntity::Update() {
 		physx::PxTransform t = mActor->getGlobalPose();
-		sData.mModel = translate(mat4(1.0), vec3(t.p.x, t.p.y, t.p.z));
+		sData.mModel = translate(mat4(1.0), vec3(t.p.x, t.p.y, t.p.z)) * QuatToMatrix(*(quat*)&t.q);
+		sData.mNormalModel = inverse(sData.mModel);
 	}
 
 	PhysicsEntity::~PhysicsEntity() {

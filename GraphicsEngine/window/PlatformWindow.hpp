@@ -137,6 +137,11 @@
 
 struct GLFWwindow;
 
+struct PlatformWindowCallback {
+	std::function<void(const Event& e, void* pUserDefined)> pFunc;
+	void* pUserDefined;
+};
+
 class PlatformWindow {
 
 public:
@@ -152,13 +157,15 @@ public:
 	GRAPHICS_API inline bool IsWindowFocus() { return m_focus; }
 	GRAPHICS_API bool IsWindowMinimized();
 
-	GRAPHICS_API void RegisterCallback(EventFlagBits events, const std::function<void(const Event& e)>& func);
+	// This function returns ID (index) of the callback which can be used later to remove the callback
+	GRAPHICS_API int RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined);
+	GRAPHICS_API void RemoveCallback(int ID);
 
 	int m_width, m_height;
 private:
 	GLFWwindow* m_window;
 	bool m_focus = true;
-	std::vector<std::pair<EventFlagBits, std::function<void(const Event& e)>>> mCallbacks;
+	std::vector<std::pair<EventFlagBits, PlatformWindowCallback>> mCallbacks;
 private:
 	friend void _Internal_WindowResizeCallback(GLFWwindow* window, int width, int height);
 	friend void _Internal_WindowKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);

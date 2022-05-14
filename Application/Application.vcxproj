@@ -109,6 +109,7 @@
     <ClInclude Include="include\zip\src\zip.h" />
     <ClInclude Include="src\application\Camera.hpp" />
     <ClInclude Include="src\application\Application.hpp" />
+    <ClInclude Include="src\application\CameraControl.hpp" />
     <ClInclude Include="src\application\ecs\EntityController.hpp" />
     <ClInclude Include="src\application\Globals.hpp" />
     <ClInclude Include="src\application\Layer.hpp" />
@@ -140,6 +141,7 @@
     <ClCompile Include="include\zip\src\zip.c" />
     <ClCompile Include="src\application\Application.cpp" />
     <ClCompile Include="src\application\Camera.cpp" />
+    <ClCompile Include="src\application\CameraControl.cpp" />
     <ClCompile Include="src\application\ecs\Entity.cpp" />
     <ClCompile Include="src\application\ecs\EntityController.cpp" />
     <ClCompile Include="src\application\minimap.cpp" />

@@ -36,6 +36,7 @@ layout (location = 1) in vec2 TexCoord;
 layout (location = 2) in flat uint TextureID;
 layout (location = 3) in vec3 FragPos;
 layout (location = 4) in float SpecularStrength;
+layout (location = 5) in flat int Selected;
 
 layout (location = 0) out vec4 FragColor;
 
@@ -58,6 +59,6 @@ void main() {
 		vec3 specular = max(SpecularStrength * spec * u_Lights[i].u_Color, vec3(0.0));
 		color += vec4((ambient + diffuse + specular), 1.0) * objectColor;
 	}
-	FragColor = color;
+	FragColor = (Selected == 0) ? color : (color + vec4(0.2));
 
 }	

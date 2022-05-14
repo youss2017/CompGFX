@@ -39,6 +39,7 @@ namespace Application {
 			glm::vec2 A;
 			glm::vec2 B;
 		} sMouseSelect;
+
 		ITexture2 mCursor;
 		VkDescriptorPool mPool;
 		std::vector<DescriptorSet> mTextureSets;

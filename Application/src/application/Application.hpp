@@ -27,6 +27,7 @@
 #include "StringUtils.hpp"
 #include "minimap.hpp"
 #include "../physics/PhysicsEngine.hpp"
+#include "CameraControl.hpp"
 
 namespace Application {
 
@@ -41,8 +42,6 @@ namespace Application {
 		IGraphics3D mGfx;
 		vk::GraphicsSwapchain mSwapchain;
 		IBuffer2 mVerticesSSBO, mIndicesBuffer;
-		Camera mCamera;
-		Camera mLockedCamera;
 		
 		ShaderTypes::Light mLight;
 		ecs::EntityController* mECS;
@@ -56,7 +55,7 @@ namespace Application {
 		VkSemaphore mShadowPassSemaphore[gFrameOverlapCount];
 		VkSemaphore mBloomPassSemaphore[gFrameOverlapCount];
 		Terrain* mT0 = nullptr;
-		const uint32_t mInstanceCount = 10;
+		const uint32_t mInstanceCount = 1000;
 		ITexture2 mMinimap;
 		ITexture2 mNoiseMapTexture;
 		ITexture2 mNoiseMapTexture1;
@@ -65,6 +64,7 @@ namespace Application {
 
 		Ph::PhysicsEngine* mEngine;
 		std::vector<Ph::PhysicsEntity*> vEnts;
+		CameraControl* mCamera;
 	};
 
 }

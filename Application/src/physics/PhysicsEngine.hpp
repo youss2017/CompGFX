@@ -48,6 +48,7 @@ namespace Ph {
         int CreateMaterial(float staticFriction, float dynamicFriction, float restitution);
         PhysicsEntity* CreateRigidEntity(ecs::IEntityGeometry eg, const ShaderTypes::InstanceData& data, int nMaterialID, bool bDynamic);
         void DestroyRigidEntity(PhysicsEntity* e);
+        void AddPlane(vec4 plane, int nMaterialID);
 
         void Start();
         void End();
@@ -62,6 +63,7 @@ namespace Ph {
         // Everything goes in this scene.
         physx::PxScene* mMasterScene;
         std::vector<physx::PxMaterial*> vMaterials;
+        std::vector<physx::PxRigidStatic*> vPlanes;
     };
 
 }

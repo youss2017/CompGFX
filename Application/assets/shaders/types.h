@@ -19,6 +19,7 @@ struct InstanceData {
 	uint mTextureIndex;
     mat4 mModel;
     mat3 mNormalModel;
+    int nSelected;
 };
 
 #define INSTANCE_SIZE 80

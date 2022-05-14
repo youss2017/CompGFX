@@ -37,6 +37,7 @@ layout (location = 1) out vec2 TexCoord;
 layout (location = 2) out flat uint TextureID;
 layout (location = 3) out vec3 FragPos;
 layout (location = 4) out float SpecularStrength;
+layout (location = 5) out flat int Selected;
 
 // Since shaders don't pointers (therefore no references &), we must copy the Vertex which isn't allowed with int8 and float16
 // therefore the following is the next best thing
@@ -47,6 +48,7 @@ void main()
 {
 	GeometryData geoData = u_ModelData[draw.mGeometryDataIndex];
 	InstanceData instance = InstanceData_T(geoData.mCulledInstancePtr).v[gl_InstanceIndex];
+	Selected = instance.nSelected;
 	Normal = normalize(instance.mNormalModel * vertex.normal);
 	TexCoord = vertex.texcoord;
 	TextureID = instance.mTextureIndex;
