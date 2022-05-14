@@ -85,6 +85,8 @@ void CameraControl::SetGameUI(void* UI) {
 			cursorRay.mOrigin = {};
 			CameraMove = false;
 			mUI->SetCursorPosition({});
+			if (sMouseSelect.bSelect)
+				sMouseSelect.mDeselected = true;
 			sMouseSelect.bSelect = false;
 		}
 		}, nullptr);

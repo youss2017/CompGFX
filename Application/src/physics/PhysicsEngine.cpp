@@ -101,7 +101,7 @@ namespace Ph {
 	void PhysicsEngine::Start()
 	{
 		float dTime = Global::Time;
-		mMasterScene->simulate(1.0 / 60.0);
+		mMasterScene->simulate(1.0 / 30.0);
 	}
 
 	void PhysicsEngine::End() {

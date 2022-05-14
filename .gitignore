@@ -19,3 +19,4 @@ Application/include/physx/
 *.log
 *.tlog
 .vscode
+*.enc

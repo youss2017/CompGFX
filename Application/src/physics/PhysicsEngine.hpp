@@ -23,13 +23,13 @@ namespace Ph {
         
     public:
         const bool bDynamic;
+        physx::PxSphereGeometry mBoundingSphere;
 
     protected:
         friend class PhysicsEngine;
         PhysicsEntity(bool bDynamic, physx::PxShape* shape, physx::PxRigidActor* actor) : bDynamic(bDynamic), mSphereShape(shape), mActor(actor) {}
         ~PhysicsEntity();
 
-        physx::PxSphereGeometry mBoundingSphere;
         physx::PxShape* mSphereShape;
         physx::PxRigidActor* mActor;
     };

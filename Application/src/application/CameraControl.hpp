@@ -34,6 +34,15 @@ public:
 		bool bSelect = false;
 		glm::ivec2 iA{};
 		glm::ivec2 iB{};
+
+		inline bool OnDeselect() {
+			bool tmp = mDeselected;
+			mDeselected = false;
+			return tmp;
+		}
+
+		// Do not access directly, use OnDeselect instead
+		bool mDeselected;
 	} sMouseSelect;
 
 private:

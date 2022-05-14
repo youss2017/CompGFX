@@ -165,6 +165,7 @@ public:
 private:
 	GLFWwindow* m_window;
 	bool m_focus = true;
+	int nCallbackRemoveOffset;
 	std::vector<std::pair<EventFlagBits, PlatformWindowCallback>> mCallbacks;
 private:
 	friend void _Internal_WindowResizeCallback(GLFWwindow* window, int width, int height);

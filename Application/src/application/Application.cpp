@@ -184,12 +184,70 @@ namespace Application
 		mEngine->Start();
 		mEngine->End();
 
+		glm::mat4 vp = Global::Projection * mCamera->ReadViewMatrix();
+		auto& mouseSelect = mCamera->sMouseSelect;
+		bool deselect = mouseSelect.OnDeselect();
 		for (auto ent : vEnts) {
 			ent->Update();
-			/*
-				Determine selected units
-			*/
+			if (deselect) {
+				/*
+					Determine selected units
+				*/
+				using namespace glm;
+				glm::mat4 mvp = Global::Projection * mCamera->ReadViewMatrix() * ent->sData.mModel;
+				glm::vec4 pos = glm::vec4(Global::Geomtry[ent->pEG->m_geometryID].m_bounding_sphere_center, 1.0);
+				float radius = ent->mBoundingSphere.radius;
+				vec4 edge = vec4(pos.x + radius, pos.y + radius, pos.z, 1.0);
+				pos = mvp * pos;
+				edge = mvp * edge;
+				pos /= pos.w;
+				edge /= edge.w;
+				// Convert to screen space
+				glm::vec4 ss = glm::vec4(((float)Global::Window->GetWidth() * 0.5f), ((float)Global::Window->GetHeight() * 0.5f), 0, 0);
+				pos = (pos + 1.0f) * ss;
+				edge = (edge + 1.0f) * ss;
+				edge -= pos;
+				float radiusX = sqrt(abs(edge.x));
+				float radiusY = sqrt(abs(edge.y));
+				/*
+					Is Entity inside, seleted region?
+					 __
+					|  |
+					 --
+					 Go To https://www.desmos.com/calculator/108lqswrbm
+					 Convert radius into a square eg ---> x^2 + y^2 = r
+					 Note: points must use sqrt(r)
+					 (r, r) + origin
+					 (-r, r) + origin
+					 (-r, -r) + origin
+					 (r, -r) + origin
+				*/
+				// SELECT BOX POINTS
+				auto A = mouseSelect.iA;
+				auto B = mouseSelect.iB;
+				glm::ivec2 MinA = glm::ivec2(glm::min(A.x, B.x), glm::min(A.y, B.y));
+				glm::ivec2 MaxB = glm::ivec2(glm::max(A.x, B.x), glm::max(A.y, B.y));
+				// CIRCLE TO BOX POINTS
+				glm::vec2 C[4];
+				// the radius is scaled differently on the x/y axis
+				C[0] = glm::vec2(pos.x, pos.y) + glm::vec2( radiusX,  radiusY);
+				C[1] = glm::vec2(pos.x, pos.y) + glm::vec2(-radiusX,  radiusY);
+				C[2] = glm::vec2(pos.x, pos.y) + glm::vec2(-radiusX, -radiusY);
+				C[3] = glm::vec2(pos.x, pos.y) + glm::vec2( radiusX, -radiusY);
 
+				// Are We inside the box?
+				int selected = 0;
+				for (int i = 0; i < 4; i++) {
+					//printf("[%d]: (%f %f)\n", i, C[i][0], C[i][1]);
+					if (C[i].x > MinA.x && C[i].x < MaxB.x) {
+						if (C[i].y > MinA.y && C[i].y < MaxB.y) {
+							selected = 1;
+							break;
+						}
+					}
+				}
+				ent->sData.nSelectedData = selected;
+			}
 		}
 		
 		mECS->PrepareDataForFrame();
@@ -409,7 +467,8 @@ namespace Application
 		delete mCamera;
 		for (auto e : vEnts)
 			mEngine->DestroyRigidEntity(e);
-		delete mEngine;
+		// TODO: Fix PhysX Bug
+		//delete mEngine;
 
 		vkDestroySampler(Global::Context->defaultDevice, Global::DefaultSampler, nullptr);
 		Texture2_Destroy(mMinimap);

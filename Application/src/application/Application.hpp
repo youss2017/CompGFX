@@ -55,7 +55,7 @@ namespace Application {
 		VkSemaphore mShadowPassSemaphore[gFrameOverlapCount];
 		VkSemaphore mBloomPassSemaphore[gFrameOverlapCount];
 		Terrain* mT0 = nullptr;
-		const uint32_t mInstanceCount = 1000;
+		const uint32_t mInstanceCount = 100;
 		ITexture2 mMinimap;
 		ITexture2 mNoiseMapTexture;
 		ITexture2 mNoiseMapTexture1;

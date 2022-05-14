@@ -118,7 +118,7 @@ void _Internal_WindowMouseMove(GLFWwindow* window, double xpos, double ypos) {
 }
 
 GRAPHICS_API PlatformWindow::PlatformWindow(std::string title, int width, int height)
-	: m_width(width), m_height(height)
+	: m_width(width), m_height(height), nCallbackRemoveOffset(0)
 {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
@@ -165,10 +165,13 @@ GRAPHICS_API int PlatformWindow::RegisterCallback(EventFlagBits events, const st
 	callback.pFunc = func;
 	callback.pUserDefined = pUserDefined;
 	mCallbacks.push_back(std::make_pair(events, callback));
-	return mCallbacks.size() - 1;
+	return mCallbacks.size() - 1 + nCallbackRemoveOffset;
 }
 
 GRAPHICS_API void PlatformWindow::RemoveCallback(int ID)
 {
-	mCallbacks.erase(mCallbacks.begin() + ID);
+	// ID is basically the index in vector, however since we remove elements
+	// their indices changes theirfore we use this offset to get the correct index
+	mCallbacks.erase(mCallbacks.begin() + (ID - nCallbackRemoveOffset));
+	nCallbackRemoveOffset++;
 }
