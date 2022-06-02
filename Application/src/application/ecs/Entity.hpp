@@ -53,7 +53,7 @@ namespace ecs {
 
 	struct Entity {
 		Entity() : pEG(nullptr), pSlotIndex(nullptr) {}
-		Entity(IEntityGeometry eg) : pEG(eg), pSlotIndex(nullptr) { sData = {}; }
+		Entity(IEntityGeometry eg) : pEG(eg), pSlotIndex(nullptr) { sData = {}; sData.mModel = glm::mat4(1.0); sData.mNormalModel = sData.mModel; }
 		Entity(IEntityGeometry eg, const ShaderTypes::InstanceData& data) : pEG(eg), pSlotIndex(nullptr) { sData = {data}; }
 		IEntityGeometry pEG;
 		int* pSlotIndex;

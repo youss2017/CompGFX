@@ -1,6 +1,6 @@
 #include "Framebuffer.hpp"
 
-FramebufferAttachment GRAPHICS_API FramebufferAttachment::Create(vk::VkContext context, VkImageUsageFlags usage, int width, int height, VkFormat format, VkClearValue clear, VkPipelineColorBlendAttachmentState* pBlendState)
+FramebufferAttachment GRAPHICS_API FramebufferAttachment::Create(VkImageUsageFlags usage, int width, int height, VkFormat format, VkClearValue clear, VkPipelineColorBlendAttachmentState* pBlendState)
 {
 	FramebufferAttachment attachment;
 	attachment.m_format = format;
@@ -24,7 +24,7 @@ FramebufferAttachment GRAPHICS_API FramebufferAttachment::Create(vk::VkContext c
 	spec.m_Height = height;
 	spec.m_Samples = TextureSamples::MSAA_1;
 	spec.mUsage = usage;
-	attachment.m_attachment = Texture2_Create(context, spec);
+	attachment.m_attachment = Texture2_Create(spec);
 	return attachment;
 }
 

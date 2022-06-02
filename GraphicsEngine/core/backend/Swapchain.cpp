@@ -367,7 +367,8 @@ namespace vk
         createInfo.presentMode = presentMode;
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = m_Swapchain;
-
+        Loader_LoadVulkan();
+        Loader_LoadDevice(mContext->defaultDevice);
         VkResult result = vkCreateSwapchainKHR(mContext->defaultDevice, &createInfo, allocation_callback, &m_Swapchain);
 
         if (result != VK_SUCCESS)
@@ -471,8 +472,8 @@ namespace vk
     {
         VkGraphicsPipelineCreateInfo pipelineCreateInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
         // 1) compile shader source code into spirv
-        Shader vertex = Shader(mContext, "assets/shaders/postprocess/swapchain.vert");
-        Shader fragment = Shader(mContext, "assets/shaders/postprocess/swapchain.frag");
+        Shader vertex = Shader("assets/shaders/postprocess/swapchain.vert");
+        Shader fragment = Shader("assets/shaders/postprocess/swapchain.frag");
 
         VkPipelineShaderStageCreateInfo ShaderStages[2]{};
         ShaderStages[0].sType = ShaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

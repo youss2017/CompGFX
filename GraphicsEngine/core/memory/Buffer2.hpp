@@ -20,9 +20,9 @@ struct GPUBuffer2
 
 } typedef* IBuffer2;
 
-GRAPHICS_API IBuffer2 Buffer2_Create(vk::VkContext context, BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
+GRAPHICS_API IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
 // pData == nullptr means initalize to 0, intermediateBuffer means will you use this as an intermediate buffer BUFFER_TYPE_TRANSFER*
-GRAPHICS_API IBuffer2 Buffer2_CreatePreInitalized(vk::VkContext context, BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
+GRAPHICS_API IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer = false);
 GRAPHICS_API void Buffer2_UploadData(IBuffer2 buffer, void* pData, size_t offset, size_t size);
 GRAPHICS_API void* Buffer2_Map(IBuffer2 buffer);
 // Makes host writes (CPU) visible to device (GPU)
@@ -35,7 +35,7 @@ GRAPHICS_API uint64_t Buffer2_GetGPUPointer(IBuffer2 buffer);
 GRAPHICS_API void Buffer2_Destroy(IBuffer2 buffer);
 
 // DisableVerification means you do not to use verify methods
-GRAPHICS_API void* Gmalloc(vk::VkContext context, uint32_t size, BufferType type, bool DisableVerification);
+GRAPHICS_API void* Gmalloc(uint32_t size, BufferType type, bool DisableVerification);
 GRAPHICS_API void GverifyReadWrite(void* ptr);
 GRAPHICS_API void GverifyRead(void* ptr);
 GRAPHICS_API void GverifyWrite(void* ptr);

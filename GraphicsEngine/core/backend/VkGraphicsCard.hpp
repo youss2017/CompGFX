@@ -42,23 +42,19 @@ namespace vk {
 
 	class Swapchain;
 
-	VkContext GRAPHICS_API Gfx_CreateContext(PlatformWindow* Window, bool EnableDebug, bool ForceIntegeratedGPU,
+	void GRAPHICS_API Gfx_ConfigureContext(PlatformWindow* Window, bool EnableDebug, bool ForceIntegeratedGPU,
 		const std::vector<const char*>& Layers, const std::vector<const char*>& LayerExtensions,
 		std::vector<const char*> LogicalDeviceExtensions, VkPhysicalDeviceFeatures2 GraphicsCardFeatures,
-		uint32_t VulkanAPIVersion = VK_API_VERSION_1_2);
-	void GRAPHICS_API Gfx_DestroyContext(VkContext context);
+		uint32_t VulkanAPIVersion);
 
-	std::vector<GraphicsCard> GRAPHICS_API Gfx_GetAllGraphicsCards(VkContext context);
-	GraphicsCard GRAPHICS_API Gfx_GetDefaultCard(VkContext context, bool ForceIntegratedGPU, VkPhysicalDeviceFeatures2 requiredFeatures);
+	VkContext GRAPHICS_API Gfx_GetContext();
+	void GRAPHICS_API Gfx_ReleaseContext();
 
-	VkDevice GRAPHICS_API Gfx_CreateDevice
-	(GraphicsCard& card, std::vector<const char*> enabledExtensions, int* FamilyQueueIndex, VkQueueFlags queueFlags, int queueCount, VkPhysicalDeviceFeatures2 enabledFeatures);
+	VkFence GRAPHICS_API Gfx_CreateFence(bool signaled);
+	VkSemaphore GRAPHICS_API Gfx_CreateSemaphore(bool TimelineSemaphore);
 
-	VkFence GRAPHICS_API Gfx_CreateFence(VkContext context, bool signaled);
-	VkSemaphore GRAPHICS_API Gfx_CreateSemaphore(VkContext context, bool TimelineSemaphore);
-
-	VkCommandPool GRAPHICS_API Gfx_CreateCommandPool(VkContext context, bool memoryShortLived, bool enableIndividualReset, bool makeProtected = false);
-	VkCommandBuffer GRAPHICS_API Gfx_AllocCommandBuffer(VkContext context, VkCommandPool pool, bool primaryLevel);
+	VkCommandPool GRAPHICS_API Gfx_CreateCommandPool(bool memoryShortLived, bool enableIndividualReset, bool makeProtected = false);
+	VkCommandBuffer GRAPHICS_API Gfx_AllocCommandBuffer(VkCommandPool pool, bool primaryLevel);
 
 	/*
 	VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT specifies that each recording of the command buffer will only be submitted once, and the command buffer will be reset and recorded again between each submission.
@@ -78,11 +74,11 @@ namespace vk {
 
 	VK_DESCRIPTOR_POOL_CREATE_HOST_ONLY_BIT_VALVE specifies that this descriptor pool and the descriptor sets allocated from it reside entirely in host memory and cannot be bound. Descriptor sets allocated from this pool are partially exempt from the external synchronization requirement in vkUpdateDescriptorSetWithTemplateKHR and vkUpdateDescriptorSets. Descriptor sets and their descriptors can be updated concurrently in different threads, though the same descriptor must not be updated concurrently by two threads.
 	*/
-	VkDescriptorPool GRAPHICS_API Gfx_CreateDescriptorPool(VkContext context, int maxSets, const std::vector<VkDescriptorPoolSize>& poolSizes, VkDescriptorPoolCreateFlags flags = (VkDescriptorPoolCreateFlags)0);
+	VkDescriptorPool GRAPHICS_API Gfx_CreateDescriptorPool(int maxSets, const std::vector<VkDescriptorPoolSize>& poolSizes, VkDescriptorPoolCreateFlags flags = (VkDescriptorPoolCreateFlags)0);
 
 	void GRAPHICS_API Gfx_SubmitCmdBuffers(VkQueue queue, std::vector<VkCommandBuffer> cmdBuffers, std::vector<VkSemaphore> waitSemaphores, std::vector<VkPipelineStageFlags> waitDstStageMask, std::vector<VkSemaphore> signalSemaphores, VkFence fence);
 
-	VkSampler GRAPHICS_API Gfx_CreateSampler(VkContext context,
+	VkSampler GRAPHICS_API Gfx_CreateSampler(
 		VkFilter magFilter = VK_FILTER_LINEAR,
 		VkFilter minFilter = VK_FILTER_LINEAR,
 		VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
@@ -96,7 +92,7 @@ namespace vk {
 		float maxLod = 1000.0, 
 		VkBorderColor borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE);
 
-	VkQueryPool GRAPHICS_API Gfx_CreateQueryPool(VkContext context, VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics);
+	VkQueryPool GRAPHICS_API Gfx_CreateQueryPool(VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics);
 
 	struct SingleUseCmdBuffer {
 		VkDevice device;
@@ -106,7 +102,7 @@ namespace vk {
 		VkCommandBuffer cmd;
 	};
 
-	SingleUseCmdBuffer GRAPHICS_API Gfx_CreateSingleUseCmdBuffer(VkContext context);
+	SingleUseCmdBuffer GRAPHICS_API Gfx_CreateSingleUseCmdBuffer();
 	void GRAPHICS_API Gfx_SubmitSingleUseCmdBufferAndDestroy(SingleUseCmdBuffer& buffer);
 
 	VkBufferMemoryBarrier GRAPHICS_API Gfx_BufferMemoryBarrier(VkAccessFlags srcAccess, VkAccessFlags dstAccess, VkBuffer buffer);

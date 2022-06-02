@@ -13,7 +13,7 @@
 class Shader
 {
 public:
-    GRAPHICS_API Shader(vk::VkContext context, const char *ShaderPath, const char *EntryPointFunction = "main");
+    GRAPHICS_API Shader(const char *ShaderPath, const char *EntryPointFunction = "main");
     GRAPHICS_API ~Shader();
     GRAPHICS_API const std::string &GetSource();
     GRAPHICS_API inline uint32_t *GetBytecode() { return m_Bytecode.data(); }

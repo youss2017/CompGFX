@@ -14,7 +14,7 @@ namespace ecs {
 		IEntityGeometry GetEntity(int id) {
 #if defined(_DEBUG)
 			if (mEntites.find(id) == mEntites.end()) {
-				logerror("Could not find EntityGeometryID!");
+				logerror("Could not find EntityGeometryID! Did you include the //# Path in the config file?");
 				Utils::Break();
 			}
 #endif

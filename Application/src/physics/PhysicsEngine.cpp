@@ -98,6 +98,39 @@ namespace Ph {
 		vPlanes.push_back(p);
 	}
 
+	void PhysicsEngine::SetTerrain(Terrain* terrain) {
+		using namespace physx;
+		int sampleCount = terrain->GetIndicesBuffer()->mSize / sizeof(int);
+		PxHeightFieldSample* samples = new PxHeightFieldSample[sampleCount];
+		for (int i = 0, q = 0; i < terrain->GetSubmeshCount(); i++) {
+			auto& submesh = terrain->GetSubmesh(i);
+			for (int j = 0; j < submesh.mIndicesCount; j++) {
+				vec3 pos = FullVec3(terrain->mVertices[submesh.mFirstVertex + terrain->mIndices[submesh.mFirstIndex + j]].inPosition16);
+				auto& sample = samples[q++];
+				sample.height = pos.y;
+			}
+		}
+
+#if 0
+		PxHeightFieldDesc hfDesc;
+		hfDesc.format = PxHeightFieldFormat::eS16_TM;
+		hfDesc.nbColumns = numCols;
+		hfDesc.nbRows = numRows;
+		hfDesc.samples.data = samples;
+		hfDesc.samples.stride = sizeof(PxHeightFieldSample);
+
+		PxHeightField* aHeightField = theCooking->createHeightField(hfDesc,
+			thePhysics->getPhysicsInsertionCallback());
+
+		PxHeightFieldGeometry hfGeom(aHeightField, PxMeshGeometryFlags(), heightScale, rowScale,
+			colScale);
+		PxShape* aHeightFieldShape = PxRigidActorExt::createExclusiveShape(*aHeightFieldActor,
+			hfGeom, aMaterialArray, nbMaterials);
+#endif
+
+		delete[] samples;
+	}
+
 	void PhysicsEngine::Start()
 	{
 		float dTime = Global::Time;

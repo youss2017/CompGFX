@@ -6,7 +6,7 @@ class CommandPool {
 public:
 	CommandPool(vk::VkContext context) : mContext(context) {
 		for (int i = 0; i < gFrameOverlapCount; i++) {
-			mPools[i] = vk::Gfx_CreateCommandPool(context, false, false);
+			mPools[i] = vk::Gfx_CreateCommandPool(false, false);
 		}
 	}
 

@@ -12,7 +12,7 @@ namespace Application {
 	public:
 
 		// This camera will be used as a pointer, make sure to allocate camera on heap
-		FrustumCullPass(ecs::EntityController *ecs, Camera* camera);
+		FrustumCullPass(ecs::EntityController *ecs, Camera* camera, bool enableCulling);
 		~FrustumCullPass();
 
 		void ReloadShaders();
@@ -35,6 +35,7 @@ namespace Application {
 		VkQueryPool mQuery;
 		VkQueryPool mInvocationQuery;
 		void* mFrustrumPlanesMapped[gFrameOverlapCount];
+		bool mEnableCulling;
 		friend class GeometryPass;
 	};
 

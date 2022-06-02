@@ -29,9 +29,10 @@ static std::string Shader_Internal_GenerateIdentifier()
     return std::to_string(random_engine());
 }
 
-GRAPHICS_API Shader::Shader(vk::VkContext context, const char *__ShaderPath, const char *EntryPointFunction)
+GRAPHICS_API Shader::Shader(const char *__ShaderPath, const char *EntryPointFunction)
     : m_EntryPointFunction(EntryPointFunction)
 {
+    vk::VkContext context = vk::Gfx_GetContext();
     m_Context = context;
     std::filesystem::path ShaderPath;
     try {

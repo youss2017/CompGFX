@@ -20,3 +20,5 @@ Application/include/physx/
 *.tlog
 .vscode
 *.enc
+*.glb
+*.blend

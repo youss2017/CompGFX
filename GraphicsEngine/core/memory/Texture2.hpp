@@ -25,14 +25,14 @@ struct GPUTexture2D_2
 
 typedef GPUTexture2D_2* ITexture2;
 
-ITexture2 GRAPHICS_API Texture2_Create(vk::VkContext context, const  Texture2DSpecification& specification);
+ITexture2 GRAPHICS_API Texture2_Create(const Texture2DSpecification& specification);
 void GRAPHICS_API Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_t size);
 void GRAPHICS_API Texture2_UpdateMipmaps(ITexture2 texture);
 // PixelSize refers to the size of a single pixel, what access do you want after copy is complete
 void GRAPHICS_API Texture2_ReadPixels(ITexture2 texture, VkAccessFlagBits finalAccessFlags, VkImageLayout currentLayout, uint32_t pixelSize, void* buffer);
 void GRAPHICS_API Texture2_Destroy(ITexture2 texture);
 
-ITexture2 GRAPHICS_API Texture2_CreateFromFile(vk::VkContext context, const char* path, bool mipmaps);
+ITexture2 GRAPHICS_API Texture2_CreateFromFile(const char* path, bool mipmaps);
 void GRAPHICS_API Texture2_RemoveAlphaChannel(uint32_t* srcPixels, char* dstPixels, int width, int height);
 
 // Converts "RGBA8" to TextureFormat::RGBA8

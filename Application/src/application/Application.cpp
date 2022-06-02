@@ -1,6 +1,7 @@
 #include "Application.hpp"
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
+#include "../jobs/Jobs.hpp"
 
 #ifdef _DEBUG
 static constexpr bool s_DebugMode = true;
@@ -21,6 +22,8 @@ namespace Global {
 	float zNear = 0.5;
 	float zFar = 10000.0;
 }
+
+ecs::Entity* tecs;
 
 namespace Application
 {
@@ -74,7 +77,7 @@ namespace Application
 		ImGui::SetCurrentContext((ImGuiContext*)Graphics3D_GetCurrentImGuiContext());
 		mSwapchain = mGfx->m_vswapchain;
 		Global::Window = mGfx->m_window;
-		Global::DefaultSampler = vk::Gfx_CreateSampler(Global::Context);
+		Global::DefaultSampler = vk::Gfx_CreateSampler();
 		Global::Projection = glm::perspectiveFovLH<float>(90.0, Global::Window->GetWidth(), Global::Window->GetHeight(), Global::zNear, Global::zFar);
 		Shader::ConfigureShaderCache(s_ShaderCache);
 
@@ -107,7 +110,11 @@ namespace Application
 		//srand(140);
 #if 1
 		ecs::IEntityGeometry cube = mECS->GetEntity(ENTITY_GEOMETRY_CUBE);
+		ecs::IEntityGeometry terrain = mECS->GetEntity(ENTITY_GEOMETRY_TERRAIN);
 		ECS_ConfigureEntityGeometry(cube, mInstanceCount);
+		ECS_ConfigureEntityGeometry(terrain, 1);
+		tecs = new ecs::Entity(terrain);
+		terrain->AddEntity(tecs);
 		uint32_t instanceSize = mInstanceCount * sizeof(ShaderTypes::InstanceData);
 		int m0 = mEngine->CreateMaterial(3.1, 2.0, 0.0);
 		for (unsigned int i = 0; i < mInstanceCount; i++) {
@@ -134,9 +141,8 @@ namespace Application
 		mEngine->AddPlane(glm::vec4(-1.0, +0.0, +0.0, worldSize), m1);
 		mEngine->AddPlane(glm::vec4(+0.0, +0.0, +1.0, worldSize), m1);
 		mEngine->AddPlane(glm::vec4(+0.0, +0.0, -1.0, worldSize), m1);
-		
 
-		PROFILE_FUNCTION();
+
 		UI::Frequency[0] = 2;
 		UI::Octave[0] = 2;
 		UI::Frequency[1] = 2;
@@ -147,15 +153,15 @@ namespace Application
 		UI::Contribution[1] = 0.5;
 		UI::Contribution[2] = 0.2;
 		CreateTerrain();
-		mImGuiSampler = vk::Gfx_CreateSampler(Global::Context);
+		mImGuiSampler = vk::Gfx_CreateSampler();
 		UI::UpdateNoiseMap(mNoiseMapTexture, mNoiseMapTexture1, mNoiseMapTexture2, mImGuiSampler);
-		
+
 		UI::LightPosition = glm::vec3(0.0f, 25.0f, 2.5f);
 
 		mCamera = new CameraControl(Global::Window);
 
 		mShadow = new ShadowPass(mVerticesSSBO, mIndicesBuffer, mT0, mECS, &mCamera->mCamera, 1024);
-		mCullPass = new FrustumCullPass(mECS, &mCamera->mLockedCamera);
+		mCullPass = new FrustumCullPass(mECS, &mCamera->mLockedCamera, false);
 		mGeoPass = new GeometryPass(1, &mLight, mVerticesSSBO, mIndicesBuffer, mT0, 1920, 1080, mCullPass, &mCamera->mCamera, &mCamera->mLockedCamera, mECS, mShadow->GetDepthAttachment());
 		mSkybox = new SkyboxPass("assets/textures/cubemap4.png", mGeoPass, &mCamera->mCamera, true);
 		mDebugPass = new DebugPass(mGeoPass->GetFramebuffer());
@@ -166,8 +172,8 @@ namespace Application
 		mCamera->SetGameUI(mUI);
 
 		for (int i = 0; i < gFrameOverlapCount; i++) {
-			mShadowPassSemaphore[i] = vk::Gfx_CreateSemaphore(Global::Context, false);
-			mBloomPassSemaphore[i] = vk::Gfx_CreateSemaphore(Global::Context, false);
+			mShadowPassSemaphore[i] = vk::Gfx_CreateSemaphore(false);
+			mBloomPassSemaphore[i] = vk::Gfx_CreateSemaphore(false);
 		}
 
 		return true;
@@ -187,28 +193,29 @@ namespace Application
 		glm::mat4 vp = Global::Projection * mCamera->ReadViewMatrix();
 		auto& mouseSelect = mCamera->sMouseSelect;
 		bool deselect = mouseSelect.OnDeselect();
+		glm::vec2 ToScreenSpace = glm::vec2(((float)Global::Window->GetWidth() * 0.5f), ((float)Global::Window->GetHeight() * 0.5f));
 		for (auto ent : vEnts) {
 			ent->Update();
 			if (deselect) {
+				using namespace glm;
 				/*
 					Determine selected units
 				*/
-				using namespace glm;
-				glm::mat4 mvp = Global::Projection * mCamera->ReadViewMatrix() * ent->sData.mModel;
-				glm::vec4 pos = glm::vec4(Global::Geomtry[ent->pEG->m_geometryID].m_bounding_sphere_center, 1.0);
-				float radius = ent->mBoundingSphere.radius;
-				vec4 edge = vec4(pos.x + radius, pos.y + radius, pos.z, 1.0);
+				mat4 mvp = vp * ent->sData.mModel;
+				vec4 pos = vec4(Global::Geomtry[ent->pEG->m_geometryID].m_bounding_sphere_center, 1.0);
+				float original_radius = sqrt(abs(ent->mBoundingSphere.radius));
+				vec4 edge = vec4(pos.x + original_radius, pos.y + original_radius, pos.z, 1.0);
 				pos = mvp * pos;
 				edge = mvp * edge;
-				pos /= pos.w;
-				edge /= edge.w;
+				pos.x /= pos.w;
+				pos.y /= pos.w;
+				edge.x /= edge.w;
+				edge.y /= edge.w;
 				// Convert to screen space
-				glm::vec4 ss = glm::vec4(((float)Global::Window->GetWidth() * 0.5f), ((float)Global::Window->GetHeight() * 0.5f), 0, 0);
-				pos = (pos + 1.0f) * ss;
-				edge = (edge + 1.0f) * ss;
-				edge -= pos;
-				float radiusX = sqrt(abs(edge.x));
-				float radiusY = sqrt(abs(edge.y));
+				vec2 pos2 = vec2((pos + 1.0f)) * ToScreenSpace;
+				vec2 edge2 = vec2((edge + 1.0f)) * ToScreenSpace;
+				edge2 -= pos2;
+				float radius = max(edge2.x, edge2.y);
 				/*
 					Is Entity inside, seleted region?
 					 __
@@ -225,31 +232,29 @@ namespace Application
 				// SELECT BOX POINTS
 				auto A = mouseSelect.iA;
 				auto B = mouseSelect.iB;
-				glm::ivec2 MinA = glm::ivec2(glm::min(A.x, B.x), glm::min(A.y, B.y));
-				glm::ivec2 MaxB = glm::ivec2(glm::max(A.x, B.x), glm::max(A.y, B.y));
+				ivec2 MinA = glm::ivec2(min(A.x, B.x), min(A.y, B.y));
+				ivec2 MaxB = glm::ivec2(max(A.x, B.x), max(A.y, B.y));
 				// CIRCLE TO BOX POINTS
-				glm::vec2 C[4];
+				vec2 C[4];
 				// the radius is scaled differently on the x/y axis
-				C[0] = glm::vec2(pos.x, pos.y) + glm::vec2( radiusX,  radiusY);
-				C[1] = glm::vec2(pos.x, pos.y) + glm::vec2(-radiusX,  radiusY);
-				C[2] = glm::vec2(pos.x, pos.y) + glm::vec2(-radiusX, -radiusY);
-				C[3] = glm::vec2(pos.x, pos.y) + glm::vec2( radiusX, -radiusY);
+				C[0] = pos2 + vec2(radius, radius);
+				C[1] = pos2 + vec2(-radius, radius);
+				C[2] = pos2 + vec2(-radius, -radius);
+				C[3] = pos2 + vec2(radius, -radius);
 
-				// Are We inside the box?
+				// Are We inside the box (any point)?
 				int selected = 0;
 				for (int i = 0; i < 4; i++) {
-					//printf("[%d]: (%f %f)\n", i, C[i][0], C[i][1]);
-					if (C[i].x > MinA.x && C[i].x < MaxB.x) {
-						if (C[i].y > MinA.y && C[i].y < MaxB.y) {
-							selected = 1;
-							break;
-						}
+					if (C[i].x > MinA.x && C[i].x < MaxB.x && C[i].y > MinA.y && C[i].y < MaxB.y) {
+						selected = 1;
+						break;
 					}
 				}
 				ent->sData.nSelectedData = selected;
 			}
 		}
-		
+
+		tecs->sData.mSpecularStrength = abs(sin(Global::TimeFromStart)) * 20.0f;
 		mECS->PrepareDataForFrame();
 
 		if (UI::StateChanged)
@@ -273,18 +278,6 @@ namespace Application
 				mUI->ReloadShaders();
 			}
 			mGeoPass->SetWireframeMode(UI::ShowWireframe);
-			if (UI::SaveTerrain) {
-				int choosenFilter = 0;
-				std::vector<std::string> assimpIDs;
-				std::vector<std::pair<std::string, std::string>> filters = Terrain::GetFilters(assimpIDs);
-				std::string path = Utils::SaveAsDialog(Utils::CreateDialogFilter(filters), choosenFilter);
-				if (path.size() > 0) {
-					if (!Utils::StrContains(path, "."))
-						path += filters[choosenFilter].second.data() + 1;
-					mT0->Export(assimpIDs[choosenFilter].data(), path);
-					mT0->Save(path + ".zip");
-				}
-			}
 		}
 
 		if (UI::RegenerateNoiseMap) {
@@ -310,7 +303,7 @@ namespace Application
 			mBloom->GetStatistics(wait, frame.m_FrameIndex, UI::BloomPassTime);
 			mDebugPass->GetStatistics(wait, frame.m_FrameIndex, UI::DebugPassTime);
 		}
-		
+
 		//glm::mat4 transform = glm::translate(glm::mat4(1.0), glm::vec3(t0->, 0.0, 0.0));
 		//t0->SetTransform(transform);
 
@@ -320,55 +313,55 @@ namespace Application
 			float height = Global::Window->GetHeight();
 			glm::mat4 proj = Global::Projection;
 			glm::mat4 view = mCamera->ReadLockedViewMatrix();
-		
+
 			//(-1, -1, -1) (1, -1, -1) (1, 1, -1) (-1, 1, -1) // near plane
 			//(-1, -1, 1) (1, -1, 1) (1, 1, 1) (-1, 1, 1) // far plane
-		
+
 			glm::vec3 nearPlane[4];
 			nearPlane[0] = glm::vec3(-1.0f);
 			nearPlane[1] = glm::vec3(1.0f, -1.0f, -1.0f);
 			nearPlane[2] = glm::vec3(1.0f, 1.0f, -1.0f);
 			nearPlane[3] = glm::vec3(-1.0f, 1.0f, -1.0f);
-		
+
 			glm::vec3 farPlane[4];
 			farPlane[0] = glm::vec3(-1.0f, -1.0f, 1.0f);
 			farPlane[1] = glm::vec3(1.0f, -1.0f, 1.0f);
 			farPlane[2] = glm::vec3(1.0f);
 			farPlane[3] = glm::vec3(-1.0f, 1.0f, 1.0f);
-		
+
 			glm::mat4 invProj = glm::inverse(proj);
 			glm::mat4 invView = glm::inverse(view);
 			auto ToWorldPosition = [&invProj, &invView](glm::vec3& ndc) throw() -> void {
 				glm::vec4 pth = invView * invProj * glm::vec4(ndc, 1.0f);
 				ndc = glm::vec3(pth) / pth.w;
 			};
-		
+
 			ToWorldPosition(nearPlane[0]);
 			ToWorldPosition(nearPlane[1]);
 			ToWorldPosition(nearPlane[2]);
 			ToWorldPosition(nearPlane[3]);
-		
+
 			ToWorldPosition(farPlane[0]);
 			ToWorldPosition(farPlane[1]);
 			ToWorldPosition(farPlane[2]);
 			ToWorldPosition(farPlane[3]);
-		
+
 			mDebugPass->DrawLine(nearPlane[0], nearPlane[1], glm::vec3(1.0, 0.0, 0.0), 6);
 			mDebugPass->DrawLine(nearPlane[2], nearPlane[1], glm::vec3(1.0, 0.0, 0.0), 6);
 			mDebugPass->DrawLine(nearPlane[3], nearPlane[2], glm::vec3(1.0, 0.0, 0.0), 6);
 			mDebugPass->DrawLine(nearPlane[3], nearPlane[0], glm::vec3(1.0, 0.0, 0.0), 6);
-			
+
 			mDebugPass->DrawLine(farPlane[0], farPlane[1], glm::vec3(1.0), 6);
 			mDebugPass->DrawLine(farPlane[1], farPlane[2], glm::vec3(1.0), 6);
 			mDebugPass->DrawLine(farPlane[2], farPlane[3], glm::vec3(1.0), 6);
 			mDebugPass->DrawLine(farPlane[3], farPlane[0], glm::vec3(1.0), 6);
-			
+
 			mDebugPass->DrawLine(nearPlane[0], farPlane[0], glm::vec3(1.0), 4);
 			mDebugPass->DrawLine(nearPlane[1], farPlane[1], glm::vec3(1.0), 4);
 			mDebugPass->DrawLine(nearPlane[2], farPlane[2], glm::vec3(1.0), 4);
 			mDebugPass->DrawLine(nearPlane[3], farPlane[3], glm::vec3(1.0), 4);
 		}
-		
+
 		glm::vec3 pos = UI::LightPosition;
 		mLight.u_AmbientStrength = 0.1;
 		mLight.u_Color = glm::vec3(1.0);
@@ -377,7 +370,7 @@ namespace Application
 		mDebugPass->SetProjectionView(Global::Projection, mCamera->ReadViewMatrix());
 
 		mSkybox->SetLOD(UI::CubemapLOD);
-		
+
 		mShadow->SetShadowLightPosition(pos);
 		mGeoPass->SetLightDirection(-1.0f * glm::normalize(pos));
 		mGeoPass->SetLightSpace(mShadow->GetLightSpace());
@@ -417,31 +410,42 @@ namespace Application
 		Global::Context->mFrameIndex = FrameIndex;
 		if (Global::UpdateUIInfo)
 			UI::NextFrameTime = double((NextFrameEnd - NextFrameStart).count()) * 1e-6;
-		
+
 		vkWaitForFences(device, 1, &frame.m_RenderFence, true, UINT64_MAX);
 		vkResetFences(device, 1, &frame.m_RenderFence);
-		
-		// Culling and Shadow Pass
-		VkCommandBuffer cullPassShadowCmd = nullptr;
-		VkCommandBuffer cullPassCmd = mCullPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
-		VkCommandBuffer shadowPassCmd = mShadow->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
-		
-		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, { cullPassCmd, shadowPassCmd }, { frame.m_RenderSemaphore }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { mShadowPassSemaphore[FrameIndex] }, nullptr);
-		
-		// Geometry Pass
-		VkCommandBuffer geoPassCmd = mGeoPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
-		VkCommandBuffer skyboxCmd = mSkybox->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
-		VkCommandBuffer debugPassCmd = mDebugPass->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
 
+		VkCommandBuffer cullPassShadowCmd = nullptr;
+		PassPrepare* cullPrepare = mCullPass->GetPassPrepare(frame.m_FrameIndex);
+		PassPrepare* shadowPrepare = mShadow->GetPassPrepare(frame.m_FrameIndex);
+		PassPrepare* geoPrepare = mGeoPass->GetPassPrepare(frame.m_FrameIndex);
+		PassPrepare* skyboxPrepare = mSkybox->GetPassPrepare(frame.m_FrameIndex);
+		PassPrepare* debugPassPrepare = mDebugPass->GetPassPrepare(frame.m_FrameIndex);
+		PassPrepare* gameUIPrepare = mUI->GetPassPrepare(frame.m_FrameIndex);
+		PassPrepare* bloomPrepare = mBloom->GetPassPrepare(frame.m_FrameIndex);
+
+		MTSetDelayStart(job::context, 1);
+
+		MTExecute(job::context, nullptr, Pass::Launch, cullPrepare);
+		MTExecute(job::context, nullptr, Pass::Launch, shadowPrepare);
+		MTExecute(job::context, nullptr, Pass::Launch, geoPrepare);
+		MTExecute(job::context, nullptr, Pass::Launch, skyboxPrepare);
+		MTExecute(job::context, nullptr, Pass::Launch, debugPassPrepare);
+		MTExecute(job::context, nullptr, Pass::Launch, gameUIPrepare);
+		MTExecute(job::context, nullptr, Pass::Launch, bloomPrepare);
+
+		MTDelayStart(job::context);
+		MTSynchronize(job::context);
+
+		// Culling and Shadow Pass
+		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, { cullPrepare->pOutCmd, shadowPrepare->pOutCmd }, { frame.m_RenderSemaphore }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { mShadowPassSemaphore[FrameIndex] }, nullptr);
+
+		// Geometry Pass
 		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue,
-			{ geoPassCmd, skyboxCmd, debugPassCmd }, { mShadowPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT }, { mBloomPassSemaphore[FrameIndex] }, nullptr);
-		
+			{ geoPrepare->pOutCmd, skyboxPrepare->pOutCmd, debugPassPrepare->pOutCmd }, { mShadowPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT }, { mBloomPassSemaphore[FrameIndex] }, nullptr);
+
 		// Postprocess Effects
-		VkCommandBuffer gameUICmd = mUI->Prepare(frame.m_FrameIndex, Global::Time, Global::TimeFromStart);
-		VkCommandBuffer bloomCmd = mBloom->Prepare(FrameIndex, Global::Time, Global::TimeFromStart);
-		
-		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, { bloomCmd, gameUICmd }, { mBloomPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { frame.m_PresentSemaphore }, frame.m_RenderFence);
-		
+		vk::Gfx_SubmitCmdBuffers(Global::Context->defaultQueue, { bloomPrepare->pOutCmd, gameUIPrepare->pOutCmd }, { mBloomPassSemaphore[FrameIndex] }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { frame.m_PresentSemaphore }, frame.m_RenderFence);
+
 		if (s_EnableImGui)
 			UI::RenderUI();
 		mSwapchain.SetExposure(UI::Exposure);
@@ -519,9 +523,9 @@ namespace Application
 			specifcation.mTextureSwizzling.r = VK_COMPONENT_SWIZZLE_R;
 			specifcation.mTextureSwizzling.g = VK_COMPONENT_SWIZZLE_R;
 			specifcation.mTextureSwizzling.b = VK_COMPONENT_SWIZZLE_R;
-			mNoiseMapTexture = Texture2_Create (Global::Context, specifcation);
-			mNoiseMapTexture1 = Texture2_Create(Global::Context, specifcation);
-			mNoiseMapTexture2 = Texture2_Create(Global::Context, specifcation);
+			mNoiseMapTexture = Texture2_Create(specifcation);
+			mNoiseMapTexture1 = Texture2_Create(specifcation);
+			mNoiseMapTexture2 = Texture2_Create(specifcation);
 		}
 		if (UI::ActiveNoiseMap == 0 || !(mT0)) {
 			Texture2_UploadPixels(mNoiseMapTexture, perlinBuffer.data(), perlinBuffer.size() * sizeof(float));

@@ -11,7 +11,6 @@
 // TODO: Use 32 for Nvidia Graphics cards
 #define KernalSizeX 64
 #define KernalSizeY 8
-#define DisableCulling (false)
 // Big objects may be completely outside one frustrum plane, however they may be partialy inside another frustrum plane
 // the radius epsillion multiples the radius to reduce incorrect culling results, this is a hotfix.
 #define RadiusEpsillion (2.5f)
@@ -23,7 +22,8 @@ namespace Application {
 	};
 }
 
-Application::FrustumCullPass::FrustumCullPass(ecs::EntityController* ecs, Camera* camera) : Pass(Global::Context->defaultDevice, true), mECS(ecs), mCamera(camera)
+Application::FrustumCullPass::FrustumCullPass(ecs::EntityController* ecs, Camera* camera, bool enableCulling) : 
+	Pass(Global::Context->defaultDevice, true), mECS(ecs), mCamera(camera), mEnableCulling(enableCulling)
 {
 	BindingDescription computeBindings[5]{};
 	computeBindings[0].mBindingID = 0;
@@ -66,22 +66,22 @@ Application::FrustumCullPass::FrustumCullPass(ecs::EntityController* ecs, Camera
 
 	std::vector<VkDescriptorPoolSize> poolSize;
 	ShaderConnector_CalculateDescriptorPool(5, computeBindings, poolSize);
-	mPool = vk::Gfx_CreateDescriptorPool(Global::Context, 1 * gFrameOverlapCount, poolSize);
-	mSet = ShaderConnector_CreateSet(Global::Context, 0, mPool, 5, computeBindings);
+	mPool = vk::Gfx_CreateDescriptorPool( 1 * gFrameOverlapCount, poolSize);
+	mSet = ShaderConnector_CreateSet(0, mPool, 5, computeBindings);
 
-	mFrustrumLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 1, &mSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
-	Shader computeShader = Shader(Global::Context, "assets/shaders/FrustrumCulling.comp");
+	mFrustrumLayout = ShaderConnector_CreatePipelineLayout(1, &mSet, { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(FrustrumPlanes)} });
+	Shader computeShader = Shader("assets/shaders/FrustrumCulling.comp");
 	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
-	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
+	computeShader.SetSpecializationConstant<unsigned int>(2, mEnableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = PipelineState_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = PipelineState_CreateCompute(&computeShader, mFrustrumLayout, 0);
 
 	mOutputGeometryDataArray = mSet.GetBuffer2(1);
 	mOutputDrawDataArray = mSet.GetBuffer2(3);
 
-	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
-	mInvocationQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT);
+	mQuery = vk::Gfx_CreateQueryPool( VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+	mInvocationQuery = vk::Gfx_CreateQueryPool( VK_QUERY_TYPE_PIPELINE_STATISTICS, gFrameOverlapCount, VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT);
 	
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
@@ -93,7 +93,7 @@ Application::FrustumCullPass::~FrustumCullPass()
 	Super_Pass_Destroy();
 	vkDestroyPipelineLayout(mDevice, mFrustrumLayout, nullptr);
 	vkDestroyDescriptorPool(mDevice, mPool, nullptr);
-	ShaderConnector_DestroySet(Global::Context->defaultDevice, mSet);
+	ShaderConnector_DestroySet(mSet);
 	vkDestroyPipeline(mDevice, mFrustrum, nullptr);
 	vkDestroyQueryPool(mDevice, mQuery, nullptr);
 	vkDestroyQueryPool(mDevice, mInvocationQuery, nullptr);
@@ -101,12 +101,12 @@ Application::FrustumCullPass::~FrustumCullPass()
 
 void Application::FrustumCullPass::ReloadShaders() {
 	vkDestroyPipeline(mDevice, mFrustrum, nullptr);
-	Shader computeShader = Shader(Global::Context, "assets/shaders/FrustrumCulling.comp");
+	Shader computeShader = Shader("assets/shaders/FrustrumCulling.comp");
 	computeShader.SetSpecializationConstant<unsigned int>(0, KernalSizeX);
 	computeShader.SetSpecializationConstant<unsigned int>(1, KernalSizeY);
-	computeShader.SetSpecializationConstant<unsigned int>(2, DisableCulling);
+	computeShader.SetSpecializationConstant<unsigned int>(2, mEnableCulling);
 	computeShader.SetSpecializationConstant<float>(3, RadiusEpsillion);
-	mFrustrum = PipelineState_CreateCompute(Global::Context, &computeShader, mFrustrumLayout, 0);
+	mFrustrum = PipelineState_CreateCompute(&computeShader, mFrustrumLayout, 0);
 	for (int i = 0; i < gFrameOverlapCount; i++) {
 		RecordCommands(i);
 	}

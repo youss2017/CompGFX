@@ -6,4 +6,4 @@
 #include <string>
 #include <vector>
 
-ITexture2 GRAPHICS_API CubeMap_Create(vk::VkContext context, const std::string& path, VkFormat format);
+ITexture2 GRAPHICS_API CubeMap_Create(const std::string& path, VkFormat format);

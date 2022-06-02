@@ -172,6 +172,7 @@ enum class PolygonTopology
 {
     TRIANGLE_LIST,
     LINE_LIST,
+    LINE_STRIP,
     POINT_LIST
 };
 
@@ -189,6 +190,7 @@ struct PipelineSpecification
     float m_MinSampleShading;
     float m_NearField = 0.0f;
     float m_FarField = 1.0f;
+    float m_LineWidth = 1.0;
 };
 
 struct PipelineState
@@ -202,6 +204,6 @@ struct PipelineState
 
 typedef PipelineState *IPipelineState;
 
-IPipelineState GRAPHICS_API PipelineState_Create(vk::VkContext context, const PipelineSpecification &spec, PipelineVertexInputDescription& input_description,
+IPipelineState GRAPHICS_API PipelineState_Create(const PipelineSpecification &spec, PipelineVertexInputDescription& input_description,
     Framebuffer fbo, VkPipelineLayout layout, Shader* vertex, Shader* fragment, const std::vector<VkDynamicState>& dynamicStates = {});
 void GRAPHICS_API PipelineState_Destroy(IPipelineState state);

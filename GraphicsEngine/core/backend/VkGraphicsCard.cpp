@@ -20,6 +20,21 @@ VkBool32 GraphicsCardFeatureValidation_Check(VkPhysicalDevice device, VkPhysical
 namespace vk
 {
 
+	struct CONFIGURATION {
+		PlatformWindow* Window;
+		bool EnableDebug;
+		bool ForceIntegeratedGPU;
+		std::vector<const char*> Layers;
+		std::vector<const char*> LayerExtensions;
+		std::vector<const char*> LogicalDeviceExtensions;
+		VkPhysicalDeviceFeatures2 GraphicsCardFeatures;
+		uint32_t VulkanAPIVersion;
+	};
+
+	static bool s_Configured = false;
+	static CONFIGURATION s_Config;
+	static VkContext s_Context = nullptr;
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 	{
 		if (Utils::StrStartsWith(std::string(pCallbackData->pMessage), "loader_scanned_icd_add: Driver"))
@@ -88,26 +103,45 @@ namespace vk
 		vkDestroyInstance(instance, NULL);
 	}
 
-	VkContext GRAPHICS_API Gfx_CreateContext(PlatformWindow *Window, bool EnableDebug, bool ForceIntegeratedGPU,
-								const std::vector<const char *> &Layers, const std::vector<const char *> &LayerExtensions,
-								std::vector<const char *> LogicalDeviceExtensions, VkPhysicalDeviceFeatures2 GraphicsCardFeatures, uint32_t VulkanAPIVersion)
+	void GRAPHICS_API Gfx_ConfigureContext(PlatformWindow* Window, bool EnableDebug, bool ForceIntegeratedGPU, const std::vector<const char*>& Layers, const std::vector<const char*>& LayerExtensions, std::vector<const char*> LogicalDeviceExtensions, VkPhysicalDeviceFeatures2 GraphicsCardFeatures, uint32_t VulkanAPIVersion)
 	{
+		if (s_Configured) {
+			log_error("Context Already Configured. CANNOT Be configured again", __FILE__, __LINE__, true);
+			return;
+		}
+		s_Configured = true;
+		s_Config.Window = Window;
+		s_Config.EnableDebug = EnableDebug;
+		s_Config.ForceIntegeratedGPU = ForceIntegeratedGPU;
+		s_Config.Layers = Layers;
+		s_Config.LayerExtensions = LayerExtensions;
+		s_Config.GraphicsCardFeatures = GraphicsCardFeatures;
+		s_Config.LogicalDeviceExtensions = LogicalDeviceExtensions;
+		s_Config.VulkanAPIVersion = VulkanAPIVersion;
+	}
+
+	std::vector<GraphicsCard> GRAPHICS_API Gfx_GetAllGraphicsCards(VkContext context);
+	GraphicsCard GRAPHICS_API Gfx_GetDefaultCard(VkContext context, bool ForceIntegratedGPU, VkPhysicalDeviceFeatures2 requiredFeatures);
+	VkDevice GRAPHICS_API Gfx_CreateDevice(GraphicsCard& card, std::vector<const char*> enabledExtensions, int* FamilyQueueIndex, VkQueueFlags queueFlags, int queueCount, VkPhysicalDeviceFeatures2 enabledFeatures);
+
+	VkContext GRAPHICS_API Gfx_GetContext()
+	{
+		if (s_Context)
+			return s_Context;
+		if (!s_Configured) {
+			log_error("Please Call Gfx_ConfigureContext First!", __FILE__, __LINE__, true);
+			return nullptr;
+		}
 #if defined(VK_NO_PROTOTYPES)
 		Loader_LoadVulkan();
 #endif
-		if (EnableDebug)
+		if (s_Config.EnableDebug)
 		{
 			logwarning("Enabling Validation Layers requires the VulkanSDK to be installed or validation .dlls/.so");
 			logwarning("If VulkanSDK is not installed, then validation layers will be prevent the application from running and cause a crash.");
 		}
-		VkContext context = new _VkContext();
-		assert(context);
-		context->m_ApiType = 0;
-		if (!context)
-		{
-			logerror("Could not allocate VkContext memory, this should not happpen!");
-			return NULL;
-		}
+		s_Context = (_VkContext*)new _VkContext;
+		s_Context->m_ApiType = 0;
 
 		uint32_t InstanceVersion;
 		vkEnumerateInstanceVersion(&InstanceVersion);
@@ -115,23 +149,23 @@ namespace vk
 		string instance_log = "Vulkan Version "s + to_string(VK_API_VERSION_MAJOR(InstanceVersion)) + "."s + to_string(VK_API_VERSION_MINOR(InstanceVersion));
 		loginfos(instance_log);
 
-		VkApplicationInfo appinfo{VK_STRUCTURE_TYPE_APPLICATION_INFO};
-		appinfo.pApplicationName = "Exoab 3";
+		VkApplicationInfo appinfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
+		appinfo.pApplicationName = "Application";
 		appinfo.applicationVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
-		appinfo.pEngineName = "ExoabEngine";
+		appinfo.pEngineName = "Application";
 		appinfo.engineVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
-		appinfo.apiVersion = VulkanAPIVersion;
-		VkInstanceCreateInfo createInfo{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+		appinfo.apiVersion = s_Config.VulkanAPIVersion;
+		VkInstanceCreateInfo createInfo{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 		createInfo.pApplicationInfo = &appinfo;
-		createInfo.enabledLayerCount = Layers.size();
-		createInfo.ppEnabledLayerNames = Layers.data();
-		createInfo.enabledExtensionCount = LayerExtensions.size();
-		createInfo.ppEnabledExtensionNames = LayerExtensions.data();
+		createInfo.enabledLayerCount = s_Config.Layers.size();
+		createInfo.ppEnabledLayerNames = s_Config.Layers.data();
+		createInfo.enabledExtensionCount = s_Config.LayerExtensions.size();
+		createInfo.ppEnabledExtensionNames = s_Config.LayerExtensions.data();
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-		if (EnableDebug)
+		if (s_Config.EnableDebug)
 		{
 			populateDebugMessengerCreateInfo(debugCreateInfo);
-			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
 		}
 
 		VkInstance instance = NULL;
@@ -139,89 +173,94 @@ namespace vk
 #if defined(VK_NO_PROTOTYPES)
 		Loader_LoadInstance(instance);
 #endif
-		if (EnableDebug)
+		if (s_Config.EnableDebug)
 		{
 			VkDebugUtilsMessengerEXT debugMessenger;
 			if (CreateDebugUtilsMessengerEXT(instance, &debugCreateInfo, nullptr, &debugMessenger) != VK_SUCCESS)
 			{
 				log_alert("Failed to set up debug messenger!", true);
 			}
-			context->debugMessenger = debugMessenger;
+			s_Context->debugMessenger = debugMessenger;
 		}
-		context->instance = instance;
-		context->window = Window;
+		s_Context->instance = instance;
+		s_Context->window = s_Config.Window;
 
-		GraphicsCard card = Gfx_GetDefaultCard(context, ForceIntegeratedGPU, GraphicsCardFeatures);
-		memcpy(&context->card, &card, sizeof(GraphicsCard)); // because of c++ struct constructor stuff
-		strcpy(context->card.name, card.name);
+		GraphicsCard card = Gfx_GetDefaultCard(s_Context, s_Config.ForceIntegeratedGPU, s_Config.GraphicsCardFeatures);
+		memcpy(&s_Context->card, &card, sizeof(GraphicsCard)); // because of c++ struct constructor stuff
+		strcpy(s_Context->card.name, card.name);
 		loginfo(card.name);
 		/* Create Default Vulkan Logical Device */
-		context->defaultDevice = nullptr;
-		context->defaultDevice = Gfx_CreateDevice(card,
-												  LogicalDeviceExtensions,
-												  (int *)&context->defaultQueueFamilyIndex,
-												  VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT,
-												  1,
-												  GraphicsCardFeatures);
+		s_Context->defaultDevice = nullptr;
+		s_Context->defaultDevice = Gfx_CreateDevice(card,
+			s_Config.LogicalDeviceExtensions,
+			(int*)&s_Context->defaultQueueFamilyIndex,
+			VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT,
+			1,
+			s_Config.GraphicsCardFeatures);
 #if defined(VK_NO_PROTOTYPES)
-		Loader_LoadDevice(context->defaultDevice);
+		Loader_LoadDevice(s_Context->defaultDevice);
 #endif
-		vkGetDeviceQueue(context->defaultDevice, context->defaultQueueFamilyIndex, 0, &context->defaultQueue);
+		vkGetDeviceQueue(s_Context->defaultDevice, s_Context->defaultQueueFamilyIndex, 0, &s_Context->defaultQueue);
 
-		context->debugEnabled = EnableDebug;
+		s_Context->debugEnabled = s_Config.EnableDebug;
 		VkSampleCountFlags counts = card.deviceLimits.framebufferColorSampleCounts & card.deviceLimits.framebufferDepthSampleCounts;
 
 		if (counts & VK_SAMPLE_COUNT_64_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 64");
-			context->m_MaxMSAASamples = 64;
+			s_Context->m_MaxMSAASamples = 64;
 		}
 		else if (counts & VK_SAMPLE_COUNT_32_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 32");
-			context->m_MaxMSAASamples = 32;
+			s_Context->m_MaxMSAASamples = 32;
 		}
 		else if (counts & VK_SAMPLE_COUNT_16_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 16");
-			context->m_MaxMSAASamples = 16;
+			s_Context->m_MaxMSAASamples = 16;
 		}
 		else if (counts & VK_SAMPLE_COUNT_8_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 8");
-			context->m_MaxMSAASamples = 8;
+			s_Context->m_MaxMSAASamples = 8;
 		}
 		else if (counts & VK_SAMPLE_COUNT_4_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 4");
-			context->m_MaxMSAASamples = 4;
+			s_Context->m_MaxMSAASamples = 4;
 		}
 		else if (counts & VK_SAMPLE_COUNT_2_BIT)
 		{
 			loginfo("Max Supported MSAA Samples 2");
-			context->m_MaxMSAASamples = 2;
+			s_Context->m_MaxMSAASamples = 2;
 		}
 		else
 		{
 			loginfo("MSAA is not supported on this graphics card.");
-			context->m_MaxMSAASamples = 1;
+			s_Context->m_MaxMSAASamples = 1;
 		}
 
-		context->m_future_memory_context = VkAlloc::CreateContext(context->instance, context->defaultDevice, context->card.handle, /* 64 mb*/ 64 * (1024 * 1024));
+		s_Context->m_future_memory_context = VkAlloc::CreateContext(s_Context->instance, s_Context->defaultDevice, s_Context->card.handle, /* 64 mb*/ 64 * (1024 * 1024));
 
-		return context;
+		return s_Context;
 	}
 
-	void GRAPHICS_API Gfx_DestroyContext(VkContext context)
+	void GRAPHICS_API Gfx_ReleaseContext()
 	{
-		vkDeviceWaitIdle(context->defaultDevice);
-		VkAlloc::DestroyContext(context->m_future_memory_context);
-		vkDestroyDevice(context->defaultDevice, 0);
-		if (context->debugEnabled)
-			DestroyDebugUtilsMessengerEXT(context->instance, context->debugMessenger, nullptr);
-		vkDestroyInstance(context->instance, nullptr);
+		if (!s_Context) {
+			log_error("Context has not been created yet.", __FILE__, __LINE__, true);
+			return;
+		}
+		vkDeviceWaitIdle(s_Context->defaultDevice);
+		VkAlloc::DestroyContext(s_Context->m_future_memory_context);
+		vkDestroyDevice(s_Context->defaultDevice, 0);
+		if (s_Context->debugEnabled)
+			DestroyDebugUtilsMessengerEXT(s_Context->instance, s_Context->debugMessenger, nullptr);
+		vkDestroyInstance(s_Context->instance, nullptr);
 		// For some reason this is broken?
 		//delete context;
+		s_Context = nullptr;
 	}
 
 	std::vector<GraphicsCard> GRAPHICS_API Gfx_GetAllGraphicsCards(VkContext context)
@@ -333,16 +372,16 @@ namespace vk
 		return device;
 	}
 
-	VkFence GRAPHICS_API Gfx_CreateFence(VkContext context, bool signaled)
+	VkFence GRAPHICS_API Gfx_CreateFence(bool signaled)
 	{
 		VkFenceCreateInfo createInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
 		createInfo.flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
 		VkFence fence;
-		vkcheck(vkCreateFence(context->defaultDevice, &createInfo, 0, &fence));
+		vkcheck(vkCreateFence(s_Context->defaultDevice, &createInfo, 0, &fence));
 		return fence;
 	}
 
-	VkSemaphore GRAPHICS_API Gfx_CreateSemaphore(VkContext context, bool TimelineSemaphore)
+	VkSemaphore GRAPHICS_API Gfx_CreateSemaphore(bool TimelineSemaphore)
 	{
 		VkSemaphoreTypeCreateInfo timelineCreateInfo;
 		timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -355,11 +394,11 @@ namespace vk
 		createInfo.pNext = TimelineSemaphore ? &timelineCreateInfo : nullptr;
 		createInfo.flags = 0;
 		VkSemaphore semaphore;
-		vkcheck(vkCreateSemaphore(context->defaultDevice, &createInfo, 0, &semaphore));
+		vkcheck(vkCreateSemaphore(s_Context->defaultDevice, &createInfo, 0, &semaphore));
 		return semaphore;
 	}
 
-	VkCommandPool GRAPHICS_API Gfx_CreateCommandPool(VkContext context, bool memoryShortLived, bool enableIndividualReset, bool makeProtected)
+	VkCommandPool GRAPHICS_API Gfx_CreateCommandPool(bool memoryShortLived, bool enableIndividualReset, bool makeProtected)
 	{
 		VkCommandPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
 		if (memoryShortLived)
@@ -375,18 +414,18 @@ namespace vk
 			createInfo.flags |= VK_COMMAND_POOL_CREATE_PROTECTED_BIT;
 		}
 		VkCommandPool pool;
-		vkCreateCommandPool(context->defaultDevice, &createInfo, 0, &pool);
+		vkCreateCommandPool(s_Context->defaultDevice, &createInfo, 0, &pool);
 		return pool;
 	}
 
-	VkCommandBuffer GRAPHICS_API Gfx_AllocCommandBuffer(VkContext context, VkCommandPool pool, bool primaryLevel)
+	VkCommandBuffer GRAPHICS_API Gfx_AllocCommandBuffer(VkCommandPool pool, bool primaryLevel)
 	{
 		VkCommandBufferAllocateInfo allocInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
 		allocInfo.commandPool = pool;
 		allocInfo.level = primaryLevel ? VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
 		allocInfo.commandBufferCount = 1;
 		VkCommandBuffer buffer;
-		vkcheck(vkAllocateCommandBuffers(context->defaultDevice, &allocInfo, &buffer));
+		vkcheck(vkAllocateCommandBuffers(s_Context->defaultDevice, &allocInfo, &buffer));
 		return buffer;
 	}
 
@@ -399,7 +438,7 @@ namespace vk
 
 	/*************************************************** PIPELINE LAYOUT ***************************************************/
 
-	VkDescriptorPool GRAPHICS_API Gfx_CreateDescriptorPool(VkContext context, int maxSets, const std::vector<VkDescriptorPoolSize> &poolSizes, VkDescriptorPoolCreateFlags flags)
+	VkDescriptorPool GRAPHICS_API Gfx_CreateDescriptorPool(int maxSets, const std::vector<VkDescriptorPoolSize> &poolSizes, VkDescriptorPoolCreateFlags flags)
 	{
 		VkDescriptorPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
 		createInfo.flags = flags;
@@ -407,12 +446,11 @@ namespace vk
 		createInfo.poolSizeCount = poolSizes.size();
 		createInfo.pPoolSizes = poolSizes.data();
 		VkDescriptorPool pool;
-		vkcheck(vkCreateDescriptorPool(context->defaultDevice, &createInfo, 0, &pool));
+		vkcheck(vkCreateDescriptorPool(s_Context->defaultDevice, &createInfo, 0, &pool));
 		return pool;
 	}
 
-	VkSampler Gfx_CreateSampler(VkContext context, 
-		VkFilter magFilter, 
+	VkSampler Gfx_CreateSampler(VkFilter magFilter, 
 		VkFilter minFilter, 
 		VkSamplerMipmapMode mipmapMode, 
 		VkSamplerAddressMode u, 
@@ -445,7 +483,7 @@ namespace vk
 		createInfo.borderColor = borderColor;
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 		VkSampler sampler;
-		vkCreateSampler(context->defaultDevice, &createInfo, nullptr, &sampler);
+		vkCreateSampler(s_Context->defaultDevice, &createInfo, nullptr, &sampler);
 		return sampler;
 	}
 
@@ -533,14 +571,14 @@ namespace vk
 		vkCmdPipelineBarrier(cmdBuffer, srcFlags, dstFlags, 0, 0, NULL, 0, NULL, 1, &imageBarrier);
 	}
 
-	SingleUseCmdBuffer Gfx_CreateSingleUseCmdBuffer(VkContext context)
+	SingleUseCmdBuffer Gfx_CreateSingleUseCmdBuffer()
 	{
 		SingleUseCmdBuffer buf;
-		buf.device = context->defaultDevice;
-		buf.queue = context->defaultQueue;
-		buf.fence = Gfx_CreateFence(context, false);
-		buf.pool = Gfx_CreateCommandPool(context, true, true, false);
-		buf.cmd = Gfx_AllocCommandBuffer(context, buf.pool, true);
+		buf.device = s_Context->defaultDevice;
+		buf.queue = s_Context->defaultQueue;
+		buf.fence = Gfx_CreateFence(false);
+		buf.pool = Gfx_CreateCommandPool(true, true, false);
+		buf.cmd = Gfx_AllocCommandBuffer(buf.pool, true);
 		VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		vkBeginCommandBuffer(buf.cmd, &beginInfo);
@@ -572,14 +610,14 @@ namespace vk
 		return barrier;
 	}
 
-	VkQueryPool GRAPHICS_API Gfx_CreateQueryPool(VkContext context, VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics)
+	VkQueryPool GRAPHICS_API Gfx_CreateQueryPool(VkQueryType queryType, uint32_t queryCount, VkQueryPipelineStatisticFlags pipelineStatistics)
 	{
 		VkQueryPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
 		createInfo.queryType = queryType;
 		createInfo.queryCount = queryCount;
 		createInfo.pipelineStatistics = pipelineStatistics;
 		VkQueryPool pool;
-		vkCreateQueryPool(context->defaultDevice, &createInfo, nullptr, &pool);
+		vkCreateQueryPool(s_Context->defaultDevice, &createInfo, nullptr, &pool);
 		return pool;
 	}
 

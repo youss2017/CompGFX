@@ -104,7 +104,7 @@ GRAPHICS_API IGraphics3D Graphics3D_Create(ConfigurationSettings *config, float 
 #else
     ForceIntegeratedGPU = false;
 #endif
-    gfx->m_context = vk::Gfx_CreateContext(Window, DebugMode, ForceIntegeratedGPU, layers, layer_extensions,
+    vk::Gfx_ConfigureContext(Window, DebugMode, ForceIntegeratedGPU, layers, layer_extensions,
                                                {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                                                 VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
 #if DEBUG_PRINTF
@@ -112,17 +112,18 @@ GRAPHICS_API IGraphics3D Graphics3D_Create(ConfigurationSettings *config, float 
 #endif
                                                 },
                                                features, VK_API_VERSION_1_3);
+    gfx->m_context = vk::Gfx_GetContext();
     auto vcont = gfx->m_context;
     gfx->m_vswapchain = vk::GraphicsSwapchain::Create(vcont, zNear, zFar, vcont->defaultQueueFamilyIndex, cs_SwapchainFormat, Window, gFrameOverlapCount, config->VSync, EnableImGui);
     
     for (int i = 0; i < gFrameOverlapCount; i++)
     {
         gfx->m_FrameData[i].m_FrameIndex = i;
-        gfx->m_FrameData[i].m_PresentSemaphore = vk::Gfx_CreateSemaphore(vcont, false);
-        gfx->m_FrameData[i].m_RenderSemaphore = vk::Gfx_CreateSemaphore(vcont, false);
-        gfx->m_FrameData[i].m_RenderFence = vk::Gfx_CreateFence(vcont, true);
-        gfx->m_FrameData[i].m_pool = vk::Gfx_CreateCommandPool(vcont, false, true, false);
-        gfx->m_FrameData[i].m_cmd = vk::Gfx_AllocCommandBuffer(vcont, gfx->m_FrameData[i].m_pool, true);
+        gfx->m_FrameData[i].m_PresentSemaphore = vk::Gfx_CreateSemaphore(false);
+        gfx->m_FrameData[i].m_RenderSemaphore = vk::Gfx_CreateSemaphore(false);
+        gfx->m_FrameData[i].m_RenderFence = vk::Gfx_CreateFence(true);
+        gfx->m_FrameData[i].m_pool = vk::Gfx_CreateCommandPool(false, true, false);
+        gfx->m_FrameData[i].m_cmd = vk::Gfx_AllocCommandBuffer(gfx->m_FrameData[i].m_pool, true);
     }
     
     return gfx;
@@ -170,7 +171,7 @@ GRAPHICS_API void Graphics3D_Destroy(IGraphics3D gfx)
         vkDestroyCommandPool((gfx->m_context)->defaultDevice, gfx->m_FrameData[i].m_pool, nullptr);
     }
     delete gfx->m_window;
-    vk::Gfx_DestroyContext(gfx->m_context);
+    vk::Gfx_ReleaseContext();
 }
 
 GRAPHICS_API FrameData& Graphics3D_GetFrame(IGraphics3D gfx)

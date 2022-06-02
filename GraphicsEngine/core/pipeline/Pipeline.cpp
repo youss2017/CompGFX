@@ -138,10 +138,10 @@ static VulkanPipelineVertexInput Vulkan_Internal_PipelineState_InitalizeVertexIn
     return input_state;
 }
 
-IPipelineState GRAPHICS_API PipelineState_Create(vk::VkContext _context, const PipelineSpecification &spec, PipelineVertexInputDescription& input_description,
+IPipelineState GRAPHICS_API PipelineState_Create(const PipelineSpecification &spec, PipelineVertexInputDescription& input_description,
     Framebuffer fbo, VkPipelineLayout layout, Shader *vertex, Shader *fragment, const std::vector<VkDynamicState>& dynamicStates)
 {
-    vk::VkContext context = (_context);
+    vk::VkContext context = vk::Gfx_GetContext();
     std::array<VkPipelineShaderStageCreateInfo, 2> Stages;
     Stages[0].sType = Stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     Stages[0].pNext = Stages[1].pNext = 0;
@@ -169,6 +169,8 @@ IPipelineState GRAPHICS_API PipelineState_Create(vk::VkContext _context, const P
         InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     else if (PolygonTopology::LINE_LIST == spec.m_Topology)
         InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    else if (PolygonTopology::LINE_STRIP == spec.m_Topology)
+        InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
     else if (PolygonTopology::POINT_LIST == spec.m_Topology)
         InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     else
@@ -231,7 +233,7 @@ IPipelineState GRAPHICS_API PipelineState_Create(vk::VkContext _context, const P
     RasterizationState.depthBiasConstantFactor = 0.0f;
     RasterizationState.depthBiasClamp = 0.0f;
     RasterizationState.depthBiasSlopeFactor = 0.0f;
-    RasterizationState.lineWidth = 1.0f;
+    RasterizationState.lineWidth = spec.m_LineWidth;
 
     VkPipelineMultisampleStateCreateInfo MultisampleState;
     MultisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;

@@ -4,7 +4,9 @@
 namespace ecs {
 
 	void ProcessEntityGeometry(EntityGeometry* EG)
-	{
+	{	
+		if (EG->mInstanceCount == 0)
+			return;
 		for (int i = 0; i < EG->nAllocatedInstanceCount; i++) {
 			Entity* e = EG->vEnts[i];
 			memcpy((char*)EG->pInstanceMapped + (i * sizeof(ShaderTypes::InstanceData)), &e->sData, sizeof(ShaderTypes::InstanceData));
@@ -14,11 +16,12 @@ namespace ecs {
 
 	void ECS_ConfigureEntityGeometry(EntityGeometry* eg, int nMaxInstanceCount)
 	{
+		assert(nMaxInstanceCount > 0);
 		eg->bInstanceSlots = new bool[nMaxInstanceCount];
 		memset(eg->bInstanceSlots, INT_MAX, sizeof(bool) * nMaxInstanceCount);
 		eg->mInstanceCount = nMaxInstanceCount;
-		eg->mInstanceBuffer = Buffer2_CreatePreInitalized(Global::Context, BufferType::BUFFER_TYPE_STORAGE, nullptr, sizeof(ShaderTypes::InstanceData) * nMaxInstanceCount, BufferMemoryType::CPU_TO_GPU, true, false);
-		eg->mCulledInstanceBuffer = Buffer2_CreatePreInitalized(Global::Context, BufferType::BUFFER_TYPE_STORAGE, nullptr, sizeof(ShaderTypes::InstanceData) * nMaxInstanceCount, BufferMemoryType::CPU_TO_GPU, true, false);
+		eg->mInstanceBuffer = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_STORAGE, nullptr, sizeof(ShaderTypes::InstanceData) * nMaxInstanceCount, BufferMemoryType::CPU_TO_GPU, true, false);
+		eg->mCulledInstanceBuffer = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_STORAGE, nullptr, sizeof(ShaderTypes::InstanceData) * nMaxInstanceCount, BufferMemoryType::CPU_TO_GPU, true, false);
 		eg->vEnts.resize(nMaxInstanceCount);
 		eg->nAllocatedInstanceCount = 0;
 		eg->pInstanceMapped = Buffer2_Map(eg->mInstanceBuffer);

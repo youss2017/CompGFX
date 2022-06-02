@@ -9,7 +9,7 @@
 	There are more efficent ways of doing this but this only used in loading and its fast enough.
 */
 
-ITexture2 GRAPHICS_API CubeMap_Create(vk::VkContext context, const std::string& path, VkFormat format)
+ITexture2 GRAPHICS_API CubeMap_Create(const std::string& path, VkFormat format)
 {
 	int width, height, channels;
 	struct Pixel {
@@ -82,7 +82,7 @@ ITexture2 GRAPHICS_API CubeMap_Create(vk::VkContext context, const std::string& 
 		spec.m_CreatePerFrame  = false;
 		spec.m_LazilyAllocate  = false;
 		spec.mUsage = 0;
-		cubeFaces[i] = Texture2_Create(context, spec);
+		cubeFaces[i] = Texture2_Create(spec);
 		Texture2_UploadPixels(cubeFaces[i], faces[i], face_size * face_size * 4);
 	}
 
@@ -97,9 +97,10 @@ ITexture2 GRAPHICS_API CubeMap_Create(vk::VkContext context, const std::string& 
 	spec.m_CreatePerFrame = false;
 	spec.m_LazilyAllocate = false;
 	spec.mFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-	ITexture2 cubeMap = Texture2_Create(context, spec);
-
-	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(context);
+	ITexture2 cubeMap = Texture2_Create(spec);
+	
+	vk::VkContext context = vk::Gfx_GetContext();
+	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer();
 	VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;

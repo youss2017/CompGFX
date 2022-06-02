@@ -5,6 +5,7 @@
 #include "PxFoundation.h"
 #include "cooking/PxCooking.h"
 #include "extensions/PxDefaultCpuDispatcher.h"
+#include "../mesh/Terrain.hpp"
 #include <vector>
 
 namespace Ph {
@@ -49,6 +50,8 @@ namespace Ph {
         PhysicsEntity* CreateRigidEntity(ecs::IEntityGeometry eg, const ShaderTypes::InstanceData& data, int nMaterialID, bool bDynamic);
         void DestroyRigidEntity(PhysicsEntity* e);
         void AddPlane(vec4 plane, int nMaterialID);
+
+        void SetTerrain(Terrain* terrain);
 
         void Start();
         void End();

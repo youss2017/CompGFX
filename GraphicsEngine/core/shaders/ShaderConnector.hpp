@@ -64,6 +64,6 @@ struct DescriptorSetSharedResources {
 };
 
 void GRAPHICS_API ShaderConnector_CalculateDescriptorPool(uint32_t bindingsCount, BindingDescription* pBindings, std::vector<VkDescriptorPoolSize>& poolSizes);
-GRAPHICS_API DescriptorSet ShaderConnector_CreateSet(vk::VkContext context, uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings);
-GRAPHICS_API VkPipelineLayout ShaderConnector_CreatePipelineLayout(vk::VkContext context, uint32_t descriptorSetCount, DescriptorSet* pSets, std::vector<VkPushConstantRange> ranges);
-void GRAPHICS_API ShaderConnector_DestroySet(VkDevice device, const DescriptorSet& set);
+GRAPHICS_API DescriptorSet ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings);
+GRAPHICS_API VkPipelineLayout ShaderConnector_CreatePipelineLayout(uint32_t descriptorSetCount, DescriptorSet* pSets, std::vector<VkPushConstantRange> ranges);
+void GRAPHICS_API ShaderConnector_DestroySet(const DescriptorSet& set);

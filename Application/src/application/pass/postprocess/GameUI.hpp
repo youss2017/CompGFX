@@ -9,11 +9,6 @@
 
 namespace Application {
 
-	struct UIVertex {
-		glm::vec2 inPosition;
-		glm::vec2 inTexCoord;
-	};
-
 	class GameUI : public Pass {
 
 	public:
@@ -43,10 +38,13 @@ namespace Application {
 		ITexture2 mCursor;
 		VkDescriptorPool mPool;
 		std::vector<DescriptorSet> mTextureSets;
-		UIVertex *mVertices;
+		void* mVertices;
 		Framebuffer mFBO;
 		VkPipelineLayout mLayout;
 		IPipelineState mState;
+		// Vulkan does not have dynamic primitive topology (it says it does but validation layers say it doesn't)
+		// I could use vkCmdSetPrimitiveTopology, however validation layers complain.
+		IPipelineState mLineListState;
 	};
 
 }

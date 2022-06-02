@@ -2,9 +2,14 @@
 #include <backend/VkGraphicsCard.hpp>
 #include <unordered_map>
 
-GRAPHICS_API IBuffer2 Buffer2_Create(vk::VkContext context, BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
+GRAPHICS_API IBuffer2 Buffer2_Create(BufferType type, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
 {
 	using namespace VkAlloc;
+	if (size == 0) {
+		log_error("Cannot create buffer because [buffer_size] = 0.", __FILE__, __LINE__);
+		return nullptr;
+	}
+	vk::VkContext context = vk::Gfx_GetContext();
 	BUFFER_DESCRIPTION desc;
 	desc.m_properties = memoryType == BufferMemoryType::GPU_ONLY ? DEVICE_MEMORY_PROPERTY::GPU_ONLY : ((memoryType == BufferMemoryType::CPU_TO_GPU) ? DEVICE_MEMORY_PROPERTY::CPU_TO_GPU : DEVICE_MEMORY_PROPERTY::CPU_ONLY);
 	desc.m_size = size;
@@ -56,9 +61,9 @@ GRAPHICS_API IBuffer2 Buffer2_Create(vk::VkContext context, BufferType type, siz
 	return buffer;
 }
 
-GRAPHICS_API IBuffer2 Buffer2_CreatePreInitalized(vk::VkContext context, BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
+GRAPHICS_API IBuffer2 Buffer2_CreatePreInitalized(BufferType type, void* pData, size_t size, BufferMemoryType memoryType, bool pointerUsage, bool requireCoherent, bool intermediateBuffer)
 {
-	IBuffer2 buffer = Buffer2_Create(context, type, size, memoryType, pointerUsage, requireCoherent, intermediateBuffer);
+	IBuffer2 buffer = Buffer2_Create(type, size, memoryType, pointerUsage, requireCoherent, intermediateBuffer);
 	if (pData) {
 		Buffer2_UploadData(buffer, (char8_t*)pData, 0, VK_WHOLE_SIZE);
 	}
@@ -84,11 +89,11 @@ GRAPHICS_API void Buffer2_UploadData(IBuffer2 buffer, void *pData, size_t offset
 		Buffer2_Unmap(buffer);
 		return;
 	}
-	IBuffer2 intermediate = Buffer2_Create(buffer->mContext, BUFFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false, true);
+	IBuffer2 intermediate = Buffer2_Create(BUFFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false, true);
 	Buffer2_UploadData(intermediate, pData, 0, size);
-	VkFence fence = vk::Gfx_CreateFence(buffer->mContext, false);
-	VkCommandPool pool = vk::Gfx_CreateCommandPool(buffer->mContext, true, false);
-	VkCommandBuffer cmd = vk::Gfx_AllocCommandBuffer(buffer->mContext, pool, true);
+	VkFence fence = vk::Gfx_CreateFence(false);
+	VkCommandPool pool = vk::Gfx_CreateCommandPool(true, false);
+	VkCommandBuffer cmd = vk::Gfx_AllocCommandBuffer(pool, true);
 	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	VkBufferCopy region;
 	region.srcOffset = 0;
@@ -168,8 +173,8 @@ GRAPHICS_API void Buffer2_Destroy(IBuffer2 buffer)
 static std::unordered_map<uint64_t, IBuffer2> GmallocBuffers;
 static std::unordered_map<IBuffer2, uint64_t> GbufferToPointer;
 
-GRAPHICS_API void* Gmalloc(vk::VkContext context, uint32_t size, BufferType type, bool DisableVerfication) {
-	IBuffer2 buffer = Buffer2_Create(context, type, size, BufferMemoryType::CPU_TO_GPU, true, DisableVerfication);
+GRAPHICS_API void* Gmalloc(uint32_t size, BufferType type, bool DisableVerfication) {
+	IBuffer2 buffer = Buffer2_Create(type, size, BufferMemoryType::CPU_TO_GPU, true, DisableVerfication);
 	void* ptr = Buffer2_Map(buffer);
 	GmallocBuffers.insert(std::make_pair(uint64_t(ptr), buffer));
 	GbufferToPointer.insert({ buffer, uint64_t(ptr) });

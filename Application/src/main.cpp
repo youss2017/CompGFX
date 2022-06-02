@@ -18,7 +18,7 @@
 #include "graphics/Graphics.hpp"
 #include "application/Application.hpp"
 #include <csignal>
-#include "jobs/Jobs.hpp"
+#include "jobs/MT.hpp"
 #include <core/Entry.hpp>
 
 #ifdef _WIN32
@@ -40,10 +40,11 @@ namespace Global {
     double FrameRate;
     bool UpdateUIInfo;
     bool RenderDOC;
+    MTContext* MT;
 }
 
 static void LoadConfiguration();
-
+#include "mesh/Heightfield.hpp"
 int main(int argc, char** argv)
 {
     PROFILE_BEGIN_SESSION("Startup", "Profiling-Startup.json");
@@ -52,8 +53,9 @@ int main(int argc, char** argv)
 #else
     PreparePOSIX(argc, argv);
 #endif
+    Heightfield h("assets/terrain/terrain.glb");
     GraphicsEngine_Initalize();
-    //job::OnStartup();
+    Global::MT = MTCreate(0);
     /* Load Game Settings from settings.cfg */
     LoadConfiguration();
     bool rd = false;
@@ -102,7 +104,7 @@ int main(int argc, char** argv)
     app->OnDestroy();
     delete app;
     GraphicsEngine_Destroy();
-    //job::OnDestroy();
+    MTDestroy(Global::MT, 1500);
     PROFILE_END_SESSION();
     return 0;
 }

@@ -30,7 +30,8 @@ void GRAPHICS_API ShaderConnector_CalculateDescriptorPool(uint32_t bindingsCount
     }
 }
 
-DescriptorSet GRAPHICS_API ShaderConnector_CreateSet(vk::VkContext context, uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings) {
+DescriptorSet GRAPHICS_API ShaderConnector_CreateSet(uint32_t setID, VkDescriptorPool pool, uint32_t bindingsCount, BindingDescription* pBindings) {
+    vk::VkContext context = vk::Gfx_GetContext();
     DescriptorSet set;
     set.mSetID = setID;
     set.mPool = pool;
@@ -60,7 +61,7 @@ DescriptorSet GRAPHICS_API ShaderConnector_CreateSet(vk::VkContext context, uint
                     bufferType = BufferType(bufferType | BUFFER_TYPE_INDIRECT);
                 BindingFlags flags = binding.mFlags;
                 BufferMemoryType memoryType = (binding.mFlags & BINDING_FLAG_CPU_VISIBLE) ? BufferMemoryType::CPU_TO_GPU : BufferMemoryType::GPU_ONLY;
-                binding.mBuffer = Buffer2_Create(context, bufferType, binding.mBufferSize, memoryType, (binding.mFlags & BINDING_FLAG_CREATE_BUFFERS_POINTER), (binding.mFlags & BINDING_FLAG_REQUIRE_COHERENT));
+                binding.mBuffer = Buffer2_Create(bufferType, binding.mBufferSize, memoryType, (binding.mFlags & BINDING_FLAG_CREATE_BUFFERS_POINTER), (binding.mFlags & BINDING_FLAG_REQUIRE_COHERENT));
             }
             set.mBindings.insert(std::make_pair(binding.mBindingID, binding));
         }
@@ -166,7 +167,8 @@ DescriptorSet GRAPHICS_API ShaderConnector_CreateSet(vk::VkContext context, uint
     return set;
 }
 
-VkPipelineLayout GRAPHICS_API ShaderConnector_CreatePipelineLayout(vk::VkContext context, uint32_t descriptorSetCount, DescriptorSet* pSets, std::vector<VkPushConstantRange> ranges) {
+VkPipelineLayout GRAPHICS_API ShaderConnector_CreatePipelineLayout(uint32_t descriptorSetCount, DescriptorSet* pSets, std::vector<VkPushConstantRange> ranges) {
+    vk::VkContext context = vk::Gfx_GetContext();
     std::vector<VkDescriptorSetLayout> setLayouts;
     for (uint32_t i = 0; i < descriptorSetCount; i++) setLayouts.push_back(pSets[i].mSetLayout);
     VkPipelineLayoutCreateInfo createInfo;
@@ -182,7 +184,9 @@ VkPipelineLayout GRAPHICS_API ShaderConnector_CreatePipelineLayout(vk::VkContext
     return layout;
 }
 
-void GRAPHICS_API ShaderConnector_DestroySet(VkDevice device, const DescriptorSet& set) {
+void GRAPHICS_API ShaderConnector_DestroySet(const DescriptorSet& set) {
+    vk::VkContext context = vk::Gfx_GetContext();
+    VkDevice device = context->defaultDevice;
     vkDestroyDescriptorSetLayout(device, set.mSetLayout, nullptr);
     //vkFreeDescriptorSets(Global::Context->defaultDevice, set.mPool, gFrameOverlapCount, &set.mSets[0]);
     for (auto& bindingPair : set.mBindings) {

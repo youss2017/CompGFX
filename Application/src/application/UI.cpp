@@ -121,7 +121,7 @@ void UI::RenderUI()
         float exposure = std::stof(std::string(buf));
         UI::Exposure = exposure;
     }
-    catch (std::exception& e) {}
+    catch (std::exception&) {}
     ImGui::SliderInt("Cubemap LOD", &UI::CubemapLOD, 0, UI::CubemapLODMax);
     ImGui::SliderInt("Bloom Downsample", &UI::BloomDownsampleMip, 0, 7);
     const char* items[] = { "Color Buffer", "Depth Buffer", "Shadow Buffer", "Bloom Buffer" };
@@ -165,11 +165,6 @@ void UI::RenderUI()
         if (ImGui::Button("Regenerate")) {
             RegenerateNoiseMap = true;
         }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Export Terrain")) {
-        StateChanged = true;
-        SaveTerrain = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Quit")) {

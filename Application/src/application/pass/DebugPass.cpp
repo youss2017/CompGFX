@@ -3,9 +3,9 @@
 #include "../Globals.hpp"
 
 Application::DebugPass::DebugPass(const Framebuffer& fbo) : Pass(Global::Context->defaultDevice, true), mFBO(fbo), mProjView(glm::mat4(1.0)), mDebugObjectCount(0), mDebugBuffer(nullptr), mDebugObjectIndex(0), mDebugBufferPointer(0) {
-	mLayout = ShaderConnector_CreatePipelineLayout(Global::Context, 0, nullptr, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugPushblock)}});
-	Shader vertexShader = Shader(Global::Context, "assets/shaders/debug/debugVertex.vert");
-	Shader fragmentShader = Shader(Global::Context, "assets/shaders/debug/debugFragment.frag");
+	mLayout = ShaderConnector_CreatePipelineLayout( 0, nullptr, { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DebugPushblock)}});
+	Shader vertexShader = Shader( "assets/shaders/debug/debugVertex.vert");
+	Shader fragmentShader = Shader( "assets/shaders/debug/debugFragment.frag");
 	PipelineSpecification specification;
 	specification.m_CullMode = CullMode::CULL_BACK;
 	specification.m_DepthEnabled = true;
@@ -19,12 +19,12 @@ Application::DebugPass::DebugPass(const Framebuffer& fbo) : Pass(Global::Context
 	specification.m_NearField = 0.0f;
 	specification.m_FarField = 1.0f;
 	PipelineVertexInputDescription input;
-	mState = PipelineState_Create(Global::Context, specification, input, fbo, mLayout, &vertexShader, &fragmentShader);
+	mState = PipelineState_Create( specification, input, fbo, mLayout, &vertexShader, &fragmentShader);
 	specification.m_DepthFunc = DepthFunction::ALWAYS;
 	specification.m_DepthWriteEnable = false;
 	specification.m_CullMode = CullMode::CULL_NONE;
-	mStateInFront = PipelineState_Create(Global::Context, specification, input, fbo, mLayout, &vertexShader, &fragmentShader);
-	mQuery = vk::Gfx_CreateQueryPool(Global::Context, VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
+	mStateInFront = PipelineState_Create( specification, input, fbo, mLayout, &vertexShader, &fragmentShader);
+	mQuery = vk::Gfx_CreateQueryPool( VK_QUERY_TYPE_TIMESTAMP, gFrameOverlapCount * 2, 0);
 }
 
 Application::DebugPass::~DebugPass() {
@@ -38,13 +38,13 @@ Application::DebugPass::~DebugPass() {
 }
 
 void Application::DebugPass::ReloadShaders() {
-	Shader vertexShader = Shader(Global::Context, "assets/shaders/debug/debugVertex.vert");
-	Shader fragmentShader = Shader(Global::Context, "assets/shaders/debug/debugFragment.frag");
+	Shader vertexShader = Shader("assets/shaders/debug/debugVertex.vert");
+	Shader fragmentShader = Shader("assets/shaders/debug/debugFragment.frag");
 	PipelineSpecification specification = mState->m_spec;
 	PipelineVertexInputDescription input;
 	PipelineState_Destroy(mState);
-	mState = PipelineState_Create(Global::Context, specification, input, mFBO, mLayout, &vertexShader, &fragmentShader, {});
-	mStateInFront = PipelineState_Create(Global::Context, mStateInFront->m_spec, input, mFBO, mLayout, &vertexShader, &fragmentShader, {});
+	mState = PipelineState_Create(specification, input, mFBO, mLayout, &vertexShader, &fragmentShader, {});
+	mStateInFront = PipelineState_Create(mStateInFront->m_spec, input, mFBO, mLayout, &vertexShader, &fragmentShader, {});
 }
 
 VkCommandBuffer Application::DebugPass::Prepare(uint32_t FrameIndex, float dTime, float dTimeFromStart) {
@@ -90,14 +90,14 @@ void Application::DebugPass::BufferSizeCheck(uint32_t requiredSize) {
 			Gfree(mDebugBuffer);
 			uint32_t countPreIcremeant = mDebugObjectCount;
 			mDebugObjectCount += (requiredSize) ? requiredSize : 10;
-			mDebugBuffer = (DebugObject*)Gmalloc(Global::Context, mDebugObjectCount * sizeof(DebugObject), BufferType::BUFFER_TYPE_STORAGE, true);
+			mDebugBuffer = (DebugObject*)Gmalloc( mDebugObjectCount * sizeof(DebugObject), BufferType::BUFFER_TYPE_STORAGE, true);
 			mDebugBufferPointer = Buffer2_GetGPUPointer(Gbuffer(mDebugBuffer));
 			memcpy(mDebugBuffer, tempBuffer, sizeof(DebugObject) * countPreIcremeant);
 			delete[] tempBuffer;
 		}
 		else {
 			mDebugObjectCount += (requiredSize) ? requiredSize : 10;
-			mDebugBuffer = (DebugObject*)Gmalloc(Global::Context, sizeof(DebugObject) * mDebugObjectCount, BufferType::BUFFER_TYPE_STORAGE, true);
+			mDebugBuffer = (DebugObject*)Gmalloc( sizeof(DebugObject) * mDebugObjectCount, BufferType::BUFFER_TYPE_STORAGE, true);
 			mDebugBufferPointer = Buffer2_GetGPUPointer(Gbuffer(mDebugBuffer));
 		}
 	}

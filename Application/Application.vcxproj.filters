@@ -111,10 +111,13 @@
     <ClInclude Include="include\zip\src\zip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\MT.hpp">
+    <ClInclude Include="src\jobs\MT.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\application\CameraControl.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mesh\Heightfield.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -176,7 +179,7 @@
     <ClCompile Include="src\application\minimap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\jobs\Win32Jobs.cpp">
+    <ClCompile Include="src\jobs\Jobs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\physics\PhysicsEngine.cpp">
@@ -188,13 +191,19 @@
     <ClCompile Include="include\zip\src\zip.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\MT.cpp">
+    <ClCompile Include="src\jobs\MT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\application\ecs\Entity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\application\CameraControl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mesh\Heightfield.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\application\pass\Pass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

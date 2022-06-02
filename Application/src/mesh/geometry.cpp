@@ -24,16 +24,16 @@ namespace Mesh
 		glm::vec3 minp = glm::vec3(lx, ly, lz);
 		glm::vec3 maxp = glm::vec3(hx, hy, hz);
 		glm::vec3 center = (minp + maxp) / 2.0f;
-		
+
 		/*
 			x x
 			x x
 			. .
 			. .
 		*/
-		glm::vec3 fleft_top = glm::vec3(minp.x, maxp.y, minp.z),	fright_top = glm::vec3(maxp.x, maxp.y, minp.z);
+		glm::vec3 fleft_top = glm::vec3(minp.x, maxp.y, minp.z), fright_top = glm::vec3(maxp.x, maxp.y, minp.z);
 		glm::vec3 fleft_bottom = glm::vec3(minp.x, minp.y, minp.z), fright_bottom = glm::vec3(maxp.x, minp.y, minp.z);
-		glm::vec3 bleft_top = glm::vec3(minp.x, maxp.y, maxp.z),	bright_top = glm::vec3(maxp.x, maxp.y, maxp.z);
+		glm::vec3 bleft_top = glm::vec3(minp.x, maxp.y, maxp.z), bright_top = glm::vec3(maxp.x, maxp.y, maxp.z);
 		glm::vec3 bleft_bottom = glm::vec3(minp.x, minp.y, maxp.z), bright_bottom = glm::vec3(maxp.x, minp.y, maxp.z);
 
 		float d0 = glm::distance(center, fleft_top);
@@ -62,7 +62,7 @@ namespace Mesh
 		int meshIndex = 0;
 		for (auto& _path : config.mList)
 		{
-			std::string &path = _path.second;
+			std::string& path = _path.second;
 			const aiScene* scene = imp.ReadFile(path, aiProcessPreset_TargetRealtime_MaxQuality);
 			if (!scene) {
 				std::string errmsg = "Error parsing '" + std::string(path) + "', because: " + std::string(imp.GetErrorString());
@@ -70,7 +70,7 @@ namespace Mesh
 				return false;
 			}
 			Geometry geometry;
-			
+
 			std::stringstream infostream;
 			infostream << meshIndex++ << " --> Loading Geomtry from model with " << scene->mNumMeshes << " submeshes: " << path;
 			loginfos(infostream.str());
@@ -129,8 +129,8 @@ namespace Mesh
 		std::stringstream memory_info;
 		memory_info << "Using about " << (vertices.size() * sizeof(GeometryVertex) / 1024.0) << " kb for vertices and " << (indices.size() * sizeof(uint32) / 1024.0) << " kb for indices.";
 		loginfos(memory_info.str());
-		IBuffer2 vertices_ssbo = Buffer2_Create(Global::Context, BUFFER_TYPE_STORAGE, vertices.size() * sizeof(GeometryVertex), BufferMemoryType::GPU_ONLY, false, false);
-		IBuffer2 indices_buffer = Buffer2_Create(Global::Context, BUFFER_TYPE_INDEX, indices.size() * sizeof(uint32), BufferMemoryType::GPU_ONLY, false, false);
+		IBuffer2 vertices_ssbo = Buffer2_Create(BUFFER_TYPE_STORAGE, vertices.size() * sizeof(GeometryVertex), BufferMemoryType::GPU_ONLY, false, false);
+		IBuffer2 indices_buffer = Buffer2_Create(BUFFER_TYPE_INDEX, indices.size() * sizeof(uint32), BufferMemoryType::GPU_ONLY, false, false);
 		Buffer2_UploadData(vertices_ssbo, (char8_t*)vertices.data(), 0, vertices.size() * sizeof(GeometryVertex));
 		Buffer2_UploadData(indices_buffer, (char8_t*)indices.data(), 0, indices.size() * sizeof(uint32));
 		*pVerticesSSBO = vertices_ssbo;
@@ -148,8 +148,8 @@ namespace Mesh
 			indicesSize += mesh.mIndices.size() * sizeof(uint32_t);
 			OutSkinnedMesh.push_back(mesh);
 		}
-		*pOutVertices = Buffer2_Create(Global::Context, BUFFER_TYPE_STORAGE, verticesSize, BufferMemoryType::GPU_ONLY, false, false);
-		*pOutIndices = Buffer2_Create(Global::Context, BUFFER_TYPE_INDEX, indicesSize, BufferMemoryType::GPU_ONLY, false, false);
+		*pOutVertices = Buffer2_Create(BUFFER_TYPE_STORAGE, verticesSize, BufferMemoryType::GPU_ONLY, false, false);
+		*pOutIndices = Buffer2_Create(BUFFER_TYPE_INDEX, indicesSize, BufferMemoryType::GPU_ONLY, false, false);
 		size_t verticesOffset = 0;
 		size_t indicesOffset = 0;
 		for (auto& skinnedMesh : OutSkinnedMesh) {
@@ -158,7 +158,7 @@ namespace Mesh
 			Buffer2_UploadData(*pOutVertices, (char8_t*)skinnedMesh.mVertices.data(), verticesOffset, verticesSize);
 			Buffer2_UploadData(*pOutIndices, (char8_t*)skinnedMesh.mIndices.data(), indicesOffset, indicesSize);
 		}
-	
+
 	}
 
 	void GeometryConfiguration::Load(const std::string& configPath)

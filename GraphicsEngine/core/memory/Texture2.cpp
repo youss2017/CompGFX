@@ -4,9 +4,10 @@
 #include <stb_image.h>
 #include <StringUtils.hpp>
 
-ITexture2 GRAPHICS_API Texture2_Create(vk::VkContext context, const Texture2DSpecification& specification)
+ITexture2 GRAPHICS_API Texture2_Create(const Texture2DSpecification& specification)
 {
 	using namespace VkAlloc;
+	vk::VkContext context = vk::Gfx_GetContext();
 	IMAGE_DESCRIPITION desc{};
 	desc.m_properties = DEVICE_MEMORY_PROPERTY::GPU_ONLY;
 	desc.m_flags = specification.mFlags;
@@ -124,7 +125,7 @@ void GRAPHICS_API Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_
 {
 	vk::VkContext context = (vk::VkContext)texture->m_context;
 	// create staging buffer
-	IBuffer2 staging_buffer = Buffer2_Create(texture->m_context, BUFFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false);
+	IBuffer2 staging_buffer = Buffer2_Create(BUFFER_TYPE_TRANSFER_SRC, size, BufferMemoryType::CPU_ONLY, false, false);
 	// load data to buffer
 	void* staging_buffer_ptr = Buffer2_Map(staging_buffer);
 	memcpy(staging_buffer_ptr, pixels, size);
@@ -132,8 +133,8 @@ void GRAPHICS_API Texture2_UploadPixels(ITexture2 texture, void* pixels, uint32_
 	Buffer2_Unmap(staging_buffer);
 	// Create cmd_buffer and pool
 	VkCommandPool pool = vk::Gfx_CreateCommandPool(context, true, false);
-	VkCommandBuffer cmd_buffer = vk::Gfx_AllocCommandBuffer(context, pool, true);
-	VkFence fence = vk::Gfx_CreateFence(context, false);
+	VkCommandBuffer cmd_buffer = vk::Gfx_AllocCommandBuffer(pool, true);
+	VkFence fence = vk::Gfx_CreateFence(false);
 	// transition image into suitable layout
 	VkAccessFlags CurrentAccessFlag = 0;
 	VkPipelineStageFlags CurrentPipelineStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -200,8 +201,8 @@ void GRAPHICS_API Texture2_UpdateMipmaps(ITexture2 texture)
 	uint32_t miplevels = std::floor(std::log2(std::min(texture->m_specification.m_Width, texture->m_specification.m_Height)));
 	VkContext context = (VkContext)texture->m_context;
 	VkCommandPool pool = Gfx_CreateCommandPool(context, true, false);
-	VkCommandBuffer cmd = Gfx_AllocCommandBuffer(context, pool, true);
-	VkFence fence = Gfx_CreateFence(context, false);
+	VkCommandBuffer cmd = Gfx_AllocCommandBuffer(pool, true);
+	VkFence fence = Gfx_CreateFence(false);
 
 	vk::Gfx_StartCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
@@ -292,11 +293,11 @@ void GRAPHICS_API Texture2_UpdateMipmaps(ITexture2 texture)
 }
 
 void GRAPHICS_API Texture2_ReadPixels(ITexture2 texture, VkAccessFlagBits finalAccessFlags, VkImageLayout currentLayout, uint32_t pixelSize, void* buffer) {
-	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer(texture->m_context);
+	auto cmd = vk::Gfx_CreateSingleUseCmdBuffer();
 	vk::Framebuffer_TransistionImage(cmd.cmd, texture, texture->m_vk_aspectmask, 0, VK_ACCESS_MEMORY_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currentLayout);
 	auto spec = texture->m_specification;
 	size_t dstBufferSize = spec.m_Width * spec.m_Height * pixelSize;
-	void* dstBuffer = Gmalloc(texture->m_context, dstBufferSize, BufferType::BUFFER_TYPE_TRANSFER_DST, false);
+	void* dstBuffer = Gmalloc(dstBufferSize, BufferType::BUFFER_TYPE_TRANSFER_DST, false);
 	VkBufferImageCopy region{};
 	region.bufferOffset = 0;
 	region.imageSubresource.aspectMask = texture->m_vk_aspectmask;
@@ -332,7 +333,7 @@ void GRAPHICS_API Texture2_Destroy(ITexture2 texture)
 	delete texture;
 }
 
-ITexture2 GRAPHICS_API Texture2_CreateFromFile(vk::VkContext context, const char* path, bool mipmaps)
+ITexture2 GRAPHICS_API Texture2_CreateFromFile(const char* path, bool mipmaps)
 {
 	int w, h, c;
 	unsigned int* pixels = (unsigned int*)stbi_load(path, &w, &h, &c, 4);
@@ -364,7 +365,7 @@ ITexture2 GRAPHICS_API Texture2_CreateFromFile(vk::VkContext context, const char
 	specification.m_Format = VK_FORMAT_R8G8B8A8_UNORM;
 	specification.m_GenerateMipMapLevels = mipmaps;
 	specification.m_TextureUsage = TextureUsage::TEXTURE;
-	ITexture2 texture = Texture2_Create(context, specification);
+	ITexture2 texture = Texture2_Create(specification);
 	Texture2_UploadPixels(texture, pixels, w * h * sizeof(uint32_t));
 	stbi_image_free(pixels);
 	return texture;

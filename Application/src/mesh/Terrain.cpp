@@ -91,8 +91,8 @@ Terrain::Terrain(uint32_t width, uint32_t height, uint32_t splitX, uint32_t spli
 	CalculateTangentBitangent();
 	mVertices.shrink_to_fit();
 	mIndices.shrink_to_fit();
-	mVerticesBuffer = Buffer2_CreatePreInitalized(Global::Context, BufferType::BUFFER_TYPE_STORAGE, mVertices.data(), mVertices.size() * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY, true, false);
-	mIndicesBuffer = Buffer2_CreatePreInitalized(Global::Context, BufferType::BUFFER_TYPE_INDEX, mIndices.data(), mIndices.size() * 4, BufferMemoryType::GPU_ONLY, true, false);
+	mVerticesBuffer = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_STORAGE, mVertices.data(), mVertices.size() * sizeof(TerrainVertex), BufferMemoryType::GPU_ONLY, true, false);
+	mIndicesBuffer = Buffer2_CreatePreInitalized(BufferType::BUFFER_TYPE_INDEX, mIndices.data(), mIndices.size() * 4, BufferMemoryType::GPU_ONLY, true, false);
 	mModelTransform = glm::translate(glm::mat4(1.0), glm::vec3(-(float(mWidth - mSplitX) / 2.0f), 0.0, -(float(mHeight - mSplitY) / 2.0f)));
 }
 

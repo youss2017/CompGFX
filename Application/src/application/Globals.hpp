@@ -4,6 +4,7 @@
 #include <graphics/Graphics.hpp>
 #include <glm/mat4x4.hpp>
 #include "../mesh/geometry.hpp"
+#include "../jobs/MT.hpp"
 
 namespace Global {
 	extern bool Quit;
@@ -20,4 +21,5 @@ namespace Global {
 	extern VkSampler DefaultSampler;
 	extern float zNear;
 	extern float zFar;
+	extern MTContext* MT;
 }

@@ -64,6 +64,10 @@ public:
     void Export(const std::string& assimpID, const std::string& path, size_t* pOutSize = nullptr, char** pOutBuffer = nullptr);
     void Save(const std::string& name);
 
+public:
+    std::vector<TerrainVertex> mVertices;
+    std::vector<uint32_t> mIndices;
+
 private:
     void CalculateTangentBitangent();
     void SmoothNormals();
@@ -73,8 +77,6 @@ private:
     uint32_t mHeight;
     uint32_t mSplitX;
     uint32_t mSplitY;
-    std::vector<TerrainVertex> mVertices;
-    std::vector<uint32_t> mIndices;
     std::vector<TerrainSubmesh> mSubmeshes;
     IBuffer2 mVerticesBuffer;
     IBuffer2 mIndicesBuffer;
