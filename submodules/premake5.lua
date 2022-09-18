@@ -1,0 +1,71 @@
+workspace "GenericWorkspace"
+    location "Generic"
+    configurations({"Debug", "Release"})
+    platforms { "Win64" }
+    cppdialect "C++17"
+
+    includedirs { 
+        os.getenv('VULKAN_SDK') .. '/include',
+        "imgui/",
+        "../include/"
+    }
+
+    objdir("../bin/int/%{prj.name}")
+    
+    filter {"configurations:Debug"}
+    targetdir("../library/Debug")
+    filter {"configurations:Release"}
+    targetdir("../library/Release")
+
+    filter {}
+
+    filter { "platforms:Win64" }
+        system "Windows"
+        architecture "x86_64"
+
+    project "Generic"
+        location "Generic"
+        kind "StaticLib"
+        language "C++"
+        files { 
+            "Utilities/**.h",
+            "Utilities/**.hpp",
+            "Utilities/**.cpp",
+            "VulkanMemoryAllocator/src/*.cpp",
+            "imgui/*.cpp",
+            "imgui/backends/imgui_impl_vulkan.h",
+            "imgui/backends/imgui_impl_vulkan.cpp",
+            "imgui/backends/imgui_impl_glfw.h",
+            "imgui/backends/imgui_impl_glfw.cpp",
+        }
+        removefiles { "*Test*", "*test*" }
+
+        filter { "system:Windows" }
+            links { "kernel32.lib", "user32.lib", "gdi32.lib"  }
+            defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS" }
+
+        filter "configurations:Debug"
+            defines { "DEBUG" }
+            symbols "On"
+            runtime "Debug"
+            buildoptions "/MDd"
+            
+            filter "configurations:Release"
+            defines { "NDEBUG" }
+            optimize "On"
+            runtime "Release"
+            buildoptions "/MD"
+
+newaction {
+    trigger = "clean",
+    description = "Remove all binaries, intermediate binaries, and vs files.",
+    execute = function()
+        print("Cleaning...")
+        os.rmdir("./.vs")
+        os.remove("*.sln")
+        os.remove("**.vcxproj")
+        os.remove("**.vcxproj.filters")
+        os.remove("**.vcxproj.user")
+        print("Done")
+    end
+}

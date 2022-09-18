@@ -1,0 +1,23 @@
+[submodule "submodules/glm"]
+	path = submodules/glm
+	url = https://github.com/g-truc/glm
+[submodule "submodules/VulkanMemoryAllocator"]
+	path = submodules/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "submodules/assimp"]
+	path = submodules/assimp
+	url = https://github.com/assimp/assimp
+[submodule "submodules/glfw"]
+	path = submodules/glfw
+	url = https://github.com/glfw/glfw
+[submodule "submodules/stb"]
+	path = submodules/stb
+	url = https://github.com/nothings/stb
+[submodule "submodules/Utilities"]
+	path = submodules/Utilities
+	url = https://github.com/youss2017/Utilities
+[submodule "https://github.com/ocornut/imgui"]
+	branch = docking
+[submodule "submodules/imgui"]
+	path = submodules/imgui
+	url = https://github.com/ocornut/imgui
