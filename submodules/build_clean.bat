@@ -27,7 +27,7 @@ xcopy glm\glm\* ..\include\glm\ /K /D /H /Y /s /e
 xcopy stb\*.h ..\include\stb\ /K /D /H /Y /s /e
 xcopy Utilities\*.hpp ..\include\util\ /K /D /H /Y /s /e
 xcopy Utilities\*.h ..\include\util\ /K /D /H /Y /s /e
-..\premake.exe vs2022
+..\premake5.exe vs2022
 cd Generic
 msbuild rebuild GenericWorkspace.sln /p:Configuration=Debug
 msbuild rebuild GenericWorkspace.sln /p:Configuration=Release
