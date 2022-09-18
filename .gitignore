@@ -1,7 +1,6 @@
 include/
 *.sln
-*.vcproj.*
-*.vcproj
+*.vcxproj*
 #from https://raw.githubusercontent.com/github/gitignore/main/VisualStudio.gitignore
 
 ## Ignore Visual Studio temporary files, build results, and
