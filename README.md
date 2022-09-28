@@ -5,6 +5,7 @@
     <li>Visual Studio 2022</li>
     <li>Python 3</li>
     <li>CMake</li>
+    <li>Vulkan SDK</li>
 </ul>
 <h3>Build Steps</h3>
 <ol>
