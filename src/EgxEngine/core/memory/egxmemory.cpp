@@ -5,11 +5,12 @@
 #include <cmath>
 #include <vector>
 #include "../../window/egxswapchain.hpp"
+#include <imgui/backends/imgui_impl_vulkan.h>
 
 #pragma region Buffer
 egx::ref<egx::Buffer>  egx::Buffer::FactoryCreate(
 	const ref<VulkanCoreInterface>& CoreInterface,
-	size_t size,
+	uint32_t size,
 	memorylayout layout,
 	buffertype type,
 	bool requireCoherent)
@@ -255,6 +256,7 @@ void  egx::Buffer::copy(VkBuffer src, size_t offset, size_t size)
 	barriers[0].offset = offset;
 	barriers[0].size = size;
 
+	barriers[1].sType = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
 	barriers[1].buffer = src;
 	barriers[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 	barriers[1].srcQueueFamilyIndex =
@@ -291,7 +293,6 @@ egx::ref<egx::Image>  egx::Image::FactoryCreate(
 	VkImageUsageFlags usage,
 	VkImageLayout InitalLayout)
 {
-	assert(InitalLayout != VK_IMAGE_LAYOUT_UNDEFINED);
 	VkAlloc::IMAGE_DESCRIPITION desc{};
 	switch (layout) {
 	case(memorylayout::local): {
@@ -330,7 +331,8 @@ egx::ref<egx::Image>  egx::Image::FactoryCreate(
 
 	auto result = ref<Image>(new Image(width, height, depth, mipcount, desc.m_arrayLayers,
 		image->m_image, usage, CoreInterface->MemoryContext, image, CoreInterface, format, aspect, layout, desc.m_usage, InitalLayout));
-	result->setlayout(VK_IMAGE_LAYOUT_UNDEFINED, InitalLayout);
+	if(InitalLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+		result->setlayout(VK_IMAGE_LAYOUT_UNDEFINED, InitalLayout);
 	return result;
 }
 #pragma endregion
@@ -483,7 +485,7 @@ void egx::Image::generatemipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel
 		regions[j].dstOffsets[1].y = Height >> i;
 		regions[j].dstOffsets[1].z = 1;
 	}
-	vkCmdBlitImage(cmd.Cmd, Img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data(), VK_FILTER_LINEAR);
+	vkCmdBlitImage(cmd.Cmd, Img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)regions.size(), regions.data(), VK_FILTER_LINEAR);
 
 	// 3) Transition to original layout
 	VkImageMemoryBarrier OriginalBarrier[2]{};
@@ -629,7 +631,7 @@ egx::ref<egx::Image>  egx::Image::CreateCubemap(ref<VulkanCoreInterface>& CoreIn
 
 	// 2) Create mipmaps
 	auto CreateMips = [face_size](uint32_t* face, uint32_t mipindex) throw() -> uint32_t* {
-		int mipcount = std::log2(face_size);
+		int mipcount = (int)std::log2(face_size);
 		int size = face_size >> mipindex;
 		uint32_t* mip = new uint32_t[size * size];
 		stbir_resize_uint8((uint8_t*)face, face_size, face_size, face_size * sizeof(uint32_t), (uint8_t*)mip, size, size, size * 4, 4);
@@ -802,7 +804,7 @@ egx::ref<egx::Image> egx::Image::copy(VkImageLayout CurrentLayout, VkImageLayout
 		VK_ACCESS_NONE, VK_ACCESS_TRANSFER_READ_BIT);
 	result->barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT);
-	vkCmdCopyImage(cmd.Cmd, Img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, result->Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data());
+	vkCmdCopyImage(cmd.Cmd, Img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, result->Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)regions.size(), regions.data());
 	this->barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, CurrentLayout,
 		VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_NONE);
 	result->barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CopyFinalLayout,
@@ -819,7 +821,7 @@ egx::ref<egx::Image> egx::Image::clone() const
 ImTextureID egx::Image::GetImGuiTextureID(VkSampler sampler, uint32_t viewId)
 {
 	if (_imgui_textureid) return _imgui_textureid;
-	_imgui_textureid = ((VulkanSwapchain*)(this->_coreinterface->Swapchain))->ImGuiWrapper->CreateImGuiTexture({ this, true }, viewId, sampler);
+	_imgui_textureid = ImGui_ImplVulkan_AddTexture(sampler, view(viewId), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	return _imgui_textureid;
 }
 

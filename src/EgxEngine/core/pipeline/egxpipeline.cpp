@@ -1,7 +1,8 @@
 #include "egxpipeline.hpp"
 #include <cassert>
+#pragma warning disable (supress: C4244)
 
-egx::ref<egx::Pipeline>  egx::Pipeline::FactoryCreate(ref<VulkanCoreInterface>& CoreInterface)
+egx::ref<egx::Pipeline>  egx::Pipeline::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface)
 {
     return ref<Pipeline>(new Pipeline(CoreInterface));
 }
@@ -31,7 +32,8 @@ void  egx::Pipeline::create(
     const ref<PipelineLayout>& layout,
     const egxshader& vertex, 
     const egxshader& fragment, 
-    const ref<egxframebuffer>& framebuffer,
+    const ref<Framebuffer>& framebuffer,
+    const uint32_t PassId,
     const egxvertexdescription& vertexDescription)
 {
     assert(Pipe == nullptr);
@@ -197,6 +199,7 @@ void  egx::Pipeline::create(
     DynamicState.dynamicStateCount = 0;
     DynamicState.pDynamicStates = nullptr;
 
+#if 0
     VkPipelineRenderingCreateInfo dynamicCreateInfo{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
     dynamicCreateInfo.viewMask = 0;
     dynamicCreateInfo.colorAttachmentCount = (uint32_t)framebuffer->_colorattachements.size();
@@ -218,10 +221,11 @@ void  egx::Pipeline::create(
         dynamicCreateInfo.depthAttachmentFormat = framebuffer->_depthattachment->Attachment->Format;
         dynamicCreateInfo.stencilAttachmentFormat = framebuffer->_depthattachment->Attachment->Format;
     }
+#endif
 
     VkGraphicsPipelineCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    createInfo.pNext = &dynamicCreateInfo;
+    createInfo.pNext = nullptr; //&dynamicCreateInfo;
 #ifdef _DEBUG
     createInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT | VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
 #endif
@@ -263,8 +267,8 @@ void  egx::Pipeline::create(
     createInfo.pColorBlendState = &ColorBlendState;
     createInfo.pDynamicState = &DynamicState;
     createInfo.layout = layout->GetLayout();
-    createInfo.renderPass = nullptr;
-    createInfo.subpass = 0;
+    createInfo.renderPass = framebuffer->GetRenderPass();
+    createInfo.subpass = PassId;
     createInfo.basePipelineHandle = 0;
     createInfo.basePipelineIndex = 0;
 

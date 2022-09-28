@@ -39,7 +39,20 @@ namespace egx {
 			ref<PlatformWindow> window = { new PlatformWindow(title, width, height) };
 			EngineCore* core = new EngineCore();
 			core->_window = window;
-			core->EstablishDevice(core->EnumerateDevices()[0], UsingRenderDOC);
+			auto deviceList = core->EnumerateDevices();
+			if (deviceList.size() == 0) {
+				delete core;
+				return nullptr;
+			}
+			auto& device = deviceList[0];
+			int score = 0;
+			for (auto& d : deviceList) {
+				int s = d.IsDedicated ? 1000 : 0;
+				s += d.VideoRam > device.VideoRam ? 1000 : 0;
+				if (s > score)
+					device = d;
+			}
+			core->EstablishDevice(device, UsingRenderDOC);
 			core->AssociateWindow(window(), MaxFramesInFlight, VSync, SetupImGui, ClearSwapchain);
 			return core;
 		}
@@ -47,9 +60,17 @@ namespace egx {
 		// Default Window created by CreateDefaultEngine()
 		inline ref<PlatformWindow> GetDefaultWindow() { return _window; }
 		inline void WaitIdle() const { vkDeviceWaitIdle(CoreInterface->Device); }
+		void EGX_API DisableLogger(bool Disable) const;
+
+		inline void SetImGuiContext() const {
+			ImGui::SetCurrentContext(GetContext());
+		}
+
+	private:
+		EGX_API ImGuiContext* GetContext() const;
 
 	public:
-		VulkanSwapchain* Swapchain;
+		VulkanSwapchain* Swapchain = nullptr;
 		ref<VulkanCoreInterface> CoreInterface;
 	private:
 		ref<PlatformWindow> _window;

@@ -23,7 +23,7 @@ namespace egx {
 	class Buffer {
 
 	public:
-		static ref<Buffer> EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, size_t size, memorylayout layout, buffertype type, bool requireCoherent = false);
+		static ref<Buffer> EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, uint32_t size, memorylayout layout, buffertype type, bool requireCoherent = false);
 
 		EGX_API ~Buffer();
 		EGX_API Buffer(Buffer& cp) = delete;
@@ -53,7 +53,7 @@ namespace egx {
 
 	protected:
 		EGX_API Buffer(
-			const size_t size,
+			const uint32_t size,
 			const memorylayout layout,
 			const buffertype type,
 			const bool coherent,
@@ -71,7 +71,7 @@ namespace egx {
 		void EGX_API copy(VkBuffer src, size_t offset, size_t size);
 
 	public:
-		const size_t Size;
+		const uint32_t Size;
 		const memorylayout Layout;
 		const buffertype Type;
 		const bool CoherentFlag;
@@ -220,6 +220,9 @@ namespace egx {
 		ref<Image> EGX_API clone() const;
 
 		EGX_API ImTextureID GetImGuiTextureID(VkSampler sampler, uint32_t viewId = 0);
+		
+		// cmd can be null, if it is null then the clear will be blocking and immediate
+		EGX_API void ClearImage(VkCommandBuffer cmd);
 
 	protected:
 		EGX_API Image(uint32_t width, uint32_t height,

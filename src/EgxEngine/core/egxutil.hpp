@@ -4,6 +4,7 @@
 #include <vector>
 #include <string_view>
 #include <string>
+#include <imgui/imgui.h>
 
 #ifdef _DEBUG
 #define DInsertDebugLabel(RefCoreInterface, cmd, FrameIndex, DebugLabelText, ColR, ColG, ColB) egx::InsertDebugLabel(RefCoreInterface, cmd, FrameIndex, DebugLabelText, ColR, ColG, ColB)
@@ -401,5 +402,7 @@ namespace egx {
 	};
 
 	std::string VkResultToString(VkResult result);
+
+	EGX_API ImFont* LoadFont(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, float size);
 
 }

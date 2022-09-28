@@ -162,7 +162,7 @@ namespace egx {
 	class PipelineLayout {
 
 	public:
-		static ref<PipelineLayout> EGX_API FactoryCreate(ref<VulkanCoreInterface>& CoreInterface);
+		static ref<PipelineLayout> EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface);
 		EGX_API ~PipelineLayout();
 		EGX_API PipelineLayout(PipelineLayout&) = delete;
 		EGX_API PipelineLayout(PipelineLayout&&) noexcept;
@@ -188,12 +188,13 @@ namespace egx {
 			Sets[SetId]->DynamicOffsets[BindingId] = Offset;
 		}
 		inline void bind(VkCommandBuffer cmd, VkPipelineBindPoint BindPoint) {
+			if (_cached_set.size() == 0) return;
 			UpdateDynamicOffsets();
 			vkCmdBindDescriptorSets(cmd, BindPoint, GetLayout(), 0, (uint32_t)_cached_set.size(), _cached_set.data(), (uint32_t)_cached_dynamicoffsets.size(), _cached_dynamicoffsets.data());
 		}
 
 	protected:
-		EGX_API PipelineLayout(ref<VulkanCoreInterface>& CoreInterface) :
+		EGX_API PipelineLayout(const ref<VulkanCoreInterface>& CoreInterface) :
 			_coreinterface(CoreInterface)
 		{}
 

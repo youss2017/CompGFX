@@ -1,7 +1,7 @@
 #pragma once
 #include "../core/egxcommon.hpp"
-#include "../core/egxgui.hpp"
 #include "../core/egxutil.hpp"
+#include "../core/memory/egxmemory.hpp"
 
 namespace egx {
 
@@ -30,12 +30,12 @@ namespace egx {
 		void CreateRenderPass();
 
 	public:
-		VkSwapchainKHR Swapchain;
-		VkSurfaceKHR Surface;
+		VkSwapchainKHR Swapchain = nullptr;
+		VkSurfaceKHR Surface = nullptr;
 		std::vector<VkImage> Imgs;
 		std::vector<VkImageView> Views;
-		void* GlfwWindowPtr;
-		ref<egximguiwrapper> ImGuiWrapper;
+		void* GlfwWindowPtr = nullptr;
+
 	private:
 		ref<VulkanCoreInterface> _core;
 		VkFence _dummyfence = nullptr;
@@ -53,6 +53,7 @@ namespace egx {
 		std::vector<VkCommandBuffer> _cmd;
 		ref<Semaphore> _presentlock;
 		ref<Fence> _poollock;
+		VkDescriptorPool _imguipool = nullptr;
 	};
 
 }

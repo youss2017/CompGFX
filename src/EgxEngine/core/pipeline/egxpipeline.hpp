@@ -18,10 +18,12 @@ namespace egx {
 
 		inline void AddAttribute(
 			uint32_t BindingId, uint32_t Location,
-			uint32_t Offset, uint32_t Size,
-			VkFormat Format) {
+			uint32_t Size, VkFormat Format) {
+			uint32_t offset = 0;
+			for (auto& a : Attributes)
+				offset += (a.BindingId == BindingId) & a.Size;
 			Attributes.push_back(
-				{BindingId, Location, Offset, Size, Format}
+				{ BindingId, Location, offset, Size, Format }
 			);
 		}
 
@@ -29,15 +31,7 @@ namespace egx {
 			uint32_t stride = 0;
 			for (auto& e : Attributes) {
 				if (e.BindingId != BindingId) continue;
-				if (IsAligned) {
-					auto size = e.Size;
-					size -= size % 4;
-					size += 4;
-					stride += size;
-				}
-				else {
-					stride += e.Size;
-				}
+				stride += e.Size;
 			}
 			return stride;
 		}
@@ -100,17 +94,27 @@ namespace egx {
 
 	class Pipeline {
 	public:
-		static ref<Pipeline> EGX_API FactoryCreate(ref<VulkanCoreInterface>& CoreInterface);
+		static ref<Pipeline> EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface);
 		EGX_API ~Pipeline();
 		EGX_API Pipeline(Pipeline& copy) = delete;
 		EGX_API Pipeline(Pipeline&& move) noexcept;
 		EGX_API Pipeline& operator=(Pipeline&& move) noexcept;
 
+		/// <summary>
+		/// PassId is determined from Framebuffer::CreatePass()
+		/// </summary>
+		/// <param name="layout"></param>
+		/// <param name="vertex"></param>
+		/// <param name="fragment"></param>
+		/// <param name="framebuffer"></param>
+		/// <param name="vertexDescription"></param>
+		/// <returns></returns>
 		void EGX_API create(
 			const ref<PipelineLayout>& layout,
 			const egxshader& vertex,
 			const egxshader& fragment,
-			const ref<egxframebuffer>& framebuffer,
+			const ref<Framebuffer>& framebuffer,
+			const uint32_t PassId,
 			const egxvertexdescription& vertexDescription);
 
 		void EGX_API create(const ref<PipelineLayout>& layout, const egxshader& compute);
@@ -123,15 +127,15 @@ namespace egx {
 		inline VkPipeline operator*() const { return Pipe; }
 
 	protected:
-		Pipeline(ref<VulkanCoreInterface>& coreinterface) :
+		Pipeline(const ref<VulkanCoreInterface>& coreinterface) :
 			_coreinterface(coreinterface) {}
 
 	public:
 		/// Pipeline properties you do not have to set viewport width/height
 		// the default is to use the framebuffer
-		cullmode CullMode = cullmode_back;
+		cullmode CullMode = cullmode_none;
 		frontface FrontFace = frontface_ccw;
-		depthcompare DepthCompare = depthcompare_less;
+		depthcompare DepthCompare = depthcompare_always;
 		polygonmode FillMode = polygonmode_fill;
 		polygontopology Topology = polgyontopology_trianglelist;
 		float NearField = 0.0f;
@@ -140,7 +144,7 @@ namespace egx {
 		uint32_t ViewportWidth = 0;
 		uint32_t ViewportHeight = 0;
 		VkPipeline Pipe = nullptr;
-		bool DepthEnabled = true;
+		bool DepthEnabled = false;
 		bool DepthWriteEnable = true;
 
 	protected:

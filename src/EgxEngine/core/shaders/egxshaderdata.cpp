@@ -295,7 +295,7 @@ VkDescriptorPool egx::egxsetpool::getpool()
 #pragma endregion
 
 #pragma region pipeline layout
-egx::ref<egx::PipelineLayout> egx::PipelineLayout::FactoryCreate(ref<VulkanCoreInterface>& CoreInterface)
+egx::ref<egx::PipelineLayout> egx::PipelineLayout::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface)
 {
 	return ref<PipelineLayout>(new PipelineLayout(CoreInterface));
 }

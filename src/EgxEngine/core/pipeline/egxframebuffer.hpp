@@ -3,6 +3,8 @@
 #include "../memory/egxmemory.hpp"
 #include <vector>
 #include <optional>
+#include <cstdint>
+#include <unordered_map>
 
 namespace egx {
 
@@ -10,7 +12,8 @@ namespace egx {
 		struct egfxframebuffer_attachment {
 			ref<Image> Attachment;
 			VkImageView View{};
-			VkRenderingAttachmentInfo AttachmentInfo{};
+			VkAttachmentDescription Description{};
+			VkClearValue ClearValue{};
 			std::optional<VkPipelineColorBlendAttachmentState> BlendState;
 
 			inline VkPipelineColorBlendAttachmentState GetBlendState() const {
@@ -32,44 +35,62 @@ namespace egx {
 		};
 	}
 
-	class egxframebuffer {
+	class Framebuffer {
 
 	public:
-		static ref<egxframebuffer> EGX_API FactoryCreate(ref<VulkanCoreInterface>& CoreInterface, uint32_t Width, uint32_t Height);
+		static ref<Framebuffer > EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, uint32_t Width, uint32_t Height);
 
-		egxframebuffer(egxframebuffer& cp) = delete;
-		egxframebuffer(egxframebuffer&& move) = delete;
-		egxframebuffer& operator=(egxframebuffer&& move) = delete;
+		Framebuffer(Framebuffer& cp) = delete;
+		Framebuffer(Framebuffer&& move) = delete;
+		Framebuffer& operator=(Framebuffer&& move) = delete;
+		EGX_API ~Framebuffer();
 
+		/// <summary>
+		/// Creates color attachment for the framebuffer (aka pass)
+		/// </summary>
+		/// <param name="ColorAttachmentID">An integer id used to reference this Color Attachment</param>
+		/// <param name="Format">The format of the attachment</param>
+		/// <param name="ClearValue">If loadOp is clear, then when the pass is started, this value is used to clear the attachment</param>
+		/// <param name="loadOp">Determines whether to load, clear, or don't care about the attachment's content</param>
+		/// <param name="storeOp">Determine's where to store/don't care about the attachment's content</param>
+		/// <param name="InitialLayout">The inital layout before the pass has started</param>
+		/// <param name="PassLayout">The layout used during the pass</param>
+		/// <param name="FinalLayout">The final layout after the pass.</param>
+		/// <param name="CustomUsageFlags">Additional usage flags such as GENERAL, SHADER_READ_ONLY_OPTIMAL for shader use</param>
+		/// <param name="pBlendState">For Alpha blending</param>
+		/// <returns></returns>
 		void EGX_API CreateColorAttachment(
-			uint32_t ColorAttachmentID,
+			uint32_t ColorAttachmentId,
 			VkFormat Format,
 			VkClearValue ClearValue,
-			VkImageUsageFlags CustomUsageFlags,
-			VkImageLayout ImageLayout,
 			VkAttachmentLoadOp LoadOp,
 			VkAttachmentStoreOp StoreOp,
-			VkPipelineColorBlendAttachmentState* pBlendState = nullptr);
+			VkImageLayout InitialLayout,
+			VkImageLayout FinalLayout,
+			VkImageUsageFlags CustomUsageFlags = 0,
+			VkPipelineColorBlendAttachmentState* pBlendState = nullptr
+		);
 
+		// Same as CreateColorAttachment
 		void EGX_API CreateDepthAttachment(
 			VkFormat Format,
 			VkClearValue ClearValue,
-			VkImageUsageFlags CustomUsageFlags,
-			VkImageLayout ImageLayout,
 			VkAttachmentLoadOp LoadOp,
-			VkAttachmentStoreOp StoreOp);
+			VkAttachmentStoreOp StoreOp,
+			VkImageLayout InitialLayout,
+			VkImageLayout FinalLayout,
+			VkImageUsageFlags CustomUsageFlags = 0);
 
-		inline VkRenderingAttachmentInfo EGX_API GetColorAttachmentInfo(uint32_t ColorAttachmentID, VkImageLayout layout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) const
-		{
-			assert(_colorattachements.find(ColorAttachmentID) != _colorattachements.end());
-			const auto& attachment = _colorattachements.at(ColorAttachmentID);
-			return attachment.AttachmentInfo;
-		}
 
-		inline VkRenderingAttachmentInfo EGX_API GetDepthAttachmentInfo(VkImageLayout layout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) const {
-			assert(_depthattachment.has_value());
-			return _depthattachment->AttachmentInfo;
-		}
+		// std::pair<uint32_t, VkImageLayout>
+		// The uint32_t is the ColorAttachmentId
+		// The VkImageLayout is the image layout to use during the pass aka (VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		// Note: subpasses are in order of creation
+		// Returns PassId
+		EGX_API uint32_t CreatePass(
+			const std::vector<std::pair<uint32_t, VkImageLayout>>& ColorAttachmentIds, 
+			std::optional<std::pair<uint32_t, VkImageLayout>> DepthAttachment = {},
+			const std::vector<std::pair<uint32_t, VkImageLayout>>& InputAttachments = {});
 
 		inline ref<Image> GetColorAttachment(uint32_t ColorAttachmentID) {
 			return _colorattachements[ColorAttachmentID].Attachment;
@@ -80,35 +101,32 @@ namespace egx {
 				return _depthattachment->Attachment;
 			return { (Image*)nullptr };
 		}
-		
-		/*
-		void EGX_API start();
-		void EGX_API end();
-		*/
 
-		VkRenderingInfoKHR& GetRenderingInfo() {
-			if (_renderinfo.has_value()) return *_renderinfo;
-			_dummycolorattachmentlist.clear();
-			for (auto& [Id, attach] : _colorattachements) {
-				_dummycolorattachmentlist.push_back(attach.AttachmentInfo);
-			}
-			_dummycolorattachmentlist.shrink_to_fit();
-			VkRenderingInfoKHR renderInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO_KHR };
-			renderInfo.renderArea = {{}, {Width, Height}};
-			renderInfo.layerCount = (uint32_t)_dummycolorattachmentlist.size();
-			renderInfo.viewMask = 0;
-			renderInfo.colorAttachmentCount = (uint32_t)_dummycolorattachmentlist.size();
-			renderInfo.pColorAttachments = _dummycolorattachmentlist.data();
-			renderInfo.pDepthAttachment = _depthattachment.has_value() ? &_depthattachment->AttachmentInfo : nullptr;
-			renderInfo.pStencilAttachment = nullptr;
-			_renderinfo = renderInfo;
-			return *_renderinfo;
+		// Once you call GetFramebuffer you no longer can create any pass or any attachment
+		// On the first call to this function the framebuffer is created.
+		VkFramebuffer& GetFramebuffer() noexcept {
+			if (_framebuffer) return _framebuffer;
+			InternalCreate();
+			return _framebuffer;
 		}
 
+		// Once you call GetRenderPass you no longer can create any pass or any attachment
+		// On the first call to this function the render pass is created.
+		VkRenderPass& GetRenderPass() noexcept {
+			if (_renderpass) return _renderpass;
+			InternalCreate();
+			return _renderpass;
+		}
+		
 	protected:
-		egxframebuffer(ref<VulkanCoreInterface>& CoreInterface, uint32_t width, uint32_t height) :
+		Framebuffer(const ref<VulkanCoreInterface>& CoreInterface, uint32_t width, uint32_t height) :
 			_coreinterface(CoreInterface), Width(width), Height(height)
-		{}
+		{
+			_attachment_ref.reserve(1000);
+		}
+
+	private:
+		EGX_API void InternalCreate();
 
 	public:
 		const uint32_t Width;
@@ -116,12 +134,16 @@ namespace egx {
 
 	protected:
 		friend class Pipeline;
+		friend class PipelineState;
 		ref<VulkanCoreInterface> _coreinterface;
-		std::map<uint32_t, _internal::egfxframebuffer_attachment> _colorattachements;
+		std::unordered_map<uint32_t, _internal::egfxframebuffer_attachment> _colorattachements;
 		std::optional<_internal::egfxframebuffer_attachment> _depthattachment;
-		std::optional<VkRenderingInfoKHR> _renderinfo;
+		// std::optional<VkRenderingInfoKHR> _renderinfo;
 		std::vector<VkRenderingAttachmentInfoKHR> _dummycolorattachmentlist;
-		// VkRenderPass _renderpass = nullptr;
+		std::vector<VkAttachmentReference> _attachment_ref;
+		std::vector<VkSubpassDescription> _subpass;
+		VkFramebuffer _framebuffer = nullptr;
+		VkRenderPass _renderpass = nullptr;
 	};
 
 }

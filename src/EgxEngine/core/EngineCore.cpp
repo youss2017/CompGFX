@@ -23,7 +23,6 @@ EGX_API egx::EngineCore::EngineCore()
 	layer_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
-
 	VkApplicationInfo appinfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	appinfo.pApplicationName = "Application";
 	appinfo.applicationVersion = VK_MAKE_API_VERSION(0, 1, 0, 0);
@@ -32,9 +31,9 @@ EGX_API egx::EngineCore::EngineCore()
 	appinfo.apiVersion = VK_API_VERSION_1_3;
 	VkInstanceCreateInfo createInfo{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 	createInfo.pApplicationInfo = &appinfo;
-	createInfo.enabledLayerCount = layers.size();
+	createInfo.enabledLayerCount = (uint32_t)layers.size();
 	createInfo.ppEnabledLayerNames = layers.data();
-	createInfo.enabledExtensionCount = layer_extensions.size();
+	createInfo.enabledExtensionCount = (uint32_t)layer_extensions.size();
 	createInfo.ppEnabledExtensionNames = layer_extensions.data();
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 #ifdef _DEBUG
@@ -86,7 +85,6 @@ void EGX_API egx::EngineCore::AssociateWindow(PlatformWindow* Window, uint32_t M
 		VSync,
 		SetupImGui,
 		ClearSwapchain);
-	CoreInterface->Swapchain = Swapchain;
 }
 
 std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
@@ -222,7 +220,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 
 	createInfo.queueCreateInfoCount = 1;
 	createInfo.pQueueCreateInfos = &queueCreateInfo;
-	createInfo.enabledExtensionCount = extensions.size();
+	createInfo.enabledExtensionCount = (uint32_t)extensions.size();
 	createInfo.ppEnabledExtensionNames = extensions.data();
 
 	vkCreateDevice(Device.Id, &createInfo, NULL, &this->CoreInterface->Device);
@@ -232,6 +230,16 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 
 	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance, this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024));
 	this->CoreInterface->PhysicalDevice = Device;
+}
+
+void EGX_API egx::EngineCore::DisableLogger(bool Disable) const
+{
+	ut::log_configure(!Disable, true, true, false);
+}
+
+ImGuiContext* egx::EngineCore::GetContext() const
+{
+	return ImGui::GetCurrentContext();
 }
 
 static VkBool32 VKAPI_CALL ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)

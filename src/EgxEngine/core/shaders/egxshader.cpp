@@ -39,7 +39,7 @@ namespace egx {
 		catch (std::exception& e) {
 			std::string error_message = "Could not load shader file '" + std::string(__ShaderPath) + "' because: " + e.what();
 			logerrors(error_message);
-			assert(0);
+			throw std::runtime_error(error_message);
 		}
 		std::filesystem::path shader_path(ShaderPath.string());
 		m_ShaderPath = shader_path.string();

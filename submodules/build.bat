@@ -15,7 +15,7 @@ xcopy include\* ..\..\include\ /K /D /H /Y /s /e
 cd ..
 echo "Building glfw"
 cd glfw
-cmake . -DGLFW_BUILD_DOCS:BOOL="0" -DGLFW_BUILD_TESTS:BOOL="0" -DGLFW_INSTALL:BOOL="0" -DGLFW_BUILD_EXAMPLES:BOOL="0" -DCMAKE_CONFIGURATION_TYPES:STRING="Debug;Release;MinSizeRel;RelWithDebInfo" -DCMAKE_INSTALL_PREFIX:PATH="C:/Program Files (x86)/GLFW"
+cmake . -DGLFW_BUILD_DOCS:BOOL="0" -DGLFW_BUILD_TESTS:BOOL="0" -DGLFW_INSTALL:BOOL="0" -DGLFW_BUILD_EXAMPLES:BOOL="0" -DCMAKE_CONFIGURATION_TYPES:STRING="Debug;Release;"
 msbuild GLFW.sln /p:Configuration=Debug
 msbuild GLFW.sln /p:Configuration=Release
 xcopy src\Debug\* ..\..\library\Debug\ /K /D /H /Y
@@ -27,7 +27,7 @@ xcopy glm\glm\* ..\include\glm\ /K /D /H /Y /s /e
 xcopy stb\*.h ..\include\stb\ /K /D /H /Y /s /e
 xcopy Utilities\*.hpp ..\include\util\ /K /D /H /Y /s /e
 xcopy Utilities\*.h ..\include\util\ /K /D /H /Y /s /e
-..\premake5.exe vs2022
+..\premake5.exe %~1
 cd Generic
 msbuild GenericWorkspace.sln /p:Configuration=Debug
 msbuild GenericWorkspace.sln /p:Configuration=Release
@@ -37,3 +37,17 @@ xcopy imgui\*.h ..\include\imgui\ /K /D /H /Y /s /e
 xcopy imgui\backends\imgui_impl_vulkan.h ..\include\imgui\ /K /D /H /Y /s /e
 xcopy imgui\backends\imgui_impl_glfw.h ..\include\imgui\ /K /D /H /Y /s /e
 echo "Done"
+goto Exit
+
+:Clean
+cmake --build .\assimp\ --target clean
+cmake --build .\glfw\ --target clean
+..\premake5.exe clean
+goto Exit
+
+:Help
+echo build.bat clean
+echo build.bat <vs2022, vs2019, ...>
+goto Exit
+
+:Exit

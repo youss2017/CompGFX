@@ -1,5 +1,4 @@
 #include "PlatformWindow.hpp"
-#include "../utils/MBox.hpp"
 #include <util/utilcore.hpp>
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -184,7 +183,7 @@ namespace egx {
 		callback.pFunc = func;
 		callback.pUserDefined = pUserDefined;
 		mCallbacks.push_back(std::make_pair(events, callback));
-		return mCallbacks.size() - 1 + nCallbackRemoveOffset;
+		return (int)mCallbacks.size() - 1 + nCallbackRemoveOffset;
 	}
 
 	EGX_API void PlatformWindow::RemoveCallback(int ID)

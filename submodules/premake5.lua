@@ -11,13 +11,12 @@ workspace "GenericWorkspace"
     }
 
     objdir("../bin/int/%{prj.name}")
-    
-    filter {"configurations:Debug"}
-    targetdir("../library/Debug")
-    filter {"configurations:Release"}
-    targetdir("../library/Release")
+
+    objdir("../bin/int/%{prj.name}/%{cfg.buildcfg}-%{cfg.architecture}")    
+    targetdir("../library/%{cfg.buildcfg}")
 
     filter {}
+    flags { "MultiProcessorCompile" }
 
     filter { "platforms:Win64" }
         system "Windows"
