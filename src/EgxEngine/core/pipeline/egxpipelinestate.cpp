@@ -31,13 +31,11 @@ egx::PipelineState& egx::PipelineState::operator=(PipelineState& move)
 
 void egx::PipelineState::AddSet(ref<egxshaderset>& set)
 {
-	assert(!Pipeline.IsValidRef());
 	Layout->AddSet(set);
 }
 
 void egx::PipelineState::AddPushconstantRange(uint32_t offset, uint32_t size, VkShaderStageFlags stages)
 {
-	assert(!Pipeline.IsValidRef());
 	Layout->AddPushconstantRange(offset, size, stages);
 }
 

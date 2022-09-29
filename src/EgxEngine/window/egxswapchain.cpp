@@ -31,9 +31,6 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 	VkFenceCreateInfo createInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 	vkCreateFence(_core->Device, &createInfo, nullptr, &_dummyfence);
 
-	// ImGui_ImplVulkanH_Window window{};
-	//ImGui_ImplVulkanH_CreateOrResizeWindow(_core->Instance, _core->PhysicalDevice.Id, _core->Device, &window, _core->QueueFamilyIndex, nullptr, )
-
 	_pool = CreateCommandPool(_core, true, false, false, false);
 	_cmd = _pool->AllocateBufferFrameFlightMode(true);
 	_presentlock = CreateSemaphore(_core, true);

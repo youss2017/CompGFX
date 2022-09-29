@@ -40,7 +40,7 @@ namespace egx {
 			if (j >= SignalSemaphores.size()) {
 				auto semaphore = pass[k]->FinishedSemaphore->GetSemaphore();
 				pSignalSemaphores[j] = semaphore;
-				FinishedSemaphores[k] = pass[k]->FinishedSemaphore->GetSemaphore();
+				FinishedSemaphores[k] = semaphore;
 				k++;
 			} else
 				pSignalSemaphores[j] = SignalSemaphores[j]->GetSemaphore();
@@ -51,13 +51,12 @@ namespace egx {
 			pCommandBuffers[j] = pass[j]->OnRecord(FrameIndex);
 			pass[j]->OnStopRecording(FrameIndex);
 		}
-
 		submitInfo.waitSemaphoreCount = (uint32_t)WaitSemaphores.size();
 		submitInfo.pWaitSemaphores = pWaitSemaphores;
 		submitInfo.pWaitDstStageMask = nullptr;
 		submitInfo.commandBufferCount = (uint32_t)pass.size();
 		submitInfo.pCommandBuffers = pCommandBuffers;
-		submitInfo.signalSemaphoreCount = (uint32_t)SignalSemaphores.size();
+		submitInfo.signalSemaphoreCount = (uint32_t)(SignalSemaphores.size() + pass.size());
 		submitInfo.pSignalSemaphores = pSignalSemaphores;
 		vkQueueSubmit(CoreInterface->Queue, 1, &submitInfo, SignalFence);
 		return FinishedSemaphores;
