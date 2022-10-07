@@ -192,7 +192,7 @@ void egx::VulkanSwapchain::Acquire(bool block, VkSemaphore ReadySemaphore, VkFen
 	}
 }
 
-void egx::VulkanSwapchain::Present(ref<Image>& image, uint32_t viewIndex, const std::vector<VkSemaphore>& WaitSemaphores)
+void egx::VulkanSwapchain::Present(const ref<Image>& image, uint32_t viewIndex, const std::vector<VkSemaphore>& WaitSemaphores)
 {
 	assert(!_clearswapchain && "Cannot clear swapchain when presentating an image because the copied image will be cleared.");
 	_poollock->Wait(UINT64_MAX);
@@ -466,7 +466,7 @@ void egx::VulkanSwapchain::CreateRenderPass() {
 	VkAttachmentDescription attachmentDescription{};
 	attachmentDescription.format = GetSurfaceFormat().format;
 	attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-	attachmentDescription.loadOp = _clearswapchain ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachmentDescription.loadOp = _clearswapchain ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 	attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	attachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

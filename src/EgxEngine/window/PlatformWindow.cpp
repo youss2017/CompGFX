@@ -48,11 +48,12 @@ namespace egx {
 
 	void _Internal_WindowKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
+		if (key == GLFW_KEY_UNKNOWN) return;
+		if (action == GLFW_REPEAT) return;
 		PlatformWindow* w = _Internal_GetWindow(window);
 		if (!w)
 			return;
-		if (action == GLFW_REPEAT)
-			action = GLFW_PRESS;
+		w->_key_state[key] = action == GLFW_PRESS;
 		for (auto& [events, callback] : w->mCallbacks) {
 			if (events & EVENT_FLAGS_KEY_PRESS || events & EVENT_FLAGS_KEY_RELEASE) {
 				if (events & EVENT_FLAGS_KEY_PRESS && action != GLFW_PRESS && !(events & EVENT_FLAGS_KEY_RELEASE))
@@ -192,6 +193,15 @@ namespace egx {
 		// their indices changes theirfore we use this offset to get the correct index
 		mCallbacks.erase(mCallbacks.begin() + (ID - nCallbackRemoveOffset));
 		nCallbackRemoveOffset++;
+	}
+
+	bool PlatformWindow::GetKeyState(uint16_t KeyCode)
+	{
+		assert(KeyCode <= GLFW_KEY_LAST && "Key code is outside of key range. Invalid key code.");
+		if (KeyCode <= 255) {
+			KeyCode = toupper(KeyCode);
+		}
+		return _key_state[KeyCode];
 	}
 
 }

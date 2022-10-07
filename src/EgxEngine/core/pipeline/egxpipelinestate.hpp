@@ -25,22 +25,6 @@ namespace egx {
 
 		void EGX_API CreateCompuePipeline(const egxshader& compute);
 
-		/// <summary>
-		/// Make sure the pipeline is not used.
-		/// </summary>
-		/// <param name="compute">The reloaded compute shader, must have the same layout</param>
-		void EGX_API ReloadComputePipeline(const egxshader& compute);
-
-		/// <summary>
-		/// Make sure the pipeline is not used.
-		/// </summary>
-		/// <param name="compute">The reloaded compute shader, must have the same layout</param>
-		void EGX_API ReloadRasterPipeline(
-			const egxshader& vertex,
-			const egxshader& fragment,
-			const uint32_t PassId,
-			const egxvertexdescription& vertexDescription);
-
 		inline void SetDynamicOffset(uint32_t SetId, uint32_t BindingId, uint32_t Offset) {
 			Layout->SetDynamicOffset(SetId, BindingId, Offset);
 		}
@@ -83,7 +67,6 @@ namespace egx {
 		uint32_t Height;
 	private:
 		ref<VulkanCoreInterface> _core;
-		bool _isgraphics = true;
 	};
 
 }

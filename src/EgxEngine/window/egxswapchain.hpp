@@ -14,7 +14,7 @@ namespace egx {
 		EGX_API ~VulkanSwapchain();
 
 		void EGX_API Acquire(bool block, VkSemaphore ReadySemaphore, VkFence ReadyFence);
-		void EGX_API Present(ref<Image>& image, uint32_t viewIndex, const std::vector<VkSemaphore>& WaitSemaphores = {});
+		void EGX_API Present(const ref<Image>& image, uint32_t viewIndex, const std::vector<VkSemaphore>& WaitSemaphores = {});
 		void EGX_API Present(const std::vector<VkSemaphore>& WaitSemaphores = {});
 
 		void EGX_API SetSyncInterval(bool VSync);

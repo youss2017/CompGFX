@@ -41,29 +41,12 @@ void egx::PipelineState::AddPushconstantRange(uint32_t offset, uint32_t size, Vk
 
 void egx::PipelineState::CreateRasterPipeline(const egxshader& vertex, const egxshader& fragment, const uint32_t PassId, const egxvertexdescription& vertexDescription)
 {
-	assert(Pipeline->Pipe == nullptr && Width > 0 && Height > 0);
-	this->_isgraphics = true;
-	Pipeline->create(Layout, vertex, fragment, Framebuffer, PassId, vertexDescription);
+	assert(Width > 0 && Height > 0);
+	Pipeline->invalidate(Layout, vertex, fragment, Framebuffer, PassId, vertexDescription);
 }
 
 void egx::PipelineState::CreateCompuePipeline(const egxshader& compute)
 {
-	assert(Pipeline->Pipe == nullptr && Width == 0 && Height == 0);
-	this->_isgraphics = false;
-	Pipeline = egx::Pipeline::FactoryCreate(_core);
-	Pipeline->create(Layout, compute);
-}
-
-void egx::PipelineState::ReloadComputePipeline(const egxshader& compute)
-{
-	assert(!_isgraphics);
-	Pipeline = egx::Pipeline::FactoryCreate(_core);
-	Pipeline->create(Layout, compute);
-}
-
-void egx::PipelineState::ReloadRasterPipeline(const egxshader& vertex, const egxshader& fragment, const uint32_t PassId, const egxvertexdescription& vertexDescription)
-{
-	assert(_isgraphics);
-	Pipeline = egx::Pipeline::FactoryCreate(_core);
-	Pipeline->create(Layout, vertex, fragment, Framebuffer, PassId, vertexDescription);
+	assert(Width == 0 && Height == 0);
+	Pipeline->invalidate(Layout, compute);
 }

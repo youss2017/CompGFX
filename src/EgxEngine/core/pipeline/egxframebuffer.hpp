@@ -87,9 +87,9 @@ namespace egx {
 		// The VkImageLayout is the image layout to use during the pass aka (VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 		// Note: subpasses are in order of creation
 		// Returns PassId
-		EGX_API uint32_t CreatePass(
+		EGX_API uint32_t CreateSubpass(
 			const std::vector<std::pair<uint32_t, VkImageLayout>>& ColorAttachmentIds, 
-			std::optional<std::pair<uint32_t, VkImageLayout>> DepthAttachment = {},
+			std::optional<VkImageLayout> DepthAttachment = {},
 			const std::vector<std::pair<uint32_t, VkImageLayout>>& InputAttachments = {});
 
 		inline ref<Image> GetColorAttachment(uint32_t ColorAttachmentID) {

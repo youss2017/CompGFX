@@ -153,7 +153,7 @@ namespace egx {
 		attachment.Attachment = Image::FactoryCreate(
 			_coreinterface,
 			memorylayout::local,
-			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
 			Width,
 			Height,
 			1,
@@ -178,9 +178,9 @@ namespace egx {
 		_depthattachment = attachment;
 	}
 
-	uint32_t Framebuffer::CreatePass(
+	uint32_t Framebuffer::CreateSubpass(
 		const std::vector<std::pair<uint32_t, VkImageLayout>>& ColorAttachmentIds,
-		std::optional<std::pair<uint32_t, VkImageLayout>> DepthAttachment,
+		std::optional<VkImageLayout> DepthAttachment,
 		const std::vector<std::pair<uint32_t, VkImageLayout>>& InputAttachments)
 	{
 		assert(_renderpass == nullptr);
@@ -215,7 +215,7 @@ namespace egx {
 
 		depthK = _attachment_ref.size();
 		if (DepthAttachment.has_value()) {
-			_attachment_ref.push_back({ 0, DepthAttachment->second });
+			_attachment_ref.push_back({ 0, DepthAttachment.value()});
 		}
 		
 		VkSubpassDescription subpass{};

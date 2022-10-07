@@ -28,7 +28,7 @@ egx::Pipeline::Pipeline(Pipeline&& move) noexcept :
     return *this;
 }
 
-void  egx::Pipeline::create(
+void  egx::Pipeline::invalidate(
     const ref<PipelineLayout>& layout,
     const egxshader& vertex, 
     const egxshader& fragment, 
@@ -36,7 +36,7 @@ void  egx::Pipeline::create(
     const uint32_t PassId,
     const egxvertexdescription& vertexDescription)
 {
-    assert(Pipe == nullptr);
+    if (Pipe) vkDestroyPipeline(_coreinterface->Device, Pipe, nullptr);
     _graphics = true;
     VkPipelineShaderStageCreateInfo Stages[2]{};
     Stages[0].sType = Stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -275,9 +275,9 @@ void  egx::Pipeline::create(
     vkCreateGraphicsPipelines(_coreinterface->Device, nullptr, 1, &createInfo, 0, &Pipe);
 }
 
-void  egx::Pipeline::create(const ref<PipelineLayout>& layout, const egxshader& compute)
+void  egx::Pipeline::invalidate(const ref<PipelineLayout>& layout, const egxshader& compute)
 {
-    assert(Pipe == nullptr);
+    if (Pipe) vkDestroyPipeline(_coreinterface->Device, Pipe, nullptr);
     _graphics = false;
     VkComputePipelineCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;

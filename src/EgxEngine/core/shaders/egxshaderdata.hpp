@@ -25,7 +25,7 @@ namespace egx {
 
 	protected:
 		VkDescriptorPool _pool = nullptr;
-		ref<VulkanCoreInterface>& _coreinterface;
+		ref<VulkanCoreInterface> _coreinterface;
 		std::map<VkDescriptorType, uint32_t> _types;
 		uint32_t _setcount = 0;
 	};

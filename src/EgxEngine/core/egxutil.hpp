@@ -140,11 +140,19 @@ namespace egx {
 		inline VkSemaphore& operator[](uint32_t FrameIndex) noexcept { return semaphores[FrameIndex]; }
 		inline VkSemaphore& operator*() noexcept { return semaphore; }
 
-		inline VkSemaphore& GetSemaphore() {
+		inline const VkSemaphore& GetSemaphore() const {
 			if (semaphores.size() > 0) {
 				return semaphores[_core->CurrentFrame];
 			}
 			return semaphore;
+		}
+
+		static inline std::vector<VkSemaphore> GetRawSemaphores(const std::vector<egx::ref<Semaphore>>& Semaphores) {
+			std::vector<VkSemaphore> result(Semaphores.size());
+			int i = 0;
+			for (auto& s : Semaphores)
+				result[i++] = s->GetSemaphore();
+			return result;
 		}
 
 		VkSemaphore semaphore = nullptr;

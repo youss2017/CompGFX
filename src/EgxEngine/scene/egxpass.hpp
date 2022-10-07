@@ -2,14 +2,19 @@
 #include "../core/egxcommon.hpp"
 #include "../core/egxutil.hpp"
 #include "../core/pipeline/egxpipelinestate.hpp"
+#include <memory>
 
 namespace egx {
 
+	class Scene;
+
 	class Pass {
 
-	public:
-		Pass(const ref<VulkanCoreInterface>& CoreInterface, const egx::PipelineState& State, bool FrameFlightMode, bool MemoryShortLived, bool EnableIndividualReset) :
-			CoreInterface(CoreInterface), State(State)
+	protected:
+		Pass(const ref<VulkanCoreInterface>& CoreInterface, const ref<egx::Framebuffer>& Framebuffer, uint32_t PassId,
+			bool FrameFlightMode = true, bool MemoryShortLived = false, bool EnableIndividualReset = false) :
+			CoreInterface(CoreInterface), Framebuffer(Framebuffer), PassId(PassId),
+			State(InitalizePipelineState(Framebuffer, PassId))
 		{
 			CmdPool = CreateCommandPool(CoreInterface, FrameFlightMode, MemoryShortLived, EnableIndividualReset, false);
 			if (FrameFlightMode) {
@@ -21,8 +26,8 @@ namespace egx {
 				FinishedSemaphore = CreateSemaphore(CoreInterface, false);
 			}
 		}
+		
 		Pass(Pass&) = delete;
-		virtual Pass& operator=(Pass&) = 0;
 
 		virtual void OnStartRecording(uint32_t FrameIndex) {
 			if (Cmd.size() > 1) {
@@ -33,7 +38,8 @@ namespace egx {
 			}
 		}
 
-		virtual VkCommandBuffer& OnRecord(uint32_t FrameIndex) = 0;
+		virtual VkCommandBuffer& GetCommandBuffer(uint32_t FrameIndex) = 0;
+		virtual void OnRecordBuffer(uint32_t FrameIndex) = 0;
 
 		virtual void OnStopRecording(uint32_t FrameIndex) {
 			if (Cmd.size() > 1)
@@ -42,29 +48,17 @@ namespace egx {
 				vkEndCommandBuffer(Cmd[0]);
 		}
 
+		virtual std::shared_ptr<egx::PipelineState> InitalizePipelineState(const egx::ref<egx::Framebuffer>& Framebuffer, const uint32_t PassId) = 0;
+
 	protected:
-		friend class PassDispatcher;
+		friend class Scene;
 		ref<VulkanCoreInterface> CoreInterface;
+		ref<egx::Framebuffer> Framebuffer;
+		const uint32_t PassId;
+		std::shared_ptr<egx::PipelineState> State;
 		ref<CommandPool> CmdPool;
 		std::vector<VkCommandBuffer> Cmd;
 		ref<Semaphore> FinishedSemaphore;
-		PipelineState State;
-	};
-
-	class PassDispatcher {
-
-	public:
-		EGX_API PassDispatcher(const ref<VulkanCoreInterface>& CoreInterface);
-		PassDispatcher(PassDispatcher&) = delete;
-		EGX_API PassDispatcher(PassDispatcher&&) noexcept;
-		EGX_API PassDispatcher& operator=(PassDispatcher&) noexcept;
-		EGX_API ~PassDispatcher();
-
-		// Returns FinishedSemaphore for each Pass
-		EGX_API std::vector<VkSemaphore> ExecutePass(const std::vector<Pass*>& pass, const std::vector<ref<Semaphore>>& WaitSemaphores, const std::vector<ref<Semaphore>>& SignalSemaphores, VkFence SignalFence = nullptr);
-
-	private:
-		ref<VulkanCoreInterface> CoreInterface;
 	};
 
 }

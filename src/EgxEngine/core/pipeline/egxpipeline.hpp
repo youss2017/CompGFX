@@ -21,7 +21,8 @@ namespace egx {
 			uint32_t Size, VkFormat Format) {
 			uint32_t offset = 0;
 			for (auto& a : Attributes)
-				offset += (a.BindingId == BindingId) & a.Size;
+				if ((a.BindingId == BindingId))
+					offset += a.Size;
 			Attributes.push_back(
 				{ BindingId, Location, offset, Size, Format }
 			);
@@ -109,7 +110,7 @@ namespace egx {
 		/// <param name="framebuffer"></param>
 		/// <param name="vertexDescription"></param>
 		/// <returns></returns>
-		void EGX_API create(
+		void EGX_API invalidate(
 			const ref<PipelineLayout>& layout,
 			const egxshader& vertex,
 			const egxshader& fragment,
@@ -117,7 +118,7 @@ namespace egx {
 			const uint32_t PassId,
 			const egxvertexdescription& vertexDescription);
 
-		void EGX_API create(const ref<PipelineLayout>& layout, const egxshader& compute);
+		void EGX_API invalidate(const ref<PipelineLayout>& layout, const egxshader& compute);
 
 		inline void bind(VkCommandBuffer cmd) const {
 			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipe);
