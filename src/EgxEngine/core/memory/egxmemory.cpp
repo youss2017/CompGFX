@@ -536,7 +536,7 @@ egx::ref<egx::Image> EGX_API egx::Image::LoadFromDisk(ref<VulkanCoreInterface>& 
 
 
 #pragma region image view
-VkImageView  egx::Image::createview(uint32_t ViewId, uint32_t Miplevel, uint32_t MipCount, uint32_t ArrayLevel, uint32_t ArrayCount)
+VkImageView  egx::Image::createview(uint32_t ViewId, uint32_t Miplevel, uint32_t MipCount, uint32_t ArrayLevel, uint32_t ArrayCount, VkComponentMapping RGBASwizzle)
 {
 	assert(_views.find(ViewId) == _views.end());
 	VkImageViewCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
@@ -558,10 +558,7 @@ VkImageView  egx::Image::createview(uint32_t ViewId, uint32_t Miplevel, uint32_t
 			createInfo.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
 	}
 	createInfo.format = Format;
-	createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-	createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-	createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-	createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	createInfo.components = RGBASwizzle;
 	createInfo.subresourceRange.aspectMask = ImageAspect;
 	createInfo.subresourceRange.baseArrayLayer = ArrayLevel;
 	createInfo.subresourceRange.layerCount = ArrayCount;
@@ -572,9 +569,9 @@ VkImageView  egx::Image::createview(uint32_t ViewId, uint32_t Miplevel, uint32_t
 	_views[ViewId] = view;
 	return view;
 }
-VkImageView  egx::Image::createview(uint32_t ViewId)
+VkImageView  egx::Image::createview(uint32_t ViewId, VkComponentMapping RGBASwizzle)
 {
-	return createview(ViewId, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS);
+	return createview(ViewId, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS, RGBASwizzle);
 }
 #pragma endregion
 

@@ -154,9 +154,10 @@ namespace egx {
 			uint32_t Miplevel,
 			uint32_t MipCount,
 			uint32_t ArrayLevel,
-			uint32_t ArrayCount);
+			uint32_t ArrayCount,
+			VkComponentMapping RGBASwizzle = {});
 
-		EGX_API VkImageView createview(uint32_t ViewId);
+		EGX_API VkImageView createview(uint32_t ViewId, VkComponentMapping RGBASwizzle = {});
 
 		inline const VkImageView view(uint32_t ViewId) noexcept {
 			assert(_views.find(ViewId) != _views.end());

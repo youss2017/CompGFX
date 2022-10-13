@@ -102,6 +102,7 @@ namespace egx {
 		VkImageLayout InitialLayout,
 		VkImageLayout FinalLayout,
 		VkImageUsageFlags CustomUsageFlags,
+		bool CreateDefaultView,
 		VkPipelineColorBlendAttachmentState* pBlendState)
 	{
 		assert(_renderpass == nullptr);
@@ -122,7 +123,8 @@ namespace egx {
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CustomUsageFlags,
 			InitialLayout);
 
-		attachment.View = attachment.Attachment->createview(0);
+		if (CreateDefaultView)
+			attachment.View = attachment.Attachment->createview(0);
 
 		attachment.Description.format = Format;
 		attachment.Description.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -145,7 +147,8 @@ namespace egx {
 		VkAttachmentStoreOp StoreOp,
 		VkImageLayout InitialLayout,
 		VkImageLayout FinalLayout,
-		VkImageUsageFlags CustomUsageFlags)
+		VkImageUsageFlags CustomUsageFlags,
+		bool CreateDefaultView)
 	{
 		assert(_renderpass == nullptr);
 		assert(!_depthattachment.has_value());
@@ -163,7 +166,8 @@ namespace egx {
 			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CustomUsageFlags,
 			InitialLayout);
 
-		attachment.View = attachment.Attachment->createview(0);
+		if (CreateDefaultView)
+			attachment.View = attachment.Attachment->createview(0);
 
 		attachment.Description.format = Format;
 		attachment.Description.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -215,9 +219,9 @@ namespace egx {
 
 		depthK = _attachment_ref.size();
 		if (DepthAttachment.has_value()) {
-			_attachment_ref.push_back({ 0, DepthAttachment.value()});
+			_attachment_ref.push_back({ 0, DepthAttachment.value() });
 		}
-		
+
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.inputAttachmentCount = InputAttachments.size();
@@ -239,11 +243,11 @@ namespace egx {
 		std::vector<VkImageView> attachmentViews;
 		if (_depthattachment.has_value()) {
 			attachments.push_back(_depthattachment->Description);
-			attachmentViews.push_back(_depthattachment->View);
+			attachmentViews.push_back(_depthattachment->Attachment->view(0));
 		}
 		for (auto& [id, attachment] : _colorattachements) {
 			attachments.push_back(attachment.Description);
-			attachmentViews.push_back(attachment.View);
+			attachmentViews.push_back(attachment.Attachment->view(0));
 		}
 		VkRenderPassCreateInfo passCreateInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
 		passCreateInfo.attachmentCount = attachments.size();

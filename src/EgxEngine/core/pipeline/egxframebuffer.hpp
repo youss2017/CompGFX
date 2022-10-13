@@ -68,6 +68,7 @@ namespace egx {
 			VkImageLayout InitialLayout,
 			VkImageLayout FinalLayout,
 			VkImageUsageFlags CustomUsageFlags = 0,
+			bool CreateDefaultView = true,
 			VkPipelineColorBlendAttachmentState* pBlendState = nullptr
 		);
 
@@ -79,7 +80,8 @@ namespace egx {
 			VkAttachmentStoreOp StoreOp,
 			VkImageLayout InitialLayout,
 			VkImageLayout FinalLayout,
-			VkImageUsageFlags CustomUsageFlags = 0);
+			VkImageUsageFlags CustomUsageFlags = 0,
+			bool CreateDefaultView = true);
 
 
 		// std::pair<uint32_t, VkImageLayout>
