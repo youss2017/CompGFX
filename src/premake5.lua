@@ -36,19 +36,6 @@ workspace "Egx"
     optimize "On"
     runtime "Release"
     buildoptions "/MD"
-    
-    project "HardwareAcceleration"
-        kind "SharedLib"
-        language "C++"
-        location "HardwareAcceleration"
-        links { "EgxEngine.lib" }
-        defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS" }
-        files { 
-            "HardwareAcceleration/**.h",
-            "HardwareAcceleration/**.hpp",
-            "HardwareAcceleration/**.c",
-            "HardwareAcceleration/**.cpp",
-        }
 
     project "EgxEngine"
         kind "SharedLib"

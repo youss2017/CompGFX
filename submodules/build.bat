@@ -27,7 +27,7 @@ xcopy glm\glm\* ..\include\glm\ /K /D /H /Y /s /e
 xcopy stb\*.h ..\include\stb\ /K /D /H /Y /s /e
 xcopy Utilities\*.hpp ..\include\util\ /K /D /H /Y /s /e
 xcopy Utilities\*.h ..\include\util\ /K /D /H /Y /s /e
-..\premake5.exe %~1
+..\premake5.exe vs2022
 cd Generic
 msbuild GenericWorkspace.sln /p:Configuration=Debug
 msbuild GenericWorkspace.sln /p:Configuration=Release
@@ -36,18 +36,6 @@ echo "Copying ImGui headers"
 xcopy imgui\*.h ..\include\imgui\ /K /D /H /Y /s /e
 xcopy imgui\backends\imgui_impl_vulkan.h ..\include\imgui\ /K /D /H /Y /s /e
 xcopy imgui\backends\imgui_impl_glfw.h ..\include\imgui\ /K /D /H /Y /s /e
+echo "Copying Vulkan Memory Allocator Headers"
+xcopy VulkanMemoryAllocator\include\ ..\include\vma\ /K /D /H /Y /s /e
 echo "Done"
-goto Exit
-
-:Clean
-cmake --build .\assimp\ --target clean
-cmake --build .\glfw\ --target clean
-..\premake5.exe clean
-goto Exit
-
-:Help
-echo build.bat clean
-echo build.bat <vs2022, vs2019, ...>
-goto Exit
-
-:Exit

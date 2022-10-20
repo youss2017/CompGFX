@@ -13,9 +13,6 @@
 [submodule "submodules/stb"]
 	path = submodules/stb
 	url = https://github.com/nothings/stb
-[submodule "submodules/Utilities"]
-	path = submodules/Utilities
-	url = https://github.com/youss2017/Utilities
 [submodule "https://github.com/ocornut/imgui"]
 	branch = docking
 [submodule "submodules/imgui"]
