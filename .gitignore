@@ -2,6 +2,12 @@
 submodules/imgui
 submodules/Utility
 submodules/stb
+submodules/assimp
+submodules/Generic
+submodules/glfw
+submodules/glm
+submodules/imgui
+submodules/VulkanMemoryAllocator
 include/
 *.sln
 *.vcxproj*
