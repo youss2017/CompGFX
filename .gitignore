@@ -1,4 +1,7 @@
 .vscode
+submodules/imgui
+submodules/Utility
+submodules/stb
 include/
 *.sln
 *.vcxproj*
