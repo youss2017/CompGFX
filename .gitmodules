@@ -18,6 +18,3 @@
 [submodule "submodules/imgui"]
 	path = submodules/imgui
 	url = https://github.com/ocornut/imgui
-[submodule "submodules/Utility"]
-	path = submodules/Utility
-	url = https://github.com/youss2017/Utility

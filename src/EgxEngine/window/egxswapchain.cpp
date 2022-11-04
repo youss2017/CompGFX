@@ -32,13 +32,14 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, v
 	CreateRenderPass();
 	CreateSwapchain(_width, _height);
 
-	_pool = CreateCommandPool(_core, true, false, false, false);
+	_pool = CreateCommandPool(_core, true, false, true, false);
 	_cmd = _pool->AllocateBufferFrameFlightMode(true);
 	_poollock = Fence::FactoryCreate(_core, true);
 
-	// Synchronization.SetSignalFence(Fence::FactoryCreate(CoreInterface, true));
-	Synchronization.ProducerSync.AddWaitSemaphore(Semaphore::FactoryCreate(CoreInterface, "PresentLock"));
-	Synchronization.ProducerSync.AddWaitSemaphore(Semaphore::FactoryCreate(CoreInterface, "InternalBlitLock"));
+	_presentLock = Semaphore::FactoryCreate(CoreInterface, "InternalBlitLock");
+	_blitLock = Semaphore::FactoryCreate(CoreInterface, "PresentLock");
+	Synchronization.SetConsumerWaitSemaphore(_presentLock);
+	Synchronization.AddWaitSemaphore(_presentLock);
 
 	if (_imgui)
 	{
@@ -185,7 +186,7 @@ void egx::VulkanSwapchain::Acquire()
 	VkResult result = vkAcquireNextImageKHR(_core->Device,
 											Swapchain,
 											UINT64_MAX,
-											Synchronization.ProducerSync.GetNamedRefWaitSemaphore("PresentLock")->_semaphores[_current_swapchain_frame],
+											_presentLock->_semaphores[_current_swapchain_frame],
 											nullptr,
 											&_core->CurrentFrame);
 	// fence->Wait(UINT64_MAX);
@@ -254,18 +255,6 @@ void egx::VulkanSwapchain::Present(const ref<Image> &image, uint32_t viewIndex)
 		vkCmdEndRenderPass(_cmd[frame]);
 	}
 
-	if (_imgui)
-	{
-		auto &io = ImGui::GetIO();
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			auto backup_context = ImGui::GetCurrentContext();
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-			ImGui::SetCurrentContext(backup_context);
-		}
-	}
-
 	vkEndCommandBuffer(_cmd[frame]);
 
 	DEndDebugLabel(_core, _cmd[frame]);
@@ -277,7 +266,7 @@ void egx::VulkanSwapchain::Present()
 {
 	assert(_imgui && "To use default Present() you must have enabled imgui otherwise you are presenting nothing.");
 	uint32_t frame = PresentInit();
-	
+
 	StartCommandBuffer(_cmd[frame], 0);
 	VkClearValue clear{};
 	VkRenderPassBeginInfo beginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
@@ -296,6 +285,11 @@ void egx::VulkanSwapchain::Present()
 	vkCmdEndRenderPass(_cmd[frame]);
 	vkEndCommandBuffer(_cmd[frame]);
 
+	PresentCommon(frame);
+}
+
+void egx::VulkanSwapchain::PresentCommon(uint32_t frame)
+{
 	if (_imgui)
 	{
 		auto &io = ImGui::GetIO();
@@ -308,17 +302,12 @@ void egx::VulkanSwapchain::Present()
 		}
 	}
 
-	PresentCommon(frame);
-}
-
-void egx::VulkanSwapchain::PresentCommon(uint32_t frame)
-{
-	VkSemaphore blitLock = Synchronization.ProducerSync.GetNamedRefWaitSemaphore("InternalBlitLock")->_semaphores[frame];
+	VkSemaphore blitLock = _blitLock->_semaphores[frame];
 
 	CommandBuffer::Submit(_core, {_cmd[frame]},
-						  {Synchronization.ProducerSync.GetNamedRefWaitSemaphore("PresentLock")->_semaphores[frame]},
-						  {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
-						  {blitLock},
+						  Synchronization.GetProducerWaitSemaphores(frame),
+						  Synchronization.GetProducerWaitStageFlags(),
+						  { blitLock },
 						  {_poollock->_fences[frame]});
 
 	VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};

@@ -47,18 +47,14 @@ namespace egx {
 		CommandPool(CommandPool&) = delete;
 		inline CommandPool(CommandPool&& move) noexcept {
 			this->~CommandPool();
-			this->commandPool = move.commandPool;
-			this->commandPools = move.commandPools;
-			move.commandPool = nullptr;
-			move.commandPools.resize(0);
+			memcpy(this, &move, sizeof(CommandPool));
+			memset(&move, 0, sizeof(CommandPool));
 		}
 
 		inline CommandPool& operator=(CommandPool&& move) noexcept {
 			this->~CommandPool();
-			this->commandPool = move.commandPool;
-			this->commandPools = move.commandPools;
-			move.commandPool = nullptr;
-			move.commandPools.resize(0);
+			memcpy(this, &move, sizeof(CommandPool));
+			memset(&move, 0, sizeof(CommandPool));
 			return *this;
 		}
 

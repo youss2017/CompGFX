@@ -264,3 +264,8 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
 }
+
+ut::Logger* egx::EngineCore::GetEngineLogger()
+{
+	return &ut::Logger::GetGlobalLogger();
+}

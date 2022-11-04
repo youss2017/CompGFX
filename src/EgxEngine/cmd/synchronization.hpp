@@ -31,6 +31,8 @@ namespace egx
         
         const std::vector<VkPipelineStageFlags>& GetProducerWaitStageFlags() const { return _producer_wait_stage_flags; }
 
+        void SetConsumerWaitSemaphore(const RefSemaphore& semaphore) { _consumer_wait = semaphore; }
+
     private:
         std::vector<RefSemaphore> _producer_wait;
         std::vector<VkPipelineStageFlags> _producer_wait_stage_flags;

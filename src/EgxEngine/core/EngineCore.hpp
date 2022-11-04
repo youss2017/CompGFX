@@ -55,6 +55,8 @@ namespace egx {
 			return core;
 		}
 
+		EGX_API ut::Logger* GetEngineLogger();
+
 		// Default Window created by CreateDefaultEngine()
 		inline ref<PlatformWindow> GetDefaultWindow() { return _window; }
 		inline void WaitIdle() const { vkDeviceWaitIdle(CoreInterface->Device); }

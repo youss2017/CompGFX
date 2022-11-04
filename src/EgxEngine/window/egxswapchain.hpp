@@ -15,9 +15,9 @@ namespace egx {
 		EGX_API ~VulkanSwapchain();
 
 		void EGX_API Acquire();
-		// [Note]: Put your rendering finished semaphore in the SynchronizationCollection object
+		// [Note]: Put your rendering finished semaphore in the SynchronizationContext object
 		void EGX_API Present(const ref<Image>& image, uint32_t viewIndex);
-		// [Note]: Put your rendering finished semaphore in the SynchronizationCollection object
+		// [Note]: Put your rendering finished semaphore in the SynchronizationContext object
 		void EGX_API Present();
 
 		void EGX_API SetSyncInterval(bool VSync);
@@ -40,7 +40,7 @@ namespace egx {
 		std::vector<VkImage> Imgs;
 		std::vector<VkImageView> Views;
 		void* GlfwWindowPtr = nullptr;
-		SynchronizationCollection Synchronization;
+		SynchronizationContext Synchronization;
 
 	private:
 		ref<VulkanCoreInterface> _core;
@@ -58,6 +58,8 @@ namespace egx {
 		ref<CommandPool> _pool;
 		std::vector<VkCommandBuffer> _cmd;
 		ref<Fence> _poollock;
+		ref<Semaphore> _presentLock;
+		ref<Semaphore> _blitLock;
 		VkDescriptorPool _imguipool = nullptr;
 	};
 
