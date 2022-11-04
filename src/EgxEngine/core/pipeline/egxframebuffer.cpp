@@ -1,5 +1,7 @@
 #include "egxframebuffer.hpp"
 #include <stdexcept>
+#include <Utility/CppUtility.hpp>
+#include "../memory/formatsize.hpp"
 
 egx::ref<egx::Framebuffer>  egx::Framebuffer::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, uint32_t Width, uint32_t Height)
 {
@@ -107,6 +109,11 @@ namespace egx {
 	{
 		assert(_renderpass == nullptr);
 		assert(_colorattachements.find(ColorAttachmentId) == _colorattachements.end());
+#ifdef _DEBUG
+		LOG(INFO, "Creating FBO Color Attachment {0}x{1} Format: {2} Clear: <{3}, {4}, {5}, {6}>", 
+			Width, Height, egx::_internal::DebugVkFormatToString(Format),
+			ClearValue.color.float32[0], ClearValue.color.float32[1], ClearValue.color.float32[2], ClearValue.color.float32[3]);
+#endif
 		_internal::egfxframebuffer_attachment attachment;
 		if (pBlendState)
 			attachment.BlendState = *pBlendState;
@@ -152,6 +159,9 @@ namespace egx {
 	{
 		assert(_renderpass == nullptr);
 		assert(!_depthattachment.has_value());
+#ifdef _DEBUG
+		LOG(INFO, "Creating FBO Depth Attachment {0}x{1} Format: {2}, Clear: {3}", Width, Height, egx::_internal::DebugVkFormatToString(Format), ClearValue.depthStencil.depth);
+#endif
 		_internal::egfxframebuffer_attachment attachment;
 		attachment.Attachment = Image::FactoryCreate(
 			_coreinterface,
@@ -197,7 +207,7 @@ namespace egx {
 		int depthK = 0;
 		int depthAttachmentOffset = _depthattachment.has_value() ? 1 : 0;
 
-		inputK = _attachment_ref.size();
+		inputK = (int)_attachment_ref.size();
 		for (auto& [id, layout] : InputAttachments) {
 			if (_colorattachements.find(id) == _colorattachements.end()) {
 				throw std::runtime_error("Could not find input attachment specified Id");
@@ -207,7 +217,7 @@ namespace egx {
 				, layout });
 		}
 
-		colorK = _attachment_ref.size();
+		colorK = (int)_attachment_ref.size();
 		for (auto& [id, layout] : ColorAttachmentIds) {
 			if (_colorattachements.find(id) == _colorattachements.end()) {
 				throw std::runtime_error("Could not find color attachment specified Id");
@@ -217,23 +227,23 @@ namespace egx {
 				, layout });
 		}
 
-		depthK = _attachment_ref.size();
+		depthK = (int)_attachment_ref.size();
 		if (DepthAttachment.has_value()) {
 			_attachment_ref.push_back({ 0, DepthAttachment.value() });
 		}
 
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.inputAttachmentCount = InputAttachments.size();
+		subpass.inputAttachmentCount = (uint32_t)InputAttachments.size();
 		subpass.pInputAttachments = &_attachment_ref[inputK];
-		subpass.colorAttachmentCount = ColorAttachmentIds.size();
+		subpass.colorAttachmentCount = (uint32_t)ColorAttachmentIds.size();
 		subpass.pColorAttachments = &_attachment_ref[colorK];
 		subpass.pResolveAttachments = nullptr;
 		subpass.pDepthStencilAttachment = DepthAttachment.has_value() ? &_attachment_ref[depthK] : nullptr;
 		subpass.preserveAttachmentCount = 0;
 		subpass.pPreserveAttachments = nullptr;
 		_subpass.push_back(subpass);
-		return _subpass.size() - 1;
+		return (uint32_t)_subpass.size() - 1u;
 	}
 
 	EGX_API void Framebuffer::InternalCreate()
@@ -250,9 +260,9 @@ namespace egx {
 			attachmentViews.push_back(attachment.Attachment->view(0));
 		}
 		VkRenderPassCreateInfo passCreateInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-		passCreateInfo.attachmentCount = attachments.size();
+		passCreateInfo.attachmentCount = (uint32_t)attachments.size();
 		passCreateInfo.pAttachments = attachments.data();
-		passCreateInfo.subpassCount = _subpass.size();
+		passCreateInfo.subpassCount = (uint32_t)_subpass.size();
 		passCreateInfo.pSubpasses = _subpass.data();
 		passCreateInfo.dependencyCount = 0;
 		passCreateInfo.pDependencies = nullptr;
@@ -260,7 +270,7 @@ namespace egx {
 
 		VkFramebufferCreateInfo createInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
 		createInfo.renderPass = _renderpass;
-		createInfo.attachmentCount = attachmentViews.size();
+		createInfo.attachmentCount = (uint32_t)attachmentViews.size();
 		createInfo.pAttachments = attachmentViews.data();
 		createInfo.width = Width;
 		createInfo.height = Height;

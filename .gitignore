@@ -1,3 +1,4 @@
+.vscode
 include/
 *.sln
 *.vcxproj*

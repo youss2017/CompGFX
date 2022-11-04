@@ -1,6 +1,5 @@
 #include "egxpipeline.hpp"
 #include <cassert>
-#pragma warning disable (supress: C4244)
 
 egx::ref<egx::Pipeline>  egx::Pipeline::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface)
 {
@@ -82,16 +81,16 @@ void  egx::Pipeline::invalidate(
     VkViewport viewport{};
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = ViewportWidth == 0 ? framebuffer->Width : ViewportWidth;
-    viewport.height = ViewportHeight == 0 ? framebuffer->Height : ViewportHeight;
+    viewport.width = float(ViewportWidth == 0 ? framebuffer->Width : ViewportWidth);
+    viewport.height = float(ViewportHeight == 0 ? framebuffer->Height : ViewportHeight);
     viewport.minDepth = NearField;
     viewport.maxDepth = FarField;
 
     VkRect2D scissor{};
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    scissor.extent.width = viewport.width;
-    scissor.extent.height = viewport.height;
+    scissor.extent.width  = uint32_t(viewport.width);
+    scissor.extent.height = uint32_t(viewport.height);
 
     VkPipelineViewportStateCreateInfo ViewportState{};
     ViewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -185,7 +184,7 @@ void  egx::Pipeline::invalidate(
     ColorBlendState.flags = 0;
     ColorBlendState.logicOpEnable = VK_FALSE;
     ColorBlendState.logicOp = VK_LOGIC_OP_MAX_ENUM;
-    ColorBlendState.attachmentCount = BlendAttachmentStates.size();
+    ColorBlendState.attachmentCount = (uint32_t)BlendAttachmentStates.size();
     ColorBlendState.pAttachments = BlendAttachmentStates.data();
     ColorBlendState.blendConstants[0] = 0.0;
     ColorBlendState.blendConstants[1] = 0.0;
@@ -250,9 +249,9 @@ void  egx::Pipeline::invalidate(
             attribute.offset = e.Offset;
             VertexAttributes.push_back(attribute);
         }
-        VertexInputState.vertexBindingDescriptionCount = VertexBinding.size();
+        VertexInputState.vertexBindingDescriptionCount = (uint32_t)VertexBinding.size();
         VertexInputState.pVertexBindingDescriptions = VertexBinding.data();
-        VertexInputState.vertexAttributeDescriptionCount = VertexAttributes.size();
+        VertexInputState.vertexAttributeDescriptionCount = (uint32_t)VertexAttributes.size();
         VertexInputState.pVertexAttributeDescriptions = VertexAttributes.data();
     }
     createInfo.stageCount = 2;

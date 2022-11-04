@@ -1,5 +1,5 @@
 #include "PlatformWindow.hpp"
-#include <util/utilcore.hpp>
+#include <Utility/CppUtility.hpp>
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <atomic>
@@ -10,11 +10,10 @@ constexpr bool DebugEnabled = true;
 #else
 constexpr bool DebugEnabled = false;
 #endif
-using namespace ut;
 
 namespace egx {
 
-	static std::unordered_map<GLFWwindow*, PlatformWindow*> s_Internal_Windows;
+	static thread_local std::unordered_map<GLFWwindow*, PlatformWindow*> s_Internal_Windows;
 
 	PlatformWindow* _Internal_GetWindow(GLFWwindow* window)
 	{
@@ -142,13 +141,20 @@ namespace egx {
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
+		if (m_window == nullptr) {
+			LOG(ERR, "Failed to create window.");
+			throw std::runtime_error("Failed to create window.");
+		}
+
+		LOG(INFO, "Window '{0}' create {1}x{2}", title, width, height);
+
 		glfwSetWindowSizeCallback(m_window, _Internal_WindowResizeCallback);
 		glfwSetWindowFocusCallback(m_window, _Internal_WindowFocusCallback);
 		glfwSetKeyCallback(m_window, _Internal_WindowKeyCallback);
 		glfwSetMouseButtonCallback(m_window, _Internal_WindowMouseButtonCallback);
 		glfwSetCursorPosCallback(m_window, _Internal_WindowMouseMove);
 		if (!glfwRawMouseMotionSupported()) {
-			log_error("RAW INPUT is not supported on your device?");
+			LOG(ERR, "Raw Input is not supported on your device?");
 		}
 		else {
 			//glfwSetInputMode(m_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);

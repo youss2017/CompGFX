@@ -2,7 +2,7 @@
 #include <spirv_cross/spirv_glsl.hpp>
 #include <chrono>
 #include <random>
-#include <util/utilcore.hpp>
+#include <Utility/CppUtility.hpp>
 #include <sstream>
 
 #ifdef _DEBUG
@@ -34,12 +34,11 @@ namespace egx {
 	{
 		std::filesystem::path ShaderPath;
 		try {
-			ShaderPath = std::filesystem::canonical(ut::replace(std::string(__ShaderPath), "\\", "/"));
+			ShaderPath = std::filesystem::canonical(ut::Replace(std::string(__ShaderPath), "\\", "/"));
 		}
 		catch (std::exception& e) {
-			std::string error_message = "Could not load shader file '" + std::string(__ShaderPath) + "' because: " + e.what();
-			logerrors(error_message);
-			throw std::runtime_error(error_message);
+			LOG(ERR, "Could not load shader source file '{0}' because: {1}", __ShaderPath, e.what());
+			throw std::runtime_error("Shader source not found.");
 		}
 		std::filesystem::path shader_path(ShaderPath.string());
 		m_ShaderPath = shader_path.string();
@@ -69,7 +68,7 @@ namespace egx {
 		std::string ascii_extension_str = shader_path.extension().c_str();
 		std::wstring extension = Utils::StringToWideString(ascii_extension_str);
 #endif
-		extension = ut::lower(extension);
+		extension = ut::LowerCase(extension);
 		shaderc_shader_kind shader_type;
 		if (extension.compare(L".vert") == 0)
 		{
@@ -85,8 +84,8 @@ namespace egx {
 		}
 		else
 		{
-			ut::log_error("Unsupported shader extension or an invalid shader extension. (Support shader extensions are .vert, .frag, .comp)", __FILE__, __LINE__);
-			assert(0);
+			LOG(ERR, "Unsupported shader extension or an invalid shader extension. (Support shader extensions are .vert, .frag, .comp)");
+			throw std::runtime_error("Unknown shader extension.");
 		}
 		m_ShaderKind = shader_type;
 
@@ -110,7 +109,7 @@ namespace egx {
 			}
 			else
 			{
-				logalert("Could not load SPIR-V Cache even though it was listed in SPIR-V Cache catalog.");
+				LOG(INFOBOLD, "Could not load SPIR-V Cache even though it was listed in SPIR-V Cache catalog.");
 				BytecodeLoaded = false;
 			}
 		}
@@ -139,25 +138,21 @@ namespace egx {
 
 			if (!m_CompileStatus)
 			{
-				std::string err = std::string(ShaderPath.string()) + " --- Failed to compile into SPIR-V.\n" + spv.GetErrorMessage();
 				// TODO: The following steps! but is this necessary?
 				// 1) Remove from catalog
 				// 2) Delete from cache!
-				ut::log_error(err.c_str(), __FILE__, 0);
-				throw std::runtime_error(err);
+				LOG(ERR, "{0} --- Failed to compile into SPIR-V.", ShaderPath.string(), spv.GetErrorMessage());
+				throw std::runtime_error("SPIR-V Compilation Failed.");
 			}
 			else
 			{
-				std::string info = shader_path.string() + " compiled successfully!";
-				loginfo(info.c_str());
+				LOG(INFO, "{0} compiled successfully.", shader_path.filename().string());
 			}
 
 			m_Bytecode = std::vector<uint32_t>(spv.cbegin(), spv.cend());
 			double duration = (double)(std::chrono::high_resolution_clock::now() - start).count();
 			duration *= 1e-6;
-			std::stringstream ss;
-			ss << "Compilation for " << shader_path.filename().string() << " took " << duration << " ms.";
-			logalerts(ss.str());
+			LOG(INFOBOLD, "Compilation for {0} took {1} ms.", shader_path.filename().string(), duration);
 			if (UseCaching)
 			{
 				identifier = Shader_Internal_GenerateIdentifier();
@@ -178,7 +173,7 @@ namespace egx {
 				}
 
 				auto temp = ut::ReadTextFile(s_CacheDirectory + "/" + std::string(SPIRV_CATALOG));
-				std::vector<std::string> old_catalog = ut::split(&temp[1], "\n");
+				std::vector<std::string> old_catalog = ut::Split(&temp[1], "\n");
 				std::string new_catalog;
 				// Modify Catalog to store new data
 				bool modified = false;
@@ -186,8 +181,8 @@ namespace egx {
 				{
 					if (item.length() <= 1)
 						continue;
-					item = ut::trim(item);
-					std::vector<std::string> item_split = ut::split(item, "::");
+					item = ut::Trim(item);
+					std::vector<std::string> item_split = ut::Split(item, "::");
 					assert(item_split.size() == 5);
 					if (item_split[0].compare(m_ShaderDirectory) == 0 && item_split[2].compare(shader_path.stem().string()) == 0 && item_split[3].compare(shader_path.extension().string()) == 0)
 					{
@@ -209,8 +204,7 @@ namespace egx {
 				std::string spirv_file_path = std::filesystem::path(s_CacheDirectory + "/" + spirv_filename).make_preferred().string();
 				if (!ut::WriteBinaryFile(spirv_file_path, m_Bytecode.data(), m_Bytecode.size() * 4u))
 				{
-					std::string alert_message = "Could not cache shader bytecode for " + spirv_file_path;
-					logalert(alert_message.c_str());
+					LOG(WARNING, "Could not cache shader bytecode for {0}", spirv_file_path);
 				}
 			}
 		}
@@ -235,15 +229,15 @@ namespace egx {
 	{
 		std::string full_code;
 
-		std::vector<std::string> sl = ut::split(source_code, "\n");
+		std::vector<std::string> sl = ut::Split(source_code, "\n");
 		for (size_t i = 0; i < sl.size(); i++)
 		{
-			auto str = ut::ltrim(sl[i]);
+			auto str = ut::LTrim(sl[i]);
 			if (ut::StartsWith(str, "#include"))
 			{
 				// get file to include
 				std::string include_file = str.substr(9);
-				include_file = ut::replaceAll(include_file, "\"", "");
+				include_file = ut::ReplaceAll(include_file, "\"", "");
 				std::string include_path;
 				if (include_file[0] != '/' && include_file[0] != '\\')
 				{
@@ -260,8 +254,7 @@ namespace egx {
 				}
 				catch (std::exception& e)
 				{
-					std::string error_msg = std::string("Could not get #include directive file full path, specifically [") + std::string(include_file) + std::string("], Caught Exception:\n\n") + std::string(e.what()) + "\n";
-					ut::log_error(error_msg.c_str(), __FILE__, __LINE__);
+					LOG(ERR, "Could not get #include directive file full path, specifically [{0}], Caught Exception:\n{1}", include_file, e.what());
 					return source_code;
 				}
 				auto includeSource = ut::ReadTextFile(correct_path.string());
@@ -308,17 +301,17 @@ namespace egx {
 						[File Directory]::[identifier]::[Filename Stem]::[Filename Extension]::[Last Accessed Data]
 					*/
 					std::string catalog_string = &ut::ReadTextFile(catalog_path.string())[1];
-					std::vector<std::string> catalog = ut::split(catalog_string, "\n");
+					std::vector<std::string> catalog = ut::Split(catalog_string, "\n");
 					std::string last_access = std::to_string(uint64_t(std::filesystem::last_write_time(shader_path).time_since_epoch().count()));
 					for (auto& subject : catalog)
 					{
-						subject = ut::trim(subject);
+						subject = ut::Trim(subject);
 						if (subject.length() <= 1)
 							continue;
-						std::vector<std::string> subcomponents = ut::split(subject, "::");
+						std::vector<std::string> subcomponents = ut::Split(subject, "::");
 						if (subcomponents.size() != 5)
 						{
-							ut::log_error("SPIRV Catalog has been corrupted! Deleting catalog!", __FILE__, __LINE__);
+							LOG(ERR, "SPIRV Catalog has been corrupted; deleting catalog.");
 							std::filesystem::remove(catalog_path);
 							break;
 						}
@@ -334,13 +327,11 @@ namespace egx {
 									if (subcomponents[4].compare(last_access) == 0)
 									{
 										Cached = true;
-										cache_result_info = "Cache match for " + shader_path.string();
-										loginfo(cache_result_info.c_str());
+										LOG(INFO, "Cache match for {0}", shader_path.string());
 									}
 									else
 									{
-										cache_result_info = "Cache mismatch for " + shader_path.string();
-										logalert(cache_result_info.c_str());
+										LOG(INFOBOLD, "Cache mismatch for {0}", shader_path.string());
 									}
 									identifier = subcomponents[1];
 									break;
@@ -352,19 +343,16 @@ namespace egx {
 				else
 				{
 					// create catalog
-					std::string catalog_create_alert = "Creating SPIR-V Caching Catalog: " + std::string(SPIRV_CATALOG);
-					logalerts(catalog_create_alert);
+					LOG(INFOBOLD, "Creating SPIR-V Caching Catalog: {0}", SPIRV_CATALOG);
 					ut::CreateEmptyFile(catalog_path.string());
 				}
 			}
 			else
 			{
-				std::string create_alert = "Creating SPIR-V Caching Directory Hierarchy: " + s_CacheDirectory;
-				logalerts(create_alert);
+				LOG(INFOBOLD, "Creating SPIR-V Caching Directory Hierarchy: {0}", s_CacheDirectory);
 				std::filesystem::create_directories(s_CacheDirectory);
 				// create catalog
-				std::string catalog_create_alert = "Creating SPIR-V Caching Catalog: " + std::string(SPIRV_CATALOG);
-				logalerts(catalog_create_alert);
+				LOG(INFOBOLD, "Creating SPIR-V Caching Catalog: {0}", SPIRV_CATALOG);
 				ut::CreateEmptyFile(catalog_path.string());
 			}
 		}
@@ -372,7 +360,8 @@ namespace egx {
 
 	EGX_API egxshader::~egxshader()
 	{
-		vkDestroyShaderModule(CoreInterface->Device, (VkShaderModule)m_ShaderHandle, 0);
+		if (m_ShaderHandle)
+			vkDestroyShaderModule(CoreInterface->Device, (VkShaderModule)m_ShaderHandle, 0);
 	}
 
 	EGX_API const std::string& egxshader::GetSource()
@@ -400,7 +389,7 @@ namespace egx {
 		auto spv = compiler.CompileGlslToSpv(source_code, strlen(source_code), shader_type, filename, EntryPointFunction, options);
 		if (spv.GetCompilationStatus() != shaderc_compilation_status_success)
 		{
-			ut::log_error(spv.GetErrorMessage().c_str(), __FILE__, __LINE__);
+			LOG(ERR, spv.GetErrorMessage());
 			ut::DebugBreak();
 		}
 
@@ -409,7 +398,7 @@ namespace egx {
 		memcpy(pBytecode, bytecode.data(), bytecode.size() * sizeof(uint32_t));
 
 		*pOutCode = pBytecode;
-		*pOutSize = bytecode.size() * 4;
+		*pOutSize = (uint32_t)bytecode.size() * 4u;
 	}
 
 	std::string egxshader::s_CacheDirectory;
@@ -420,27 +409,24 @@ namespace egx {
 			egxshader::s_CacheDirectory = "";
 			return true;
 		}
-		SpirvCahceFolder = ut::replaceAll(SpirvCahceFolder, "\\", "/");
+		SpirvCahceFolder = ut::ReplaceAll(SpirvCahceFolder, "\\", "/");
 
 		if (!std::filesystem::exists(SpirvCahceFolder))
 		{
-			std::string warning = "SPIR-V Cahce Directory does not exist, attempting to create directory hierarchy: " + SpirvCahceFolder;
-			logwarnings(warning);
+			LOG(WARNING, "SPIR-V Cahce Directory does not exist, attempting to create directory hierarchy: {0}", SpirvCahceFolder.c_str());
 			try
 			{
 				std::filesystem::create_directories(SpirvCahceFolder);
 			}
 			catch (std::exception& e)
 			{
-				std::string alert_message = std::string("Could not create SPIRV-Cahce Directory! SPIR-V Caching is not ENABLED!") + e.what();
-				logalerts(alert_message);
+				LOG(ERR, "Could not create SPIRV-Cahce Directory. SPIR-V Caching is not enabled -- {0}", e.what());
 				egxshader::s_CacheDirectory = "";
 				return false;
 			}
 		}
 		egxshader::s_CacheDirectory = std::filesystem::canonical(SpirvCahceFolder).string();
-		std::string info_cache = "Shader Cache Directory set to: " + egxshader::s_CacheDirectory;
-		loginfos(info_cache);
+		LOG(INFO, "Shader Cache Directory set to: {0}", egxshader::s_CacheDirectory);
 		return true;
 	}
 

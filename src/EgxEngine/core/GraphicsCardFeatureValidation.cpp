@@ -1,9 +1,8 @@
 #include "vulkinc.hpp"
-#include "util/Logger.hpp"
+#include "Utility/CppUtility.hpp"
 #include <stdio.h>
 #include <string.h>
 
-using namespace ut;
 namespace egx {
 	static void ConvertStructureTypeToString(VkStructureType type, char* buffer) {
 		if (type == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES) { strcat(buffer, "VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES"); }
@@ -496,7 +495,7 @@ namespace egx {
 				return pNext;
 			}
 		}
-		log_error("Could not validate feature, missing", __FILE__, __LINE__, true);
+		LOG(ERR, "Could not validate feature, missing");
 		return nullptr;
 	}
 
@@ -573,7 +572,7 @@ namespace egx {
 						 char VK_TYPE_STRING[150]{};\
 						 ConvertStructureTypeToString(type, VK_TYPE_STRING);\
 						 sprintf(NF_ERROR_LOG, "Enabled features from '%s' are not supported by graphics card.", VK_TYPE_STRING);\
-						 logerror(NF_ERROR_LOG);\
+						 LOG(ERR, NF_ERROR_LOG);\
 						}
 
 #define Acquire(structTypedef) structTypedef nf = *(structTypedef*)pNext; structTypedef src = *(structTypedef*)GetCardFeature(type, features); bool error = false;
@@ -991,7 +990,7 @@ namespace egx {
 			else {
 				char buffer[512]{ 0 };
 				sprintf(buffer, "Unknown Feature requested VkStructureType: %d --- 0x%x, 0X%X\n", type, type, type);
-				log_warning(buffer, true);
+				LOG(WARNING, buffer, true);
 			}
 
 			// use any structure to get the next pNext

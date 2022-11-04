@@ -48,15 +48,15 @@ namespace egx {
 			return *this;
 		}
 
-		inline T* operator->() const noexcept {
+		constexpr T* operator->() const noexcept {
 			return base;
 		}
 
-		inline T& operator*() const noexcept {
+		constexpr T& operator*() const noexcept {
 			return *base;
 		}
 
-		inline T* operator()() const noexcept {
+		constexpr  T* operator()() const noexcept {
 			return base;
 		}
 

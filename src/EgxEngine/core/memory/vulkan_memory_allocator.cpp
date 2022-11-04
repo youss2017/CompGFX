@@ -9,8 +9,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <util/utilcore.hpp>
-using namespace ut;
+#include <Utility/CppUtility.hpp>
 
 namespace VkAlloc
 {
@@ -104,7 +103,7 @@ namespace VkAlloc
 			vmaCreateInfo.priority = desc.m_priority;
 			VkResult result = vmaCreateBuffer(context->m_allocator, &createInfo, &vmaCreateInfo, &buffer->m_buffer, &buffer->m_suballocation.m_allocation, &buffer->m_suballocation.m_allocation_info);
 			if (result != VK_SUCCESS) {
-				logerror("VMA Failed.");
+				LOG(ERR, "VMA Failed.");
 				ut::DebugBreak();
 				delete buffer;
 				return result;
@@ -186,14 +185,12 @@ namespace VkAlloc
 		assert(buffer->m_suballocation.m_host_visible && "Buffer must be host visible, CPU_ONLY OR CPU_TO_GPU!");
 		vmaMapMemory(context->m_allocator, buffer->m_suballocation.m_allocation, &buffer->m_suballocation.m_allocation_info.pMappedData);
 	}
-	void FlushBuffer(CONTEXT context, BUFFER buffer, uint32_t offset, uint32_t size)
+	void FlushBuffer(CONTEXT context, BUFFER buffer, size_t offset, size_t size)
 	{
 		assert(buffer->m_suballocation.m_host_visible && "Buffer must be host visible, CPU_ONLY OR CPU_TO_GPU!");
-		//if (buffer->m_suballocation.m_coherent)
-		//	return;
 		vmaFlushAllocation(context->m_allocator, buffer->m_suballocation.m_allocation, offset, size);
 	}
-	void InvalidateBuffer(CONTEXT context, BUFFER buffer, uint32_t offset, uint32_t size)
+	void InvalidateBuffer(CONTEXT context, BUFFER buffer, size_t offset, size_t size)
 	{
 		assert(buffer->m_suballocation.m_host_visible && "Buffer must be host visible, CPU_ONLY OR CPU_TO_GPU!");
 		if (buffer->m_suballocation.m_coherent)

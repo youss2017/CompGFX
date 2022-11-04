@@ -22,8 +22,6 @@ namespace egx {
 		EGX_API EngineCore(const EngineCore& copy) = delete;
 		EGX_API EngineCore(const EngineCore&& move) = delete;
 
-		EGX_API void SetDebugOnErrorDialog(bool state) noexcept;
-
 		/// <summary>
 		/// Creates swapchain for window and initalizes ImGui
 		/// </summary>
@@ -60,7 +58,6 @@ namespace egx {
 		// Default Window created by CreateDefaultEngine()
 		inline ref<PlatformWindow> GetDefaultWindow() { return _window; }
 		inline void WaitIdle() const { vkDeviceWaitIdle(CoreInterface->Device); }
-		void EGX_API DisableLogger(bool Disable) const;
 
 		inline void SetImGuiContext() const {
 			ImGui::SetCurrentContext(GetContext());

@@ -33,7 +33,7 @@ namespace VkAlloc
 	struct BUFFER_DESCRIPTION {
 		DEVICE_MEMORY_PROPERTY m_properties;
 		VkBufferUsageFlags m_usage;
-		uint32_t m_size;
+		size_t m_size;
 		bool mRequireCoherent;
 		float m_priority = 0.5f;
 	};
@@ -90,9 +90,9 @@ namespace VkAlloc
 
 	void MapBuffer(CONTEXT context, BUFFER buffer);
 	// Writes by CPU become visible to GPU (for non-coherent)
-	void FlushBuffer(CONTEXT context, BUFFER buffer, uint32_t offset, uint32_t size);
+	void FlushBuffer(CONTEXT context, BUFFER buffer, size_t offset, size_t size);
 	// Writes by GPU become visible to CPU (for non-coherent)
-	void InvalidateBuffer(CONTEXT context, BUFFER buffer, uint32_t offset, uint32_t size);
+	void InvalidateBuffer(CONTEXT context, BUFFER buffer, size_t offset, size_t size);
 	void UnmapBuffer(CONTEXT context, BUFFER buffer);
 
 	void DestroyBuffers(const CONTEXT context, uint32_t count, const BUFFER* pBuffers);

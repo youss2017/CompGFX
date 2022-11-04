@@ -25,8 +25,7 @@ cd ..
 echo "Building Generic"
 xcopy glm\glm\* ..\include\glm\ /K /D /H /Y /s /e
 xcopy stb\*.h ..\include\stb\ /K /D /H /Y /s /e
-xcopy Utilities\*.hpp ..\include\util\ /K /D /H /Y /s /e
-xcopy Utilities\*.h ..\include\util\ /K /D /H /Y /s /e
+xcopy Utility\*.hpp ..\include\Utility\ /K /D /H /Y /s /e
 ..\premake5.exe vs2022
 cd Generic
 msbuild GenericWorkspace.sln /p:Configuration=Debug

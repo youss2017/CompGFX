@@ -1,6 +1,18 @@
 #pragma once
-#include <egxcommon.hpp>
-#include <memory/egxref.hpp>
-#include <memory/egxmemory.hpp>
-#include <pipeline/egxframebuffer.hpp>
-#include <EngineCore.hpp>
+#include "memory/egxmemory.hpp"
+#include "pipeline/egxframebuffer.hpp"
+#include "pipeline/egxpipelinestate.hpp"
+#include "pipeline/egxsampler.hpp"
+#include "shaders/egxshader.hpp"
+#include "shaders/egxshaderdata.hpp"
+#include "EngineCore.hpp"
+
+template<typename T>
+using Ref = egx::ref<T>;
+
+using Buffer = egx::Buffer;
+using Image = egx::Image;
+
+using RefBuffer = Ref<egx::Buffer>;
+using RefImage = Ref<egx::Image>;
+

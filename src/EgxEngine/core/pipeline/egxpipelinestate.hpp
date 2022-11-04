@@ -45,7 +45,7 @@ namespace egx {
 				beginInfo.renderPass = Framebuffer->GetRenderPass();
 				beginInfo.framebuffer = Framebuffer->GetFramebuffer();
 				beginInfo.renderArea = { {0,0}, {Width, Height} };
-				beginInfo.clearValueCount = clearValues.size();
+				beginInfo.clearValueCount = (uint32_t)clearValues.size();
 				beginInfo.pClearValues = clearValues.data();
 				vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 				Pipeline->bind(cmd);

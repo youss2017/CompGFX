@@ -2,19 +2,25 @@
 #include "../egxutil.hpp"
 #include "stb/stb_image.h"
 #include "stb/stb_image_resize.h"
+#include "../../cmd/cmd.hpp"
+#include <imgui/backends/imgui_impl_vulkan.h>
 #include <cmath>
 #include <vector>
-#include "../../window/egxswapchain.hpp"
-#include <imgui/backends/imgui_impl_vulkan.h>
+#include <Utility/CppUtility.hpp>
 
 #pragma region Buffer
 egx::ref<egx::Buffer>  egx::Buffer::FactoryCreate(
 	const ref<VulkanCoreInterface>& CoreInterface,
-	uint32_t size,
+	size_t size,
 	memorylayout layout,
 	buffertype type,
 	bool requireCoherent)
 {
+#ifdef _DEBUG
+	if (size > 1 * (1024 * 1024)) {
+		LOG(INFO, "Creating a {0} Mb Buffer", (double)size / (1024.0 * 1024.0));
+	}
+#endif
 	VkAlloc::DEVICE_MEMORY_PROPERTY property;
 	VkFlags bufferUsage =
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
@@ -70,12 +76,12 @@ egx::Buffer& egx::Buffer::operator=(Buffer& move) noexcept
 	return *this;
 }
 
-egx::ref<egx::Buffer>  egx::Buffer::clone()
+egx::ref<egx::Buffer> egx::Buffer::clone()
 {
 	return Buffer::FactoryCreate(_coreinterface, Size, Layout, Type, CoherentFlag);
 }
 
-egx::ref<egx::Buffer>  egx::Buffer::cloneAndCopy()
+egx::ref<egx::Buffer> egx::Buffer::cloneAndCopy()
 {
 	auto clone = this->clone();
 	if (!clone.IsValidRef()) return clone;
@@ -87,13 +93,13 @@ void  egx::Buffer::copy(ref<Buffer>& source)
 	this->copy(source());
 }
 
-void  egx::Buffer::copy(Buffer* source)
+void egx::Buffer::copy(Buffer* source)
 {
 	assert(Size == source->Size);
 	this->copy(source->Buf, 0, Size);
 }
 
-void  egx::Buffer::write(void* data, size_t offset, size_t size)
+void egx::Buffer::write(void* data, size_t offset, size_t size)
 {
 	if (Layout != memorylayout::local) {
 		bool mapState = _ptr == nullptr;
@@ -146,7 +152,7 @@ void  egx::Buffer::read(void* pOutput, size_t offset, size_t size)
 		return;
 	}
 	ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, buffertype_onlytransfer);
-	auto cmd = SingleUseBuffer(_coreinterface);
+	auto cmd = CommandBufferSingleUse(_coreinterface);
 
 	{
 		VkBufferMemoryBarrier barrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
@@ -244,7 +250,7 @@ void  egx::Buffer::invalidate(size_t offset, size_t size)
 
 void  egx::Buffer::copy(VkBuffer src, size_t offset, size_t size)
 {
-	auto cmd = SingleUseBuffer(_coreinterface);
+	auto cmd = CommandBufferSingleUse(_coreinterface);
 
 	VkBufferMemoryBarrier barriers[2]{};
 	barriers[0].sType = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
@@ -316,7 +322,7 @@ egx::ref<egx::Image>  egx::Image::FactoryCreate(
 	desc.m_extent.width = width;
 	desc.m_extent.height = height;
 	desc.m_extent.depth = depth;
-	uint32_t MipCount = std::min(std::log2(width), std::log2(height));
+	uint32_t MipCount = (uint32_t)std::min(std::log2(width), std::log2(height));
 	if (mipcount == 0) mipcount = MipCount;
 	mipcount = std::min(mipcount, MipCount);
 	desc.m_mipLevels = mipcount;
@@ -347,7 +353,7 @@ egx::Image::~Image() noexcept
 #pragma region Image write
 void egx::Image::setlayout(VkImageLayout OldLayout, VkImageLayout NewLayout)
 {
-	auto cmd = egx::SingleUseBuffer(_coreinterface);
+	auto cmd = egx::CommandBufferSingleUse(_coreinterface);
 	VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier.oldLayout = OldLayout;
 	barrier.newLayout = NewLayout;
@@ -376,7 +382,7 @@ void  egx::Image::write(
 	ref<Buffer> stage = Buffer::FactoryCreate(_coreinterface, Height * StrideSizeInBytes, memorylayout::stream, buffertype::buffertype_onlytransfer);
 	stage->write(Data);
 	stage->flush();
-	auto cmd = SingleUseBuffer(_coreinterface);
+	auto cmd = CommandBufferSingleUse(_coreinterface);
 
 	VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier.srcAccessMask = VK_ACCESS_NONE;
@@ -431,7 +437,7 @@ void  egx::Image::write(uint8_t* Data, VkImageLayout CurrentLayout, uint32_t Wid
 void egx::Image::generatemipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel)
 {
 	assert(Mipcount > 1);
-	auto cmd = SingleUseBuffer(_coreinterface);
+	auto cmd = CommandBufferSingleUse(_coreinterface);
 
 	// 1) First mip to transiation src
 	VkImageMemoryBarrier TransitionBarrier[2]{};
@@ -668,7 +674,7 @@ egx::ref<egx::Image>  egx::Image::CreateCubemap(ref<VulkanCoreInterface>& CoreIn
 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 	);
 
-	auto cmd = SingleUseBuffer(CoreInterface);
+	auto cmd = CommandBufferSingleUse(CoreInterface);
 
 	VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 	barrier.srcAccessMask = 0;
@@ -786,7 +792,7 @@ egx::ref<egx::Image> egx::Image::copy(VkImageLayout CurrentLayout, VkImageLayout
 {
 	if (CopyFinalLayout == VK_IMAGE_LAYOUT_UNDEFINED) CopyFinalLayout = CurrentLayout;
 	auto result = clone();
-	auto cmd = SingleUseBuffer(_coreinterface);
+	auto cmd = CommandBufferSingleUse(_coreinterface);
 	std::vector<VkImageCopy> regions(this->Mipcount);
 	for (int i = 0; i < regions.size(); i++) {
 		regions[i] = {};

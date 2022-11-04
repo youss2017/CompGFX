@@ -181,7 +181,7 @@ VkDescriptorSet& egx::egxshaderset::GetSet()
 			Writes[i].descriptorCount = (uint32_t)info.Image.size();
 			Writes[i].descriptorType = info.Type;
 
-			int j = ImageInfos.size();
+			int j = (int)ImageInfos.size();
 			for (int k = 0; k < info.Image.size(); k++) {
 				VkDescriptorImageInfo imageInfo{};
 				imageInfo.sampler = info.Sampler;
@@ -196,7 +196,7 @@ VkDescriptorSet& egx::egxshaderset::GetSet()
 			i++;
 		}
 
-		vkUpdateDescriptorSets(_coreinterface->Device, Writes.size(), Writes.data(), 0, nullptr);
+		vkUpdateDescriptorSets(_coreinterface->Device, (uint32_t)Writes.size(), Writes.data(), 0, nullptr);
 	}
 	return _set;
 }
@@ -219,12 +219,12 @@ VkDescriptorSetLayout& egx::egxshaderset::GetSetLayout()
 	for (auto& [Id, info] : _images) {
 		bindings[i].binding = info.BindingId;
 		bindings[i].descriptorType = info.Type;
-		bindings[i].descriptorCount = info.Image.size();
+		bindings[i].descriptorCount = (uint32_t)info.Image.size();
 		bindings[i].stageFlags = info.Stages;
 		bindings[i].pImmutableSamplers = nullptr;
 		i++;
 	}
-	createInfo.bindingCount = bindings.size();
+	createInfo.bindingCount = (uint32_t)bindings.size();
 	createInfo.pBindings = bindings.data();
 	vkCreateDescriptorSetLayout(_coreinterface->Device, &createInfo, nullptr, &_setlayout);
 	return _setlayout;
@@ -287,7 +287,7 @@ VkDescriptorPool egx::egxsetpool::getpool()
 
 	createInfo.flags = 0;
 	createInfo.maxSets = _setcount;
-	createInfo.poolSizeCount = sizes.size();
+	createInfo.poolSizeCount = (uint32_t)sizes.size();
 	createInfo.pPoolSizes = sizes.data();
 	vkCreateDescriptorPool(_coreinterface->Device, &createInfo, nullptr, &_pool);
 	return _pool;
@@ -341,7 +341,7 @@ VkPipelineLayout& egx::PipelineLayout::GetLayout()
 		setLayouts[i] = Sets[i]->GetSetLayout();
 	}
 	VkPipelineLayoutCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	createInfo.setLayoutCount = setLayouts.size();
+	createInfo.setLayoutCount = (uint32_t)setLayouts.size();
 	createInfo.pSetLayouts = setLayouts.data();
 	createInfo.pushConstantRangeCount = (uint32_t)_ranges.size();
 	createInfo.pPushConstantRanges = _ranges.data();

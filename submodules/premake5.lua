@@ -27,9 +27,6 @@ workspace "GenericWorkspace"
         kind "StaticLib"
         language "C++"
         files { 
-            "Utilities/**.h",
-            "Utilities/**.hpp",
-            "Utilities/**.cpp",
             "VulkanMemoryAllocator/src/*.cpp",
             "imgui/*.cpp",
             "imgui/backends/imgui_impl_vulkan.h",

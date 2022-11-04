@@ -1,10 +1,8 @@
 #include "EngineCore.hpp"
 #include "GraphicsCardFeatureValidation.hpp"
 #include <iostream>
-#include <util/Logger.hpp>
+#include <Utility/CppUtility.hpp>
 #include <cassert>
-
-using namespace ut;
 
 static VkBool32 VKAPI_CALL ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
@@ -40,7 +38,7 @@ EGX_API egx::EngineCore::EngineCore()
 	debugCreateInfo = {};
 	debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	debugCreateInfo.pfnUserCallback = ApiDebugCallback;
 	createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
 #endif
@@ -52,7 +50,7 @@ EGX_API egx::EngineCore::EngineCore()
 #ifdef _DEBUG
 	if (CreateDebugUtilsMessengerEXT(CoreInterface->Instance, &debugCreateInfo, nullptr, &CoreInterface->DebugMessenger) != VK_SUCCESS)
 	{
-		log_alert("Failed to set up debug messenger!", true);
+		LOG(WARNING, "Failed to set up debug messenger!");
 	}
 #endif
 
@@ -67,10 +65,6 @@ EGX_API egx::EngineCore::~EngineCore()
 	WaitIdle();
 	if (Swapchain)
 		delete Swapchain;
-}
-
-void egx::EngineCore::SetDebugOnErrorDialog(bool state) noexcept {
-	ut::log_configure(true, true, state);
 }
 
 void EGX_API egx::EngineCore::AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui, bool ClearSwapchain)
@@ -123,6 +117,7 @@ std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
 void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool UsingRenderDOC)
 {
 	using namespace std;
+	LOG(INFOBOLD, "Establishing {0}; {1} Mb VRAM; {2} Mb Shared System RAM; Device", Device.VendorName, (double)Device.VideoRam / (1024.0 * 1024.0), (double)Device.SharedSystemRam / (1024.0 * 1024.0));
 	VkDeviceCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 	VkDeviceQueueCreateInfo queueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 
@@ -154,10 +149,10 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 	vulkan12features.uniformBufferStandardLayout = VK_TRUE;
 	vulkan12features.shaderInt8 = VK_TRUE;
 	if (UsingRenderDOC) {
-		log_warning("Disabled bufferDeviceAddress feature so we can use RenderDOC.", false);
+		LOG(WARNING, "Disabled bufferDeviceAddress feature so we can use RenderDOC.");
 	}
 	else {
-		log_warning("bufferDeviceAddress is turned on, CANNOT debug with RenderDOC, in renderdoc use 'debug' or 'renderdoc' in command line arguments.", false);
+		LOG(WARNING, "bufferDeviceAddress is turned on, CANNOT debug with RenderDOC, in renderdoc use 'debug' or 'renderdoc' in command line arguments.");
 		vulkan12features.bufferDeviceAddress = VK_TRUE;
 	}
 
@@ -180,10 +175,10 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 	vulkan12features.hostQueryReset = VK_TRUE;
 
 	if (!egx::GraphicsCardFeatureValidation_Check(Device.Id, features)) {
-		log_error((Device.VendorName + " has passed feature validation check."s).c_str(), __FILE__, __LINE__, true);
+		LOG(ERR, "{0} has failed feature validation check.", Device.VendorName);
 	}
 	else
-		log_info((Device.VendorName + " has passed feature validation check."s).c_str(), false);
+		LOG(INFO, "{0} has passed feature validation check.", Device.VendorName);
 
 	createInfo.pNext = &features;
 
@@ -206,7 +201,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 
 	if (!set)
 	{
-		logerror("Could not create logical device since the Queue Flags could not be found!");
+		LOG(ERR, "Could not create logical device since the Queue Flags could not be found!");
 	}
 
 	float priorities = { 1.0f };
@@ -232,11 +227,6 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 	this->CoreInterface->PhysicalDevice = Device;
 }
 
-void EGX_API egx::EngineCore::DisableLogger(bool Disable) const
-{
-	ut::log_configure(!Disable, true, true, false);
-}
-
 ImGuiContext* egx::EngineCore::GetContext() const
 {
 	return ImGui::GetCurrentContext();
@@ -246,18 +236,18 @@ static VkBool32 VKAPI_CALL ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsE
 {
 	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 	{
-		logwarning(pCallbackData->pMessage);
+		LOG(WARNING, pCallbackData->pMessage);
 	}
 	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 	{
-		log_error(pCallbackData->pMessage, "N/A", 0);
+		LOG(ERR, pCallbackData->pMessage);
 	}
 	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-		loginfo(pCallbackData->pMessage);
+		LOG(INFO, pCallbackData->pMessage);
 	}
 	else
 	{
-		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+		LOG(INFOBOLD, pCallbackData->pMessage);
 	}
 	return VK_FALSE;
 }
