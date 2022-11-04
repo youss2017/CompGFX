@@ -8,6 +8,7 @@
 #include "memory/vulkan_memory_allocator.hpp"
 #include "../window/egxswapchain.hpp"
 #include "egxutil.hpp"
+#include "Utility/CppUtility.hpp"
 
 namespace egx {
 
