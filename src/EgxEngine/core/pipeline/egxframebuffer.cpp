@@ -20,7 +20,7 @@ void  egx::egxframebuffer::CreateColorAttachment(
 	VkAttachmentStoreOp StoreOp,
 	VkPipelineColorBlendAttachmentState* pBlendState) {
 	assert(_colorattachements.find(ColorAttachmentID) == _colorattachements.end());
-	_internal::egfxframebuffer_attachment attachment;
+	internal::egfxframebuffer_attachment attachment;
 	if (pBlendState)
 		attachment.BlendState = *pBlendState;
 	attachment.Attachment = Image::FactoryCreate(
@@ -114,7 +114,7 @@ namespace egx {
 			Width, Height, egx::_internal::DebugVkFormatToString(Format),
 			ClearValue.color.float32[0], ClearValue.color.float32[1], ClearValue.color.float32[2], ClearValue.color.float32[3]);
 #endif
-		_internal::egfxframebuffer_attachment attachment;
+		internal::egfxframebuffer_attachment attachment;
 		if (pBlendState)
 			attachment.BlendState = *pBlendState;
 		attachment.Attachment = Image::FactoryCreate(
@@ -162,7 +162,7 @@ namespace egx {
 #ifdef _DEBUG
 		LOG(INFO, "Creating FBO Depth Attachment {0}x{1} Format: {2}, Clear: {3}", Width, Height, egx::_internal::DebugVkFormatToString(Format), ClearValue.depthStencil.depth);
 #endif
-		_internal::egfxframebuffer_attachment attachment;
+		internal::egfxframebuffer_attachment attachment;
 		attachment.Attachment = Image::FactoryCreate(
 			_coreinterface,
 			memorylayout::local,

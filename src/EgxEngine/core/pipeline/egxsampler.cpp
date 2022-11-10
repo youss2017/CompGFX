@@ -1,5 +1,12 @@
 #include "egxsampler.hpp"
 
+using namespace egx;
+
+ref<Sampler> Sampler::FactoryCreate(const ref<VulkanCoreInterface> &CoreInterface)
+{
+	return new Sampler(CoreInterface);
+}
+
 egx::Sampler::Sampler(const ref<VulkanCoreInterface>& CoreInterface) :
 	_coreinterface(CoreInterface)
 {}

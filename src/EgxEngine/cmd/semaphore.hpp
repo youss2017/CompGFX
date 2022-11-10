@@ -1,10 +1,11 @@
 #pragma once
 #include "../core/egxcommon.hpp"
+#include "../core/memory/frameflight.hpp"
 #include <vector>
 
 namespace egx {
 
-    class Semaphore {
+    class Semaphore : public FrameFlight {
     public:
         EGX_API Semaphore() = default;
         EGX_API Semaphore(const ref<VulkanCoreInterface>& CoreInterface, const std::string& Name);
@@ -29,10 +30,8 @@ namespace egx {
         const std::string Name;
 
     private:
-        friend class VulkanSwapchain;
         std::vector<VkSemaphore> _semaphores;
         ref<VulkanCoreInterface> _core_interface = nullptr;
-        uint32_t* _currrent_frame_ptr = nullptr;
     };
 
 }

@@ -25,12 +25,12 @@ namespace egx
     void Fence::DelayInitalize(const ref<VulkanCoreInterface> &CoreInterface, bool CreateSignaled)
     {
         _core_interface = CoreInterface;
-        _current_frame_ptr = &CoreInterface->CurrentFrame;
         VkFenceCreateInfo createInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
         createInfo.flags = CreateSignaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
         _fences.resize(CoreInterface->MaxFramesInFlight);
         for (size_t i = 0; i < _fences.size(); i++)
             vkCreateFence(_core_interface->Device, &createInfo, nullptr, &_fences[i]);
+        DelayInitalizeFF(CoreInterface);
     }
 
     const VkFence& Fence::GetFence()
@@ -68,6 +68,11 @@ namespace egx
         vkResetFences(fences[0]->_core_interface->Device, (uint32_t)fence_handles.size(), fence_handles.data());
     }
 
+    void Fence::SynchronizeAllFrames()
+    {
+        vkWaitForFences(_core_interface->Device, (uint32_t)_fences.size(), _fences.data(), VK_TRUE, UINT64_MAX);
+    }
+
     ref<Fence> Fence::CreateSingleFence(const ref<VulkanCoreInterface> &CoreInterface, bool CreateSignaled)
     {
         ref<Fence> f = {new Fence()};
@@ -76,6 +81,7 @@ namespace egx
         createInfo.flags = CreateSignaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
         f->_fences.resize(1);
         vkCreateFence(f->_core_interface->Device, &createInfo, nullptr, &f->_fences[0]);
+        f->DelayInitalizeFF(CoreInterface, true);
         return f;
     }
 

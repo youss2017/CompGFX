@@ -59,8 +59,6 @@ namespace egx {
 		}
 
 		inline ~CommandPool() {
-			if (commandPool)
-				vkDestroyCommandPool(_core->Device, commandPool, nullptr);
 			for (auto cmdPool : commandPools)
 				vkDestroyCommandPool(_core->Device, cmdPool, nullptr);
 		}
@@ -175,12 +173,6 @@ namespace egx {
 		const ref<VulkanCoreInterface>& CoreInterface,
 		bool FrameFlightMode, bool MemoryShortLived, bool EnableIndividualReset, bool MakeProtected) {
 		return { new CommandPool(CoreInterface, FrameFlightMode, MemoryShortLived, EnableIndividualReset, MakeProtected) };
-	}
-
-	inline static void StartCommandBuffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage) {
-		VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		beginInfo.flags = usage;
-		vkBeginCommandBuffer(buffer, &beginInfo);
 	}
 
 	inline static ref<DescriptorPool> CreateDescriptorPool(ref<VulkanCoreInterface>& CoreInterface, bool FrameFlightMode, uint32_t MaximumSets, const std::vector<VkDescriptorPoolSize>& PoolSizes, VkDescriptorPoolCreateFlags flags)

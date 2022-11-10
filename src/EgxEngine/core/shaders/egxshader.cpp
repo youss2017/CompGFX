@@ -278,7 +278,7 @@ namespace egx {
 	{
 		VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 		createInfo.codeSize = m_Bytecode.size() * 4u;
-		createInfo.pCode = this->GetBytecode();
+		createInfo.pCode = m_Bytecode.data();
 		VkShaderModule m;
 		vkCreateShaderModule(CoreInterface->Device, &createInfo, 0, &m);
 		m_ShaderHandle = m;
@@ -374,10 +374,8 @@ namespace egx {
 		return m_Source;
 	}
 
-	void EGX_API egxshader::CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, uint32_t** pOutCode, uint32_t* pOutSize, const char* EntryPointFunction)
+	void EGX_API egxshader::CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, std::vector<uint32_t>& OutCode, const char* EntryPointFunction)
 	{
-		assert(pOutCode && pOutSize);
-
 		shaderc::Compiler compiler;
 		shaderc::CompileOptions options;
 		options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
@@ -393,13 +391,20 @@ namespace egx {
 			ut::DebugBreak();
 		}
 
-		std::vector<uint32_t> bytecode = std::vector<uint32_t>(spv.cbegin(), spv.cend());
-		uint32_t* pBytecode = new uint32_t[bytecode.size()];
-		memcpy(pBytecode, bytecode.data(), bytecode.size() * sizeof(uint32_t));
-
-		*pOutCode = pBytecode;
-		*pOutSize = (uint32_t)bytecode.size() * 4u;
+		OutCode = std::vector<uint32_t>(spv.cbegin(), spv.cend());
 	}
+
+    egxshader egxshader::CreateFromSource(const ref<VulkanCoreInterface>& CoreInterface, const char* source_code, shaderc_shader_kind shader_type)
+	{
+		egxshader ret;
+		ret.CoreInterface = CoreInterface;
+		ret.m_Source = source_code;
+		CompileVulkanSPIRVText(source_code, "main.glsl", shader_type, ret.m_Bytecode);
+		ret.m_CompileStatus = true;
+		ret.InitalizeVulkan();
+		return ret;
+	}
+
 
 	std::string egxshader::s_CacheDirectory;
 	EGX_API bool egxshader::ConfigureShaderCache(std::string SpirvCahceFolder)

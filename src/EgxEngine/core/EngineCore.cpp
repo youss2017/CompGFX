@@ -4,7 +4,7 @@
 #include <Utility/CppUtility.hpp>
 #include <cassert>
 
-static VkBool32 VKAPI_CALL ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+static VkBool32 VKAPI_ATTR ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 
 EGX_API egx::EngineCore::EngineCore()
@@ -117,7 +117,7 @@ std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
 void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool UsingRenderDOC)
 {
 	using namespace std;
-	LOG(INFOBOLD, "Establishing {0}; {1} Mb VRAM; {2} Mb Shared System RAM; Device", Device.VendorName, (double)Device.VideoRam / (1024.0 * 1024.0), (double)Device.SharedSystemRam / (1024.0 * 1024.0));
+	LOG(INFOBOLD, "Establishing {0}; {1:%.2lf} Mb VRAM; {2:%.2lf} Mb Shared System RAM; Device", Device.VendorName, (double)Device.VideoRam / (1024.0 * 1024.0), (double)Device.SharedSystemRam / (1024.0 * 1024.0));
 	VkDeviceCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 	VkDeviceQueueCreateInfo queueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 
@@ -232,7 +232,7 @@ ImGuiContext* egx::EngineCore::GetContext() const
 	return ImGui::GetCurrentContext();
 }
 
-static VkBool32 VKAPI_CALL ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+static VkBool32 VKAPI_ATTR ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
 	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 	{

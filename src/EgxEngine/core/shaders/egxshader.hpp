@@ -54,10 +54,13 @@ namespace egx {
             return info;
         }
 
-        // Call delete[] on byecode pointer when your done with it.
-        EGX_API static void CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, uint32_t** pOutCode, uint32_t* pOutSize, const char* EntryPointFunction = "main");
+        EGX_API static void CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, std::vector<uint32_t>& OutCode, const char* EntryPointFunction = "main");
+        EGX_API static egxshader CreateFromSource(const ref<VulkanCoreInterface>& CoreInterface, const char* source_code, shaderc_shader_kind shader_type);
 
     private:
+        friend class VulkanSwapchain;
+        egxshader() = default;
+
         ref<VulkanCoreInterface> CoreInterface;
         std::vector<uint32_t> m_Bytecode;
         std::string m_ShaderDirectory, m_ShaderFilename, m_EntryPointFunction, m_ShaderPath;

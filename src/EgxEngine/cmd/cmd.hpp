@@ -1,13 +1,14 @@
 #pragma once
 #include "../core/egxcommon.hpp"
 #include "../core/egxutil.hpp"
+#include "../core/memory/frameflight.hpp"
 #include "synchronization.hpp"
 #include <vector>
 
 namespace egx
 {
 
-    class CommandBuffer
+    class CommandBuffer : public FrameFlight
     {
     public:
         EGX_API CommandBuffer() = default;
@@ -20,8 +21,6 @@ namespace egx
         EGX_API const VkCommandBuffer GetBuffer();
         EGX_API const VkCommandBuffer &GetReadonlyBuffer() const;
         EGX_API void Finalize();
-
-        inline void SetStaticRecordIndex(uint32_t index = UINT32_MAX) { _static_record_index = index; }
 
         EGX_API static ref<CommandBuffer> CreateSingleBuffer(const ref<VulkanCoreInterface> &CoreInterface);
 
@@ -57,25 +56,18 @@ namespace egx
                                    VkFence SignalFence,
                                    bool Block = false);
 
+        EGX_API static void StartCommandBuffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage);
+
         CommandBuffer(CommandBuffer &) = delete;
 
         static egx::ref<CommandBuffer> FactoryCreate(const ref<VulkanCoreInterface> &CoreInterface)
         {
             return {new CommandBuffer(CoreInterface)};
         }
-
-    private:
-        inline uint32_t GetCurrentFrame() const
-        {
-            return _current_frame_ptr ? (_static_record_index == UINT32_MAX ? *_current_frame_ptr : _static_record_index) : 0;
-        }
-
     private:
         std::vector<VkCommandBuffer> _cmd;
         std::vector<bool> _cmd_static_init;
-        uint32_t *_current_frame_ptr = nullptr;
         uint32_t _last_frame = UINT32_MAX;
-        uint32_t _static_record_index = UINT32_MAX;
     };
 
     class CommandBufferSingleUse
@@ -91,6 +83,7 @@ namespace egx
 
         void Execute()
         {
+            vkEndCommandBuffer(Cmd);
             CommandBuffer::Submit(_queue, {Cmd}, {}, {}, {}, _fence->GetFence(), true);
         }
 

@@ -3,6 +3,7 @@
 #include "egxref.hpp"
 #include <memory>
 #include <imgui.h>
+#include "frameflight.hpp"
 
 namespace egx {
 
@@ -12,6 +13,7 @@ namespace egx {
 		stream
 	};
 
+#pragma region GPU Buffer
 	enum buffertype : uint32_t {
 		buffertype_vertex = 0b0001,
 		buffertype_index = 0b0010,
@@ -20,68 +22,76 @@ namespace egx {
 		buffertype_onlytransfer = 0b0000
 	};
 
-	class Buffer {
+	class Buffer : public FrameFlight {
 
 	public:
-		static ref<Buffer> EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, size_t size, memorylayout layout, buffertype type, bool requireCoherent = false);
+		static ref<Buffer> EGX_API FactoryCreate(
+			const ref<VulkanCoreInterface>& CoreInterface,
+			size_t size,
+			memorylayout layout,
+			buffertype type,
+			bool CpuWritePerFrameFlag,
+			bool requireCoherent = false);
 
 		EGX_API ~Buffer();
 		EGX_API Buffer(Buffer& cp) = delete;
 		EGX_API Buffer(Buffer&& move) noexcept;
 		EGX_API Buffer& operator=(Buffer& move) noexcept;
 
-		EGX_API ref<Buffer> clone();
-		EGX_API ref<Buffer> cloneAndCopy();
-		EGX_API void copy(ref<Buffer>& source);
-		EGX_API void copy(Buffer* source);
+		EGX_API ref<Buffer> Clone();
+		EGX_API void Copy(ref<Buffer>& source);
+		EGX_API void Copy(Buffer* source);
 
-		EGX_API void write(void* data, size_t offset, size_t size);
-		EGX_API void write(void* data, size_t size);
-		EGX_API void write(void* data);
+		EGX_API void Write(void* data, size_t offset, size_t size);
+		EGX_API void Write(void* data, size_t size);
+		EGX_API void Write(void* data);
 
-		EGX_API void* map();
-		EGX_API void unmap();
+		EGX_API void* Map();
+		EGX_API void Unmap();
 
-		EGX_API void read(void* pOutput, size_t offset, size_t size);
-		EGX_API void read(void* pOutput, size_t size);
-		EGX_API void read(void* pOutput);
+		EGX_API void Read(void* pOutput, size_t offset, size_t size);
+		EGX_API void Read(void* pOutput, size_t size);
+		EGX_API void Read(void* pOutput);
 
-		EGX_API void flush();
-		EGX_API void flush(size_t offset, size_t size);
-		EGX_API void invalidate();
-		EGX_API void invalidate(size_t offset, size_t size);
+		EGX_API void Flush();
+		EGX_API void Flush(size_t offset, size_t size);
+		EGX_API void Invalidate();
+		EGX_API void Invalidate(size_t offset, size_t size);
+
+		EGX_API const VkBuffer& GetBuffer() const;
 
 	protected:
 		EGX_API Buffer(
 			const size_t size,
 			const memorylayout layout,
 			const buffertype type,
+			const bool cpuaccessflag,
 			const bool coherent,
-			const VkBuffer buffer,
 			const VkAlloc::CONTEXT context,
-			const VkAlloc::BUFFER _buffer,
 			const ref<VulkanCoreInterface>& coreinterface) :
 			Size(size), Layout(layout),
 			Type(type), CoherentFlag(coherent),
-			Buf(buffer), _context(context),
-			_buffer(_buffer), _coreinterface(coreinterface),
-			_ptr(nullptr)
-		{}
+			_context(context), _coreinterface(coreinterface),
+			_ptr(nullptr), CpuAccessPerFrame(cpuaccessflag)
+		{
+			DelayInitalizeFF(coreinterface, !CpuAccessPerFrame);
+		}
 
-		void EGX_API copy(VkBuffer src, size_t offset, size_t size);
+		void EGX_API Copy(VkBuffer src, size_t offset, size_t size);
 
 	public:
 		const size_t Size;
 		const memorylayout Layout;
 		const buffertype Type;
 		const bool CoherentFlag;
-		const VkBuffer Buf;
+		const bool CpuAccessPerFrame;
 	protected:
-		const VkAlloc::CONTEXT _context;
-		const VkAlloc::BUFFER _buffer;
 		ref<VulkanCoreInterface> _coreinterface;
+		const VkAlloc::CONTEXT _context;
+		std::vector<VkAlloc::BUFFER> _buffers;
 		void* _ptr;
 	};
+#pragma endregion GPU Buffer
 
 	class Image {
 
@@ -97,7 +107,7 @@ namespace egx {
 		/// <param name="mipcount">Set to 0 for max mipmap count</param>
 		/// <param name="arraylevel">For arrayed images</param>
 		/// <returns></returns>
-		static ref<Image> EGX_API FactoryCreate(
+		EGX_API static ref<Image> FactoryCreate(
 			const ref<VulkanCoreInterface>& CoreInterface,
 			memorylayout layout,
 			VkImageAspectFlags aspect,
@@ -108,7 +118,7 @@ namespace egx {
 			uint32_t mipcount,
 			uint32_t arraylevel,
 			VkImageUsageFlags usage,
-			VkImageLayout InitalLayout);
+			VkImageLayout InitialLayout);
 
 		EGX_API ~Image() noexcept;
 
@@ -232,15 +242,15 @@ namespace egx {
 			VkAlloc::CONTEXT _context, VkAlloc::IMAGE _image,
 			const ref<VulkanCoreInterface>& _interface, VkFormat format,
 			VkImageAspectFlags aspect, memorylayout layout,
-			VkImageUsageFlags imageUsage, VkImageLayout initalLayout)
+			VkImageLayout initalLayout)
 			: Width(width), Height(height),
 			Depth(depth), Mipcount(mipcount),
 			Arraylevels(arraylevels), Img(image),
 			ImageUsage(usage), _context(_context),
 			_image(_image), _coreinterface(_interface),
 			Format(format), ImageAspect(aspect),
-			_memorylayout(layout), _imageusage(imageUsage),
-			_initallayout(initalLayout)
+			_memorylayout(layout), _imageusage(usage),
+			_initial_layout(initalLayout)
 		{}
 
 	public:
@@ -249,10 +259,10 @@ namespace egx {
 		const uint32_t Depth;
 		const uint32_t Mipcount;
 		const uint32_t Arraylevels;
-		const VkImage Img;
 		const VkImageUsageFlags ImageUsage;
 		const VkFormat Format;
 		const VkImageAspectFlags ImageAspect;
+		const VkImage Img;
 
 	protected:
 		const VkAlloc::CONTEXT _context;
@@ -262,7 +272,8 @@ namespace egx {
 		ImTextureID _imgui_textureid = nullptr;
 		memorylayout _memorylayout;
 		VkImageUsageFlags _imageusage;
-		VkImageLayout _initallayout;
+		VkImageLayout _initial_layout;
+		bool _call_destruction = true;
 	};
 
 }

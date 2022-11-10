@@ -8,6 +8,44 @@
 #include <imgui/imgui.h>
 #include <Utility/CppUtility.hpp>
 #include "../cmd/cmd.hpp"
+#include "../core/shaders/egxshader.hpp"
+
+static const char *builtin_vertex_shader = R"(
+	#version 450
+
+	const vec4 verts[6] =
+	{
+		vec4(-1.0, -1.0, 0.0, 0.0),
+		vec4(-1.0, 1.0, 0.0, 1.0),
+		vec4(1.0, -1.0, 1.0, 0.0),
+		vec4(-1.0, 1.0, 0.0, 1.0),
+		vec4(1.0, 1.0, 1.0, 1.0),
+		vec4(1.0, -1.0, 1.0, 0.0)
+	};
+
+	layout (location = 0) out vec2 UV;
+
+	void main() {
+		vec4 v = verts[gl_VertexIndex];
+		UV = v.zw;
+		gl_Position = vec4(v.xy, 0.0, 1.0);
+	}
+)";
+
+static const char *builtin_fragment_shader = R"(
+	#version 450
+
+	layout (binding = 0) uniform sampler2D BlitImage; 
+	layout (location = 0) in vec2 UV;
+	layout (location = 0) out vec4 FragColor;
+
+	void main()
+	{
+		FragColor = texture(BlitImage, UV);
+	}
+)";
+
+using namespace egx;
 
 egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, void *GlfwWindowPtr, bool VSync, bool SetupImGui, bool ClearSwapchain)
 	: _core(CoreInterface), GlfwWindowPtr(GlfwWindowPtr), _vsync(VSync), _imgui(SetupImGui), _clearswapchain(ClearSwapchain)
@@ -29,17 +67,15 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, v
 	vkGetPhysicalDeviceSurfacePresentModesKHR(_core->PhysicalDevice.Id, Surface, &presentationModeCount, _presentationModes.data());
 
 	glfwGetFramebufferSize((GLFWwindow *)GlfwWindowPtr, &_width, &_height);
-	CreateRenderPass();
-	CreateSwapchain(_width, _height);
 
 	_pool = CreateCommandPool(_core, true, false, true, false);
 	_cmd = _pool->AllocateBufferFrameFlightMode(true);
-	_poollock = Fence::FactoryCreate(_core, true);
+	_swapchain_acquire_lock = Fence::FactoryCreate(_core, true);
+	_cmd_lock = Fence::FactoryCreate(_core, true);
 
-	_presentLock = Semaphore::FactoryCreate(CoreInterface, "InternalBlitLock");
-	_blitLock = Semaphore::FactoryCreate(CoreInterface, "PresentLock");
-	Synchronization.SetConsumerWaitSemaphore(_presentLock);
-	Synchronization.AddWaitSemaphore(_presentLock);
+	_present_lock = Semaphore::FactoryCreate(CoreInterface, "PresentLock");
+	_blit_lock = Semaphore::FactoryCreate(CoreInterface, "InternalBlitLock");
+	Synchronization.SetConsumerWaitSemaphore(_present_lock);
 
 	if (_imgui)
 	{
@@ -64,25 +100,26 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, v
 			&ImGui_Load_UserData);
 #endif
 
-		std::vector<VkDescriptorPoolSize> poolSizes = {
-			{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-			{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-			{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-			{VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-			{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-			{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-			{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
+		_descriptor_set_pool = SetPool::FactoryCreate(CoreInterface);
+		SetPoolRequirementsInfo req;
+		req.SetCount = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_SAMPLER] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC] = 1000;
+		req.Type[VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT] = 1000;
+		_descriptor_set_pool->AdjustForRequirements(req);
 
-		VkDescriptorPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-		createInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-		createInfo.maxSets = 1000;
-		createInfo.poolSizeCount = (uint32_t)poolSizes.size();
-		createInfo.pPoolSizes = poolSizes.data();
-		vkCreateDescriptorPool(CoreInterface->Device, &createInfo, nullptr, &_imguipool);
+		CreateRenderPass();
+		CreateSwapchain(_width, _height);
+		CreatePipelineObjects();
+		CreatePipeline();
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -101,7 +138,7 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, v
 		init_info.QueueFamily = CoreInterface->QueueFamilyIndex;
 		init_info.Queue = queue;
 		init_info.PipelineCache = NULL;
-		init_info.DescriptorPool = _imguipool;
+		init_info.DescriptorPool = _descriptor_set_pool->GetSetPool();
 		init_info.Allocator = NULL;
 		init_info.MinImageCount = this->_core->MaxFramesInFlight;
 		init_info.ImageCount = this->_core->MaxFramesInFlight;
@@ -146,7 +183,6 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, v
 
 egx::VulkanSwapchain::VulkanSwapchain(VulkanSwapchain &&move) noexcept
 {
-	this->~VulkanSwapchain();
 	memcpy(this, &move, sizeof(VulkanSwapchain));
 	memset(&move, 0, sizeof(VulkanCoreInterface));
 }
@@ -166,7 +202,6 @@ egx::VulkanSwapchain::~VulkanSwapchain()
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-		vkDestroyDescriptorPool(_core->Device, _imguipool, nullptr);
 	}
 	if (RenderPass)
 		vkDestroyRenderPass(_core->Device, RenderPass, nullptr);
@@ -178,19 +213,23 @@ egx::VulkanSwapchain::~VulkanSwapchain()
 		vkDestroyImageView(_core->Device, view, nullptr);
 	for (auto fbo : _framebuffers)
 		vkDestroyFramebuffer(_core->Device, fbo, nullptr);
+	_cmd_lock->SynchronizeAllFrames();
+	_swapchain_acquire_lock->SynchronizeAllFrames();
 }
 
 void egx::VulkanSwapchain::Acquire()
 {
-	// auto &fence = _swapchain_sync.GetSignalFence();
+	_swapchain_acquire_lock->SetStaticFrameIndex(_current_swapchain_frame);
+	_present_lock->SetStaticFrameIndex(_current_swapchain_frame);
+	auto fence = _swapchain_acquire_lock->GetFence();
+	vkWaitForFences(_core->Device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(_core->Device, 1, &fence);
 	VkResult result = vkAcquireNextImageKHR(_core->Device,
 											Swapchain,
 											UINT64_MAX,
-											_presentLock->_semaphores[_current_swapchain_frame],
-											nullptr,
+											_present_lock->GetSemaphore(),
+											fence,
 											&_core->CurrentFrame);
-	// fence->Wait(UINT64_MAX);
-	// fence->Reset();
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		Resize();
 	if (_imgui)
@@ -204,7 +243,9 @@ void egx::VulkanSwapchain::Acquire()
 uint32_t egx::VulkanSwapchain::PresentInit()
 {
 	uint32_t frame = _current_swapchain_frame;
-	auto poollock = _poollock->_fences[frame];
+	_cmd_lock->SetStaticFrameIndex(frame);
+	_blit_lock->SetStaticFrameIndex(frame);
+	auto poollock = _cmd_lock->GetFence();
 	vkWaitForFences(_core->Device, 1, &poollock, VK_TRUE, UINT64_MAX);
 	vkResetFences(_core->Device, 1, &poollock);
 	return frame;
@@ -212,54 +253,50 @@ uint32_t egx::VulkanSwapchain::PresentInit()
 
 void egx::VulkanSwapchain::Present(const ref<Image> &image, uint32_t viewIndex)
 {
-	assert(!_clearswapchain && "Cannot clear swapchain when presentating an image because the copied image will be cleared.");
+	// assert(!_clearswapchain && "Cannot clear swapchain when presentating an image because the copied image will be cleared.");
 	uint32_t frame = PresentInit();
 
-	StartCommandBuffer(_cmd[frame], 0);
+	if (image->Img != _last_updated_image[frame])
+	{
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.sampler = _image_sampler->GetSampler();
+		imageInfo.imageView = image->view(viewIndex);
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+		write.dstSet = _descriptor_set[frame];
+		write.dstBinding = 0;
+		write.dstArrayElement = 0;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.pImageInfo = &imageInfo;
+		vkUpdateDescriptorSets(_core->Device, 1, &write, 0, nullptr);
+		_last_updated_image[frame] = image->Img;
+	}
+
+	CommandBuffer::StartCommandBuffer(_cmd[frame], 0);
 	DInsertDebugLabel(_core, _cmd[frame], frame, "Swapchain Present", 0.5f, 0.4f, 0.65f);
 
-	VkImageMemoryBarrier barriers[2]{};
-	barriers[0] = Image::Barrier(Imgs[frame], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-								 VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT);
-
+	VkRenderPassBeginInfo beginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+	beginInfo.renderPass = RenderPass;
+	beginInfo.framebuffer = _framebuffers[frame];
+	beginInfo.renderArea = {{}, {(uint32_t)_width, (uint32_t)_height}};
+	vkCmdBeginRenderPass(_cmd[frame], &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBindPipeline(_cmd[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, _blit_gfx);
+	vkCmdBindDescriptorSets(_cmd[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, _blit_layout, 0, 1, &_descriptor_set[frame], 0, nullptr);
+	vkCmdDraw(_cmd[frame], 6, 1, 0, 0);
 	if (_imgui)
 	{
-		vkCmdPipelineBarrier(_cmd[frame], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, barriers);
-	}
-	else
-	{
-		barriers[1] = Image::Barrier(Imgs[frame], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-									 VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_NONE);
-		vkCmdPipelineBarrier(_cmd[frame], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 2, barriers);
-	}
-
-	VkImageBlit region{};
-	region.srcOffsets[0] = region.dstOffsets[0] = {0, 0, 0};
-	region.srcOffsets[1] = {(int32_t)image->Width, (int32_t)image->Height, 1};
-	region.dstOffsets[1] = {_width, _height, 1};
-	region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.dstSubresource.layerCount = 1;
-	region.srcSubresource.aspectMask = image->ImageAspect;
-	region.srcSubresource.layerCount = 1;
-	vkCmdBlitImage(_cmd[frame], image->Img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Imgs[frame], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_NEAREST);
-	if (_imgui)
-	{
-		VkRenderPassBeginInfo beginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-		beginInfo.renderPass = RenderPass;
-		beginInfo.framebuffer = _framebuffers[frame];
-		beginInfo.renderArea = {{}, {(uint32_t)_width, (uint32_t)_height}};
-		vkCmdBeginRenderPass(_cmd[frame], &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 		ImGui::Render();
 		auto draw_data = ImGui::GetDrawData();
 		ImGui_ImplVulkan_RenderDrawData(draw_data, _cmd[frame]);
-		vkCmdEndRenderPass(_cmd[frame]);
 	}
+	vkCmdEndRenderPass(_cmd[frame]);
 
 	vkEndCommandBuffer(_cmd[frame]);
 
 	DEndDebugLabel(_core, _cmd[frame]);
 
-	PresentCommon(frame);
+	PresentCommon(frame, false);
 }
 
 void egx::VulkanSwapchain::Present()
@@ -267,7 +304,7 @@ void egx::VulkanSwapchain::Present()
 	assert(_imgui && "To use default Present() you must have enabled imgui otherwise you are presenting nothing.");
 	uint32_t frame = PresentInit();
 
-	StartCommandBuffer(_cmd[frame], 0);
+	CommandBuffer::StartCommandBuffer(_cmd[frame], 0);
 	VkClearValue clear{};
 	VkRenderPassBeginInfo beginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
 	beginInfo.renderPass = RenderPass;
@@ -285,10 +322,10 @@ void egx::VulkanSwapchain::Present()
 	vkCmdEndRenderPass(_cmd[frame]);
 	vkEndCommandBuffer(_cmd[frame]);
 
-	PresentCommon(frame);
+	PresentCommon(frame, true);
 }
 
-void egx::VulkanSwapchain::PresentCommon(uint32_t frame)
+void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 {
 	if (_imgui)
 	{
@@ -302,13 +339,21 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame)
 		}
 	}
 
-	VkSemaphore blitLock = _blitLock->_semaphores[frame];
+	VkSemaphore blitLock = _blit_lock->GetSemaphore();
+	auto waitSemaphores = Synchronization.GetProducerWaitSemaphores(frame);
+	auto waitDstStages = Synchronization.GetProducerWaitStageFlags();
+
+	if (onlyimgui)
+	{
+		waitSemaphores.push_back(_present_lock->GetSemaphore());
+		waitDstStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	}
 
 	CommandBuffer::Submit(_core, {_cmd[frame]},
-						  Synchronization.GetProducerWaitSemaphores(frame),
-						  Synchronization.GetProducerWaitStageFlags(),
-						  { blitLock },
-						  {_poollock->_fences[frame]});
+						  waitSemaphores,
+						  waitDstStages,
+						  {blitLock},
+						  _cmd_lock->GetFence());
 
 	VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
 	presentInfo.waitSemaphoreCount = 1;
@@ -330,6 +375,7 @@ void egx::VulkanSwapchain::Resize(int width, int height)
 {
 	assert(width > 0 && height > 0);
 	CreateSwapchain(_width, _height);
+	CreatePipeline();
 }
 
 void egx::VulkanSwapchain::Resize()
@@ -390,7 +436,7 @@ VkPresentModeKHR egx::VulkanSwapchain::GetPresentMode()
 void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 {
 	vkQueueWaitIdle(_core->Queue);
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_core->PhysicalDevice.Id, Surface, &_cabilities);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_core->PhysicalDevice.Id, Surface, &_capabilities);
 	VkSurfaceFormatKHR surfaceFormat = GetSurfaceFormat();
 	_width = width;
 	_height = height;
@@ -402,12 +448,12 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 
 	VkExtent2D swapchainSize =
 		{
-			std::clamp<uint32_t>(width, _cabilities.minImageExtent.width, _cabilities.maxImageExtent.width),
-			std::clamp<uint32_t>(height, _cabilities.minImageExtent.height, _cabilities.maxImageExtent.height)};
+			std::clamp<uint32_t>(width, _capabilities.minImageExtent.width, _capabilities.maxImageExtent.width),
+			std::clamp<uint32_t>(height, _capabilities.minImageExtent.height, _capabilities.maxImageExtent.height)};
 	_width = swapchainSize.width;
 	_height = swapchainSize.height;
 
-	_core->MaxFramesInFlight = std::max<uint32_t>(_core->MaxFramesInFlight, _cabilities.minImageCount);
+	_core->MaxFramesInFlight = std::max<uint32_t>(_core->MaxFramesInFlight, _capabilities.minImageCount);
 	assert(_core->MaxFramesInFlight <= 5);
 
 	VkSwapchainKHR oldSwapchain = Swapchain;
@@ -422,7 +468,7 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 	createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	createInfo.queueFamilyIndexCount = 1;
 	createInfo.pQueueFamilyIndices = &_core->QueueFamilyIndex;
-	createInfo.preTransform = _cabilities.currentTransform; // VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR /* VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR */;
+	createInfo.preTransform = _capabilities.currentTransform; // VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR /* VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR */;
 	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	createInfo.presentMode = GetPresentMode();
 	createInfo.clipped = VK_TRUE;
@@ -510,4 +556,112 @@ void egx::VulkanSwapchain::CreateRenderPass()
 	passCreateInfo.dependencyCount = 1;
 	passCreateInfo.pDependencies = &dependency;
 	vkCreateRenderPass(_core->Device, &passCreateInfo, nullptr, &RenderPass);
+}
+
+void VulkanSwapchain::CreatePipelineObjects()
+{
+	_image_sampler = Sampler::FactoryCreate(_core);
+	{
+		VkDescriptorSetLayoutBinding binding{};
+		binding.binding = 0;
+		binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		binding.descriptorCount = 1;
+		binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+		createInfo.bindingCount = 1;
+		createInfo.pBindings = &binding;
+		vkCreateDescriptorSetLayout(_core->Device, &createInfo, nullptr, &_descriptor_layout);
+	}
+	{
+		VkDescriptorSetAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+		allocateInfo.descriptorPool = _descriptor_set_pool->GetSetPool();
+		allocateInfo.descriptorSetCount = 1;
+		allocateInfo.pSetLayouts = &_descriptor_layout;
+		_descriptor_set.resize(_framebuffers.size());
+		for (size_t i = 0; i < _descriptor_set.size(); i++)
+			vkAllocateDescriptorSets(_core->Device, &allocateInfo, &_descriptor_set[i]);
+		_last_updated_image.resize(_framebuffers.size(), nullptr);
+	}
+	{
+		VkPipelineLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+		createInfo.setLayoutCount = 1;
+		createInfo.pSetLayouts = &_descriptor_layout;
+		vkCreatePipelineLayout(_core->Device, &createInfo, nullptr, &_blit_layout);
+	}
+	_builtin_vertex = egxshader::CreateFromSource(_core, builtin_vertex_shader, shaderc_vertex_shader);
+	_builtin_fragment = egxshader::CreateFromSource(_core, builtin_fragment_shader, shaderc_fragment_shader);
+}
+
+void VulkanSwapchain::CreatePipeline()
+{
+	if (_blit_gfx)
+		vkDestroyPipeline(_core->Device, _blit_gfx, nullptr);
+	VkGraphicsPipelineCreateInfo createInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+	createInfo.stageCount = 2;
+	VkPipelineShaderStageCreateInfo stages[2]{};
+	stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+	stages[0].module = _builtin_vertex.GetShader();
+	stages[0].pName = "main";
+
+	stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	stages[1].module = _builtin_fragment.GetShader();
+	stages[1].pName = "main";
+	createInfo.pStages = stages;
+
+	VkPipelineVertexInputStateCreateInfo vertexInputState{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+	createInfo.pVertexInputState = &vertexInputState;
+
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	createInfo.pInputAssemblyState = &inputAssembly;
+
+	VkPipelineTessellationStateCreateInfo tessellation{VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO};
+	createInfo.pTessellationState = &tessellation;
+
+	VkViewport viewport{};
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+	viewport.width = float(_width);
+	viewport.height = float(_height);
+	VkRect2D scissor{};
+	scissor.extent = {uint32_t(_width), uint32_t(_height)};
+	VkPipelineViewportStateCreateInfo viewportState{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
+	viewportState.viewportCount = 1;
+	viewportState.pViewports = &viewport;
+	viewportState.scissorCount = 1;
+	viewportState.pScissors = &scissor;
+	createInfo.pViewportState = &viewportState;
+
+	VkPipelineRasterizationStateCreateInfo rasterizationState{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+	rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizationState.cullMode = VK_CULL_MODE_NONE;
+	rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizationState.lineWidth = 1.0f;
+	createInfo.pRasterizationState = &rasterizationState;
+
+	VkPipelineMultisampleStateCreateInfo multisampleState{VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
+	multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	createInfo.pMultisampleState = &multisampleState;
+
+	VkPipelineDepthStencilStateCreateInfo depthStencilState{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+	createInfo.pDepthStencilState = &depthStencilState;
+
+	VkPipelineColorBlendAttachmentState attachment{};
+	attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+								VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	VkPipelineColorBlendStateCreateInfo colorBlendState{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
+	colorBlendState.attachmentCount = 1;
+	colorBlendState.pAttachments = &attachment;
+	createInfo.pColorBlendState = &colorBlendState;
+
+	createInfo.pDynamicState = nullptr;
+	createInfo.layout = _blit_layout;
+	createInfo.renderPass = RenderPass;
+	VkResult result = vkCreateGraphicsPipelines(_core->Device, nullptr, 1, &createInfo, nullptr, &_blit_gfx);
+	if(result != VK_SUCCESS) {
+		LOG(ERR, "Fatal! Could not create swapchain pipeline!");
+		ut::DebugBreak();
+	}
 }

@@ -5,20 +5,19 @@
 
 namespace egx
 {
-
     using RefSemaphore = ref<Semaphore>;
 
     class SynchronizationContext
     {
     public:
-        SynchronizationContext &AddWaitSemaphore(const RefSemaphore &semaphore, VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+        SynchronizationContext &AddProducerWaitSemaphore(const RefSemaphore &semaphore, VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
         {
             _producer_wait.push_back(semaphore);
             _producer_wait_stage_flags.push_back(stageMask);
             return *this;
         }
 
-        SynchronizationContext &AddSignalSemaphore(const RefSemaphore &semaphore)
+        SynchronizationContext &AddProducerSignalSemaphore(const RefSemaphore &semaphore)
         {
             _producer_signal.push_back(semaphore);
             return *this;
@@ -28,10 +27,21 @@ namespace egx
 
         std::vector<VkSemaphore> GetProducerWaitSemaphores(uint32_t CustomFrame = UINT32_MAX) const { return Semaphore::GetSemaphores(_producer_wait, CustomFrame); }
         std::vector<VkSemaphore> GetProducerSignalSemaphores(uint32_t CustomFrame = UINT32_MAX) const { return Semaphore::GetSemaphores(_producer_signal, CustomFrame); }
+        const std::vector<RefSemaphore>& GetProducerRefWaitSemaphores() const { return _producer_wait; }
+        const std::vector<RefSemaphore>& GetProducerRefSignalSemaphores() const { return _producer_signal; }
         
         const std::vector<VkPipelineStageFlags>& GetProducerWaitStageFlags() const { return _producer_wait_stage_flags; }
 
         void SetConsumerWaitSemaphore(const RefSemaphore& semaphore) { _consumer_wait = semaphore; }
+
+        // Setup wait and signal semaphore for seperate sync contexts.
+        static void SynchronizeSeperateCtx(SynchronizationContext& Predecessor, SynchronizationContext& Successor)
+        {
+            Successor.AddProducerWaitSemaphore(Predecessor.GetConsumerWaitSemaphore());
+        }
+
+    public:
+        egx::ref<egx::Fence> CompletionFence = { nullptr };
 
     private:
         std::vector<RefSemaphore> _producer_wait;

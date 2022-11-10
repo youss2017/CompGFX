@@ -1,7 +1,7 @@
 #pragma once
 #include "../egxcommon.hpp"
 #include "../shaders/egxshader.hpp"
-#include "../shaders/egxshaderdata.hpp"
+#include "../shaders/egxshaderset.hpp"
 #include "../memory/egxref.hpp"
 #include "egxframebuffer.hpp"
 #include <set>
@@ -120,7 +120,7 @@ namespace egx {
 
 		void EGX_API invalidate(const ref<PipelineLayout>& layout, const egxshader& compute);
 
-		inline void bind(VkCommandBuffer cmd) const {
+		inline void Bind(VkCommandBuffer cmd) const {
 			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipe);
 		}
 

@@ -6,43 +6,48 @@
 #include <cstdint>
 #include <unordered_map>
 
-namespace egx {
+namespace egx
+{
 
-	namespace _internal {
-		struct egfxframebuffer_attachment {
+	namespace internal
+	{
+		struct egfxframebuffer_attachment
+		{
 			ref<Image> Attachment;
 			VkImageView View{};
 			VkAttachmentDescription Description{};
 			VkClearValue ClearValue{};
 			std::optional<VkPipelineColorBlendAttachmentState> BlendState;
 
-			inline VkPipelineColorBlendAttachmentState GetBlendState() const {
-				if (BlendState.has_value()) return *BlendState;
+			inline VkPipelineColorBlendAttachmentState GetBlendState() const
+			{
+				if (BlendState.has_value())
+					return *BlendState;
 				// Thanks to https://vulkan-tutorial.com
 				VkPipelineColorBlendAttachmentState colorBlendAttachment{};
 				// ColorWriteMask is critical, if not set correctly no/partial data will be written the framebuffer
 				colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 				colorBlendAttachment.blendEnable = VK_FALSE;
-				colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+				colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;	 // Optional
 				colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-				colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-				colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+				colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;			 // Optional
+				colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;	 // Optional
 				colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-				colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+				colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;			 // Optional
 				return colorBlendAttachment;
 			}
-
 		};
 	}
 
-	class Framebuffer {
+	class Framebuffer
+	{
 
 	public:
-		static ref<Framebuffer > EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, uint32_t Width, uint32_t Height);
+		static ref<Framebuffer> EGX_API FactoryCreate(const ref<VulkanCoreInterface> &CoreInterface, uint32_t Width, uint32_t Height);
 
-		Framebuffer(Framebuffer& cp) = delete;
-		Framebuffer(Framebuffer&& move) = delete;
-		Framebuffer& operator=(Framebuffer&& move) = delete;
+		Framebuffer(Framebuffer &cp) = delete;
+		Framebuffer(Framebuffer &&move) = delete;
+		Framebuffer &operator=(Framebuffer &&move) = delete;
 		EGX_API ~Framebuffer();
 
 		/// <summary>
@@ -69,8 +74,7 @@ namespace egx {
 			VkImageLayout FinalLayout,
 			VkImageUsageFlags CustomUsageFlags = 0,
 			bool CreateDefaultView = true,
-			VkPipelineColorBlendAttachmentState* pBlendState = nullptr
-		);
+			VkPipelineColorBlendAttachmentState *pBlendState = nullptr);
 
 		// Same as CreateColorAttachment
 		void EGX_API CreateDepthAttachment(
@@ -83,46 +87,75 @@ namespace egx {
 			VkImageUsageFlags CustomUsageFlags = 0,
 			bool CreateDefaultView = true);
 
-
 		// std::pair<uint32_t, VkImageLayout>
 		// The uint32_t is the ColorAttachmentId
 		// The VkImageLayout is the image layout to use during the pass aka (VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 		// Note: subpasses are in order of creation
 		// Returns PassId
 		EGX_API uint32_t CreateSubpass(
-			const std::vector<std::pair<uint32_t, VkImageLayout>>& ColorAttachmentIds, 
+			const std::vector<std::pair<uint32_t, VkImageLayout>> &ColorAttachmentIds,
 			std::optional<VkImageLayout> DepthAttachment = {},
-			const std::vector<std::pair<uint32_t, VkImageLayout>>& InputAttachments = {});
+			const std::vector<std::pair<uint32_t, VkImageLayout>> &InputAttachments = {});
 
-		inline ref<Image> GetColorAttachment(uint32_t ColorAttachmentID) {
+		inline ref<Image> GetColorAttachment(uint32_t ColorAttachmentID)
+		{
 			return _colorattachements[ColorAttachmentID].Attachment;
 		}
 
-		inline ref<Image> GetDepthAttachment() {
+		inline ref<Image> GetDepthAttachment()
+		{
 			if (_depthattachment.has_value())
 				return _depthattachment->Attachment;
-			return { (Image*)nullptr };
+			return {(Image *)nullptr};
 		}
 
 		// Once you call GetFramebuffer you no longer can create any pass or any attachment
 		// On the first call to this function the framebuffer is created.
-		VkFramebuffer& GetFramebuffer() noexcept {
-			if (_framebuffer) return _framebuffer;
+		VkFramebuffer &GetFramebuffer() noexcept
+		{
+			if (_framebuffer)
+				return _framebuffer;
 			InternalCreate();
 			return _framebuffer;
 		}
 
 		// Once you call GetRenderPass you no longer can create any pass or any attachment
 		// On the first call to this function the render pass is created.
-		VkRenderPass& GetRenderPass() noexcept {
-			if (_renderpass) return _renderpass;
+		VkRenderPass &GetRenderPass() noexcept
+		{
+			if (_renderpass)
+				return _renderpass;
 			InternalCreate();
 			return _renderpass;
 		}
-		
+
+		// Starts render pass
+		void Bind(VkCommandBuffer cmd)
+		{
+			std::vector<VkClearValue> clearValues;
+			clearValues.reserve(15);
+			if (_depthattachment.has_value() && _depthattachment->Description.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+			{
+				clearValues.push_back(_depthattachment->ClearValue);
+			}
+			for (auto &[id, attachment] : _colorattachements)
+			{
+				if (attachment.Description.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+				{
+					clearValues.push_back(attachment.ClearValue);
+				}
+			}
+			VkRenderPassBeginInfo beginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+			beginInfo.renderPass = _renderpass;
+			beginInfo.framebuffer = _framebuffer;
+			beginInfo.renderArea = {{0, 0}, {Width, Height}};
+			beginInfo.clearValueCount = (uint32_t)clearValues.size();
+			beginInfo.pClearValues = clearValues.data();
+			vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		}
+
 	protected:
-		Framebuffer(const ref<VulkanCoreInterface>& CoreInterface, uint32_t width, uint32_t height) :
-			_coreinterface(CoreInterface), Width(width), Height(height)
+		Framebuffer(const ref<VulkanCoreInterface> &CoreInterface, uint32_t width, uint32_t height) : _coreinterface(CoreInterface), Width(width), Height(height)
 		{
 			_attachment_ref.reserve(1000);
 		}
@@ -138,8 +171,8 @@ namespace egx {
 		friend class Pipeline;
 		friend class PipelineState;
 		ref<VulkanCoreInterface> _coreinterface;
-		std::unordered_map<uint32_t, _internal::egfxframebuffer_attachment> _colorattachements;
-		std::optional<_internal::egfxframebuffer_attachment> _depthattachment;
+		std::unordered_map<uint32_t, internal::egfxframebuffer_attachment> _colorattachements;
+		std::optional<internal::egfxframebuffer_attachment> _depthattachment;
 		// std::optional<VkRenderingInfoKHR> _renderinfo;
 		std::vector<VkRenderingAttachmentInfoKHR> _dummycolorattachmentlist;
 		std::vector<VkAttachmentReference> _attachment_ref;

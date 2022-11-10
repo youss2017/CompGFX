@@ -7,13 +7,13 @@ namespace egx {
 	template<typename T>
 	class ref {
 	public:
-		inline ref<T>(T* base) {
+		inline ref<T>(T* base) noexcept {
 			this->base = base;
 			refCount = new int32_t;
 			*refCount = 1;
 		}
 
-		inline ref<T>(const T* base, bool SelfReference) {
+		inline ref<T>(const T* base, bool SelfReference) noexcept {
 			this->base = (T*)base;
 			if (!SelfReference) {
 				refCount = new int32_t;
@@ -23,25 +23,25 @@ namespace egx {
 				refCount = nullptr;
 		}
 
-		inline ref<T>() {
+		inline ref<T>() noexcept {
 			this->base = nullptr;
 			refCount = new int32_t;
 			*refCount = 1;
 		}
 
-		inline ref<T>(const ref& cp) {
+		inline ref<T>(const ref& cp) noexcept {
 			this->base = cp.base;
 			this->refCount = cp.refCount;
 			*this->refCount += 1;		}
 
-		inline ref<T>(ref&& move) {
+		inline ref<T>(ref&& move) noexcept {
 			this->base = move.base;
 			this->refCount = move.refCount;
 			move.base = nullptr;
 			move.refCount = nullptr;
 		}
 
-		inline ref<T>& operator=(ref move) {
+		inline ref<T>& operator=(ref move) noexcept {
 			this->base = move.base;
 			this->refCount = move.refCount;
 			*this->refCount += 1;

@@ -1,10 +1,9 @@
 #pragma once
 #include "memory/egxmemory.hpp"
 #include "pipeline/egxframebuffer.hpp"
-#include "pipeline/egxpipelinestate.hpp"
 #include "pipeline/egxsampler.hpp"
 #include "shaders/egxshader.hpp"
-#include "shaders/egxshaderdata.hpp"
+#include "shaders/egxshaderset.hpp"
 #include "EngineCore.hpp"
 
 template<typename T>
