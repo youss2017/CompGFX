@@ -270,10 +270,13 @@ void egx::VulkanSwapchain::Present(const ref<Image> &image, uint32_t viewIndex)
 	CommandBuffer::StartCommandBuffer(_cmd[frame], 0);
 	DInsertDebugLabel(_core, _cmd[frame], frame, "Swapchain Present", 0.5f, 0.4f, 0.65f);
 
+	VkClearValue clear{};
 	VkRenderPassBeginInfo beginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
 	beginInfo.renderPass = RenderPass;
 	beginInfo.framebuffer = _framebuffers[frame];
 	beginInfo.renderArea = {{}, {(uint32_t)_width, (uint32_t)_height}};
+	beginInfo.clearValueCount = _clearswapchain ? 1 : 0;
+	beginInfo.pClearValues = &clear;
 	vkCmdBeginRenderPass(_cmd[frame], &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindPipeline(_cmd[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, _blit_gfx);
 	vkCmdBindDescriptorSets(_cmd[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, _blit_layout, 0, 1, &_descriptor_set[frame], 0, nullptr);
