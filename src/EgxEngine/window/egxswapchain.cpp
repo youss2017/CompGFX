@@ -584,8 +584,8 @@ void VulkanSwapchain::CreatePipelineObjects()
 		createInfo.pSetLayouts = &_descriptor_layout;
 		vkCreatePipelineLayout(_core->Device, &createInfo, nullptr, &_blit_layout);
 	}
-	_builtin_vertex = egxshader::CreateFromSource(_core, builtin_vertex_shader, shaderc_vertex_shader);
-	_builtin_fragment = egxshader::CreateFromSource(_core, builtin_fragment_shader, shaderc_fragment_shader);
+	_builtin_vertex = Shader::CreateFromSource(_core, builtin_vertex_shader, shaderc_vertex_shader);
+	_builtin_fragment = Shader::CreateFromSource(_core, builtin_fragment_shader, shaderc_fragment_shader);
 }
 
 void VulkanSwapchain::CreatePipeline()

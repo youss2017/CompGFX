@@ -70,8 +70,8 @@ namespace egx {
 		ref<Semaphore> _present_lock;
 		ref<Semaphore> _blit_lock;
 		
-		egxshader _builtin_vertex;
-		egxshader _builtin_fragment;
+		Shader _builtin_vertex;
+		Shader _builtin_fragment;
 		ref<Sampler> _image_sampler;
 		ref<SetPool> _descriptor_set_pool;
 		VkDescriptorSetLayout _descriptor_layout = nullptr;

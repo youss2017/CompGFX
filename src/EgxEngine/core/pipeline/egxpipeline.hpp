@@ -112,13 +112,13 @@ namespace egx {
 		/// <returns></returns>
 		void EGX_API invalidate(
 			const ref<PipelineLayout>& layout,
-			const egxshader& vertex,
-			const egxshader& fragment,
+			const Shader& vertex,
+			const Shader& fragment,
 			const ref<Framebuffer>& framebuffer,
 			const uint32_t PassId,
 			const egxvertexdescription& vertexDescription);
 
-		void EGX_API invalidate(const ref<PipelineLayout>& layout, const egxshader& compute);
+		void EGX_API invalidate(const ref<PipelineLayout>& layout, const Shader& compute);
 
 		inline void Bind(VkCommandBuffer cmd) const {
 			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipe);

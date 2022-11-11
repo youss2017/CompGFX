@@ -29,8 +29,8 @@ egx::Pipeline::Pipeline(Pipeline&& move) noexcept :
 
 void  egx::Pipeline::invalidate(
     const ref<PipelineLayout>& layout,
-    const egxshader& vertex, 
-    const egxshader& fragment, 
+    const Shader& vertex, 
+    const Shader& fragment, 
     const ref<Framebuffer>& framebuffer,
     const uint32_t PassId,
     const egxvertexdescription& vertexDescription)
@@ -274,7 +274,7 @@ void  egx::Pipeline::invalidate(
     vkCreateGraphicsPipelines(_coreinterface->Device, nullptr, 1, &createInfo, 0, &Pipe);
 }
 
-void  egx::Pipeline::invalidate(const ref<PipelineLayout>& layout, const egxshader& compute)
+void  egx::Pipeline::invalidate(const ref<PipelineLayout>& layout, const Shader& compute)
 {
     if (Pipe) vkDestroyPipeline(_coreinterface->Device, Pipe, nullptr);
     _graphics = false;

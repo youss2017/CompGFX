@@ -7,20 +7,16 @@
 #include <spirv_cross/spirv_cross.hpp>
 #include "../vulkinc.hpp"
 
-#ifndef NULL
-#define NULL 0
-#endif
-
 namespace egx {
 
-    class egxshader
+    class Shader
     {
     public:
-        EGX_API egxshader(ref<VulkanCoreInterface> CoreInterface, const char* ShaderPath, const char* EntryPointFunction = "main");
-        EGX_API egxshader(egxshader& cp) = delete;
-        EGX_API egxshader(egxshader&& move);
-        EGX_API egxshader& operator=(egxshader& move);
-        EGX_API ~egxshader();
+        EGX_API Shader(ref<VulkanCoreInterface> CoreInterface, const char* ShaderPath, const char* EntryPointFunction = "main");
+        EGX_API Shader(Shader& cp) = delete;
+        EGX_API Shader(Shader&& move);
+        EGX_API Shader& operator=(Shader& move);
+        EGX_API ~Shader();
         EGX_API const std::string& GetSource();
         inline const uint32_t* GetBytecode() const { return m_Bytecode.data(); }
         inline uint32_t GetBytecodeSize() const { return (uint32_t)m_Bytecode.size() * 4u; }
@@ -55,11 +51,11 @@ namespace egx {
         }
 
         EGX_API static void CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, std::vector<uint32_t>& OutCode, const char* EntryPointFunction = "main");
-        EGX_API static egxshader CreateFromSource(const ref<VulkanCoreInterface>& CoreInterface, const char* source_code, shaderc_shader_kind shader_type);
+        EGX_API static Shader CreateFromSource(const ref<VulkanCoreInterface>& CoreInterface, const char* source_code, shaderc_shader_kind shader_type);
 
     private:
         friend class VulkanSwapchain;
-        egxshader() = default;
+        Shader() = default;
 
         ref<VulkanCoreInterface> CoreInterface;
         std::vector<uint32_t> m_Bytecode;

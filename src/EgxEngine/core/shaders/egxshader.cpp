@@ -29,7 +29,7 @@ static std::string Shader_Internal_GenerateIdentifier()
 
 namespace egx {
 
-	EGX_API egxshader::egxshader(ref<VulkanCoreInterface> CoreInterface, const char* __ShaderPath, const char* EntryPointFunction)
+	EGX_API Shader::Shader(ref<VulkanCoreInterface> CoreInterface, const char* __ShaderPath, const char* EntryPointFunction)
 		: CoreInterface(CoreInterface), m_EntryPointFunction(EntryPointFunction)
 	{
 		std::filesystem::path ShaderPath;
@@ -212,20 +212,20 @@ namespace egx {
 		InitalizeVulkan();
 	}
 
-	EGX_API egxshader::egxshader(egxshader&& move)
+	EGX_API Shader::Shader(Shader&& move)
 	{
-		memcpy(this, &move, sizeof(egxshader));
-		memset(&move, 0, sizeof(egxshader));
+		memcpy(this, &move, sizeof(Shader));
+		memset(&move, 0, sizeof(Shader));
 	}
 
-	EGX_API egxshader& egxshader::operator=(egxshader& move)
+	EGX_API Shader& Shader::operator=(Shader& move)
 	{
-		memcpy(this, &move, sizeof(egxshader));
-		memset(&move, 0, sizeof(egxshader));
+		memcpy(this, &move, sizeof(Shader));
+		memset(&move, 0, sizeof(Shader));
 		return *this;
 	}
 
-	std::string egxshader::ProcessIncludeDirectives(std::string source_code, std::string root_directory)
+	std::string Shader::ProcessIncludeDirectives(std::string source_code, std::string root_directory)
 	{
 		std::string full_code;
 
@@ -274,7 +274,7 @@ namespace egx {
 		return full_code;
 	}
 
-	void egxshader::InitalizeVulkan()
+	void Shader::InitalizeVulkan()
 	{
 		VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 		createInfo.codeSize = m_Bytecode.size() * 4u;
@@ -284,7 +284,7 @@ namespace egx {
 		m_ShaderHandle = m;
 	}
 
-	void egxshader::EvaluateCaching(std::filesystem::path shader_path, bool& UsingCache, bool& Cached, std::string& identifier)
+	void Shader::EvaluateCaching(std::filesystem::path shader_path, bool& UsingCache, bool& Cached, std::string& identifier)
 	{
 		// Check Cache!
 		UsingCache = false, Cached = false, identifier = "";
@@ -358,13 +358,13 @@ namespace egx {
 		}
 	}
 
-	EGX_API egxshader::~egxshader()
+	EGX_API Shader::~Shader()
 	{
 		if (m_ShaderHandle)
 			vkDestroyShaderModule(CoreInterface->Device, (VkShaderModule)m_ShaderHandle, 0);
 	}
 
-	EGX_API const std::string& egxshader::GetSource()
+	EGX_API const std::string& Shader::GetSource()
 	{
 		if (m_Source.size() > 0)
 			return m_Source;
@@ -374,7 +374,7 @@ namespace egx {
 		return m_Source;
 	}
 
-	void EGX_API egxshader::CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, std::vector<uint32_t>& OutCode, const char* EntryPointFunction)
+	void EGX_API Shader::CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, std::vector<uint32_t>& OutCode, const char* EntryPointFunction)
 	{
 		shaderc::Compiler compiler;
 		shaderc::CompileOptions options;
@@ -394,9 +394,9 @@ namespace egx {
 		OutCode = std::vector<uint32_t>(spv.cbegin(), spv.cend());
 	}
 
-    egxshader egxshader::CreateFromSource(const ref<VulkanCoreInterface>& CoreInterface, const char* source_code, shaderc_shader_kind shader_type)
+    Shader Shader::CreateFromSource(const ref<VulkanCoreInterface>& CoreInterface, const char* source_code, shaderc_shader_kind shader_type)
 	{
-		egxshader ret;
+		Shader ret;
 		ret.CoreInterface = CoreInterface;
 		ret.m_Source = source_code;
 		CompileVulkanSPIRVText(source_code, "main.glsl", shader_type, ret.m_Bytecode);
@@ -406,12 +406,12 @@ namespace egx {
 	}
 
 
-	std::string egxshader::s_CacheDirectory;
-	EGX_API bool egxshader::ConfigureShaderCache(std::string SpirvCahceFolder)
+	std::string Shader::s_CacheDirectory;
+	EGX_API bool Shader::ConfigureShaderCache(std::string SpirvCahceFolder)
 	{
 		if (SpirvCahceFolder.size() == 0)
 		{
-			egxshader::s_CacheDirectory = "";
+			Shader::s_CacheDirectory = "";
 			return true;
 		}
 		SpirvCahceFolder = ut::ReplaceAll(SpirvCahceFolder, "\\", "/");
@@ -426,12 +426,12 @@ namespace egx {
 			catch (std::exception& e)
 			{
 				LOG(ERR, "Could not create SPIRV-Cahce Directory. SPIR-V Caching is not enabled -- {0}", e.what());
-				egxshader::s_CacheDirectory = "";
+				Shader::s_CacheDirectory = "";
 				return false;
 			}
 		}
-		egxshader::s_CacheDirectory = std::filesystem::canonical(SpirvCahceFolder).string();
-		LOG(INFO, "Shader Cache Directory set to: {0}", egxshader::s_CacheDirectory);
+		Shader::s_CacheDirectory = std::filesystem::canonical(SpirvCahceFolder).string();
+		LOG(INFO, "Shader Cache Directory set to: {0}", Shader::s_CacheDirectory);
 		return true;
 	}
 
