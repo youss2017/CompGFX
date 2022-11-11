@@ -90,6 +90,7 @@ namespace egx
 			std::vector<ref<Image>> ImageRef;
 			std::vector<ref<Sampler>> ImageSamplers;
 			std::vector<VkImageLayout> ImageLayouts;
+			std::vector<uint32_t> ViewIndex = { 0 };
 		};
 	}
 
@@ -111,7 +112,13 @@ namespace egx
 		// Must be called before bound to Cmd Buffer (Auto Sync for frame in flight).
 		// If only one Sampler is in Samplers then that Sampler will be used for all images, same for Image Layouts.
 		// If images vector is more than 1 then binding is assumed to be an array.
-		EGX_API void SetImage(uint32_t BindingId, const std::vector<ref<Image>>& Images, const std::vector<ref<Sampler>>& Samplers, const std::vector<VkImageLayout>& ImageLayouts);
+		// Same for View Index
+		EGX_API void SetImage(
+			uint32_t BindingId, 
+			const std::vector<ref<Image>>& Images, 
+			const std::vector<ref<Sampler>>& Samplers, 
+			const std::vector<VkImageLayout>& ImageLayouts,
+			const std::vector<uint32_t>& ViewIndex);
 
 		EGX_API SetPoolRequirementsInfo GetDescriptorPoolRequirements() const;
 

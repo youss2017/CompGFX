@@ -4,6 +4,7 @@
 #include "../core/memory/egxmemory.hpp"
 #include "../cmd/synchronization.hpp"
 #include "../core/pipeline/egxsampler.hpp"
+#include "../core/pipeline/egxframebuffer.hpp"
 #include "../core/shaders/egxshaderset.hpp"
 #include "../core/shaders/egxshader.hpp"
 
@@ -18,8 +19,11 @@ namespace egx {
 		EGX_API ~VulkanSwapchain();
 
 		void EGX_API Acquire();
+		void Present(const ref<Framebuffer>& Framebuffer, uint32_t ColorAttachmentId, uint32_t ViewIndex) {
+			Present(Framebuffer->GetColorAttachment(ColorAttachmentId), ViewIndex);
+		}
 		// [Note]: Put your rendering finished semaphore in the SynchronizationContext object
-		void EGX_API Present(const ref<Image>& image, uint32_t viewIndex);
+		void EGX_API Present(const ref<Image>& Image, uint32_t ViewIndex);
 		// [Note]: Put your rendering finished semaphore in the SynchronizationContext object
 		void EGX_API Present();
 
@@ -55,7 +59,6 @@ namespace egx {
 		bool _clearswapchain;
 		int _width{};
 		int _height{};
-		uint32_t _current_swapchain_frame = 0;
 		VkSurfaceCapabilitiesKHR _capabilities{};
 		std::vector<VkSurfaceFormatKHR> _surfaceFormats;
 		std::vector<VkPresentModeKHR> _presentationModes;

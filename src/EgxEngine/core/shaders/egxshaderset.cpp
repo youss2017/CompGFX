@@ -118,7 +118,12 @@ void DescriptorSet::DescribeImage(uint32_t BindingId, VkDescriptorType Type, VkS
 // Must be called before bound to Cmd Buffer (Auto Sync for frame in flight).
 // If only one Sampler is in Samplers then that Sampler will be used for all images, same for Image Layouts.
 // If images vector is more than 1 then binding is assumed to be an array.
-void DescriptorSet::SetImage(uint32_t BindingId, const std::vector<ref<Image>> &Images, const std::vector<ref<Sampler>> &Samplers, const std::vector<VkImageLayout> &ImageLayouts)
+void DescriptorSet::SetImage(
+    uint32_t BindingId, 
+    const std::vector<ref<Image>> &Images, 
+    const std::vector<ref<Sampler>> &Samplers, 
+    const std::vector<VkImageLayout> &ImageLayouts,
+    const std::vector<uint32_t>& ViewIndex)
 {
     assert(_set_layout == nullptr);
     auto &desc = _image_descriptions[BindingId];
@@ -126,6 +131,7 @@ void DescriptorSet::SetImage(uint32_t BindingId, const std::vector<ref<Image>> &
     desc.ImageRef = Images;
     desc.ImageSamplers = Samplers;
     desc.ImageLayouts = ImageLayouts;
+    desc.ViewIndex = ViewIndex;
     std::fill(desc.IssueUpdateList.begin(), desc.IssueUpdateList.end(), true);
     _set_write_image_info.reserve(Images.size());
     _perform_writes = _max_frames;
@@ -190,7 +196,7 @@ void DescriptorSet::AllocateSet(const ref<SetPool> &Pool)
     for (size_t i = 0; i < _set.size(); i++) {
         VkResult ret = vkAllocateDescriptorSets(_core_interface->Device, &allocateInfo, &_set[i]);
         if (ret != VK_SUCCESS) {
-            LOG(ERR, "Could not allocate descriptor set; {0}", ret);
+            LOG(ERR, "Could not allocate descriptor set; (Out Of Memory? Did you allocate enought Types/Sets) {0}", ret);
         }
     }
 }
@@ -201,7 +207,7 @@ const VkDescriptorSet &DescriptorSet::GetSet()
 {
     assert(_set.size() > 0);
     uint32_t frame = GetCurrentFrame();
-    if (_perform_writes == 0 && _set_layout != nullptr)
+    if (_perform_writes == 0)
         return _set[frame];
     /*
         Note: Pointer will remain valid even after emplace_back()
@@ -237,9 +243,10 @@ const VkDescriptorSet &DescriptorSet::GetSet()
             size_t counter = _set_write_image_info.size();
             for (size_t i = 0; i < image.ImageRef.size(); i++)
             {
+                uint32_t viewIndex = image.ViewIndex.size() == 1 ? image.ViewIndex[0] : image.ViewIndex[i];
                 auto &imageInfo = _set_write_image_info.emplace_back();
                 imageInfo.sampler = image.ImageSamplers.size() > 1 ? image.ImageSamplers[i]->GetSampler() : image.ImageSamplers[0]->GetSampler();
-                imageInfo.imageView = image.ImageRef[i]->view(0);
+                imageInfo.imageView = image.ImageRef[i]->view(viewIndex);
                 imageInfo.imageLayout = image.ImageLayouts.size() > 1 ? image.ImageLayouts[i] : image.ImageLayouts[0];
             }
             VkDescriptorImageInfo *pImageInfos = &_set_write_image_info[counter];

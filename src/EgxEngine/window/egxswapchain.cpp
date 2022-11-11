@@ -219,8 +219,6 @@ egx::VulkanSwapchain::~VulkanSwapchain()
 
 void egx::VulkanSwapchain::Acquire()
 {
-	_swapchain_acquire_lock->SetStaticFrameIndex(_current_swapchain_frame);
-	_present_lock->SetStaticFrameIndex(_current_swapchain_frame);
 	auto fence = _swapchain_acquire_lock->GetFence();
 	vkWaitForFences(_core->Device, 1, &fence, VK_TRUE, UINT64_MAX);
 	vkResetFences(_core->Device, 1, &fence);
@@ -242,18 +240,14 @@ void egx::VulkanSwapchain::Acquire()
 
 uint32_t egx::VulkanSwapchain::PresentInit()
 {
-	uint32_t frame = _current_swapchain_frame;
-	_cmd_lock->SetStaticFrameIndex(frame);
-	_blit_lock->SetStaticFrameIndex(frame);
 	auto poollock = _cmd_lock->GetFence();
 	vkWaitForFences(_core->Device, 1, &poollock, VK_TRUE, UINT64_MAX);
 	vkResetFences(_core->Device, 1, &poollock);
-	return frame;
+	return _core->CurrentFrame;
 }
 
 void egx::VulkanSwapchain::Present(const ref<Image> &image, uint32_t viewIndex)
 {
-	// assert(!_clearswapchain && "Cannot clear swapchain when presentating an image because the copied image will be cleared.");
 	uint32_t frame = PresentInit();
 
 	if (image->Img != _last_updated_image[frame])
@@ -360,9 +354,8 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 	presentInfo.pWaitSemaphores = &blitLock;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &Swapchain;
-	presentInfo.pImageIndices = &_current_swapchain_frame;
+	presentInfo.pImageIndices = &frame;
 	vkQueuePresentKHR(_core->Queue, &presentInfo);
-	_current_swapchain_frame = (_current_swapchain_frame + 1) % _framebuffers.size();
 }
 
 void egx::VulkanSwapchain::SetSyncInterval(bool VSync)
