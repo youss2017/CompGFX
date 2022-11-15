@@ -47,8 +47,8 @@ static const char *builtin_fragment_shader = R"(
 
 using namespace egx;
 
-egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, void *GlfwWindowPtr, bool VSync, bool SetupImGui, bool ClearSwapchain)
-	: _core(CoreInterface), GlfwWindowPtr(GlfwWindowPtr), _vsync(VSync), _imgui(SetupImGui), _clearswapchain(ClearSwapchain)
+egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, void *GlfwWindowPtr, bool VSync, bool SetupImGui)
+	: _core(CoreInterface), GlfwWindowPtr(GlfwWindowPtr), _vsync(VSync), _imgui(SetupImGui)
 {
 	VkBool32 Supported{};
 	glfwCreateWindowSurface(_core->Instance, (GLFWwindow *)GlfwWindowPtr, nullptr, &Surface);
@@ -77,6 +77,27 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, v
 	_blit_lock = Semaphore::FactoryCreate(CoreInterface, "InternalBlitLock");
 	Synchronization.SetConsumerWaitSemaphore(_present_lock);
 
+	_descriptor_set_pool = SetPool::FactoryCreate(CoreInterface);
+	SetPoolRequirementsInfo req;
+	req.SetCount = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_SAMPLER] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC] = 1000;
+	req.Type[VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT] = 1000;
+	_descriptor_set_pool->AdjustForRequirements(req);
+
+	CreateRenderPass();
+	CreateSwapchain(_width, _height);
+	CreatePipelineObjects();
+	CreatePipeline();
+
 	if (_imgui)
 	{
 #if defined(VK_NO_PROTOTYPES)
@@ -99,28 +120,6 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface> &CoreInterface, v
 			},
 			&ImGui_Load_UserData);
 #endif
-
-		_descriptor_set_pool = SetPool::FactoryCreate(CoreInterface);
-		SetPoolRequirementsInfo req;
-		req.SetCount = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_SAMPLER] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_IMAGE] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC] = 1000;
-		req.Type[VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT] = 1000;
-		_descriptor_set_pool->AdjustForRequirements(req);
-
-		CreateRenderPass();
-		CreateSwapchain(_width, _height);
-		CreatePipelineObjects();
-		CreatePipeline();
-
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
@@ -219,6 +218,10 @@ egx::VulkanSwapchain::~VulkanSwapchain()
 
 void egx::VulkanSwapchain::Acquire()
 {
+	if (_resize_swapchain_flag) {
+		Resize();
+		_resize_swapchain_flag = false;
+	}
 	auto fence = _swapchain_acquire_lock->GetFence();
 	vkWaitForFences(_core->Device, 1, &fence, VK_TRUE, UINT64_MAX);
 	vkResetFences(_core->Device, 1, &fence);
@@ -227,9 +230,11 @@ void egx::VulkanSwapchain::Acquire()
 											UINT64_MAX,
 											_present_lock->GetSemaphore(),
 											fence,
-											&_core->CurrentFrame);
+											&_image_index);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-		Resize();
+	{
+		_resize_swapchain_flag = true;
+	}
 	if (_imgui)
 	{
 		ImGui_ImplVulkan_NewFrame();
@@ -275,7 +280,7 @@ void egx::VulkanSwapchain::Present(const ref<Image> &image, uint32_t viewIndex)
 	beginInfo.renderPass = RenderPass;
 	beginInfo.framebuffer = _framebuffers[frame];
 	beginInfo.renderArea = {{}, {(uint32_t)_width, (uint32_t)_height}};
-	beginInfo.clearValueCount = _clearswapchain ? 1 : 0;
+	beginInfo.clearValueCount = 1;
 	beginInfo.pClearValues = &clear;
 	vkCmdBeginRenderPass(_cmd[frame], &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindPipeline(_cmd[frame], VK_PIPELINE_BIND_POINT_GRAPHICS, _blit_gfx);
@@ -307,7 +312,7 @@ void egx::VulkanSwapchain::Present()
 	beginInfo.renderPass = RenderPass;
 	beginInfo.framebuffer = _framebuffers[frame];
 	beginInfo.renderArea = {{}, {(uint32_t)_width, (uint32_t)_height}};
-	beginInfo.clearValueCount = _clearswapchain ? 1 : 0;
+	beginInfo.clearValueCount = 1;
 	beginInfo.pClearValues = &clear;
 	vkCmdBeginRenderPass(_cmd[frame], &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	if (_imgui)
@@ -357,8 +362,10 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 	presentInfo.pWaitSemaphores = &blitLock;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &Swapchain;
-	presentInfo.pImageIndices = &frame;
+	presentInfo.pImageIndices = &_image_index;
 	vkQueuePresentKHR(_core->Queue, &presentInfo);
+
+	_core->CurrentFrame = (_core->CurrentFrame + 1u) % _core->MaxFramesInFlight;
 }
 
 void egx::VulkanSwapchain::SetSyncInterval(bool VSync)
@@ -376,12 +383,12 @@ void egx::VulkanSwapchain::Resize(int width, int height)
 
 void egx::VulkanSwapchain::Resize()
 {
-	vkDeviceWaitIdle(_core->Device);
 	int w, h;
 	glfwGetFramebufferSize((GLFWwindow *)GlfwWindowPtr, &w, &h);
 	if (w == 0 || h == 0)
 		return;
 	_width = w, _height = h;
+	vkDeviceWaitIdle(_core->Device);
 	CreateSwapchain(_width, _height);
 }
 
@@ -451,7 +458,6 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 	_height = swapchainSize.height;
 
 	_core->MaxFramesInFlight = std::max<uint32_t>(_core->MaxFramesInFlight, _capabilities.minImageCount);
-	assert(_core->MaxFramesInFlight <= 5);
 
 	VkSwapchainKHR oldSwapchain = Swapchain;
 	VkSwapchainCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
@@ -529,12 +535,14 @@ void egx::VulkanSwapchain::CreateRenderPass()
 	VkAttachmentDescription attachmentDescription{};
 	attachmentDescription.format = GetSurfaceFormat().format;
 	attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-	attachmentDescription.loadOp = _clearswapchain ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	attachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	attachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	attachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	bool viewportsEnabled = _imgui;/* ? (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) : false;*/
 
 	// Extracted from ImGui vulkan backend
 	VkSubpassDependency dependency = {};
@@ -551,7 +559,7 @@ void egx::VulkanSwapchain::CreateRenderPass()
 	passCreateInfo.subpassCount = 1;
 	passCreateInfo.pSubpasses = &subpass;
 	passCreateInfo.dependencyCount = 1;
-	passCreateInfo.pDependencies = &dependency;
+	passCreateInfo.pDependencies = viewportsEnabled ? &dependency : nullptr;
 	vkCreateRenderPass(_core->Device, &passCreateInfo, nullptr, &RenderPass);
 }
 

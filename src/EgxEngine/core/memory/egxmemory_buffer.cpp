@@ -88,6 +88,8 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 
 egx::Buffer::~Buffer()
 {
+    if (_mapped_flag)
+        Unmap();
     for (auto &buf : _buffers)
     {
         VkAlloc::DestroyBuffers(_coreinterface->MemoryContext, 1, &buf);
@@ -134,8 +136,8 @@ void egx::Buffer::Write(void *data, size_t offset, size_t size)
 {
     if (Layout != memorylayout::local)
     {
-        bool mapState = _ptr == nullptr;
-        char *ptr = (char*)Map();
+        bool mapState = _mapped_flag;
+        int8_t* ptr = Map();
         ptr += offset;
         memcpy(ptr, data, size);
         if (mapState)
@@ -158,21 +160,29 @@ void egx::Buffer::Write(void *data)
     return Write(data, 0, Size);
 }
 
-void *egx::Buffer::Map()
+int8_t* egx::Buffer::Map()
 {
     assert(Layout != memorylayout::local);
-    if (_ptr)
-        return _ptr;
-    VkAlloc::MapBuffer(_context, _buffers[GetCurrentFrame()]);
-    _ptr = _buffers[GetCurrentFrame()]->m_suballocation.m_allocation_info.pMappedData;
-    return _ptr;
+    auto frame = GetCurrentFrame();
+    if (_mapped_flag)
+        return _mapped_ptr[frame];
+    _mapped_flag = true;
+    for (size_t i = 0; i < _buffers.size(); i++) {
+        VkAlloc::MapBuffer(_context, _buffers[frame]);
+        _mapped_ptr[i] = (int8_t*)_buffers[frame]->m_suballocation.m_allocation_info.pMappedData;
+    }
+    return _mapped_ptr[frame];
 }
 
 void egx::Buffer::Unmap()
 {
     assert(Layout != memorylayout::local);
-    _ptr = nullptr;
-    VkAlloc::UnmapBuffer(_context, _buffers[GetCurrentFrame()]);
+    if (!_mapped_flag) return;
+    _mapped_flag = false;
+    for (size_t i = 0; i < _buffers.size(); i++) {
+        VkAlloc::UnmapBuffer(_context, _buffers[i]);
+        _mapped_ptr[i] = nullptr;
+    }
 }
 
 void egx::Buffer::Read(void *pOutput, size_t offset, size_t size)
@@ -180,8 +190,8 @@ void egx::Buffer::Read(void *pOutput, size_t offset, size_t size)
     assert(offset + size < Size);
     if (Layout != memorylayout::local)
     {
-        bool mapState = _ptr == nullptr;
-        char *ptr = (char *)(this->Map());
+        bool mapState = _mapped_flag;
+        int8_t* ptr = Map();
         ptr += offset;
         memcpy(pOutput, ptr, size);
         return;

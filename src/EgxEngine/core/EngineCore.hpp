@@ -26,7 +26,7 @@ namespace egx {
 		/// <summary>
 		/// Creates swapchain for window and initalizes ImGui
 		/// </summary>
-		void EGX_API AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui, bool ClearSwapchain);
+		void EGX_API AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui);
 
 		std::vector<Device> EGX_API EnumerateDevices();
 
@@ -34,7 +34,7 @@ namespace egx {
 
 		inline ref<VulkanCoreInterface> GetCoreInterface() noexcept { return CoreInterface; }
 
-		static EngineCore* CreateDefaultEngine(const std::string& title, uint32_t width, uint32_t height, bool VSync, bool SetupImGui, bool ClearSwapchain, bool UsingRenderDOC, uint32_t MaxFramesInFlight = 2) {
+		static EngineCore* CreateDefaultEngine(const std::string& title, uint32_t width, uint32_t height, bool VSync, bool SetupImGui, bool UsingRenderDOC, uint32_t MaxFramesInFlight = 2) {
 			ref<PlatformWindow> window = { new PlatformWindow(title, width, height) };
 			EngineCore* core = new EngineCore();
 			core->_window = window;
@@ -52,7 +52,7 @@ namespace egx {
 					device = d;
 			}
 			core->EstablishDevice(device, UsingRenderDOC);
-			core->AssociateWindow(window(), MaxFramesInFlight, VSync, SetupImGui, ClearSwapchain);
+			core->AssociateWindow(window(), MaxFramesInFlight, VSync, SetupImGui);
 			return core;
 		}
 

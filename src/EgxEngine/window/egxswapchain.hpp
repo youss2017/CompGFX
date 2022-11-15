@@ -12,7 +12,7 @@ namespace egx {
 
 	class VulkanSwapchain {
 	public:
-		EGX_API VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, void* GlfwWindowPtr, bool VSync, bool SetupImGui, bool ClearSwapchain);
+		EGX_API VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, void* GlfwWindowPtr, bool VSync, bool SetupImGui);
 		VulkanSwapchain(VulkanSwapchain& copy) = delete;
 		EGX_API VulkanSwapchain(VulkanSwapchain&& move) noexcept;
 		EGX_API VulkanSwapchain& operator=(VulkanSwapchain& move) noexcept;
@@ -56,7 +56,6 @@ namespace egx {
 		VkRenderPass RenderPass = nullptr;
 		bool _vsync;
 		bool _imgui;
-		bool _clearswapchain;
 		int _width{};
 		int _height{};
 		VkSurfaceCapabilitiesKHR _capabilities{};
@@ -69,6 +68,8 @@ namespace egx {
 		ref<Fence> _cmd_lock;
 		ref<Semaphore> _present_lock;
 		ref<Semaphore> _blit_lock;
+		uint32_t _image_index = 0;
+		bool _resize_swapchain_flag = false;
 		
 		Shader _builtin_vertex;
 		Shader _builtin_fragment;

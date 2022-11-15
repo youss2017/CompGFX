@@ -48,7 +48,11 @@ namespace egx {
 		EGX_API void Write(void* data, size_t size);
 		EGX_API void Write(void* data);
 
-		EGX_API void* Map();
+		// [WARNING]! 
+		// If you are using CPUAccessFlag then every frame you must call this function
+		// to get mapped pointer otherwise you will be writing/reading from the wrong
+		// buffer.
+		EGX_API int8_t* Map();
 		EGX_API void Unmap();
 
 		EGX_API void Read(void* pOutput, size_t offset, size_t size);
@@ -74,9 +78,10 @@ namespace egx {
 			Size(size), Layout(layout),
 			Type(type), CoherentFlag(coherent),
 			_context(context), _coreinterface(coreinterface),
-			_ptr(nullptr), CpuAccessPerFrame(cpuaccessflag)
+			CpuAccessPerFrame(cpuaccessflag)
 		{
 			DelayInitalizeFF(coreinterface, !CpuAccessPerFrame);
+			_mapped_ptr.resize(coreinterface->MaxFramesInFlight, nullptr);
 		}
 
 	public:
@@ -89,7 +94,8 @@ namespace egx {
 		ref<VulkanCoreInterface> _coreinterface;
 		const VkAlloc::CONTEXT _context;
 		std::vector<VkAlloc::BUFFER> _buffers;
-		void* _ptr;
+		std::vector<int8_t*> _mapped_ptr;
+		bool _mapped_flag = false;
 	};
 #pragma endregion GPU Buffer
 

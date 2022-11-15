@@ -67,7 +67,7 @@ EGX_API egx::EngineCore::~EngineCore()
 		delete Swapchain;
 }
 
-void EGX_API egx::EngineCore::AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui, bool ClearSwapchain)
+void EGX_API egx::EngineCore::AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui)
 {
 	assert(Swapchain == nullptr);
 	// [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
@@ -77,8 +77,7 @@ void EGX_API egx::EngineCore::AssociateWindow(PlatformWindow* Window, uint32_t M
 		CoreInterface,
 		Window->GetWindow(),
 		VSync,
-		SetupImGui,
-		ClearSwapchain);
+		SetupImGui);
 }
 
 std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
