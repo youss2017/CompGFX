@@ -23,14 +23,14 @@ xcopy src\Release\* ..\..\library\Release\ /K /D /H /Y
 xcopy include\* ..\..\include\ /K /D /H /Y /s /e
 cd ..
 echo "Building Generic"
+xcopy Utility\*.hpp ..\include\Utility\ /K /D /H /Y /s /e
+xcopy glm\glm\* ..\include\glm\ /K /D /H /Y /s /e
+xcopy stb\*.h ..\include\stb\ /K /D /H /Y /s /e
 ..\premake5.exe vs2022
 cd Generic
 REM /t:Clean;Rebuild
 msbuild GenericWorkspace.sln /p:Configuration=Debug -m
 msbuild GenericWorkspace.sln /p:Configuration=Release -m
-xcopy glm\glm\* ..\include\glm\ /K /D /H /Y /s /e
-xcopy stb\*.h ..\include\stb\ /K /D /H /Y /s /e
-xcopy Utility\*.hpp ..\include\Utility\ /K /D /H /Y /s /e
 cd ..
 echo "Copying ImGui headers"
 xcopy imgui\*.h ..\include\imgui\ /K /D /H /Y /s /e

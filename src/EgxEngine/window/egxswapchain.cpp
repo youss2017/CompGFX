@@ -228,7 +228,7 @@ void egx::VulkanSwapchain::Acquire()
 											_present_lock->GetSemaphore(),
 											fence,
 											&_core->CurrentFrame);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 		Resize();
 	if (_imgui)
 	{
@@ -376,6 +376,7 @@ void egx::VulkanSwapchain::Resize(int width, int height)
 
 void egx::VulkanSwapchain::Resize()
 {
+	vkDeviceWaitIdle(_core->Device);
 	int w, h;
 	glfwGetFramebufferSize((GLFWwindow *)GlfwWindowPtr, &w, &h);
 	if (w == 0 || h == 0)

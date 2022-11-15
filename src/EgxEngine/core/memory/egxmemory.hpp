@@ -15,11 +15,12 @@ namespace egx {
 
 #pragma region GPU Buffer
 	enum buffertype : uint32_t {
-		buffertype_vertex = 0b0001,
-		buffertype_index = 0b0010,
-		buffertype_storage = 0b0100,
-		buffertype_uniform = 0b1000,
-		buffertype_onlytransfer = 0b0000
+		BufferType_Vertex       = 0b00001,
+		BufferType_Index        = 0b00010,
+		BufferType_Storage      = 0b00100,
+		BufferType_Uniform      = 0b01000,
+		BufferType_Indirect     = 0b10000,
+		BufferType_TransferOnly = 0b00000
 	};
 
 	class Buffer : public FrameFlight {
@@ -29,7 +30,7 @@ namespace egx {
 			const ref<VulkanCoreInterface>& CoreInterface,
 			size_t size,
 			memorylayout layout,
-			buffertype type,
+			uint32_t type,
 			bool CpuWritePerFrameFlag,
 			bool requireCoherent = false);
 
@@ -41,6 +42,7 @@ namespace egx {
 		EGX_API ref<Buffer> Clone();
 		EGX_API void Copy(ref<Buffer>& source);
 		EGX_API void Copy(Buffer* source);
+		EGX_API void Copy(VkBuffer src, size_t offset, size_t size);
 
 		EGX_API void Write(void* data, size_t offset, size_t size);
 		EGX_API void Write(void* data, size_t size);
@@ -64,7 +66,7 @@ namespace egx {
 		EGX_API Buffer(
 			const size_t size,
 			const memorylayout layout,
-			const buffertype type,
+			const uint32_t type,
 			const bool cpuaccessflag,
 			const bool coherent,
 			const VkAlloc::CONTEXT context,
@@ -77,12 +79,10 @@ namespace egx {
 			DelayInitalizeFF(coreinterface, !CpuAccessPerFrame);
 		}
 
-		void EGX_API Copy(VkBuffer src, size_t offset, size_t size);
-
 	public:
 		const size_t Size;
 		const memorylayout Layout;
-		const buffertype Type;
+		const uint32_t Type;
 		const bool CoherentFlag;
 		const bool CpuAccessPerFrame;
 	protected:

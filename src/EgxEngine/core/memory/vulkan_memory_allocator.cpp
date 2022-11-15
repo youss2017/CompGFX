@@ -36,7 +36,7 @@ namespace VkAlloc
 		createInfo.pVulkanFunctions = &vulkanFunctions;
 		createInfo.instance = instance;
 		createInfo.vulkanApiVersion = VK_API_VERSION_1_3;
-		vmaCreateAllocator(&createInfo, &context->m_allocator);
+		VkResult ret = vmaCreateAllocator(&createInfo, &context->m_allocator);
 
 		VkPhysicalDeviceMemoryProperties memory_description;
 		vkGetPhysicalDeviceMemoryProperties(context->m_physical_device, &memory_description);

@@ -14,7 +14,7 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
     const ref<VulkanCoreInterface> &CoreInterface,
     size_t size,
     memorylayout layout,
-    buffertype type,
+    uint32_t type,
     bool CpuWritePerFrameFlag,
     bool requireCoherent)
 {
@@ -48,14 +48,16 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
     default:
         property = VkAlloc::DEVICE_MEMORY_PROPERTY::CPU_ONLY;
     }
-    if (type & buffertype_vertex)
+    if (type & BufferType_Vertex)
         bufferUsage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    if (type & buffertype_index)
+    if (type & BufferType_Index)
         bufferUsage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    if (type & buffertype_uniform)
+    if (type & BufferType_Uniform)
         bufferUsage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    if (type & buffertype_storage)
+    if (type & BufferType_Storage)
         bufferUsage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    if (type & BufferType_Indirect)
+        bufferUsage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     VkAlloc::BUFFER_DESCRIPTION desc{};
     desc.m_properties = property;
     desc.m_usage = bufferUsage;
@@ -184,7 +186,7 @@ void egx::Buffer::Read(void *pOutput, size_t offset, size_t size)
         memcpy(pOutput, ptr, size);
         return;
     }
-    ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, buffertype_onlytransfer, false);
+    ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, BufferType_TransferOnly, false);
     auto cmd = CommandBufferSingleUse(_coreinterface);
 
     {
