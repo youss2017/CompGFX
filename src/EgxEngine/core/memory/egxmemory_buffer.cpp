@@ -168,8 +168,8 @@ int8_t* egx::Buffer::Map()
         return _mapped_ptr[frame];
     _mapped_flag = true;
     for (size_t i = 0; i < _buffers.size(); i++) {
-        VkAlloc::MapBuffer(_context, _buffers[frame]);
-        _mapped_ptr[i] = (int8_t*)_buffers[frame]->m_suballocation.m_allocation_info.pMappedData;
+        VkAlloc::MapBuffer(_context, _buffers[i]);
+        _mapped_ptr[i] = (int8_t*)_buffers[i]->m_suballocation.m_allocation_info.pMappedData;
     }
     return _mapped_ptr[frame];
 }

@@ -35,7 +35,7 @@ namespace egx {
 		inline ref<VulkanCoreInterface> GetCoreInterface() noexcept { return CoreInterface; }
 
 		static EngineCore* CreateDefaultEngine(const std::string& title, uint32_t width, uint32_t height, bool VSync, bool SetupImGui, bool UsingRenderDOC, uint32_t MaxFramesInFlight = 2) {
-			ref<PlatformWindow> window = { new PlatformWindow(title, width, height) };
+			ref<PlatformWindow> window = new PlatformWindow(title, width, height);
 			EngineCore* core = new EngineCore();
 			core->_window = window;
 			auto deviceList = core->EnumerateDevices();

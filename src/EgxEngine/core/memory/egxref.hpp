@@ -1,9 +1,14 @@
 #pragma once
 #include <cstdint>
 #include <cassert>
+#include <memory>
 
 namespace egx {
 
+	// template<typename T>
+	// using ref = std::shared_ptr<T>;
+
+#if 1
 	template<typename T>
 	class ref {
 	public:
@@ -13,7 +18,7 @@ namespace egx {
 			*refCount = 1;
 		}
 
-		inline ref<T>(const T* base, bool SelfReference) noexcept {
+		inline ref<T>(T* base, bool SelfReference) noexcept {
 			this->base = (T*)base;
 			if (!SelfReference) {
 				refCount = new int32_t;
@@ -25,26 +30,41 @@ namespace egx {
 
 		inline ref<T>() noexcept {
 			this->base = nullptr;
-			refCount = new int32_t;
-			*refCount = 1;
+			refCount = nullptr;
 		}
 
 		inline ref<T>(const ref& cp) noexcept {
 			this->base = cp.base;
 			this->refCount = cp.refCount;
-			*this->refCount += 1;		}
-
-		inline ref<T>(ref&& move) noexcept {
-			this->base = move.base;
-			this->refCount = move.refCount;
-			move.base = nullptr;
-			move.refCount = nullptr;
+			*this->refCount += 1;
 		}
 
-		inline ref<T>& operator=(ref move) noexcept {
-			this->base = move.base;
-			this->refCount = move.refCount;
+		inline ref<T>(ref&& move) noexcept :
+			base(std::exchange(move.base, nullptr)),
+			refCount(std::exchange(move.refCount, nullptr))
+		{}
+
+		inline ref<T>& operator=(const ref& cp) noexcept {
+			this->base = cp.base;
+			this->refCount = cp.refCount;
 			*this->refCount += 1;
+			return *this;
+		}
+
+		inline ref<T>& operator=(ref&& move) noexcept {
+			if (this == &move) return *this;
+
+			if (refCount) {
+				*refCount -= 1;
+				if (*refCount == 0) {
+					delete (T*)base;
+					delete refCount;
+				}
+			}
+
+			base = std::exchange(move.base, nullptr);
+			refCount = std::exchange(move.refCount, nullptr);
+
 			return *this;
 		}
 
@@ -93,5 +113,6 @@ namespace egx {
 	protected:
 		int32_t* refCount;
 	};
+#endif
 
 }
