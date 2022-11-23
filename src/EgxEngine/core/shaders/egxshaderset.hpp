@@ -8,18 +8,19 @@
 
 namespace egx
 {
+	class DescriptorSet;
 
 	struct SetPoolRequirementsInfo
 	{
 		std::map<VkDescriptorType, uint32_t> Type;
 		uint32_t SetCount = 1; // Don't Account for Multi-Frame
 
-        static SetPoolRequirementsInfo Inline(VkDescriptorType Type, uint32_t Count, uint32_t SetCount = 1) {
-            SetPoolRequirementsInfo req;
-            req.Type[Type] = Count;
-            req.SetCount = SetCount;
-            return req;
-        }
+		static SetPoolRequirementsInfo Inline(VkDescriptorType Type, uint32_t Count, uint32_t SetCount = 1) {
+			SetPoolRequirementsInfo req;
+			req.Type[Type] = Count;
+			req.SetCount = SetCount;
+			return req;
+		}
 
 		void ExpandCurrentReqInfo(const SetPoolRequirementsInfo& MoreRequirements)
 		{
@@ -30,14 +31,14 @@ namespace egx
 			SetCount += MoreRequirements.SetCount;
 		}
 
-		std::vector<VkDescriptorPoolSize> GeneratePoolSizes() const
+		std::vector<VkDescriptorPoolSize> GeneratePoolSizes(uint32_t MaxFrames) const
 		{
 			std::vector<VkDescriptorPoolSize> ret;
 			for (auto& [type, count] : Type)
 			{
 				auto& size = ret.emplace_back();
 				size.type = type;
-				size.descriptorCount = count;
+				size.descriptorCount = count * MaxFrames;
 			}
 			return ret;
 		}
@@ -52,8 +53,12 @@ namespace egx
 		EGX_API SetPool& operator=(SetPool& move) noexcept;
 		EGX_API ~SetPool();
 
-
 		EGX_API void AdjustForRequirements(const SetPoolRequirementsInfo& Requirements);
+		EGX_API void AdjustForRequirements(const std::initializer_list<const egx::ref<DescriptorSet>>& Sets);
+		void AdjustForRequirements(const egx::ref<DescriptorSet>& Set)
+		{
+			AdjustForRequirements({ Set });
+		}
 
 		EGX_API VkDescriptorPool GetSetPool();
 
@@ -114,9 +119,9 @@ namespace egx
 		// If images vector is more than 1 then binding is assumed to be an array.
 		// Same for View Index
 		EGX_API void SetImage(
-			uint32_t BindingId, 
-			const std::vector<ref<Image>>& Images, 
-			const std::vector<ref<Sampler>>& Samplers, 
+			uint32_t BindingId,
+			const std::vector<ref<Image>>& Images,
+			const std::vector<ref<Sampler>>& Samplers,
 			const std::vector<VkImageLayout>& ImageLayouts,
 			const std::vector<uint32_t>& ViewIndex);
 
@@ -161,7 +166,7 @@ namespace egx
 		EGX_API PipelineLayout(PipelineLayout&&) noexcept;
 		EGX_API PipelineLayout& operator=(PipelineLayout&) noexcept;
 
-		EGX_API void AddSets(const std::initializer_list<ref<DescriptorSet>>& set);
+		EGX_API void AddSets(const std::initializer_list<const ref<DescriptorSet>>& set);
 		EGX_API void AddPushconstantRange(uint32_t offset, uint32_t size, VkShaderStageFlags stages);
 		EGX_API const VkPipelineLayout& GetLayout();
 

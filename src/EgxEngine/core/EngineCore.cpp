@@ -149,6 +149,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 	vulkan12features.shaderInt8 = VK_TRUE;
 	if (UsingRenderDOC) {
 		LOG(WARNING, "Disabled bufferDeviceAddress feature so we can use RenderDOC.");
+		vulkan12features.bufferDeviceAddress = VK_FALSE;
 	}
 	else {
 		LOG(WARNING, "bufferDeviceAddress is turned on, CANNOT debug with RenderDOC, in renderdoc use 'debug' or 'renderdoc' in command line arguments.");
@@ -168,6 +169,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 	features.features.multiDrawIndirect = VK_TRUE;
 	features.features.shaderInt64 = VK_FALSE;
 	features.features.wideLines = VK_TRUE;
+	features.features.shaderInt64 = VK_TRUE;
 
 	// unnecessary features.
 	features.features.pipelineStatisticsQuery = VK_TRUE;
@@ -222,7 +224,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 
 	vkGetDeviceQueue(this->CoreInterface->Device, index, 0, &this->CoreInterface->Queue);
 
-	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance, this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024));
+	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance, this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), true);
 	this->CoreInterface->PhysicalDevice = Device;
 }
 

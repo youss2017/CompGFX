@@ -118,7 +118,7 @@ void egx::Image::write(
     uint32_t StrideSizeInBytes)
 {
     assert(ArrayLevel < this->Arraylevels);
-    ref<Buffer> stage = Buffer::FactoryCreate(_coreinterface, Height * StrideSizeInBytes, memorylayout::stream, buffertype::BufferType_TransferOnly, false);
+    ref<Buffer> stage = Buffer::FactoryCreate(_coreinterface, Height * StrideSizeInBytes, memorylayout::stream, buffertype::BufferType_TransferOnly, false, false);
     stage->Write(Data);
     stage->Flush();
     auto cmd = CommandBufferSingleUse(_coreinterface);

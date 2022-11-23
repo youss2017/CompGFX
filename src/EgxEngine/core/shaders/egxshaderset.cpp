@@ -37,13 +37,19 @@ void SetPool::AdjustForRequirements(const SetPoolRequirementsInfo &Requirements)
     _pool_requirements.ExpandCurrentReqInfo(Requirements);
 }
 
+void SetPool::AdjustForRequirements(const std::initializer_list<const egx::ref<DescriptorSet>>& Sets)
+{
+    for (auto& set : Sets)
+        AdjustForRequirements(set->GetDescriptorPoolRequirements());
+}
+
 VkDescriptorPool egx::SetPool::GetSetPool()
 {
     if (_pool != nullptr)
         return _pool;
     VkDescriptorPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
 
-    std::vector<VkDescriptorPoolSize> sizes = _pool_requirements.GeneratePoolSizes();
+    std::vector<VkDescriptorPoolSize> sizes = _pool_requirements.GeneratePoolSizes(_coreinterface->MaxFramesInFlight);
 
     createInfo.flags = 0;
     createInfo.maxSets = _pool_requirements.SetCount * _max_frames;
@@ -94,7 +100,6 @@ void DescriptorSet::DescribeBuffer(uint32_t BindingId, VkDescriptorType Type, Vk
 // Must be called before bound to Cmd Buffer (Auto Sync for frame in flight)
 void DescriptorSet::SetBuffer(uint32_t BindingId, const ref<Buffer> &BufferRef, uint32_t StructSize, uint32_t Offset)
 {
-    assert(_set_layout == nullptr);
     auto &desc = _buffer_descriptions[BindingId];
     desc.BindingId = BindingId;
     desc.StructSize = StructSize == 0 ? BufferRef->Size : StructSize;
@@ -125,7 +130,6 @@ void DescriptorSet::SetImage(
     const std::vector<VkImageLayout> &ImageLayouts,
     const std::vector<uint32_t>& ViewIndex)
 {
-    assert(_set_layout == nullptr);
     auto &desc = _image_descriptions[BindingId];
     desc.BindingId = BindingId;
     desc.ImageRef = Images;
@@ -217,6 +221,8 @@ const VkDescriptorSet &DescriptorSet::GetSet()
     _set_write_buffer_info.clear();
     _set_write_image_info.clear();
     VkDescriptorSet set = _set[frame];
+    _set_write_buffer_info.reserve(_buffer_descriptions.size());
+    _set_write_image_info.reserve(_image_descriptions.size());
     for (auto &[id, buffer] : _buffer_descriptions)
     {
         if (buffer.IssueUpdateList[frame])
@@ -299,7 +305,7 @@ egx::PipelineLayout& egx::PipelineLayout::operator=(PipelineLayout& move) noexce
 	return *this;
 }
 
-void egx::PipelineLayout::AddSets(const std::initializer_list<ref<DescriptorSet>> &sets)
+void egx::PipelineLayout::AddSets(const std::initializer_list<const ref<DescriptorSet>> &sets)
 {
 	assert(_layout == nullptr);
     for(auto& set : sets)

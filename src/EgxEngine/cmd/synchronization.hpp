@@ -7,151 +7,69 @@ namespace egx
 {
     using RefSemaphore = ref<Semaphore>;
 
-    class SynchronizationContext
+    class Synchronization
     {
     public:
-        SynchronizationContext &AddProducerWaitSemaphore(const RefSemaphore &semaphore, VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+        Synchronization(const ref<VulkanCoreInterface>& CoreInterface) : _CoreInterface(CoreInterface) {}
+
+        void SetPredecessors(const std::initializer_list<Synchronization*>& predecessors)
         {
-            _producer_wait.push_back(semaphore);
-            _producer_wait_stage_flags.push_back(stageMask);
-            return *this;
+            for (Synchronization* item : predecessors)
+            {
+                item->SetSuccessor(*this);
+            }
         }
 
-        SynchronizationContext &AddProducerSignalSemaphore(const RefSemaphore &semaphore)
+        // Can only have one successor (not timeline semaphores)
+        void SetSuccessor(Synchronization& Successor, VkPipelineStageFlags stageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
         {
-            _producer_signal.push_back(semaphore);
-            return *this;
+            auto& signal = GetOrCreateSignalSemaphore();
+            Successor.SyncObjAddClientWaitSemaphore(signal, stageFlag);
         }
 
-        const RefSemaphore &GetConsumerWaitSemaphore() const { return _consumer_wait; }
-
-        std::vector<VkSemaphore> GetProducerWaitSemaphores(uint32_t CustomFrame = UINT32_MAX) const { return Semaphore::GetSemaphores(_producer_wait, CustomFrame); }
-        std::vector<VkSemaphore> GetProducerSignalSemaphores(uint32_t CustomFrame = UINT32_MAX) const { return Semaphore::GetSemaphores(_producer_signal, CustomFrame); }
-        const std::vector<RefSemaphore>& GetProducerRefWaitSemaphores() const { return _producer_wait; }
-        const std::vector<RefSemaphore>& GetProducerRefSignalSemaphores() const { return _producer_signal; }
-        
-        const std::vector<VkPipelineStageFlags>& GetProducerWaitStageFlags() const { return _producer_wait_stage_flags; }
-
-        void SetConsumerWaitSemaphore(const RefSemaphore& semaphore) { _consumer_wait = semaphore; }
-
-        // Setup wait and signal semaphore for seperate sync contexts.
-        static void SynchronizeSeperateCtx(SynchronizationContext& Predecessor, SynchronizationContext& Successor)
+    protected:
+        // Must be used this frame or pointers may become invalid.
+        VkResult Submit(VkCommandBuffer cmd)
         {
-            Successor.AddProducerWaitSemaphore(Predecessor.GetConsumerWaitSemaphore());
+            VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+            submitInfo.waitSemaphoreCount = (uint32_t)_WaitSemaphores.size();
+            submitInfo.pWaitSemaphores = GetWaitSemaphores().data();
+            submitInfo.pWaitDstStageMask = _WaitStageFlags.data();
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &cmd;
+            if (_SignalSemaphore.IsValidRef()) {
+                submitInfo.signalSemaphoreCount = 1;
+                submitInfo.pSignalSemaphores = &_SignalSemaphore->GetSemaphore();
+            }
+            return vkQueueSubmit(_CoreInterface->Queue, 1, &submitInfo, nullptr);
         }
 
-    public:
-        egx::ref<egx::Fence> CompletionFence = { nullptr };
+        [[nodiscard]] RefSemaphore& GetOrCreateSignalSemaphore()
+        {
+            if (_SignalSemaphore.IsValidRef())
+                return _SignalSemaphore;
+            _SignalSemaphore = Semaphore::FactoryCreate(_CoreInterface, "SynchronizationBase-SignalSemaphore");
+            return _SignalSemaphore;
+        }
 
+        void SyncObjAddClientWaitSemaphore(const RefSemaphore& semaphore, VkPipelineStageFlags stageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+        {
+            _WaitSemaphores.push_back(semaphore);
+            _WaitStageFlags.push_back(stageFlag);
+        }
+
+        std::vector<VkSemaphore>& GetWaitSemaphores() {
+            return Semaphore::GetSemaphores(_WaitSemaphores, _WaitSemaphoreVk);
+        }
+
+    protected:
+        std::vector<RefSemaphore> _WaitSemaphores;
+        std::vector<VkPipelineStageFlags> _WaitStageFlags;
+        RefSemaphore _SignalSemaphore;
+        ref<VulkanCoreInterface> _CoreInterface;
     private:
-        std::vector<RefSemaphore> _producer_wait;
-        std::vector<VkPipelineStageFlags> _producer_wait_stage_flags;
-        std::vector<RefSemaphore> _producer_signal;
-        RefSemaphore _consumer_wait;
+        std::vector<VkSemaphore> _WaitSemaphoreVk;
     };
 
-    // /*
-    //     SynchronizationCollection:
-    //         For an enclosed object such as swapchain, the consumer sync object
-    //         is used for wait
-    // */
-
-    // // This is what the producer waits/signals
-    // class ConsumerSynchronization
-    // {
-
-    // public:
-    //     const std::vector<VkSemaphore> GetWaitSemaphores() const
-    //     {
-    //         Semaphore::GetSemaphores(_ref_wait_semaphores);
-    //     }
-
-    //     const std::vector<VkPipelineStageFlags> GetWaitDstStageFlags() const
-    //     {
-    //         return _wait_dst_stages;
-    //     }
-
-    //     const std::vector<VkSemaphore> GetSignalSemaphores() const
-    //     {
-    //         Semaphore::GetSemaphores(_ref_signal_semaphores);
-    //     }
-
-    //     ConsumerSynchronization &AddWaitSemaphore(const RefSemaphore &semaphore, VkPipelineStageFlags WaitDstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-    //     {
-    //         _ref_wait_semaphores.push_back(semaphore);
-    //         _wait_dst_stages.push_back(WaitDstStage);
-    //         _wait_semaphores = Semaphore::GetSemaphores(_ref_wait_semaphores);
-    //         return *this;
-    //     }
-
-    //     ConsumerSynchronization &AddSignalSemaphore(const RefSemaphore &semaphore)
-    //     {
-    //         _ref_signal_semaphores.push_back(semaphore);
-    //         _signal_semaphores = Semaphore::GetSemaphores(_ref_signal_semaphores);
-    //         return *this;
-    //     }
-
-    //     VkSemaphore GetNamedWaitSemaphore(const std::string &Name) { return Semaphore::GetSemaphoreFromName(Name, _ref_wait_semaphores)->GetSemaphore(); }
-    //     VkSemaphore GetNamedSignalSemaphore(const std::string &Name) { return Semaphore::GetSemaphoreFromName(Name, _ref_signal_semaphores)->GetSemaphore(); }
-
-    //     const RefSemaphore &GetNamedRefWaitSemaphore(const std::string &Name) { return Semaphore::GetSemaphoreFromName(Name, _ref_wait_semaphores); }
-    //     const RefSemaphore &GetNamedRefSignalSemaphore(const std::string &Name) { return Semaphore::GetSemaphoreFromName(Name, _ref_signal_semaphores); }
-
-    // private:
-    //     std::vector<RefSemaphore> _ref_wait_semaphores;
-    //     std::vector<VkPipelineStageFlags> _wait_dst_stages;
-    //     std::vector<RefSemaphore> _ref_signal_semaphores;
-    //     std::vector<VkSemaphore> _wait_semaphores;
-    //     std::vector<VkSemaphore> _signal_semaphores;
-    // };
-
-    // // This is what you wait on
-    // class ProducerSynchronization
-    // {
-    // public:
-    //     const std::vector<VkSemaphore> GetWaitSemaphores() const
-    //     {
-    //         return _wait_semaphores;
-    //     }
-
-    //     const std::vector<VkPipelineStageFlags> GetWaitDstStageFlags() const
-    //     {
-    //         return _wait_dst_stages;
-    //     }
-
-    //     ProducerSynchronization &AddWaitSemaphore(const RefSemaphore &semaphore, VkPipelineStageFlags WaitDstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-    //     {
-    //         _ref_wait_semaphores.push_back(semaphore);
-    //         _wait_dst_stages.push_back(WaitDstStage);
-    //         _wait_semaphores = Semaphore::GetSemaphores(_ref_wait_semaphores);
-    //         return *this;
-    //     }
-
-    //     VkSemaphore GetNamedWaitSemaphore(const std::string &Name) { return Semaphore::GetSemaphoreFromName(Name, _ref_wait_semaphores)->GetSemaphore(); }
-    //     const RefSemaphore &GetNamedRefWaitSemaphore(const std::string &Name) { return Semaphore::GetSemaphoreFromName(Name, _ref_wait_semaphores); }
-
-    // private:
-    //     std::vector<RefSemaphore> _ref_wait_semaphores;
-    //     std::vector<VkPipelineStageFlags> _wait_dst_stages;
-    //     std::vector<VkSemaphore> _wait_semaphores;
-    // };
-
-    // class SynchronizationCollection
-    // {
-    // public:
-    //     void SetSignalFence(const ref<Fence> &fence)
-    //     {
-    //         _signal_fence = fence;
-    //     }
-
-    //     ref<Fence> &GetSignalFence() { return _signal_fence; }
-
-    // public:
-    //     ConsumerSynchronization ConsumerSync;
-    //     ProducerSynchronization ProducerSync;
-
-    // private:
-    //     ref<Fence> _signal_fence;
-    // };
 
 }

@@ -13,13 +13,13 @@
 
 namespace VkAlloc
 {
-	CONTEXT CreateContext(VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice, uint32_t HeapBlockAllocationSize)
+	CONTEXT CreateContext(VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice, uint32_t HeapBlockAllocationSize, bool UsingBufferReference)
 	{
 		CONTEXT context = new _CONTEXT();
 
 		context->m_device = device;
 		context->m_physical_device = physicalDevice;
-		
+
 		VkPhysicalDeviceProperties properties;
 		vkGetPhysicalDeviceProperties(physicalDevice, &properties);
 		context->m_HeapBlockAllocationSize = std::max(HeapBlockAllocationSize, /* Minimum blocks of 5 megabytes */ 5u * (1024u * 1024u));
@@ -35,7 +35,9 @@ namespace VkAlloc
 		createInfo.pHeapSizeLimit = nullptr;
 		createInfo.pVulkanFunctions = &vulkanFunctions;
 		createInfo.instance = instance;
-		createInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+		createInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+		if (UsingBufferReference)
+			createInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 		VkResult ret = vmaCreateAllocator(&createInfo, &context->m_allocator);
 
 		VkPhysicalDeviceMemoryProperties memory_description;
@@ -81,21 +83,21 @@ namespace VkAlloc
 			vmaCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 			// TODO: Look into VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT 
 			switch (desc.m_properties) {
-				case DEVICE_MEMORY_PROPERTY::CPU_ONLY:
-				case DEVICE_MEMORY_PROPERTY::CPU_TO_GPU:
-					vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
-					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-					vmaCreateInfo.requiredFlags = desc.mRequireCoherent ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-					buffer->m_suballocation.m_host_visible = true;
-					break;
-				case DEVICE_MEMORY_PROPERTY::GPU_ONLY:
-					assert(!desc.mRequireCoherent);
-					vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-					vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-					buffer->m_suballocation.m_host_visible = false;
-					break;
-				default:
-					assert(0);
+			case DEVICE_MEMORY_PROPERTY::CPU_ONLY:
+			case DEVICE_MEMORY_PROPERTY::CPU_TO_GPU:
+				vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
+				vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+				vmaCreateInfo.requiredFlags = desc.mRequireCoherent ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+				buffer->m_suballocation.m_host_visible = true;
+				break;
+			case DEVICE_MEMORY_PROPERTY::GPU_ONLY:
+				assert(!desc.mRequireCoherent);
+				vmaCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+				vmaCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+				buffer->m_suballocation.m_host_visible = false;
+				break;
+			default:
+				assert(0);
 			}
 			vmaCreateInfo.memoryTypeBits = UINT32_MAX;
 			vmaCreateInfo.pool = nullptr;
@@ -113,7 +115,7 @@ namespace VkAlloc
 		}
 		return VK_SUCCESS;
 	}
-	
+
 	VkResult CreateImages(CONTEXT context, uint32_t count, IMAGE_DESCRIPITION* pDescs, IMAGE* pOutImages)
 	{
 		if (count == 0 || count == UINT32_MAX)

@@ -32,12 +32,14 @@ namespace egx {
 			memorylayout layout,
 			uint32_t type,
 			bool CpuWritePerFrameFlag,
+			bool BufferReference,
 			bool requireCoherent = false);
 
 		EGX_API ~Buffer();
-		EGX_API Buffer(Buffer& cp) = delete;
+		Buffer(Buffer& cp) = delete;
+		Buffer& operator=(Buffer& cp) = delete;
 		EGX_API Buffer(Buffer&& move) noexcept;
-		EGX_API Buffer& operator=(Buffer& move) noexcept;
+		EGX_API Buffer& operator=(Buffer&& move) noexcept;
 
 		EGX_API ref<Buffer> Clone();
 		EGX_API void Copy(ref<Buffer>& source);
@@ -65,20 +67,22 @@ namespace egx {
 		EGX_API void Invalidate(size_t offset, size_t size);
 
 		EGX_API const VkBuffer& GetBuffer() const;
+		EGX_API std::vector<size_t> GetBufferBasePointer() const;
 
 	protected:
 		EGX_API Buffer(
-			const size_t size,
-			const memorylayout layout,
-			const uint32_t type,
-			const bool cpuaccessflag,
-			const bool coherent,
-			const VkAlloc::CONTEXT context,
+			size_t size,
+			memorylayout layout,
+			uint32_t type,
+			bool cpuaccessflag,
+			bool bufferreference,
+			bool coherent,
+			VkAlloc::CONTEXT context,
 			const ref<VulkanCoreInterface>& coreinterface) :
 			Size(size), Layout(layout),
 			Type(type), CoherentFlag(coherent),
 			_context(context), _coreinterface(coreinterface),
-			CpuAccessPerFrame(cpuaccessflag)
+			CpuAccessPerFrame(cpuaccessflag), BufferReference(bufferreference)
 		{
 			DelayInitalizeFF(coreinterface, !CpuAccessPerFrame);
 			_mapped_ptr.resize(coreinterface->MaxFramesInFlight, nullptr);
@@ -90,6 +94,7 @@ namespace egx {
 		const uint32_t Type;
 		const bool CoherentFlag;
 		const bool CpuAccessPerFrame;
+		const bool BufferReference;
 	protected:
 		ref<VulkanCoreInterface> _coreinterface;
 		const VkAlloc::CONTEXT _context;
@@ -136,9 +141,11 @@ namespace egx {
 			ImageUsage(move.ImageUsage), _context(move._context),
 			_image(move._image), _coreinterface(move._coreinterface),
 			ImageAspect(move.ImageAspect), Format(move.Format) {
+			memcpy(this, &move, sizeof(Image));
 			memset(&move, 0, sizeof(Image));
 		}
-		EGX_API Image& operator=(Image& move) {
+		EGX_API Image& operator=(Image&& move) {
+			if (this == &move) return *this;
 			this->~Image();
 			memcpy(this, &move, sizeof(Image));
 			memset(&move, 0, sizeof(Image));

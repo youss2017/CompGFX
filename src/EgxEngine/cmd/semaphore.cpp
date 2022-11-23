@@ -64,6 +64,7 @@ namespace egx
     std::vector<VkSemaphore> &Semaphore::GetSemaphores(const std::vector<ref<Semaphore>> &semaphores, std::vector<VkSemaphore> &OutSemaphores)
     {
         if(semaphores.size() == 0) return OutSemaphores;
+        OutSemaphores.clear();
         OutSemaphores.reserve(semaphores.size());
         for (size_t i = 0; i < semaphores.size(); i++)
             OutSemaphores.push_back(semaphores[i]->GetSemaphore());

@@ -10,7 +10,7 @@
 
 namespace egx {
 
-	class VulkanSwapchain {
+	class VulkanSwapchain : public Synchronization {
 	public:
 		EGX_API VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, void* GlfwWindowPtr, bool VSync, bool SetupImGui);
 		VulkanSwapchain(VulkanSwapchain& copy) = delete;
@@ -49,7 +49,6 @@ namespace egx {
 		std::vector<VkImage> Imgs;
 		std::vector<VkImageView> Views;
 		void* GlfwWindowPtr = nullptr;
-		SynchronizationContext Synchronization;
 
 	private:
 		ref<VulkanCoreInterface> _core;
@@ -64,10 +63,9 @@ namespace egx {
 		std::vector<VkFramebuffer> _framebuffers;
 		ref<CommandPool> _pool;
 		std::vector<VkCommandBuffer> _cmd;
-		ref<Fence> _swapchain_acquire_lock;
 		ref<Fence> _cmd_lock;
-		ref<Semaphore> _present_lock;
-		ref<Semaphore> _blit_lock;
+		ref<Semaphore> _acquire_lock;
+		ref<Semaphore> _image_blit_lock;
 		uint32_t _image_index = 0;
 		bool _resize_swapchain_flag = false;
 		

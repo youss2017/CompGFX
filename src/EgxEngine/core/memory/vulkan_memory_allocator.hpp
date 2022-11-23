@@ -82,7 +82,7 @@ namespace VkAlloc
 		VmaAllocator m_allocator;
 	} typedef *CONTEXT;
 
-	CONTEXT CreateContext(VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice, uint32_t HeapBlockAllocationSizeInBytes);
+	CONTEXT CreateContext(VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice, uint32_t HeapBlockAllocationSizeInBytes, bool UsingBufferReference);
 	void  DestroyContext(CONTEXT context);
 
 	VkResult CreateBuffers(CONTEXT context, uint32_t count, BUFFER_DESCRIPTION* pDescs, BUFFER* pOutBuffers);

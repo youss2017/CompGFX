@@ -110,7 +110,7 @@ namespace egx {
 		assert(_renderpass == nullptr);
 		assert(_colorattachements.find(ColorAttachmentId) == _colorattachements.end());
 #ifdef _DEBUG
-		LOG(INFO, "Creating FBO Color Attachment {0}x{1} Format: {2} Clear: <{3}, {4}, {5}, {6}>", 
+		LOG(INFO, "Creating FBO Color Attachment {0}x{1} Format: {2} Clear: <{3:%.3f}, {4:%.3f}, {5:%.3f}, {6:%.3f}>", 
 			Width, Height, egx::_internal::DebugVkFormatToString(Format),
 			ClearValue.color.float32[0], ClearValue.color.float32[1], ClearValue.color.float32[2], ClearValue.color.float32[3]);
 #endif
@@ -160,7 +160,7 @@ namespace egx {
 		assert(_renderpass == nullptr);
 		assert(!_depthattachment.has_value());
 #ifdef _DEBUG
-		LOG(INFO, "Creating FBO Depth Attachment {0}x{1} Format: {2}, Clear: {3}", Width, Height, egx::_internal::DebugVkFormatToString(Format), ClearValue.depthStencil.depth);
+		LOG(INFO, "Creating FBO Depth Attachment {0}x{1} Format: {2}, Clear: {3:%.3f}", Width, Height, egx::_internal::DebugVkFormatToString(Format), ClearValue.depthStencil.depth);
 #endif
 		internal::egfxframebuffer_attachment attachment;
 		attachment.Attachment = Image::FactoryCreate(
