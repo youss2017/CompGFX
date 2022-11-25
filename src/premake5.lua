@@ -5,7 +5,7 @@ workspace "Egx"
         "../include/", 
         "../include/imgui/", 
         os.getenv('VULKAN_SDK') .. '/include' }
-    cppdialect "C++17"
+    cppdialect "C++20"
     
     filter { "configurations:Debug" }
     libdirs { "../library/Debug" }

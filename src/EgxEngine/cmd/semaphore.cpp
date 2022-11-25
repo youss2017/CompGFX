@@ -1,6 +1,8 @@
 #include "semaphore.hpp"
 #include <stdexcept>
 #include <algorithm>
+#include <Utility/CppUtility.hpp>
+#include "../utils/objectdebugger.hpp"
 
 namespace egx
 {
@@ -9,9 +11,10 @@ namespace egx
         : Name(Name)
     {
         DelayInitalize(CoreInterface);
+        SetDebugName();
     }
 
-    Semaphore::Semaphore(Semaphore &&move)
+    Semaphore::Semaphore(Semaphore &&move) noexcept
     {
         this->_semaphores = std::move(move._semaphores);
         this->_core_interface = move._core_interface;
@@ -78,6 +81,14 @@ namespace egx
         if (iterator == Semaphores.end())
             throw std::runtime_error("Could not find Semaphore from given name.");
         return *iterator;
+    }
+
+    void Semaphore::SetDebugName()
+    {
+        for (size_t i = 0; i < _semaphores.size(); i++)
+        {
+            SetObjectName(_core_interface, _semaphores[i], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, ut::Format("{0} [{1}]", Name, i));
+        }
     }
 
 }

@@ -14,8 +14,8 @@ namespace egx {
     public:
         EGX_API Shader(ref<VulkanCoreInterface> CoreInterface, const char* ShaderPath, const char* EntryPointFunction = "main");
         EGX_API Shader(Shader& cp) = delete;
-        EGX_API Shader(Shader&& move);
-        EGX_API Shader& operator=(Shader& move);
+        EGX_API Shader(Shader&& move) noexcept;
+        EGX_API Shader& operator=(Shader&& move) noexcept;
         EGX_API ~Shader();
         EGX_API const std::string& GetSource();
         inline const uint32_t* GetBytecode() const { return m_Bytecode.data(); }

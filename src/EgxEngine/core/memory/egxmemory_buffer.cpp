@@ -136,19 +136,36 @@ egx::ref<egx::Buffer> egx::Buffer::Clone()
 	auto clone = Buffer::FactoryCreate(_coreinterface, Size, Layout, Type, CpuAccessPerFrame, CoherentFlag);
 	if (!clone.IsValidRef())
 		return clone;
-	clone->Copy(this);
+	clone->Copy(this, 0, Size);
 	return clone;
 }
 
-void egx::Buffer::Copy(ref<Buffer>& source)
+void Buffer::Copy(const ref<Buffer>& source, size_t offset, size_t size)
 {
-	Copy(source.base);
+	auto cmd = CommandBufferSingleUse(_coreinterface);
+	VkBufferCopy region{};
+	region.srcOffset = offset;
+	region.size = size;
+	vkCmdCopyBuffer(cmd.Cmd, source->GetBuffer(), GetBuffer(), 1, &region);
+	cmd.Execute();
 }
 
-void egx::Buffer::Copy(Buffer* source)
+// Copies including other frame data
+void Buffer::CopyAll(const ref<Buffer>& source, size_t offset, size_t size)
 {
-	assert(Size == source->Size);
-	Copy(source->_buffers[GetCurrentFrame()]->m_buffer, 0, Size);
+	auto cmd = CommandBufferSingleUse(_coreinterface);
+	VkBufferCopy region{};
+	region.srcOffset = offset;
+	region.size = size;
+	for (uint32_t i = 0; i < _coreinterface->MaxFramesInFlight; i++)
+	{
+		source->SetStaticFrameIndex(i);
+		SetStaticFrameIndex(i);
+		vkCmdCopyBuffer(cmd.Cmd, source->GetBuffer(), GetBuffer(), 1, &region);
+	}
+	source->SetStaticFrameIndex();
+	SetStaticFrameIndex();
+	cmd.Execute();
 }
 
 void egx::Buffer::Write(void* data, size_t offset, size_t size)
@@ -173,8 +190,7 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size)
 	else {
 		ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, Type, false, false);
 		stage->Write(data);
-		stage->Flush();
-		Copy(stage->_buffers[0]->m_buffer, offset, size);
+		Copy(stage, offset, size);
 	}
 }
 
@@ -324,41 +340,6 @@ void egx::Buffer::Invalidate(size_t offset, size_t size)
 	assert(offset + size < Size);
 	if (Layout == memorylayout::local) return;
 	VkAlloc::InvalidateBuffer(_context, _buffers[GetCurrentFrame()], offset, size);
-}
-
-void egx::Buffer::Copy(VkBuffer src, size_t offset, size_t size)
-{
-	auto cmd = CommandBufferSingleUse(_coreinterface);
-
-	VkBufferMemoryBarrier barriers[2]{};
-	barriers[0].sType = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-	barriers[0].buffer = GetBuffer();
-	barriers[0].dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-	barriers[0].srcQueueFamilyIndex =
-		barriers[0].dstQueueFamilyIndex =
-		VK_QUEUE_FAMILY_IGNORED;
-	barriers[0].offset = offset;
-	barriers[0].size = size;
-
-	barriers[1].sType = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-	barriers[1].buffer = src;
-	barriers[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-	barriers[1].srcQueueFamilyIndex =
-		barriers[1].dstQueueFamilyIndex =
-		VK_QUEUE_FAMILY_IGNORED;
-	barriers[1].offset = 0;
-	barriers[1].size = VK_WHOLE_SIZE;
-
-	vkCmdPipelineBarrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr,
-		2, barriers,
-		0, nullptr);
-
-	VkBufferCopy region{};
-	region.srcOffset = offset;
-	region.size = size;
-	vkCmdCopyBuffer(cmd.Cmd, src, GetBuffer(), 1, &region);
-
-	cmd.Execute();
 }
 
 const VkBuffer& Buffer::GetBuffer() const {

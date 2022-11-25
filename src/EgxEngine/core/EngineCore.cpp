@@ -3,6 +3,7 @@
 #include <iostream>
 #include <Utility/CppUtility.hpp>
 #include <cassert>
+#include <ranges>
 
 static VkBool32 VKAPI_ATTR ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
@@ -19,11 +20,15 @@ EGX_API egx::EngineCore::EngineCore(bool UsingRenderDOC)
 #ifdef _DEBUG
 	layers.push_back("VK_LAYER_KHRONOS_validation");
 	layer_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
 
-	if (UsingRenderDOC) {
+	uint32_t count = 0;
+	vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &count, nullptr);
+	std::vector<VkExtensionProperties> extProps(count);
+	vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &count, extProps.data());
+	if (std::ranges::count_if(extProps, [](VkExtensionProperties& l) {return strcmp(l.extensionName, VK_EXT_DEBUG_REPORT_EXTENSION_NAME); })) {
 		layer_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 	}
+#endif
 
 	VkApplicationInfo appinfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	appinfo.pApplicationName = "Application";
@@ -215,17 +220,27 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 	queueCreateInfo.pQueuePriorities = &priorities;
 	queueCreateInfo.queueFamilyIndex = index;
 
-	std::vector<const char*> extensions;
-	extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-	extensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
-	if (UsingRenderDOC) {
-		extensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+	std::vector<const char*> enabledExtensions;
+	enabledExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	enabledExtensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+
+#ifdef _DEBUG
+	uint32_t extensionCount = 0;
+	std::vector<VkExtensionProperties> extensions;
+	vkEnumerateDeviceExtensionProperties(Device.Id, nullptr, &extensionCount, extensions.data());
+	for (auto& ext : extensions)
+	{
+		if (!strcmp(ext.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
+		{
+			enabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+		}
 	}
+#endif
 
 	createInfo.queueCreateInfoCount = 1;
 	createInfo.pQueueCreateInfos = &queueCreateInfo;
-	createInfo.enabledExtensionCount = (uint32_t)extensions.size();
-	createInfo.ppEnabledExtensionNames = extensions.data();
+	createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
+	createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
 	vkCreateDevice(Device.Id, &createInfo, NULL, &this->CoreInterface->Device);
 	this->CoreInterface->QueueFamilyIndex = index;

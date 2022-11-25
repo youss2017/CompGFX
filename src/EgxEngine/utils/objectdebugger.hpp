@@ -6,11 +6,11 @@
 
 namespace egx
 {
+#ifdef _DEBUG
 	template<typename T>
 	VkResult SetObjectName(const ref<VulkanCoreInterface>& CoreInterface, T nativeObject, VkDebugReportObjectTypeEXT type, const std::string& name)
 	{
 		static PFN_vkDebugMarkerSetObjectNameEXT pfnDebugMarkerSetObjectName = nullptr;
-		if (!CoreInterface->DebuggingWithRenderDOCFlag) return VK_SUCCESS;
 		if (!pfnDebugMarkerSetObjectName) {
 			pfnDebugMarkerSetObjectName = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetDeviceProcAddr(CoreInterface->Device, "vkDebugMarkerSetObjectNameEXT");
 		}
@@ -24,5 +24,8 @@ namespace egx
 		}
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
+#else
+#define SetObjectName(...)
+#endif
 
 }

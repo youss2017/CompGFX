@@ -9,7 +9,7 @@ namespace egx {
     public:
         EGX_API Semaphore() = default;
         EGX_API Semaphore(const ref<VulkanCoreInterface>& CoreInterface, const std::string& Name);
-        EGX_API Semaphore(Semaphore&&);
+        EGX_API Semaphore(Semaphore&&) noexcept;
         EGX_API ~Semaphore();
         EGX_API void DelayInitalize(const ref<VulkanCoreInterface>& CoreInterface);
         EGX_API const VkSemaphore& GetSemaphore() const;
@@ -24,7 +24,10 @@ namespace egx {
 
         EGX_API static const ref<Semaphore>& GetSemaphoreFromName(const std::string& Name, const std::vector<ref<Semaphore>>& Semaphores);
 
+
         Semaphore(Semaphore&) = delete;
+    private:
+        EGX_API void SetDebugName();
 
     public:
         const std::string Name;

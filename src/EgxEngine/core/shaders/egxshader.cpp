@@ -138,9 +138,6 @@ namespace egx {
 
 			if (!m_CompileStatus)
 			{
-				// TODO: The following steps! but is this necessary?
-				// 1) Remove from catalog
-				// 2) Delete from cache!
 				LOG(ERR, "{0} --- Failed to compile into SPIR-V.", ShaderPath.string(), spv.GetErrorMessage());
 				throw std::runtime_error("SPIR-V Compilation Failed.");
 			}
@@ -212,14 +209,15 @@ namespace egx {
 		InitalizeVulkan();
 	}
 
-	EGX_API Shader::Shader(Shader&& move)
+	EGX_API Shader::Shader(Shader&& move) noexcept
 	{
 		memcpy(this, &move, sizeof(Shader));
 		memset(&move, 0, sizeof(Shader));
 	}
 
-	EGX_API Shader& Shader::operator=(Shader& move)
+	EGX_API Shader& Shader::operator=(Shader&& move) noexcept
 	{
+		if (this == &move) return *this;
 		memcpy(this, &move, sizeof(Shader));
 		memset(&move, 0, sizeof(Shader));
 		return *this;

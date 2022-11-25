@@ -17,6 +17,7 @@ namespace egx
         EGX_API ~CommandBuffer() noexcept;
 
         EGX_API void DelayInitialize(const ref<VulkanCoreInterface> &CoreInterface);
+        EGX_API void SetDebugName(const ref<VulkanCoreInterface>& CoreInterface, const std::string& Name);
 
         EGX_API const VkCommandBuffer GetBuffer();
         EGX_API const VkCommandBuffer &GetReadonlyBuffer() const;

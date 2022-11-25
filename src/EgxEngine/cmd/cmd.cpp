@@ -1,5 +1,6 @@
 #include "cmd.hpp"
 #include <Utility/CppUtility.hpp>
+#include "../utils/objectdebugger.hpp"
 
 namespace egx
 {
@@ -28,6 +29,14 @@ namespace egx
 		_cmd = internal::_cmd_pool->AllocateBufferFrameFlightMode(true);
 		_cmd_static_init.resize(CoreInterface->MaxFramesInFlight, false);
 		DelayInitalizeFF(CoreInterface);
+	}
+
+	void CommandBuffer::SetDebugName(const ref<VulkanCoreInterface>& CoreInterface, const std::string& Name)
+	{
+		for (size_t i = 0; i < _cmd.size(); i++)
+		{
+			SetObjectName(CoreInterface, _cmd[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, ut::Format("{0} [{1}]", Name, i));
+		}
 	}
 
 	CommandBuffer::CommandBuffer(CommandBuffer&& move) noexcept
