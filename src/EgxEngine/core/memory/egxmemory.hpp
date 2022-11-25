@@ -65,6 +65,7 @@ namespace egx {
 		EGX_API void Flush(size_t offset, size_t size);
 		EGX_API void Invalidate();
 		EGX_API void Invalidate(size_t offset, size_t size);
+		EGX_API void SetDebugName(const std::string& Name);
 
 		EGX_API const VkBuffer& GetBuffer() const;
 		EGX_API std::vector<size_t> GetBufferBasePointer() const;
@@ -247,6 +248,8 @@ namespace egx {
 		
 		// cmd can be null, if it is null then the clear will be blocking and immediate
 		EGX_API void ClearImage(VkCommandBuffer cmd);
+
+		EGX_API void SetDebugName(const std::string& Name);
 
 	protected:
 		EGX_API Image(uint32_t width, uint32_t height,

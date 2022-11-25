@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <Utility/CppUtility.hpp>
+#include "../../utils/objectdebugger.hpp"
 
 using namespace egx;
 
@@ -585,3 +586,12 @@ ImTextureID egx::Image::GetImGuiTextureID(VkSampler sampler, uint32_t viewId)
 }
 
 #pragma endregion
+
+void egx::Image::SetDebugName(const std::string& Name)
+{
+    SetObjectName(_coreinterface, _image->m_image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, Name);
+    for (auto& [id, view] : _views)
+    {
+        SetObjectName(_coreinterface, _image->m_image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, ut::Format("{0} (View) id={1}", Name, id));
+    }
+}

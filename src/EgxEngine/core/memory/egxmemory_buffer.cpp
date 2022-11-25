@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <Utility/CppUtility.hpp>
+#include "../../utils/objectdebugger.hpp"
 
 using namespace egx;
 
@@ -375,4 +376,13 @@ std::vector<size_t> egx::Buffer::GetBufferBasePointer() const
 		address.push_back(vkGetBufferDeviceAddress(_coreinterface->Device, &info));
 	}
 	return address;
+}
+
+void egx::Buffer::SetDebugName(const std::string& Name)
+{
+	for (uint32_t i = 0; i < _buffers.size(); i++)
+	{
+		auto buffer = _buffers[i]->m_buffer;
+		SetObjectName(_coreinterface, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, ut::Format("{0} [{1}]", Name, i));
+	}
 }

@@ -218,6 +218,9 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 	std::vector<const char*> extensions;
 	extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	extensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+	if (UsingRenderDOC) {
+		extensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+	}
 
 	createInfo.queueCreateInfoCount = 1;
 	createInfo.pQueueCreateInfos = &queueCreateInfo;
