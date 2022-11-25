@@ -45,6 +45,9 @@ namespace egx {
 		{}
 
 		inline ref<T>& operator=(const ref& cp) noexcept {
+			if (cp.base == nullptr || &cp == this) {
+				return *this;
+			}
 			this->base = cp.base;
 			this->refCount = cp.refCount;
 			*this->refCount += 1;

@@ -7,8 +7,8 @@
 static VkBool32 VKAPI_ATTR ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 
-EGX_API egx::EngineCore::EngineCore()
-	: Swapchain(nullptr), CoreInterface(new VulkanCoreInterface())
+EGX_API egx::EngineCore::EngineCore(bool UsingRenderDOC)
+	: Swapchain(nullptr), CoreInterface(new VulkanCoreInterface()), UsingRenderDOC(UsingRenderDOC)
 {
 	glfwInit();
 	std::vector<const char*> layer_extensions;
@@ -20,6 +20,10 @@ EGX_API egx::EngineCore::EngineCore()
 	layers.push_back("VK_LAYER_KHRONOS_validation");
 	layer_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
+
+	if (UsingRenderDOC) {
+		layer_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	}
 
 	VkApplicationInfo appinfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	appinfo.pApplicationName = "Application";
@@ -113,7 +117,7 @@ std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
 	return list;
 }
 
-void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool UsingRenderDOC)
+void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 {
 	using namespace std;
 	LOG(INFOBOLD, "Establishing {0}; {1:%.2lf} Mb VRAM; {2:%.2lf} Mb Shared System RAM; Device", Device.VendorName, (double)Device.VideoRam / (1024.0 * 1024.0), (double)Device.SharedSystemRam / (1024.0 * 1024.0));
@@ -150,6 +154,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device, bool Us
 	if (UsingRenderDOC) {
 		LOG(WARNING, "Disabled bufferDeviceAddress feature so we can use RenderDOC.");
 		vulkan12features.bufferDeviceAddress = VK_FALSE;
+		CoreInterface->DebuggingWithRenderDOCFlag = true;
 	}
 	else {
 		LOG(WARNING, "bufferDeviceAddress is turned on, CANNOT debug with RenderDOC, in renderdoc use 'debug' or 'renderdoc' in command line arguments.");

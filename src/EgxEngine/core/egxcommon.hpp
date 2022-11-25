@@ -36,6 +36,7 @@ namespace egx {
 		VkDebugUtilsMessengerEXT DebugMessenger = nullptr;
 		uint32_t MaxFramesInFlight = 0;
 		uint32_t CurrentFrame = 0;
+		bool DebuggingWithRenderDOCFlag = false;
 
 		EGX_API VulkanCoreInterface() = default;
 		EGX_API ~VulkanCoreInterface();

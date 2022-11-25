@@ -164,10 +164,17 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size)
 			Flush();
 		return;
 	}
-	ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, Type, false, false);
-	stage->Write(data);
-	stage->Flush();
-	Copy(stage->_buffers[0]->m_buffer, offset, size);
+	if (size < UINT16_MAX) {
+		auto cmd = CommandBufferSingleUse(_coreinterface);
+		vkCmdUpdateBuffer(cmd.Cmd, GetBuffer(), offset, size, data);
+		cmd.Execute();
+	}
+	else {
+		ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, Type, false, false);
+		stage->Write(data);
+		stage->Flush();
+		Copy(stage->_buffers[0]->m_buffer, offset, size);
+	}
 }
 
 void egx::Buffer::Write(void* data, size_t size)

@@ -14,7 +14,7 @@ namespace egx {
 
 	class EngineCore {
 	public:
-		EGX_API EngineCore();
+		EGX_API EngineCore(bool UsingRenderDOC);
 		EGX_API ~EngineCore();
 		EGX_API EngineCore(EngineCore& cp) = delete;
 		EGX_API EngineCore(EngineCore&& cp) = delete;
@@ -30,13 +30,13 @@ namespace egx {
 
 		std::vector<Device> EGX_API EnumerateDevices();
 
-		void EGX_API EstablishDevice(const Device& Device, bool UsingRenderDOC);
+		void EGX_API EstablishDevice(const Device& Device);
 
 		inline ref<VulkanCoreInterface> GetCoreInterface() noexcept { return CoreInterface; }
 
 		static EngineCore* CreateDefaultEngine(const std::string& title, uint32_t width, uint32_t height, bool VSync, bool SetupImGui, bool UsingRenderDOC, uint32_t MaxFramesInFlight = 2) {
 			ref<PlatformWindow> window = new PlatformWindow(title, width, height);
-			EngineCore* core = new EngineCore();
+			EngineCore* core = new EngineCore(UsingRenderDOC);
 			core->_window = window;
 			auto deviceList = core->EnumerateDevices();
 			if (deviceList.size() == 0) {
@@ -51,7 +51,7 @@ namespace egx {
 				if (s > score)
 					device = d;
 			}
-			core->EstablishDevice(device, UsingRenderDOC);
+			core->EstablishDevice(device);
 			core->AssociateWindow(window(), MaxFramesInFlight, VSync, SetupImGui);
 			return core;
 		}
@@ -67,6 +67,7 @@ namespace egx {
 		}
 
 	private:
+		const bool UsingRenderDOC;
 		EGX_API ImGuiContext* GetContext() const;
 
 	public:
