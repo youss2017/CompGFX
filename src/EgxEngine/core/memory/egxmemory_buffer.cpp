@@ -133,10 +133,10 @@ egx::Buffer& egx::Buffer::operator=(Buffer&& move) noexcept
 
 egx::ref<egx::Buffer> egx::Buffer::Clone()
 {
-	auto clone = Buffer::FactoryCreate(_coreinterface, Size, Layout, Type, CpuAccessPerFrame, CoherentFlag);
+	auto clone = Buffer::FactoryCreate(_coreinterface, Size, Layout, Type, CpuAccessPerFrame, BufferReference, CoherentFlag);
 	if (!clone.IsValidRef())
 		return clone;
-	clone->Copy(this, 0, Size);
+	clone->CopyAll(this, 0, Size);
 	return clone;
 }
 
