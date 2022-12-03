@@ -33,7 +33,7 @@ void  egx::Pipeline::invalidate(
     const Shader& fragment, 
     const ref<Framebuffer>& framebuffer,
     const uint32_t PassId,
-    const egxvertexdescription& vertexDescription)
+    const InputAssemblyDescription& vertexDescription)
 {
     if (Pipe) vkDestroyPipeline(_coreinterface->Device, Pipe, nullptr);
     _graphics = true;

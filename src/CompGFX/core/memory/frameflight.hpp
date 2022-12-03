@@ -21,6 +21,7 @@ namespace egx
             _static_frame = FrameIndex;
         }
 
+    protected:
         void DelayInitalizeFF(const ref<VulkanCoreInterface> &CoreInterface, bool single = false)
         {
             if (single)
@@ -34,7 +35,6 @@ namespace egx
             }
         }
 
-    protected:
         inline uint32_t GetCurrentFrame() const { return _static_frame == UINT32_MAX ? *_ptr_current_frame : _static_frame; }
 
     protected:

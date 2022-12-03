@@ -25,7 +25,7 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 	{
 		if (CpuWritePerFrameFlag)
 		{
-			LOG(INFO, "Creating a {0:%.4lf} x {1} Mb Buffer; Total {2:%.4lf} Mb", 
+			LOG(INFO, "Creating a {0:%.4lf} x {1} Mb Buffer; Total {2:%.4lf} Mb",
 				(double)size / (1024.0 * 1024.0),
 				CoreInterface->MaxFramesInFlight,
 				((double)size / (1024.0 * 1024.0)) * double(CoreInterface->MaxFramesInFlight));
@@ -131,12 +131,13 @@ egx::Buffer& egx::Buffer::operator=(Buffer&& move) noexcept
 	return *this;
 }
 
-egx::ref<egx::Buffer> egx::Buffer::Clone()
+egx::ref<egx::Buffer> egx::Buffer::Clone(bool CopyContents)
 {
 	auto clone = Buffer::FactoryCreate(_coreinterface, Size, Layout, Type, CpuAccessPerFrame, BufferReference, CoherentFlag);
 	if (!clone.IsValidRef())
 		return clone;
-	clone->CopyAll(this, 0, Size);
+	if (CopyContents)
+		clone->CopyAll(ref<Buffer>::SelfReference(this), 0, Size);
 	return clone;
 }
 
@@ -168,7 +169,7 @@ void Buffer::CopyAll(const ref<Buffer>& source, size_t offset, size_t size)
 	cmd.Execute();
 }
 
-void egx::Buffer::Write(void* data, size_t offset, size_t size)
+void egx::Buffer::Write(void* data, size_t offset, size_t size, bool keepMapped)
 {
 	if (Layout != memorylayout::local)
 	{
@@ -176,7 +177,7 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size)
 		int8_t* ptr = Map();
 		ptr += offset;
 		memcpy(ptr, data, size);
-		if (mapState)
+		if (mapState && !keepMapped)
 			Unmap();
 		else
 			Flush();
@@ -194,19 +195,20 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size)
 	}
 }
 
-void egx::Buffer::Write(void* data, size_t size)
+void egx::Buffer::Write(void* data, size_t size, bool keepMapped)
 {
-	return Write(data, 0, size);
+	return Write(data, 0, size, keepMapped);
 }
 
-void egx::Buffer::Write(void* data)
+void egx::Buffer::Write(void* data, bool keepMapped)
 {
-	return Write(data, 0, Size);
+	return Write(data, 0, Size, keepMapped);
 }
 
 int8_t* egx::Buffer::Map()
 {
 	assert(Layout != memorylayout::local);
+	GetBuffer(); // will resize buffer
 	auto frame = GetCurrentFrame();
 	if (_mapped_flag)
 		return _mapped_ptr[frame];
@@ -342,21 +344,55 @@ void egx::Buffer::Invalidate(size_t offset, size_t size)
 	VkAlloc::InvalidateBuffer(_context, _buffers[GetCurrentFrame()], offset, size);
 }
 
-const VkBuffer& Buffer::GetBuffer() const {
-	return _buffers[GetCurrentFrame()]->m_buffer;
+const VkBuffer& Buffer::GetBuffer() {
+	if(!_ResizeFlag)
+		return _buffers[GetCurrentFrame()]->m_buffer;
+	_ResizeFlag--;
+	auto frame = GetCurrentFrame();
+	Size = _ResizeBytes;
+	auto& buf = _buffers[frame];
+	auto desc = buf->m_description;
+	desc.m_size = _ResizeBytes;
+	VkAlloc::BUFFER resizedBuffer{};
+	if (_ResizeCopyOldContents)
+	{
+		VkAlloc::CreateBuffers(_context, 1, &desc, &resizedBuffer);
+		CommandBufferSingleUse cmd = CommandBufferSingleUse(_coreinterface);
+		VkBufferCopy region{};
+		region.size = std::min(buf->m_description.m_size, resizedBuffer->m_description.m_size);
+		vkCmdCopyBuffer(cmd.Cmd, buf->m_buffer, resizedBuffer->m_buffer, 1, &region);
+		cmd.Execute();
+		VkAlloc::DestroyBuffers(_context, 1, &buf);
+	}
+	else {
+		VkAlloc::DestroyBuffers(_context, 1, &buf);
+		VkAlloc::CreateBuffers(_context, 1, &desc, &resizedBuffer);
+	}
+	_buffers[frame] = resizedBuffer;
+	return _buffers[frame]->m_buffer;
 }
 
-std::vector<size_t> egx::Buffer::GetBufferBasePointer() const
+std::vector<size_t> egx::Buffer::GetBufferBasePointer()
 {
 	std::vector<size_t> address;
 	address.reserve(_max_frames);
 	for (size_t i = 0; i < _buffers.size(); i++)
 	{
-		VkBufferDeviceAddressInfo info{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
-		info.buffer = _buffers[i]->m_buffer;
+		VkBufferDeviceAddressInfo info{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+		SetStaticFrameIndex((uint32_t)i);
+		info.buffer = GetBuffer();
 		address.push_back(vkGetBufferDeviceAddress(_coreinterface->Device, &info));
 	}
+	SetStaticFrameIndex();
 	return address;
+}
+
+void egx::Buffer::Resize(size_t newSize, bool CopyOldContents)
+{
+	if (newSize == Size) return;
+	_ResizeFlag = _coreinterface->MaxFramesInFlight;
+	_ResizeCopyOldContents = CopyOldContents;
+	_ResizeBytes = newSize;
 }
 
 void egx::Buffer::SetDebugName(const std::string& Name)

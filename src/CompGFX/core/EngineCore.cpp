@@ -7,9 +7,10 @@
 
 static VkBool32 VKAPI_ATTR ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
+static VkBool32 DebugPrintfEXT_Callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData);
 
-EGX_API egx::EngineCore::EngineCore(bool UsingRenderDOC)
-	: Swapchain(nullptr), CoreInterface(new VulkanCoreInterface()), UsingRenderDOC(UsingRenderDOC)
+EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool UsingRenderDOC)
+	: Swapchain(nullptr), CoreInterface(new VulkanCoreInterface()), UsingRenderDOC(UsingRenderDOC), _DebugCallbackHandle(nullptr)
 {
 	glfwInit();
 	std::vector<const char*> layer_extensions;
@@ -44,12 +45,20 @@ EGX_API egx::EngineCore::EngineCore(bool UsingRenderDOC)
 	createInfo.ppEnabledExtensionNames = layer_extensions.data();
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 #ifdef _DEBUG
+	VkValidationFeatureEnableEXT enables[] =
+	{
+		(debugFeatures == EngineCoreDebugFeatures::GPUAssisted) ? VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT : VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT 
+	};
+	VkValidationFeaturesEXT validationFeatures{ VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+	validationFeatures.enabledValidationFeatureCount = 1;
+	validationFeatures.pEnabledValidationFeatures = enables;
+	debugCreateInfo.pNext = &validationFeatures;
 	debugCreateInfo = {};
 	debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 	debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	debugCreateInfo.pfnUserCallback = ApiDebugCallback;
-	createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+	createInfo.pNext = &debugCreateInfo;
 #endif
 
 	vkCreateInstance(&createInfo, NULL, &CoreInterface->Instance);
@@ -61,6 +70,18 @@ EGX_API egx::EngineCore::EngineCore(bool UsingRenderDOC)
 	{
 		LOG(WARNING, "Failed to set up debug messenger!");
 	}
+	// From https://anki3d.org/debugprintf-vulkan/
+	// Populate the VkDebugReportCallbackCreateInfoEXT
+	VkDebugReportCallbackCreateInfoEXT ci = {};
+	ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+	ci.pfnCallback = DebugPrintfEXT_Callback;
+	ci.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+	ci.pUserData = nullptr;
+
+	// Create the callback handle
+	PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(CoreInterface->Instance, "vkCreateDebugReportCallbackEXT");
+	if(createDebugReportCallback)
+		createDebugReportCallback(CoreInterface->Instance, &ci, nullptr, &_DebugCallbackHandle);
 #endif
 
 #if defined(VK_NO_PROTOTYPES)
@@ -72,6 +93,11 @@ EGX_API egx::EngineCore::EngineCore(bool UsingRenderDOC)
 EGX_API egx::EngineCore::~EngineCore()
 {
 	WaitIdle();
+	if (_DebugCallbackHandle)
+	{
+		PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(CoreInterface->Instance, "vkDestroyDebugReportCallbackEXT");
+		DestroyDebugReportCallbackEXT(CoreInterface->Instance, _DebugCallbackHandle, nullptr);
+	}
 	if (Swapchain)
 		delete Swapchain;
 }
@@ -234,6 +260,10 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 		{
 			enabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 		}
+		if (!strcmp(ext.extensionName, VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
+		{
+			enabledExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
+		}
 	}
 #endif
 
@@ -287,6 +317,19 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
 	{
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
+}
+
+static VkBool32 DebugPrintfEXT_Callback(VkDebugReportFlagsEXT flags,
+	VkDebugReportObjectTypeEXT objectType,
+	uint64_t object,
+	size_t location,
+	int32_t messageCode,
+	const char* pLayerPrefix,
+	const char* pMessage,
+	void* pUserData)
+{
+	LOG(INFO, "{0:%s}({1:%d}):{2:%s}", pLayerPrefix, messageCode, pMessage);
+	return false;
 }
 
 ut::Logger* egx::EngineCore::GetEngineLogger()

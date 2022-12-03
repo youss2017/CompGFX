@@ -4,6 +4,8 @@
 #include <random>
 #include <Utility/CppUtility.hpp>
 #include <sstream>
+//#define STB_INCLUDE_IMPLEMENTATION
+//#include <stb/stb_include.h>
 
 #ifdef _DEBUG
 constexpr bool OptimizeShaders = false;
@@ -16,6 +18,7 @@ constexpr shaderc_spirv_version SPIRVCompilationLevel = shaderc_spirv_version_1_
 /* SPIR-V Catalog Format
 	[File Directory]::[identifier]::[Filename Stem]::[Filename Extension]::[Last Accessed Data]
 */
+
 // Format: [identifier].[Shader Filename].[Shader Extension].[SPIRV_EXTENSION]
 constexpr const char* SPIRV_EXTENSION = ".spv";
 constexpr const char* SPIRV_CATALOG = "spirv_caching_catalog.txt";
@@ -72,14 +75,17 @@ namespace egx {
 		shaderc_shader_kind shader_type;
 		if (extension.compare(L".vert") == 0)
 		{
+			ShaderStage = VK_SHADER_STAGE_VERTEX_BIT;
 			shader_type = shaderc_shader_kind::shaderc_glsl_vertex_shader;
 		}
 		else if (extension.compare(L".frag") == 0)
 		{
+			ShaderStage = VK_SHADER_STAGE_FRAGMENT_BIT;
 			shader_type = shaderc_shader_kind::shaderc_glsl_fragment_shader;
 		}
 		else if (extension.compare(L".comp") == 0)
 		{
+			ShaderStage = VK_SHADER_STAGE_COMPUTE_BIT;
 			shader_type = shaderc_shader_kind::shaderc_glsl_compute_shader;
 		}
 		else
@@ -117,18 +123,18 @@ namespace egx {
 		if (!BytecodeLoaded)
 		{
 			auto start = std::chrono::high_resolution_clock::now();
-			auto loadedSource = ut::ReadTextFile(ShaderPath.string());
-			if (loadedSource[0] == 0) {
+			auto loadedSource = ut::ReadAllText(ShaderPath.string());
+			if (!loadedSource.has_value()) {
 				using namespace std;
 				throw std::runtime_error("Could not load shader "s + ShaderPath.string());
 			}
-			m_Source = &loadedSource[1];
+			m_Source = *loadedSource;
 			m_Source = this->ProcessIncludeDirectives(m_Source, m_ShaderDirectory);
 			shaderc::Compiler compiler;
 			shaderc::CompileOptions options;
 			options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
 			options.SetOptimizationLevel(OptimizeShaders ? shaderc_optimization_level_performance : shaderc_optimization_level_zero);
-			options.SetAutoBindUniforms(true);
+
 			options.SetAutoSampledTextures(true);
 			options.SetTargetSpirv(SPIRVCompilationLevel);
 
@@ -138,7 +144,7 @@ namespace egx {
 
 			if (!m_CompileStatus)
 			{
-				LOG(ERR, "{0} --- Failed to compile into SPIR-V.", ShaderPath.string(), spv.GetErrorMessage());
+				LOG(ERR, "{0} --- Failed to compile into SPIR-V.\n{1}", ShaderPath.string(), spv.GetErrorMessage());
 				throw std::runtime_error("SPIR-V Compilation Failed.");
 			}
 			else
@@ -169,8 +175,8 @@ namespace egx {
 					ut::CreateEmptyFile(s_CacheDirectory + "/" + std::string(SPIRV_CATALOG));
 				}
 
-				auto temp = ut::ReadTextFile(s_CacheDirectory + "/" + std::string(SPIRV_CATALOG));
-				std::vector<std::string> old_catalog = ut::Split(&temp[1], "\n");
+				auto temp = ut::ReadAllText(s_CacheDirectory + "/" + std::string(SPIRV_CATALOG));
+				std::vector<std::string> old_catalog = ut::Split(*temp, "\n");
 				std::string new_catalog;
 				// Modify Catalog to store new data
 				bool modified = false;
@@ -370,6 +376,42 @@ namespace egx {
 		m_Source = &ut::ReadTextFile(m_ShaderPath)[1];
 		m_Source = this->ProcessIncludeDirectives(m_Source, m_ShaderDirectory);
 		return m_Source;
+	}
+
+	EGX_API std::string Shader::ReflectionInfo()
+	{
+		std::string info;
+		spirv_cross::Compiler comp(m_Bytecode);
+		auto shaderResources = comp.get_shader_resources();
+		auto extractBufferInfo = [&](const spirv_cross::SmallVector<spirv_cross::Resource>& resources, bool isUniform, bool isDynamic) {
+			for (auto& item : resources)
+			{
+				int setId = comp.get_decoration(item.id, spv::DecorationDescriptorSet);
+				int bindingId = comp.get_decoration(item.id, spv::DecorationBinding);
+				auto& name = comp.get_name(item.id);
+				auto& type = comp.get_type(item.type_id);
+				auto size = comp.get_declared_struct_size(type);
+				ReflectionBinding ref;
+				ref.Name = name;
+				ref.Binding = bindingId;
+				ref.Size = size;
+				ref.DescriptorCount = type.array[0];
+				ref.Uniform = isUniform;
+				ref.Dynamic = isDynamic;
+				Reflection[setId][bindingId] = ref;
+				/*info += ut::Format("{0} {1} {{set={2} binding={3} size={4}}}\n", prefix, item.name, setId, bindingId, size);*/
+			}
+		};
+		//Reflection.insert();
+		// 1) pushconstants
+		shaderResources.push_constant_buffers;
+		// 2) uniforms
+		extractBufferInfo(shaderResources.uniform_buffers, true, true);
+		// 3) buffers
+		extractBufferInfo(shaderResources.storage_buffers, true, true);
+		// 4) textures
+		// 5) input assembly
+		return info;
 	}
 
 	void EGX_API Shader::CompileVulkanSPIRVText(const char* source_code, const char* filename, shaderc_shader_kind shader_type, std::vector<uint32_t>& OutCode, const char* EntryPointFunction)

@@ -18,14 +18,12 @@ namespace egx {
 			*refCount = 1;
 		}
 
-		inline ref<T>(T* base, bool SelfReference) noexcept {
-			this->base = (T*)base;
-			if (!SelfReference) {
-				refCount = new int32_t;
-				*refCount = 1;
-			}
-			else
-				refCount = nullptr;
+		static inline ref<T> SelfReference(T* Self)
+		{
+			ref<T> _s;
+			_s.base = Self;
+			_s.refCount = nullptr;
+			return _s;
 		}
 
 		inline ref<T>() noexcept {

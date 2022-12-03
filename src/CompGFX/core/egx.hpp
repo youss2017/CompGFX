@@ -2,6 +2,7 @@
 #include "memory/egxmemory.hpp"
 #include "pipeline/egxframebuffer.hpp"
 #include "pipeline/egxsampler.hpp"
+#include "pipeline/egxpipeline.hpp"
 #include "shaders/egxshader.hpp"
 #include "shaders/egxshaderset.hpp"
 #include "EngineCore.hpp"

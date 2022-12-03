@@ -12,9 +12,16 @@
 
 namespace egx {
 
+	enum class EngineCoreDebugFeatures
+	{
+		GPUAssisted,
+		DebugPrintfEXT
+	};
+
 	class EngineCore {
 	public:
-		EGX_API EngineCore(bool UsingRenderDOC);
+		// debugFeatures only available in debug mode
+		EGX_API EngineCore(EngineCoreDebugFeatures debugFeatures, bool UsingRenderDOC);
 		EGX_API ~EngineCore();
 		EGX_API EngineCore(EngineCore& cp) = delete;
 		EGX_API EngineCore(EngineCore&& cp) = delete;
@@ -33,33 +40,8 @@ namespace egx {
 		void EGX_API EstablishDevice(const Device& Device);
 
 		inline ref<VulkanCoreInterface> GetCoreInterface() noexcept { return CoreInterface; }
+				EGX_API ut::Logger* GetEngineLogger();
 
-		static EngineCore* CreateDefaultEngine(const std::string& title, uint32_t width, uint32_t height, bool VSync, bool SetupImGui, bool UsingRenderDOC, uint32_t MaxFramesInFlight = 2) {
-			ref<PlatformWindow> window = new PlatformWindow(title, width, height);
-			EngineCore* core = new EngineCore(UsingRenderDOC);
-			core->_window = window;
-			auto deviceList = core->EnumerateDevices();
-			if (deviceList.size() == 0) {
-				delete core;
-				return nullptr;
-			}
-			auto& device = deviceList[0];
-			int score = 0;
-			for (auto& d : deviceList) {
-				int s = d.IsDedicated ? 1000 : 0;
-				s += d.VideoRam > device.VideoRam ? 1000 : 0;
-				if (s > score)
-					device = d;
-			}
-			core->EstablishDevice(device);
-			core->AssociateWindow(window(), MaxFramesInFlight, VSync, SetupImGui);
-			return core;
-		}
-
-		EGX_API ut::Logger* GetEngineLogger();
-
-		// Default Window created by CreateDefaultEngine()
-		inline ref<PlatformWindow> GetDefaultWindow() { return _window; }
 		inline void WaitIdle() const { vkDeviceWaitIdle(CoreInterface->Device); }
 
 		inline void SetImGuiContext() const {
@@ -74,7 +56,7 @@ namespace egx {
 		VulkanSwapchain* Swapchain = nullptr;
 		ref<VulkanCoreInterface> CoreInterface;
 	private:
-		ref<PlatformWindow> _window;
+		VkDebugReportCallbackEXT _DebugCallbackHandle;
 	};
 
 }

@@ -192,10 +192,12 @@ namespace egx
 			Sets[SetId]->_set_binding_to_dynamic_offset[BindingId] = Offset;
 		}
 
-		inline void bind(VkCommandBuffer cmd, VkPipelineBindPoint BindPoint)
+		inline void Bind(VkCommandBuffer cmd, VkPipelineBindPoint BindPoint)
 		{
-			StructureDataForBinding();
-			vkCmdBindDescriptorSets(cmd, BindPoint, GetLayout(), 0, (uint32_t)_sets.size(), _sets.data(), (uint32_t)_dynamic_offsets.size(), _dynamic_offsets.data());
+			if (_sets.size() > 0) {
+				StructureDataForBinding();
+				vkCmdBindDescriptorSets(cmd, BindPoint, GetLayout(), 0, (uint32_t)_sets.size(), _sets.data(), (uint32_t)_dynamic_offsets.size(), _dynamic_offsets.data());
+			}
 		}
 
 	protected:

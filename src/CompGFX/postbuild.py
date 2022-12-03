@@ -3,7 +3,7 @@ import os
 import shutil
 from pathlib import Path
 
-#extenions example '*.bmp'
+# extenions example '*.bmp'
 # copies files based on extension and recreates folder structure inside destination
 def copy(src, dest, ext):
     for file_path in glob.glob(os.path.join(src, '**', ext), recursive=True):
@@ -15,11 +15,14 @@ def copy(src, dest, ext):
         print("{0} --> {1}".format(file_path, new_path))
         shutil.copy(file_path, new_path)
 
+print('Remove Old EGX Folder')
+shutil.rmtree("../../include/egx/")
+
 print('Copying header files')
-source_path = ".{0}EgxEngine{1}".format(os.sep, os.sep)
-target_path =  "..{0}include{1}egx{2}".format(os.sep, os.sep, os.sep)
+source_path = "./"
+target_path =  "../../include/egx/"
 copy(source_path, target_path, '*.h')
 copy(source_path, target_path, '*.hpp')
 print('Copying library files')
-copy("../bin/EgxEngine/Debug-x86_64/", "../library/Debug/", "*.*")
-copy("../bin/EgxEngine/Release-x86_64/", "../library/Release/", "*.*")
+copy("../../bin/CompGFX/Debug-x86_64/", "../../library/Debug/", "*.*")
+copy("../../bin/CompGFX/Release-x86_64/", "../../library/Release/", "*.*")

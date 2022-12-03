@@ -67,7 +67,7 @@ namespace egx {
 		ref<Semaphore> _acquire_lock;
 		ref<Semaphore> _image_blit_lock;
 		uint32_t _image_index = 0;
-		bool _resize_swapchain_flag = false;
+		bool _recreate_swapchain_flag = false;
 		
 		Shader _builtin_vertex;
 		Shader _builtin_fragment;

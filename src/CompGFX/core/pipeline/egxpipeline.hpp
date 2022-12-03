@@ -8,13 +8,13 @@
 
 namespace egx {
 
-	class egxvertexdescription {
+	class InputAssemblyDescription {
 
 	public:
-		egxvertexdescription(bool IsAligned = true) : IsAligned(IsAligned) {};
-		egxvertexdescription(egxvertexdescription& copy) = default;
-		egxvertexdescription(egxvertexdescription&& move) = default;
-		egxvertexdescription& operator=(egxvertexdescription&& move) = default;
+		InputAssemblyDescription(bool IsAligned = true) : IsAligned(IsAligned) {};
+		InputAssemblyDescription(InputAssemblyDescription& copy) = default;
+		InputAssemblyDescription(InputAssemblyDescription&& move) = default;
+		InputAssemblyDescription& operator=(InputAssemblyDescription&& move) = default;
 
 		inline void AddAttribute(
 			uint32_t BindingId, uint32_t Location,
@@ -116,12 +116,18 @@ namespace egx {
 			const Shader& fragment,
 			const ref<Framebuffer>& framebuffer,
 			const uint32_t PassId,
-			const egxvertexdescription& vertexDescription);
+			const InputAssemblyDescription& vertexDescription);
 
 		void EGX_API invalidate(const ref<PipelineLayout>& layout, const Shader& compute);
 
 		inline void Bind(VkCommandBuffer cmd) const {
 			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipe);
+		}
+
+		inline void Bind(VkCommandBuffer cmd, const ref<PipelineLayout> Layout) const
+		{
+			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipe);
+			Layout->Bind(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE);
 		}
 
 		inline VkPipeline operator()() const { return Pipe; }

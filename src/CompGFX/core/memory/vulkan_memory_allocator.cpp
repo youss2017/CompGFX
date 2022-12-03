@@ -1,6 +1,4 @@
-#define NOMINMAX
 #include "vulkan_memory_allocator.hpp"
-#define VMA_DEBUG_LOG
 #include <vma/vk_mem_alloc.h>
 #include "../vulkinc.hpp"
 #include <functional>

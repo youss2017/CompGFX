@@ -219,9 +219,11 @@ egx::VulkanSwapchain::~VulkanSwapchain()
 
 void egx::VulkanSwapchain::Acquire()
 {
-	if (_resize_swapchain_flag) {
-		Resize();
-		_resize_swapchain_flag = false;
+	if (_recreate_swapchain_flag) {
+		vkDeviceWaitIdle(_core->Device);
+		CreateSwapchain(_width, _height);
+		CreatePipeline();
+		_recreate_swapchain_flag = false;
 	}
 	VkResult result = vkAcquireNextImageKHR(_core->Device,
 		Swapchain,
@@ -231,7 +233,7 @@ void egx::VulkanSwapchain::Acquire()
 		&_image_index);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 	{
-		_resize_swapchain_flag = true;
+		_recreate_swapchain_flag = true;
 	}
 	if (_imgui)
 	{
@@ -361,16 +363,14 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 void egx::VulkanSwapchain::SetSyncInterval(bool VSync)
 {
 	_vsync = VSync;
-	CreateSwapchain(_width, _height);
+	_recreate_swapchain_flag = true;
 }
 
 void egx::VulkanSwapchain::Resize(int width, int height)
 {
 	if (width == 0 || height == 0)
 		return;
-	vkDeviceWaitIdle(_core->Device);
-	CreateSwapchain(_width, _height);
-	CreatePipeline();
+	_recreate_swapchain_flag = true;
 }
 
 void egx::VulkanSwapchain::Resize()
@@ -430,7 +430,7 @@ VkPresentModeKHR egx::VulkanSwapchain::GetPresentMode()
 
 void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 {
-	vkQueueWaitIdle(_core->Queue);
+	vkDeviceWaitIdle(_core->Device);
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_core->PhysicalDevice.Id, Surface, &_capabilities);
 	VkSurfaceFormatKHR surfaceFormat = GetSurfaceFormat();
 	_width = width;
@@ -444,7 +444,8 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 	VkExtent2D swapchainSize =
 	{
 		std::clamp<uint32_t>(width, _capabilities.minImageExtent.width, _capabilities.maxImageExtent.width),
-		std::clamp<uint32_t>(height, _capabilities.minImageExtent.height, _capabilities.maxImageExtent.height) };
+		std::clamp<uint32_t>(height, _capabilities.minImageExtent.height, _capabilities.maxImageExtent.height)
+	};
 	_width = swapchainSize.width;
 	_height = swapchainSize.height;
 

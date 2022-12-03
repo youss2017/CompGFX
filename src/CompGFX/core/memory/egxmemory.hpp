@@ -41,14 +41,14 @@ namespace egx {
 		EGX_API Buffer(Buffer&& move) noexcept;
 		EGX_API Buffer& operator=(Buffer&& move) noexcept;
 
-		EGX_API ref<Buffer> Clone();
+		EGX_API ref<Buffer> Clone(bool CopyContents = true);
 		EGX_API void Copy(const ref<Buffer>& source, size_t offset, size_t size);
 		// Copies including other frame data
 		EGX_API void CopyAll(const ref<Buffer>& source, size_t offset, size_t size);
 
-		EGX_API void Write(void* data, size_t offset, size_t size);
-		EGX_API void Write(void* data, size_t size);
-		EGX_API void Write(void* data);
+		EGX_API void Write(void* data, size_t offset, size_t size, bool keepMapped = false);
+		EGX_API void Write(void* data, size_t size, bool keepMapped = false);
+		EGX_API void Write(void* data, bool keepMapped = false);
 
 		// [WARNING]! 
 		// If you are using CPUAccessFlag then every frame you must call this function
@@ -67,8 +67,10 @@ namespace egx {
 		EGX_API void Invalidate(size_t offset, size_t size);
 		EGX_API void SetDebugName(const std::string& Name);
 
-		EGX_API const VkBuffer& GetBuffer() const;
-		EGX_API std::vector<size_t> GetBufferBasePointer() const;
+		EGX_API const VkBuffer& GetBuffer();
+		EGX_API std::vector<size_t> GetBufferBasePointer();
+
+		EGX_API void Resize(size_t newSize, bool CopyOldContents = false);
 
 	protected:
 		EGX_API Buffer(
@@ -90,7 +92,7 @@ namespace egx {
 		}
 
 	public:
-		const size_t Size;
+		size_t Size;
 		const memorylayout Layout;
 		const uint32_t Type;
 		const bool CoherentFlag;
@@ -102,6 +104,9 @@ namespace egx {
 		std::vector<VkAlloc::BUFFER> _buffers;
 		std::vector<int8_t*> _mapped_ptr;
 		bool _mapped_flag = false;
+		uint32_t _ResizeFlag = 0;
+		bool _ResizeCopyOldContents = false;
+		size_t _ResizeBytes = 0;
 	};
 #pragma endregion GPU Buffer
 
