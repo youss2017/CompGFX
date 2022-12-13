@@ -3,7 +3,7 @@
 
 namespace egx
 {
-    using namespace ut;
+    using namespace cpp;
 
     Fence::Fence(const ref<VulkanCoreInterface> &CoreInterface, bool CreateSignaled)
     {

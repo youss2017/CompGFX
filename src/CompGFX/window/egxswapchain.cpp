@@ -8,7 +8,6 @@
 #include <imgui/imgui.h>
 #include <Utility/CppUtility.hpp>
 #include "../cmd/cmd.hpp"
-#include "../core/shaders/egxshader.hpp"
 
 static const char* builtin_vertex_shader = R"(
 	#version 450
@@ -48,38 +47,34 @@ static const char* builtin_fragment_shader = R"(
 using namespace egx;
 
 egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, void* GlfwWindowPtr, bool VSync, bool SetupImGui)
-	: _core(CoreInterface), GlfwWindowPtr(GlfwWindowPtr), _vsync(VSync), _imgui(SetupImGui), Synchronization(CoreInterface)
+	: GlfwWindowPtr(GlfwWindowPtr), _vsync(VSync), _imgui(SetupImGui), ISynchronization(CoreInterface, "VulkanSwapchain")
 {
 	VkBool32 Supported{};
-	glfwCreateWindowSurface(_core->Instance, (GLFWwindow*)GlfwWindowPtr, nullptr, &Surface);
+	glfwCreateWindowSurface(_CoreInterface->Instance, (GLFWwindow*)GlfwWindowPtr, nullptr, &Surface);
 	vkGetPhysicalDeviceSurfaceSupportKHR(CoreInterface->PhysicalDevice.Id, CoreInterface->QueueFamilyIndex, Surface, &Supported);
 	if (!Supported)
 	{
-		vkDestroySurfaceKHR(_core->Instance, Surface, nullptr);
+		vkDestroySurfaceKHR(_CoreInterface->Instance, Surface, nullptr);
 		throw std::runtime_error("The provided window does not support swapchain presentation. Look up vkGetPhysicalDeviceSurfaceSupportKHR()");
 	}
 	uint32_t surfaceCount, presentationModeCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(_core->PhysicalDevice.Id, Surface, &surfaceCount, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(_CoreInterface->PhysicalDevice.Id, Surface, &surfaceCount, nullptr);
 	_surfaceFormats.resize(surfaceCount);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(_core->PhysicalDevice.Id, Surface, &surfaceCount, _surfaceFormats.data());
-	vkGetPhysicalDeviceSurfacePresentModesKHR(_core->PhysicalDevice.Id, Surface, &presentationModeCount, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(_CoreInterface->PhysicalDevice.Id, Surface, &surfaceCount, _surfaceFormats.data());
+	vkGetPhysicalDeviceSurfacePresentModesKHR(_CoreInterface->PhysicalDevice.Id, Surface, &presentationModeCount, nullptr);
 	_presentationModes.resize(presentationModeCount);
-	vkGetPhysicalDeviceSurfacePresentModesKHR(_core->PhysicalDevice.Id, Surface, &presentationModeCount, _presentationModes.data());
+	vkGetPhysicalDeviceSurfacePresentModesKHR(_CoreInterface->PhysicalDevice.Id, Surface, &presentationModeCount, _presentationModes.data());
 
 	glfwGetFramebufferSize((GLFWwindow*)GlfwWindowPtr, &_width, &_height);
 
-	_pool = CreateCommandPool(_core, true, false, true, false);
+	_pool = CreateCommandPool(_CoreInterface, true, false, true, false);
 	_cmd = _pool->AllocateBufferFrameFlightMode(true);
-	_cmd_lock = Fence::FactoryCreate(_core, true);
+	GetOrCreateCompletionFence();
 
-	_acquire_lock = Semaphore::FactoryCreate(CoreInterface, "AcqureNextImageLock");
-	_image_blit_lock = Semaphore::FactoryCreate(CoreInterface, "InternalBlitLock");
-
-	SyncObjAddClientWaitSemaphore(_acquire_lock);
+	_acquire_lock = Semaphore::FactoryCreate(CoreInterface, "AcquireNextImageLock");
 
 	_descriptor_set_pool = SetPool::FactoryCreate(CoreInterface);
 	SetPoolRequirementsInfo req;
-	req.SetCount = 1000;
 	req.Type[VK_DESCRIPTOR_TYPE_SAMPLER] = 1000;
 	req.Type[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] = 1000;
 	req.Type[VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE] = 1000;
@@ -92,6 +87,7 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 	req.Type[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC] = 1000;
 	req.Type[VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT] = 1000;
 	_descriptor_set_pool->AdjustForRequirements(req);
+	_descriptor_set_pool->IncrementSetCount(1000);
 
 	CreateRenderPass();
 	CreateSwapchain(_width, _height);
@@ -139,8 +135,8 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 		init_info.PipelineCache = NULL;
 		init_info.DescriptorPool = _descriptor_set_pool->GetSetPool();
 		init_info.Allocator = NULL;
-		init_info.MinImageCount = this->_core->MaxFramesInFlight;
-		init_info.ImageCount = this->_core->MaxFramesInFlight;
+		init_info.MinImageCount = this->_CoreInterface->MaxFramesInFlight;
+		init_info.ImageCount = this->_CoreInterface->MaxFramesInFlight;
 		init_info.CheckVkResultFn = NULL;
 		ImGui_ImplVulkan_Init(&init_info, RenderPass);
 		// ImFont* fftt = io.Fonts->AddFontFromFileTTF("assets/fonts/CascadiaCodePL-SemiBold.ttf", 14.5f);
@@ -181,7 +177,7 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 }
 
 egx::VulkanSwapchain::VulkanSwapchain(VulkanSwapchain&& other) noexcept
-	: Synchronization(std::move(other))
+	: ISynchronization(std::move(other))
 {
 	memcpy(this, &other, sizeof(VulkanSwapchain));
 	memset(&other, 0, sizeof(VulkanCoreInterface));
@@ -205,27 +201,53 @@ egx::VulkanSwapchain::~VulkanSwapchain()
 		ImGui::DestroyContext();
 	}
 	if (RenderPass)
-		vkDestroyRenderPass(_core->Device, RenderPass, nullptr);
+		vkDestroyRenderPass(_CoreInterface->Device, RenderPass, nullptr);
 	if (Swapchain)
-		vkDestroySwapchainKHR(_core->Device, Swapchain, nullptr);
+		vkDestroySwapchainKHR(_CoreInterface->Device, Swapchain, nullptr);
 	if (Surface)
-		vkDestroySurfaceKHR(_core->Instance, Surface, nullptr);
+		vkDestroySurfaceKHR(_CoreInterface->Instance, Surface, nullptr);
 	for (auto view : Views)
-		vkDestroyImageView(_core->Device, view, nullptr);
+		vkDestroyImageView(_CoreInterface->Device, view, nullptr);
 	for (auto fbo : _framebuffers)
-		vkDestroyFramebuffer(_core->Device, fbo, nullptr);
-	_cmd_lock->SynchronizeAllFrames();
+		vkDestroyFramebuffer(_CoreInterface->Device, fbo, nullptr);
+	if (_blit_layout)
+		vkDestroyPipelineLayout(_CoreInterface->Device, _blit_layout, nullptr);
+	if (_descriptor_layout)
+		vkDestroyDescriptorSetLayout(_CoreInterface->Device, _descriptor_layout, nullptr);
+	if (_blit_gfx)
+		vkDestroyPipeline(_CoreInterface->Device, _blit_gfx, nullptr);
+	GetOrCreateCompletionFence()->SynchronizeAllFrames();
 }
 
 void egx::VulkanSwapchain::Acquire()
 {
 	if (_recreate_swapchain_flag) {
-		vkDeviceWaitIdle(_core->Device);
-		CreateSwapchain(_width, _height);
-		CreatePipeline();
-		_recreate_swapchain_flag = false;
+		int w, h;
+		glfwGetFramebufferSize((GLFWwindow*)GlfwWindowPtr, &w, &h);
+		if (w > 0 && h > 0 && (w != _width || h != _height)) {
+			vkDeviceWaitIdle(_CoreInterface->Device);
+			CreateSwapchain(_width, _height);
+			CreatePipeline();
+			_recreate_swapchain_flag = false;
+			CommandBufferSingleUse cmd(_CoreInterface);
+			for (uint32_t i = 0; i < Imgs.size(); i++) {
+				VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+				barrier.srcAccessMask = VK_ACCESS_NONE;
+				barrier.dstAccessMask = VK_ACCESS_NONE;
+				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.image = Imgs[i];
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrier.subresourceRange.layerCount = 1;
+				barrier.subresourceRange.levelCount = 1;
+				vkCmdPipelineBarrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, 0, 0, 0, 0, 0, 1, &barrier);
+			}
+			cmd.Execute();
+		}
 	}
-	VkResult result = vkAcquireNextImageKHR(_core->Device,
+	VkResult result = vkAcquireNextImageKHR(_CoreInterface->Device,
 		Swapchain,
 		UINT64_MAX,
 		_acquire_lock->GetSemaphore(),
@@ -245,17 +267,15 @@ void egx::VulkanSwapchain::Acquire()
 
 uint32_t egx::VulkanSwapchain::PresentInit()
 {
-	auto poollock = _cmd_lock->GetFence();
-	vkWaitForFences(_core->Device, 1, &poollock, VK_TRUE, UINT64_MAX);
-	vkResetFences(_core->Device, 1, &poollock);
-	return _core->CurrentFrame;
+	WaitAndReset();
+	return _CoreInterface->CurrentFrame;
 }
 
 void egx::VulkanSwapchain::Present(const ref<Image>& image, uint32_t viewIndex)
 {
 	uint32_t frame = PresentInit();
 
-	if (image->Img != _last_updated_image[frame])
+	if (image->Image_ != _last_updated_image[frame])
 	{
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.sampler = _image_sampler->GetSampler();
@@ -268,12 +288,12 @@ void egx::VulkanSwapchain::Present(const ref<Image>& image, uint32_t viewIndex)
 		write.descriptorCount = 1;
 		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write.pImageInfo = &imageInfo;
-		vkUpdateDescriptorSets(_core->Device, 1, &write, 0, nullptr);
-		_last_updated_image[frame] = image->Img;
+		vkUpdateDescriptorSets(_CoreInterface->Device, 1, &write, 0, nullptr);
+		_last_updated_image[frame] = image->Image_;
 	}
 
 	CommandBuffer::StartCommandBuffer(_cmd[frame], 0);
-	DInsertDebugLabel(_core, _cmd[frame], frame, "Swapchain Present", 0.5f, 0.4f, 0.65f);
+	DInsertDebugLabel(_CoreInterface, _cmd[frame], frame, "Swapchain Present", 0.5f, 0.4f, 0.65f);
 
 	VkClearValue clear{};
 	VkRenderPassBeginInfo beginInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
@@ -296,7 +316,7 @@ void egx::VulkanSwapchain::Present(const ref<Image>& image, uint32_t viewIndex)
 
 	vkEndCommandBuffer(_cmd[frame]);
 
-	DEndDebugLabel(_core, _cmd[frame]);
+	DEndDebugLabel(_CoreInterface, _cmd[frame]);
 
 	PresentCommon(frame, false);
 }
@@ -341,13 +361,9 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 		}
 	}
 
-	VkSemaphore blitLock = _image_blit_lock->GetSemaphore();
+	VkSemaphore blitLock = GetOrCreateCompletionSemaphore()->GetSemaphore();
 	
-	CommandBuffer::Submit(_core, { _cmd[frame] },
-		GetWaitSemaphores(),
-		_WaitStageFlags,
-		{ blitLock },
-		_cmd_lock->GetFence());
+	Submit(_cmd[frame]);
 
 	VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 	presentInfo.waitSemaphoreCount = 1;
@@ -355,9 +371,9 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &Swapchain;
 	presentInfo.pImageIndices = &_image_index;
-	vkQueuePresentKHR(_core->Queue, &presentInfo);
+	vkQueuePresentKHR(_CoreInterface->Queue, &presentInfo);
 
-	_core->CurrentFrame = (_core->CurrentFrame + 1u) % _core->MaxFramesInFlight;
+	_CoreInterface->CurrentFrame = (_CoreInterface->CurrentFrame + 1u) % _CoreInterface->MaxFramesInFlight;
 }
 
 void egx::VulkanSwapchain::SetSyncInterval(bool VSync)
@@ -430,16 +446,16 @@ VkPresentModeKHR egx::VulkanSwapchain::GetPresentMode()
 
 void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 {
-	vkDeviceWaitIdle(_core->Device);
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_core->PhysicalDevice.Id, Surface, &_capabilities);
+	vkDeviceWaitIdle(_CoreInterface->Device);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_CoreInterface->PhysicalDevice.Id, Surface, &_capabilities);
 	VkSurfaceFormatKHR surfaceFormat = GetSurfaceFormat();
 	_width = width;
 	_height = height;
 
 	for (auto view : Views)
-		vkDestroyImageView(_core->Device, view, nullptr);
+		vkDestroyImageView(_CoreInterface->Device, view, nullptr);
 	for (auto fbo : _framebuffers)
-		vkDestroyFramebuffer(_core->Device, fbo, nullptr);
+		vkDestroyFramebuffer(_CoreInterface->Device, fbo, nullptr);
 
 	VkExtent2D swapchainSize =
 	{
@@ -449,12 +465,12 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 	_width = swapchainSize.width;
 	_height = swapchainSize.height;
 
-	_core->MaxFramesInFlight = std::max<uint32_t>(_core->MaxFramesInFlight, _capabilities.minImageCount);
+	_CoreInterface->MaxFramesInFlight = std::max<uint32_t>(_CoreInterface->MaxFramesInFlight, _capabilities.minImageCount);
 
 	VkSwapchainKHR oldSwapchain = Swapchain;
 	VkSwapchainCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
 	createInfo.surface = Surface;
-	createInfo.minImageCount = _core->MaxFramesInFlight;
+	createInfo.minImageCount = _CoreInterface->MaxFramesInFlight;
 	createInfo.imageFormat = surfaceFormat.format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
 	createInfo.imageExtent = swapchainSize;
@@ -462,22 +478,22 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	createInfo.queueFamilyIndexCount = 1;
-	createInfo.pQueueFamilyIndices = &_core->QueueFamilyIndex;
+	createInfo.pQueueFamilyIndices = &_CoreInterface->QueueFamilyIndex;
 	createInfo.preTransform = _capabilities.currentTransform; // VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR /* VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR */;
 	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	createInfo.presentMode = GetPresentMode();
 	createInfo.clipped = VK_TRUE;
 	createInfo.oldSwapchain = oldSwapchain;
-	if (vkCreateSwapchainKHR(_core->Device, &createInfo, nullptr, &Swapchain) != VK_SUCCESS)
+	if (vkCreateSwapchainKHR(_CoreInterface->Device, &createInfo, nullptr, &Swapchain) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Swapchain creation failed.");
 	}
 	if (oldSwapchain)
-		vkDestroySwapchainKHR(_core->Device, oldSwapchain, nullptr);
+		vkDestroySwapchainKHR(_CoreInterface->Device, oldSwapchain, nullptr);
 	uint32_t count;
-	vkGetSwapchainImagesKHR(_core->Device, Swapchain, &count, nullptr);
+	vkGetSwapchainImagesKHR(_CoreInterface->Device, Swapchain, &count, nullptr);
 	Imgs.resize(count);
-	vkGetSwapchainImagesKHR(_core->Device, Swapchain, &count, Imgs.data());
+	vkGetSwapchainImagesKHR(_CoreInterface->Device, Swapchain, &count, Imgs.data());
 	Views.resize(count);
 	_framebuffers.resize(Views.size());
 
@@ -498,7 +514,7 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 		VkImageView view;
-		vkCreateImageView(_core->Device, &createInfo, nullptr, &view);
+		vkCreateImageView(_CoreInterface->Device, &createInfo, nullptr, &view);
 		Views[i] = view;
 	}
 	for (int i = 0; i < Views.size(); i++)
@@ -511,7 +527,7 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 		framebufferCreateInfo.width = _width;
 		framebufferCreateInfo.height = _height;
 		framebufferCreateInfo.layers = 1;
-		vkCreateFramebuffer(_core->Device, &framebufferCreateInfo, nullptr, &_framebuffers[i]);
+		vkCreateFramebuffer(_CoreInterface->Device, &framebufferCreateInfo, nullptr, &_framebuffers[i]);
 	}
 }
 
@@ -552,12 +568,12 @@ void egx::VulkanSwapchain::CreateRenderPass()
 	passCreateInfo.pSubpasses = &subpass;
 	passCreateInfo.dependencyCount = 1;
 	passCreateInfo.pDependencies = viewportsEnabled ? &dependency : nullptr;
-	vkCreateRenderPass(_core->Device, &passCreateInfo, nullptr, &RenderPass);
+	vkCreateRenderPass(_CoreInterface->Device, &passCreateInfo, nullptr, &RenderPass);
 }
 
 void VulkanSwapchain::CreatePipelineObjects()
 {
-	_image_sampler = Sampler::FactoryCreate(_core);
+	_image_sampler = Sampler::FactoryCreate(_CoreInterface);
 	{
 		VkDescriptorSetLayoutBinding binding{};
 		binding.binding = 0;
@@ -567,7 +583,7 @@ void VulkanSwapchain::CreatePipelineObjects()
 		VkDescriptorSetLayoutCreateInfo createInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 		createInfo.bindingCount = 1;
 		createInfo.pBindings = &binding;
-		vkCreateDescriptorSetLayout(_core->Device, &createInfo, nullptr, &_descriptor_layout);
+		vkCreateDescriptorSetLayout(_CoreInterface->Device, &createInfo, nullptr, &_descriptor_layout);
 	}
 	{
 		VkDescriptorSetAllocateInfo allocateInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
@@ -576,34 +592,34 @@ void VulkanSwapchain::CreatePipelineObjects()
 		allocateInfo.pSetLayouts = &_descriptor_layout;
 		_descriptor_set.resize(_framebuffers.size());
 		for (size_t i = 0; i < _descriptor_set.size(); i++)
-			vkAllocateDescriptorSets(_core->Device, &allocateInfo, &_descriptor_set[i]);
+			vkAllocateDescriptorSets(_CoreInterface->Device, &allocateInfo, &_descriptor_set[i]);
 		_last_updated_image.resize(_framebuffers.size(), nullptr);
 	}
 	{
 		VkPipelineLayoutCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 		createInfo.setLayoutCount = 1;
 		createInfo.pSetLayouts = &_descriptor_layout;
-		vkCreatePipelineLayout(_core->Device, &createInfo, nullptr, &_blit_layout);
+		vkCreatePipelineLayout(_CoreInterface->Device, &createInfo, nullptr, &_blit_layout);
 	}
-	_builtin_vertex = Shader::CreateFromSource(_core, builtin_vertex_shader, shaderc_vertex_shader);
-	_builtin_fragment = Shader::CreateFromSource(_core, builtin_fragment_shader, shaderc_fragment_shader);
+	_builtin_vertex = Shader2::FactoryCreateEx(_CoreInterface, builtin_vertex_shader, VK_SHADER_STAGE_VERTEX_BIT, egx::BindingAttributes::Default, "_builting_vertex(swapchain)");
+	_builtin_fragment = Shader2::FactoryCreateEx(_CoreInterface, builtin_fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT, egx::BindingAttributes::Default, "_builting_fragment(swapchain)");
 }
 
 void VulkanSwapchain::CreatePipeline()
 {
 	if (_blit_gfx)
-		vkDestroyPipeline(_core->Device, _blit_gfx, nullptr);
+		vkDestroyPipeline(_CoreInterface->Device, _blit_gfx, nullptr);
 	VkGraphicsPipelineCreateInfo createInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 	createInfo.stageCount = 2;
 	VkPipelineShaderStageCreateInfo stages[2]{};
 	stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	stages[0].module = _builtin_vertex.GetShader();
+	stages[0].module = _builtin_vertex->ShaderModule;
 	stages[0].pName = "main";
 
 	stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	stages[1].module = _builtin_fragment.GetShader();
+	stages[1].module = _builtin_fragment->ShaderModule;
 	stages[1].pName = "main";
 	createInfo.pStages = stages;
 
@@ -656,9 +672,9 @@ void VulkanSwapchain::CreatePipeline()
 	createInfo.pDynamicState = nullptr;
 	createInfo.layout = _blit_layout;
 	createInfo.renderPass = RenderPass;
-	VkResult result = vkCreateGraphicsPipelines(_core->Device, nullptr, 1, &createInfo, nullptr, &_blit_gfx);
+	VkResult result = vkCreateGraphicsPipelines(_CoreInterface->Device, nullptr, 1, &createInfo, nullptr, &_blit_gfx);
 	if (result != VK_SUCCESS) {
 		LOG(ERR, "Fatal! Could not create swapchain pipeline!");
-		ut::DebugBreak();
+		cpp::DebugBreak();
 	}
 }

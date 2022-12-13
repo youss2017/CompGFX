@@ -33,24 +33,25 @@ namespace egx {
 		/// <summary>
 		/// Creates swapchain for window and initalizes ImGui
 		/// </summary>
-		void EGX_API AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui);
+		inline void AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui)
+		{
+			_AssociateWindow(Window, MaxFramesInFlight, VSync, SetupImGui);
+			ImGui::SetCurrentContext(GetContext());
+		}
 
 		std::vector<Device> EGX_API EnumerateDevices();
 
 		void EGX_API EstablishDevice(const Device& Device);
 
 		inline ref<VulkanCoreInterface> GetCoreInterface() noexcept { return CoreInterface; }
-				EGX_API ut::Logger* GetEngineLogger();
+				EGX_API cpp::Logger* GetEngineLogger();
 
 		inline void WaitIdle() const { vkDeviceWaitIdle(CoreInterface->Device); }
-
-		inline void SetImGuiContext() const {
-			ImGui::SetCurrentContext(GetContext());
-		}
 
 	private:
 		const bool UsingRenderDOC;
 		EGX_API ImGuiContext* GetContext() const;
+		void EGX_API _AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui);
 
 	public:
 		VulkanSwapchain* Swapchain = nullptr;

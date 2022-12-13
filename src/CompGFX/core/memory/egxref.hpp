@@ -95,7 +95,7 @@ namespace egx {
 			}
 		}
 
-		inline bool IsValidRef() const noexcept { return (base != nullptr) && (*refCount > 0); }
+		inline bool IsValidRef() const noexcept { return (base != nullptr) && refCount && (*refCount > 0); }
 
 		inline int32_t RefCount() const noexcept { return *refCount; }
 		inline int32_t AddRef() noexcept { *refCount += 1; return *refCount; }

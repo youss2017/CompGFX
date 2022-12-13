@@ -21,6 +21,8 @@ namespace egx
 
         EGX_API const VkCommandBuffer GetBuffer();
         EGX_API const VkCommandBuffer &GetReadonlyBuffer() const;
+        EGX_API void Submit(VkFence fence);
+        EGX_API void Submit(const ref<Fence> fence);
         EGX_API void Finalize();
 
         EGX_API static ref<CommandBuffer> CreateSingleBuffer(const ref<VulkanCoreInterface> &CoreInterface);
@@ -57,6 +59,8 @@ namespace egx
                                    VkFence SignalFence,
                                    bool Block = false);
 
+        EGX_API static std::vector<VkSemaphore> GetNativeSemaphoreList(const std::vector<ref<Semaphore>>& semaphores);
+
         EGX_API static void StartCommandBuffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage);
 
         CommandBuffer(CommandBuffer &) = delete;
@@ -69,6 +73,7 @@ namespace egx
         std::vector<VkCommandBuffer> _cmd;
         std::vector<bool> _cmd_static_init;
         uint32_t _last_frame = UINT32_MAX;
+        VkQueue _Queue;
     };
 
     class CommandBufferSingleUse

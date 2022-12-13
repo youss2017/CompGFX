@@ -104,7 +104,7 @@ namespace VkAlloc
 			VkResult result = vmaCreateBuffer(context->m_allocator, &createInfo, &vmaCreateInfo, &buffer->m_buffer, &buffer->m_suballocation.m_allocation, &buffer->m_suballocation.m_allocation_info);
 			if (result != VK_SUCCESS) {
 				LOG(ERR, "VMA Failed.");
-				ut::DebugBreak();
+				cpp::DebugBreak();
 				delete buffer;
 				return result;
 			}
@@ -207,6 +207,7 @@ namespace VkAlloc
 		for (uint32_t i = 0; i < count; i++)
 		{
 			BUFFER buffer = pBuffers[i];
+			if (buffer == nullptr) continue;
 			vmaDestroyBuffer(context->m_allocator, buffer->m_buffer, buffer->m_suballocation.m_allocation);
 			delete buffer;
 		}
@@ -218,6 +219,7 @@ namespace VkAlloc
 		for (uint32_t i = 0; i < count; i++)
 		{
 			IMAGE image = pImages[i];
+			if (image == nullptr) continue;
 			vmaDestroyImage(context->m_allocator, image->m_image, image->m_suballocation.m_allocation);
 			delete image;
 		}

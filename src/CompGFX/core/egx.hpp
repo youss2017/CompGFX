@@ -6,6 +6,7 @@
 #include "shaders/egxshader.hpp"
 #include "shaders/egxshaderset.hpp"
 #include "EngineCore.hpp"
+#include "../cmd/cmd.hpp"
 
 template<typename T>
 using Ref = egx::ref<T>;

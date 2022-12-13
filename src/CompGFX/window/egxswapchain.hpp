@@ -6,11 +6,11 @@
 #include "../core/pipeline/egxsampler.hpp"
 #include "../core/pipeline/egxframebuffer.hpp"
 #include "../core/shaders/egxshaderset.hpp"
-#include "../core/shaders/egxshader.hpp"
+#include "../core/shaders/egxshader2.hpp"
 
 namespace egx {
 
-	class VulkanSwapchain : public Synchronization {
+	class VulkanSwapchain : public ISynchronization {
 	public:
 		EGX_API VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, void* GlfwWindowPtr, bool VSync, bool SetupImGui);
 		VulkanSwapchain(VulkanSwapchain& copy) = delete;
@@ -45,13 +45,8 @@ namespace egx {
 
 	public:
 		VkSwapchainKHR Swapchain = nullptr;
-		VkSurfaceKHR Surface = nullptr;
-		std::vector<VkImage> Imgs;
-		std::vector<VkImageView> Views;
-		void* GlfwWindowPtr = nullptr;
 
 	private:
-		ref<VulkanCoreInterface> _core;
 		VkRenderPass RenderPass = nullptr;
 		bool _vsync;
 		bool _imgui;
@@ -63,14 +58,16 @@ namespace egx {
 		std::vector<VkFramebuffer> _framebuffers;
 		ref<CommandPool> _pool;
 		std::vector<VkCommandBuffer> _cmd;
-		ref<Fence> _cmd_lock;
 		ref<Semaphore> _acquire_lock;
-		ref<Semaphore> _image_blit_lock;
 		uint32_t _image_index = 0;
 		bool _recreate_swapchain_flag = false;
+		std::vector<VkImage> Imgs;
+		std::vector<VkImageView> Views;
+		VkSurfaceKHR Surface = nullptr;
+		void* GlfwWindowPtr = nullptr;
 		
-		Shader _builtin_vertex;
-		Shader _builtin_fragment;
+		ref<Shader2> _builtin_vertex;
+		ref<Shader2> _builtin_fragment;
 		ref<Sampler> _image_sampler;
 		ref<SetPool> _descriptor_set_pool;
 		VkDescriptorSetLayout _descriptor_layout = nullptr;

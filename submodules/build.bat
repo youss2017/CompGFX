@@ -38,4 +38,6 @@ xcopy imgui\backends\imgui_impl_vulkan.h ..\include\imgui\ /K /D /H /Y /s /e
 xcopy imgui\backends\imgui_impl_glfw.h ..\include\imgui\ /K /D /H /Y /s /e
 echo "Copying Vulkan Memory Allocator Headers"
 xcopy VulkanMemoryAllocator\include\ ..\include\vma\ /K /D /H /Y /s /e
+echo "Copying JSON"
+xcopy json\single_include\nlohmann\ ..\include\json\ /K /D /H /Y /s /e
 echo "Done"

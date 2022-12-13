@@ -400,6 +400,6 @@ void egx::Buffer::SetDebugName(const std::string& Name)
 	for (uint32_t i = 0; i < _buffers.size(); i++)
 	{
 		auto buffer = _buffers[i]->m_buffer;
-		SetObjectName(_coreinterface, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, ut::Format("{0} [{1}]", Name, i));
+		SetObjectName(_coreinterface, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, cpp::Format("{0} [{1}]", Name, i));
 	}
 }

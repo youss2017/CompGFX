@@ -87,7 +87,7 @@ namespace egx
     {
         for (size_t i = 0; i < _semaphores.size(); i++)
         {
-            SetObjectName(_core_interface, _semaphores[i], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, ut::Format("{0} [{1}]", Name, i));
+            SetObjectName(_core_interface, _semaphores[i], VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, cpp::Format("{0} [{1}]", Name, i));
         }
     }
 

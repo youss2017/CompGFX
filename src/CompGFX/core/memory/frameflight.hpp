@@ -39,7 +39,7 @@ namespace egx
 
     protected:
         uint32_t *_ptr_current_frame = nullptr;
-        uint32_t _max_frames = 0;
+        uint32_t _max_frames = 1;
         uint32_t _static_frame = UINT32_MAX;
     };
 

@@ -13,12 +13,10 @@ namespace egx
 	struct SetPoolRequirementsInfo
 	{
 		std::map<VkDescriptorType, uint32_t> Type;
-		uint32_t SetCount = 1; // Don't Account for Multi-Frame
 
-		static SetPoolRequirementsInfo Inline(VkDescriptorType Type, uint32_t Count, uint32_t SetCount = 1) {
+		static SetPoolRequirementsInfo Inline(VkDescriptorType Type, uint32_t Count) {
 			SetPoolRequirementsInfo req;
 			req.Type[Type] = Count;
-			req.SetCount = SetCount;
 			return req;
 		}
 
@@ -28,7 +26,6 @@ namespace egx
 			{
 				Type[type] += count;
 			}
-			SetCount += MoreRequirements.SetCount;
 		}
 
 		std::vector<VkDescriptorPoolSize> GeneratePoolSizes(uint32_t MaxFrames) const
@@ -60,6 +57,14 @@ namespace egx
 			AdjustForRequirements({ Set });
 		}
 
+		void AdjustForRequirements(const std::map<uint32_t, ref<DescriptorSet>>& SetIdMap) {
+			for (auto& [id, set] : SetIdMap) {
+				AdjustForRequirements(set);
+			}
+		}
+
+		void IncrementSetCount(uint32_t Count = 1) { _SetCount += Count; }
+
 		EGX_API VkDescriptorPool GetSetPool();
 
 	protected:
@@ -72,6 +77,7 @@ namespace egx
 		VkDescriptorPool _pool = nullptr;
 		ref<VulkanCoreInterface> _coreinterface;
 		SetPoolRequirementsInfo _pool_requirements;
+		uint32_t _SetCount = 0;
 	};
 
 	namespace internal
@@ -88,7 +94,8 @@ namespace egx
 		};
 		struct ImageDescription
 		{
-			uint32_t BindingId = 0;
+			uint32_t BindingId{};
+			uint32_t DescriptorCount{};
 			VkDescriptorType Type{};
 			VkShaderStageFlags ShaderStages{};
 			std::vector<bool> IssueUpdateList;
@@ -113,7 +120,7 @@ namespace egx
 		// Must be called before bound to Cmd Buffer (Auto Sync for frame in flight)
 		EGX_API void SetBuffer(uint32_t BindingId, const ref<Buffer>& BufferRef, uint32_t StructSize, uint32_t Offset);
 
-		EGX_API void DescribeImage(uint32_t BindingId, VkDescriptorType Type, VkShaderStageFlags ShaderStages);
+		EGX_API void DescribeImage(uint32_t BindingId, uint32_t DescriptorCount, VkDescriptorType Type, VkShaderStageFlags ShaderStages);
 		// Must be called before bound to Cmd Buffer (Auto Sync for frame in flight).
 		// If only one Sampler is in Samplers then that Sampler will be used for all images, same for Image Layouts.
 		// If images vector is more than 1 then binding is assumed to be an array.
@@ -194,7 +201,7 @@ namespace egx
 
 		inline void Bind(VkCommandBuffer cmd, VkPipelineBindPoint BindPoint)
 		{
-			if (_sets.size() > 0) {
+			if (Sets.size() > 0) {
 				StructureDataForBinding();
 				vkCmdBindDescriptorSets(cmd, BindPoint, GetLayout(), 0, (uint32_t)_sets.size(), _sets.data(), (uint32_t)_dynamic_offsets.size(), _dynamic_offsets.data());
 			}

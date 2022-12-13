@@ -102,7 +102,7 @@ EGX_API egx::EngineCore::~EngineCore()
 		delete Swapchain;
 }
 
-void EGX_API egx::EngineCore::AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui)
+void EGX_API egx::EngineCore::_AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui)
 {
 	assert(Swapchain == nullptr);
 	// [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
@@ -279,6 +279,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 
 	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance, this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), true);
 	this->CoreInterface->PhysicalDevice = Device;
+	CoreInterface->MaxFramesInFlight = 1;
 }
 
 ImGuiContext* egx::EngineCore::GetContext() const
@@ -332,7 +333,7 @@ static VkBool32 DebugPrintfEXT_Callback(VkDebugReportFlagsEXT flags,
 	return false;
 }
 
-ut::Logger* egx::EngineCore::GetEngineLogger()
+cpp::Logger* egx::EngineCore::GetEngineLogger()
 {
-	return &ut::Logger::GetGlobalLogger();
+	return &cpp::Logger::GetGlobalLogger();
 }

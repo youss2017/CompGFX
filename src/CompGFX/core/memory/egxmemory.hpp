@@ -4,6 +4,8 @@
 #include <memory>
 #include <imgui.h>
 #include "frameflight.hpp"
+#include "../../cmd/cmd.hpp"
+#include <optional>
 
 namespace egx {
 
@@ -49,6 +51,25 @@ namespace egx {
 		EGX_API void Write(void* data, size_t offset, size_t size, bool keepMapped = false);
 		EGX_API void Write(void* data, size_t size, bool keepMapped = false);
 		EGX_API void Write(void* data, bool keepMapped = false);
+
+		// Write data(ptr) to all Frame 1 to Frame N buffers
+		EGX_API void WriteAll(void* data, bool keepMapped = false) {
+			WriteAll(data, 0, Size, keepMapped);
+		}
+
+		// Write data(ptr) to all Frame 1 to Frame N buffers
+		EGX_API void WriteAll(void* data, size_t offset, size_t size, bool keepMapped) {
+			if (CpuAccessPerFrame) {
+				for (uint32_t i = 0; i < _coreinterface->MaxFramesInFlight; i++) {
+					SetStaticFrameIndex(i);
+					Write(data, offset, size, keepMapped);
+				}
+				SetStaticFrameIndex();
+			}
+			else {
+				Write(data, offset, size, keepMapped);
+			}
+		}
 
 		// [WARNING]! 
 		// If you are using CPUAccessFlag then every frame you must call this function
@@ -124,9 +145,8 @@ namespace egx {
 		/// <param name="mipcount">Set to 0 for max mipmap count</param>
 		/// <param name="arraylevel">For arrayed images</param>
 		/// <returns></returns>
-		EGX_API static ref<Image> FactoryCreate(
+		EGX_API static ref<Image> FactoryCreateEx(
 			const ref<VulkanCoreInterface>& CoreInterface,
-			memorylayout layout,
 			VkImageAspectFlags aspect,
 			uint32_t width,
 			uint32_t height,
@@ -135,7 +155,22 @@ namespace egx {
 			uint32_t mipcount,
 			uint32_t arraylevel,
 			VkImageUsageFlags usage,
-			VkImageLayout InitialLayout);
+			VkImageLayout InitialLayout,
+			bool StreamingMode = false);
+
+		static inline ref<Image> FactoryCreate(
+			const ref<VulkanCoreInterface>& CoreInterface,
+			VkImageAspectFlags aspect,
+			uint32_t width,
+			uint32_t height,
+			VkFormat format,
+			VkImageUsageFlags usage,
+			VkImageLayout InitialLayout,
+			uint32_t mipcount = 0,
+			bool StreamingMode = false
+		) {
+			return FactoryCreateEx(CoreInterface, aspect, width, height, 1, format, mipcount, 1, usage, InitialLayout, StreamingMode);
+		}
 
 		EGX_API ~Image() noexcept;
 
@@ -143,14 +178,15 @@ namespace egx {
 		EGX_API Image(Image&& move) noexcept :
 			Width(move.Width), Height(move.Height),
 			Depth(move.Depth), Mipcount(move.Mipcount),
-			Arraylevels(move.Arraylevels), Img(move.Img),
+			Arraylevels(move.Arraylevels), Image_(move.Image_),
 			ImageUsage(move.ImageUsage), _context(move._context),
 			_image(move._image), _coreinterface(move._coreinterface),
-			ImageAspect(move.ImageAspect), Format(move.Format) {
+			ImageAspect(move.ImageAspect), Format(move.Format), 
+			StreamingMode(move.StreamingMode) {
 			memcpy(this, &move, sizeof(Image));
 			memset(&move, 0, sizeof(Image));
 		}
-		EGX_API Image& operator=(Image&& move) {
+		EGX_API Image& operator=(Image&& move) noexcept {
 			if (this == &move) return *this;
 			this->~Image();
 			memcpy(this, &move, sizeof(Image));
@@ -262,16 +298,17 @@ namespace egx {
 			VkImage image, VkImageUsageFlags usage,
 			VkAlloc::CONTEXT _context, VkAlloc::IMAGE _image,
 			const ref<VulkanCoreInterface>& _interface, VkFormat format,
-			VkImageAspectFlags aspect, memorylayout layout,
-			VkImageLayout initalLayout)
+			VkImageAspectFlags aspect, VkImageLayout initalLayout,
+			bool streamingMode)
 			: Width(width), Height(height),
 			Depth(depth), Mipcount(mipcount),
-			Arraylevels(arraylevels), Img(image),
+			Arraylevels(arraylevels), Image_(image),
 			ImageUsage(usage), _context(_context),
 			_image(_image), _coreinterface(_interface),
 			Format(format), ImageAspect(aspect),
-			_memorylayout(layout), _imageusage(usage),
-			_initial_layout(initalLayout)
+			_imageusage(usage),
+			_initial_layout(initalLayout),
+			StreamingMode(streamingMode)
 		{}
 
 	public:
@@ -283,18 +320,21 @@ namespace egx {
 		const VkImageUsageFlags ImageUsage;
 		const VkFormat Format;
 		const VkImageAspectFlags ImageAspect;
-		const VkImage Img;
+		const VkImage Image_;
+		const bool StreamingMode;
 
 	protected:
 		const VkAlloc::CONTEXT _context;
 		const VkAlloc::IMAGE _image;
 		ref<VulkanCoreInterface> _coreinterface;
 		std::map<uint32_t, VkImageView> _views;
-		ImTextureID _imgui_textureid = nullptr;
-		memorylayout _memorylayout;
-		VkImageUsageFlags _imageusage;
-		VkImageLayout _initial_layout;
+		ImTextureID _imgui_textureid{};
+		VkImageUsageFlags _imageusage{};
+		VkImageLayout _initial_layout{};
 		bool _call_destruction = true;
+		ref<Buffer> _StreamingBuffer;
+		CommandBuffer _StreamingCmd;
+		ref<Fence> _StreamingFence;
 	};
 
 }

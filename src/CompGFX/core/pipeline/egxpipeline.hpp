@@ -1,6 +1,6 @@
 #pragma once
 #include "../egxcommon.hpp"
-#include "../shaders/egxshader.hpp"
+#include "../shaders/egxshader2.hpp"
 #include "../shaders/egxshaderset.hpp"
 #include "../memory/egxref.hpp"
 #include "egxframebuffer.hpp"
@@ -8,7 +8,7 @@
 
 namespace egx {
 
-	class InputAssemblyDescription {
+	/*class InputAssemblyDescription {
 
 	public:
 		InputAssemblyDescription(bool IsAligned = true) : IsAligned(IsAligned) {};
@@ -55,7 +55,7 @@ namespace egx {
 		};
 		std::vector<attribute> Attributes;
 		bool IsAligned;
-	};
+	};*/
 
 	enum cullmode : uint32_t {
 		cullmode_none,
@@ -111,27 +111,24 @@ namespace egx {
 		/// <param name="vertexDescription"></param>
 		/// <returns></returns>
 		void EGX_API invalidate(
-			const ref<PipelineLayout>& layout,
-			const Shader& vertex,
-			const Shader& fragment,
+			const ref<Shader2>& vertex,
+			const ref<Shader2>& fragment,
 			const ref<Framebuffer>& framebuffer,
-			const uint32_t PassId,
-			const InputAssemblyDescription& vertexDescription);
+			const uint32_t PassId);
 
-		void EGX_API invalidate(const ref<PipelineLayout>& layout, const Shader& compute);
+		void EGX_API invalidate(const ref<Shader2>& compute);
 
 		inline void Bind(VkCommandBuffer cmd) const {
-			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipe);
-		}
-
-		inline void Bind(VkCommandBuffer cmd, const ref<PipelineLayout> Layout) const
-		{
-			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipe);
+			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline_);
 			Layout->Bind(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE);
 		}
 
-		inline VkPipeline operator()() const { return Pipe; }
-		inline VkPipeline operator*() const { return Pipe; }
+		inline void PushConstants(VkCommandBuffer cmd, VkPipelineStageFlags stageFlags, uint32_t offset, uint32_t size, void* pData) {
+			vkCmdPushConstants(cmd, Layout->GetLayout(), stageFlags, offset, size, pData);
+		}
+
+		inline VkPipeline operator()() const { return Pipeline_; }
+		inline VkPipeline operator*() const { return Pipeline_; }
 
 	protected:
 		Pipeline(const ref<VulkanCoreInterface>& coreinterface) :
@@ -150,7 +147,10 @@ namespace egx {
 		float LineWidth = 1.0f;
 		uint32_t ViewportWidth = 0;
 		uint32_t ViewportHeight = 0;
-		VkPipeline Pipe = nullptr;
+		VkPipeline Pipeline_ = nullptr;
+		ref<SetPool> Pool;
+		ref<PipelineLayout> Layout;
+		std::map<uint32_t, ref<DescriptorSet>> Sets;
 		bool DepthEnabled = false;
 		bool DepthWriteEnable = true;
 

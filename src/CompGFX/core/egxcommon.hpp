@@ -11,6 +11,7 @@
 #else
 #define EGX_API
 #endif
+#define COMPGFX EGX_API
 #include "memory/vulkan_memory_allocator.hpp"
 #include "memory/egxref.hpp"
 #include <cstdint>
@@ -34,7 +35,7 @@ namespace egx {
 		uint32_t QueueFamilyIndex = -1;
 		VkAlloc::CONTEXT MemoryContext = nullptr;
 		VkDebugUtilsMessengerEXT DebugMessenger = nullptr;
-		uint32_t MaxFramesInFlight = 0;
+		uint32_t MaxFramesInFlight = 1;
 		uint32_t CurrentFrame = 0;
 		bool DebuggingWithRenderDOCFlag = false;
 

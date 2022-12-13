@@ -23,19 +23,20 @@ namespace egx
 		{
 			internal::_cmd_pool = CreateCommandPool(CoreInterface, true, false, true, false);
 #ifdef _DEBUG
-			LOG(INFO, "[Vulkan] Command Pool Initalized, Ref {{0x{0:%x}}}", internal::_cmd_pool.base);
+			LOG(INFO, "[Vulkan] Command Pool Initalized, Ref {{0x{0:%p}}}", internal::_cmd_pool.base);
 #endif
 		}
 		_cmd = internal::_cmd_pool->AllocateBufferFrameFlightMode(true);
 		_cmd_static_init.resize(CoreInterface->MaxFramesInFlight, false);
 		DelayInitalizeFF(CoreInterface);
+		_Queue = CoreInterface->Queue;
 	}
 
 	void CommandBuffer::SetDebugName(const ref<VulkanCoreInterface>& CoreInterface, const std::string& Name)
 	{
 		for (size_t i = 0; i < _cmd.size(); i++)
 		{
-			SetObjectName(CoreInterface, _cmd[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, ut::Format("{0} [{1}]", Name, i));
+			SetObjectName(CoreInterface, _cmd[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, cpp::Format("{0} [{1}]", Name, i));
 		}
 	}
 
@@ -71,6 +72,16 @@ namespace egx
 	{
 		assert(_cmd_static_init[GetCurrentFrame()] && "You must record static buffer");
 		return _cmd[GetCurrentFrame()];
+	}
+
+	void CommandBuffer::Submit(VkFence fence)
+	{
+		Submit(_Queue, { GetReadonlyBuffer() }, {}, {}, {}, fence, false);
+	}
+
+	void CommandBuffer::Submit(const ref<Fence> fence)
+	{
+		Submit(_Queue, { GetReadonlyBuffer() }, {}, {}, {}, fence->GetFence(), false);
 	}
 
 	void CommandBuffer::Finalize()
@@ -162,6 +173,15 @@ namespace egx
 		bool Block)
 	{
 		Submit(CoreInterface->Queue, CmdBuffers, WaitSemaphores, WaitDstStageMask, SignalSemaphores, SignalFence, Block);
+	}
+
+	std::vector<VkSemaphore> CommandBuffer::GetNativeSemaphoreList(const std::vector<ref<Semaphore>>& semaphores)
+	{
+		std::vector<VkSemaphore> result;
+		for (auto& item : semaphores) {
+			result.push_back(item->GetSemaphore());
+		}
+		return result;
 	}
 
 	void CommandBuffer::StartCommandBuffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage)

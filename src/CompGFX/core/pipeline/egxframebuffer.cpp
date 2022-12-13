@@ -117,9 +117,8 @@ namespace egx {
 		internal::egfxframebuffer_attachment attachment;
 		if (pBlendState)
 			attachment.BlendState = *pBlendState;
-		attachment.Attachment = Image::FactoryCreate(
+		attachment.Attachment = Image::FactoryCreateEx(
 			_coreinterface,
-			memorylayout::local,
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			Width,
 			Height,
@@ -163,9 +162,8 @@ namespace egx {
 		LOG(INFO, "Creating FBO Depth Attachment {0}x{1} Format: {2}, Clear: {3:%.3f}", Width, Height, egx::_internal::DebugVkFormatToString(Format), ClearValue.depthStencil.depth);
 #endif
 		internal::egfxframebuffer_attachment attachment;
-		attachment.Attachment = Image::FactoryCreate(
+		attachment.Attachment = Image::FactoryCreateEx(
 			_coreinterface,
-			memorylayout::local,
 			VK_IMAGE_ASPECT_DEPTH_BIT,
 			Width,
 			Height,
