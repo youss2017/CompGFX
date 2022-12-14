@@ -73,7 +73,7 @@ namespace egx
 			std::string_view Code,
 			VkShaderStageFlags ShaderType,
 			BindingAttributes Attributes,
-			std::string_view OptionalFilePathForDebugging = ""
+			std::string_view OptionalFileName = ""
 		);
 
 		COMPGFX static void SetGlobalCacheFile(std::string_view CacheFolder);

@@ -277,7 +277,8 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 
 	vkGetDeviceQueue(this->CoreInterface->Device, index, 0, &this->CoreInterface->Queue);
 
-	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance, this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), true);
+	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance, 
+		this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), !UsingRenderDOC);
 	this->CoreInterface->PhysicalDevice = Device;
 	CoreInterface->MaxFramesInFlight = 1;
 }

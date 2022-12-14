@@ -18,8 +18,6 @@ constexpr const char* CacheFileName = "GlobalShaderCache";
 constexpr const char* CacheFileExtension = ".json";
 
 namespace egx::internal {
-	using namespace nlohmann;
-
 	struct ShaderCacheInformation
 	{
 		std::string FilePath;
@@ -28,24 +26,6 @@ namespace egx::internal {
 		std::vector<uint32_t> Bytecode;
 		uint64_t LastModifiedDate{};
 	};
-
-	void to_json(json& j, const ShaderCacheInformation& p) {
-		j = json{
-			{"filePath", p.FilePath},
-			{"sourceCode", p.SourceCode},
-			{"shaderStage", p.ShaderStage},
-			{"byteCode", p.Bytecode},
-			{"lastModifiedDate", p.LastModifiedDate}
-		};
-	}
-
-	void from_json(const json& j, ShaderCacheInformation& p) {
-		j.at("filePath").get_to(p.FilePath);
-		j.at("sourceCode").get_to(p.SourceCode);
-		j.at("shaderStage").get_to(p.ShaderStage);
-		j.at("byteCode").get_to(p.Bytecode);
-		j.at("lastModifiedDate").get_to(p.LastModifiedDate);
-	}
 }
 
 ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, std::string_view File, BindingAttributes Attributes)
@@ -89,13 +69,29 @@ ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInt
 		LOGEXCEPT("Could not load file \"{0}\"", File.data());
 	}
 	auto processedCode = PreprocessInclude(fileInfo.string(), std::filesystem::absolute(fileInfo).parent_path().string(), *code);
-	return FactoryCreateEx(CoreInterface, processedCode, shaderStage, Attributes, fileInfo.string());
+	auto result = FactoryCreateEx(CoreInterface, processedCode, shaderStage, Attributes, fileInfo.filename().string());
+
+	if (Shader2::CacheFile.has_value()) {
+		internal::ShaderCacheInformation info;
+		info.FilePath = File.data();
+		info.LastModifiedDate = std::filesystem::last_write_time(fileInfo).time_since_epoch().count();
+		info.ShaderStage = shaderStage;
+		info.SourceCode = result->SourceCode;
+		info.Bytecode = result->Bytecode;
+		auto list = LoadCacheInformation();
+		if (list.size() > 0)
+			list.erase(std::remove_if(list.begin(), list.end(), [&](auto& x) {return x.FilePath == info.FilePath; }), list.end());
+		list.push_back(info);
+		SaveCacheInformation(list);
+	}
+
+	return result;
 }
 
 ref<Shader2> egx::Shader2::FactoryCreateEx
 (const ref<VulkanCoreInterface>& CoreInterface, std::string_view Code, VkShaderStageFlags ShaderType,
 	BindingAttributes Attributes,
-	std::string_view OptionalFilePathForDebugging)
+	std::string_view OptionalFileName)
 {
 	shaderc_shader_kind shaderKind{};
 	switch (ShaderType) {
@@ -115,19 +111,19 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 	options.SetOptimizationLevel(shaderc_optimization_level_performance);
 #endif
 	auto start = std::chrono::high_resolution_clock::now();
-	auto compilationResult = compiler.CompileGlslToSpv(Code.data(), shaderKind, "main.glsl", "main", options);
+	auto compilationResult = compiler.CompileGlslToSpv(Code.data(), shaderKind, OptionalFileName.data(), "main", options);
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	if (compilationResult.GetCompilationStatus() != shaderc_compilation_status::shaderc_compilation_status_success)
 	{
-		if (OptionalFilePathForDebugging.length() > 0) {
-			LOGEXCEPT("Encountered error during compilation.\nFile:{0}\n{1}", OptionalFilePathForDebugging.data(), compilationResult.GetErrorMessage());
+		if (OptionalFileName.length() > 0) {
+			LOGEXCEPT("Encountered error during compilation.\nFile:{0}\n{1}", OptionalFileName.data(), compilationResult.GetErrorMessage());
 		}
 		LOGEXCEPT("Encountered error during compilation.\n{1}", compilationResult.GetErrorMessage());
 	}
 	if (compilationResult.GetNumWarnings() > 0) {
-		if (OptionalFilePathForDebugging.length() > 0) {
-			LOG(WARNING, "{0} Warnings for Shader \"{1}\"", compilationResult.GetNumWarnings(), OptionalFilePathForDebugging.data());
+		if (OptionalFileName.length() > 0) {
+			LOG(WARNING, "{0} Warnings for Shader \"{1}\"", compilationResult.GetNumWarnings(), OptionalFileName.data());
 		}
 	}
 	auto bytecode = std::vector<uint32_t>(compilationResult.begin(), compilationResult.end());
@@ -136,7 +132,7 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 	createInfo.pCode = bytecode.data();
 	VkShaderModule shaderModule;
 	if (vkCreateShaderModule(CoreInterface->Device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-		LOGEXCEPT("Could not create shader module for '{0}'.", OptionalFilePathForDebugging.data());
+		LOGEXCEPT("Could not create shader module for '{0}'.", OptionalFileName.data());
 	}
 	auto reflection = GenerateReflection(bytecode, Attributes);
 	return new Shader2(ShaderType, duration, bytecode, Code.data(), shaderModule, Attributes, reflection, shaderKind, CoreInterface);
@@ -187,7 +183,7 @@ std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, st
 void Shader2::SetGlobalCacheFile(std::string_view CacheFolder)
 {
 	std::lock_guard guard(Shader2::CacheWriteLock);
-	if (std::filesystem::create_directories(CacheFolder)) {
+	if (std::filesystem::is_directory(CacheFolder) || std::filesystem::create_directories(CacheFolder)) {
 		const char* mode = nullptr;
 #ifdef _DEBUG
 		mode = "DEBUG";
@@ -235,15 +231,42 @@ std::vector<internal::ShaderCacheInformation> Shader2::LoadCacheInformation()
 	std::lock_guard guard(Shader2::CacheWriteLock);
 	auto cache = ReadAllText(*Shader2::CacheFile);
 	if (!cache.has_value()) return {};
-	return json(*cache).get<std::vector<internal::ShaderCacheInformation>>();
+	ordered_json j;
+	try {
+		j = ordered_json::parse(*cache);
+	}
+	catch (...) {
+		return {};
+	}
+	std::vector< internal::ShaderCacheInformation> result;
+	for (auto& item : j) {
+		auto& p = result.emplace_back();
+		item.at("filePath").get_to(p.FilePath);
+		item.at("sourceCode").get_to(p.SourceCode);
+		item.at("shaderStage").get_to(p.ShaderStage);
+		item.at("byteCode").get_to(p.Bytecode);
+		item.at("lastModifiedDate").get_to(p.LastModifiedDate);
+
+	}
+	//return json(*cache).get<std::vector<internal::ShaderCacheInformation>>();
+	return result;
 }
 
 void Shader2::SaveCacheInformation(const std::vector<internal::ShaderCacheInformation>& cacheInformation)
 {
 	if (!Shader2::CacheFile.has_value() || Shader2::CacheFile->length() == 0) return;
 	std::lock_guard guard(Shader2::CacheWriteLock);
-	json out = cacheInformation;
-	WriteAllText(*Shader2::CacheFile, out.dump(4));
+	ordered_json out = json::array();
+	for (auto& item : cacheInformation) {
+		out.push_back({
+			{"filePath", item.FilePath},
+			{"sourceCode", item.SourceCode},
+			{"shaderStage", item.ShaderStage},
+			{"byteCode", item.Bytecode},
+			{"lastModifiedDate", item.LastModifiedDate}
+			});
+	}
+	WriteAllText(*Shader2::CacheFile, out.dump());
 }
 
 ShaderReflection Shader2::GenerateReflection(const std::vector<uint32_t>& Bytecode, BindingAttributes Attributes)
