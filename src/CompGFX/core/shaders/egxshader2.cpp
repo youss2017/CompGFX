@@ -156,14 +156,9 @@ std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, st
 		}
 		auto& include_file = include_line[1];
 		std::string include_file_path;
-		try {
-			include_file_path = (std::filesystem::path(SourceDirectory) / include_file).string();
-			if (!std::filesystem::exists(include_file_path)) {
-				LOGEXCEPT("#include is not found in \"{0}\" at line {1}", CurrentFilePath.data(), line_index);
-			}
-		}
-		catch (...) {
-			LOGEXCEPT("#include is malformed in \"{0}\" at line {1}", CurrentFilePath.data(), line_index);
+		include_file_path = (std::filesystem::path(SourceDirectory) / include_file).string();
+		if (!std::filesystem::exists(include_file_path)) {
+			LOGEXCEPT("#include is not found in \"{0}\" at line {1}", CurrentFilePath.data(), line_index);
 		}
 		auto include_source_code = ReadAllText(include_file_path);
 		if (!include_source_code.has_value()) {
@@ -172,8 +167,6 @@ std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, st
 		std::filesystem::path p(include_file_path);
 		include_source_code = PreprocessInclude(include_file_path, p.parent_path().string(), *include_source_code);
 		output += *include_source_code;
-		output.push_back('\n');
-		output += "#line " + std::to_string(line_index);
 		output.push_back('\n');
 		line_index++;
 	}

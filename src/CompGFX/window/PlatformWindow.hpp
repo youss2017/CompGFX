@@ -4,6 +4,7 @@
 #include "Event.hpp"
 #include <functional>
 #include <GLFW/glfw3.h>
+#include <glm/vec2.hpp>
 
 namespace egx {
 
@@ -30,6 +31,7 @@ namespace egx {
 		// This function returns ID (index) of the callback which can be used later to remove the callback
 		EGX_API int RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined);
 		EGX_API void RemoveCallback(int ID);
+		glm::vec2 GetWindowSize() { return glm::vec2(m_width, m_height); }
 
 		/// @brief Checks the key state (pressed or not)
 		/// @param KeyCode you can enter key as ascii code e.g. 'A' or 'a' or you can eneter GLFW VK codes ex: GLFW_KEY_UP 

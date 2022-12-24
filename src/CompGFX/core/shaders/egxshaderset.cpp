@@ -163,7 +163,7 @@ SetPoolRequirementsInfo DescriptorSet::GetDescriptorPoolRequirements() const
 	}
 	for (auto& [id, image] : _image_descriptions)
 	{
-		req.Type[image.Type] += 1;
+		req.Type[image.Type] += image.DescriptorCount;
 	}
 	return req;
 }
@@ -232,9 +232,12 @@ const VkDescriptorSet& DescriptorSet::GetSet()
 	_set_writes.clear();
 	_set_write_buffer_info.clear();
 	_set_write_image_info.clear();
-	VkDescriptorSet set = _set[frame];
+
+	// We have to reserve so the vector does not reallocate memory
+	// if the vector reallocates memory then memory pointers will be invalid.
 	_set_write_buffer_info.reserve(_buffer_descriptions.size());
-	_set_write_image_info.reserve(_image_descriptions.size());
+
+	VkDescriptorSet set = _set[frame];
 	for (auto& [id, buffer] : _buffer_descriptions)
 	{
 		if (buffer.IssueUpdateList.size() > 0 && buffer.IssueUpdateList[frame])
@@ -256,19 +259,23 @@ const VkDescriptorSet& DescriptorSet::GetSet()
 	}
 	for (auto& [id, image] : _image_descriptions)
 	{
+		_set_write_image_info.resize(_set_write_image_info.size() + image.ImageRef.size());
+	}
+	for (auto& [id, image] : _image_descriptions)
+	{
 		if (image.IssueUpdateList.size() > 0 && image.IssueUpdateList[frame])
 		{
 			size_t counter = _set_write_image_info.size();
+			VkDescriptorImageInfo* pImageInfos = new VkDescriptorImageInfo[image.ImageRef.size()]{};
 			for (size_t i = 0; i < image.ImageRef.size(); i++)
 			{
 				uint32_t viewIndex = image.ViewIndex.size() == 1 ? image.ViewIndex[0] : image.ViewIndex[i];
-				auto& imageInfo = _set_write_image_info.emplace_back();
+				auto& imageInfo = pImageInfos[i];
 				if (image.ImageSamplers.size() > 0) imageInfo.sampler = image.ImageSamplers.size() > 1 ? image.ImageSamplers[i]->GetSampler() : image.ImageSamplers[0]->GetSampler();
 				else imageInfo.sampler = nullptr;
 				imageInfo.imageView = image.ImageRef[i]->view(viewIndex);
 				imageInfo.imageLayout = image.ImageLayouts.size() > 1 ? image.ImageLayouts[i] : image.ImageLayouts[0];
 			}
-			VkDescriptorImageInfo* pImageInfos = &_set_write_image_info[counter];
 			auto& write = _set_writes.emplace_back();
 			write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 			write.dstSet = set;
@@ -282,6 +289,11 @@ const VkDescriptorSet& DescriptorSet::GetSet()
 	}
 	vkUpdateDescriptorSets(_core_interface->Device, (uint32_t)_set_writes.size(), _set_writes.data(), 0, nullptr);
 	_perform_writes--;
+
+	for (auto& item : _set_writes) {
+		if (item.pImageInfo) delete[] item.pImageInfo;
+	}
+
 	return _set[frame];
 }
 

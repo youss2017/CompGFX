@@ -96,6 +96,7 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 		}
 		result->_buffers.push_back(buffer);
 	}
+	result->_ResizeFrameFlag.resize(std::max<size_t>(result->_buffers.size(), 1), false);
 	return result;
 }
 
@@ -347,8 +348,11 @@ void egx::Buffer::Invalidate(size_t offset, size_t size)
 const VkBuffer& Buffer::GetBuffer() {
 	if(!_ResizeFlag)
 		return _buffers[GetCurrentFrame()]->m_buffer;
+	if(!_ResizeFrameFlag[GetCurrentFrame()])
+		return _buffers[GetCurrentFrame()]->m_buffer;
 	_ResizeFlag--;
 	auto frame = GetCurrentFrame();
+	_ResizeFrameFlag[frame] = false;
 	Size = _ResizeBytes;
 	auto& buf = _buffers[frame];
 	auto desc = buf->m_description;
@@ -365,6 +369,8 @@ const VkBuffer& Buffer::GetBuffer() {
 		VkAlloc::DestroyBuffers(_context, 1, &buf);
 	}
 	else {
+		if (_mapped_flag)
+			Unmap();
 		VkAlloc::DestroyBuffers(_context, 1, &buf);
 		VkAlloc::CreateBuffers(_context, 1, &desc, &resizedBuffer);
 	}
@@ -390,9 +396,10 @@ std::vector<size_t> egx::Buffer::GetBufferBasePointer()
 void egx::Buffer::Resize(size_t newSize, bool CopyOldContents)
 {
 	if (newSize == Size) return;
-	_ResizeFlag = _coreinterface->MaxFramesInFlight;
+	_ResizeFlag = (uint32_t)_buffers.size();
 	_ResizeCopyOldContents = CopyOldContents;
 	_ResizeBytes = newSize;
+	std::fill(_ResizeFrameFlag.begin(), _ResizeFrameFlag.end(), true);
 }
 
 void egx::Buffer::SetDebugName(const std::string& Name)

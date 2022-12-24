@@ -197,8 +197,10 @@ namespace egx {
 	{
 		// ID is basically the index in vector, however since we remove elements
 		// their indices changes theirfore we use this offset to get the correct index
-		mCallbacks.erase(mCallbacks.begin() + (ID - nCallbackRemoveOffset));
-		nCallbackRemoveOffset++;
+		try {
+			mCallbacks.erase(mCallbacks.begin() + (ID - nCallbackRemoveOffset));
+			nCallbackRemoveOffset++;
+		} catch (...) {}
 	}
 
 	bool PlatformWindow::GetKeyState(uint16_t KeyCode)

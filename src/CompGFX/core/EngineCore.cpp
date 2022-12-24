@@ -47,7 +47,7 @@ EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool 
 #ifdef _DEBUG
 	VkValidationFeatureEnableEXT enables[] =
 	{
-		(debugFeatures == EngineCoreDebugFeatures::GPUAssisted) ? VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT : VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT 
+		(debugFeatures == EngineCoreDebugFeatures::GPUAssisted) ? VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT : VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT
 	};
 	VkValidationFeaturesEXT validationFeatures{ VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
 	validationFeatures.enabledValidationFeatureCount = 1;
@@ -80,7 +80,7 @@ EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool 
 
 	// Create the callback handle
 	PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(CoreInterface->Instance, "vkCreateDebugReportCallbackEXT");
-	if(createDebugReportCallback)
+	if (createDebugReportCallback)
 		createDebugReportCallback(CoreInterface->Instance, &ci, nullptr, &_DebugCallbackHandle);
 #endif
 
@@ -151,7 +151,6 @@ std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
 void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 {
 	using namespace std;
-	LOG(INFOBOLD, "Establishing {0}; {1:%.2lf} Mb VRAM; {2:%.2lf} Mb Shared System RAM; Device", Device.VendorName, (double)Device.VideoRam / (1024.0 * 1024.0), (double)Device.SharedSystemRam / (1024.0 * 1024.0));
 	VkDeviceCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 	VkDeviceQueueCreateInfo queueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 
@@ -173,22 +172,18 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 	vulkan12features.pNext = &Storage16Bit;
 	vulkan12features.drawIndirectCount = VK_TRUE;
 	vulkan12features.shaderInt8 = VK_FALSE;
-	vulkan12features.storageBuffer8BitAccess = VK_TRUE;
-	vulkan12features.uniformAndStorageBuffer8BitAccess = VK_TRUE;
+	vulkan12features.storageBuffer8BitAccess = VK_FALSE;
+	vulkan12features.uniformAndStorageBuffer8BitAccess = VK_FALSE;
 	vulkan12features.scalarBlockLayout = VK_TRUE;
 	vulkan12features.descriptorIndexing = VK_TRUE;
 	vulkan12features.runtimeDescriptorArray = VK_TRUE;
 	vulkan12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-	vulkan12features.shaderInt8 = VK_TRUE;
 	vulkan12features.uniformBufferStandardLayout = VK_TRUE;
-	vulkan12features.shaderInt8 = VK_TRUE;
 	if (UsingRenderDOC) {
-		LOG(WARNING, "Disabled bufferDeviceAddress feature so we can use RenderDOC.");
 		vulkan12features.bufferDeviceAddress = VK_FALSE;
 		CoreInterface->DebuggingWithRenderDOCFlag = true;
 	}
 	else {
-		LOG(WARNING, "bufferDeviceAddress is turned on, CANNOT debug with RenderDOC, in renderdoc use 'debug' or 'renderdoc' in command line arguments.");
 		vulkan12features.bufferDeviceAddress = VK_TRUE;
 	}
 
@@ -251,20 +246,8 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 	enabledExtensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
 
 #ifdef _DEBUG
-	uint32_t extensionCount = 0;
-	std::vector<VkExtensionProperties> extensions;
-	vkEnumerateDeviceExtensionProperties(Device.Id, nullptr, &extensionCount, extensions.data());
-	for (auto& ext : extensions)
-	{
-		if (!strcmp(ext.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
-		{
-			enabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-		}
-		if (!strcmp(ext.extensionName, VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
-		{
-			enabledExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
-		}
-	}
+	enabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+	enabledExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 #endif
 
 	createInfo.queueCreateInfoCount = 1;
@@ -277,7 +260,7 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 
 	vkGetDeviceQueue(this->CoreInterface->Device, index, 0, &this->CoreInterface->Queue);
 
-	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance, 
+	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance,
 		this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), !UsingRenderDOC);
 	this->CoreInterface->PhysicalDevice = Device;
 	CoreInterface->MaxFramesInFlight = 1;

@@ -90,7 +90,13 @@ namespace egx
         void Execute()
         {
             vkEndCommandBuffer(Cmd);
-            CommandBuffer::Submit(_queue, {Cmd}, {}, {}, {}, _fence->GetFence(), true);
+            CommandBuffer::Submit(_queue, {Cmd}, {}, {}, {}, _fence->GetFence(), false);
+            _fence->Wait(UINT64_MAX);
+            _fence->Reset();
+        }
+
+        void Reset() {
+            Cmd = _cmd->GetBuffer();
         }
 
         CommandBufferSingleUse(CommandBufferSingleUse &) = delete;

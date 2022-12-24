@@ -171,7 +171,10 @@ void  egx::Pipeline::invalidate(
 			else {
 				auto& set = Sets[setId];
 				for (auto& [bindingId, binding] : bindings) {
-					set->DescribeBuffer(bindingId, binding.Type, VK_SHADER_STAGE_ALL_GRAPHICS);
+					if (binding.IsBuffer)
+						set->DescribeBuffer(bindingId, binding.Type, VK_SHADER_STAGE_ALL_GRAPHICS);
+					else
+						set->DescribeImage(bindingId, binding.DescriptorCount, binding.Type, VK_SHADER_STAGE_FRAGMENT_BIT);
 				}
 			}
 		}

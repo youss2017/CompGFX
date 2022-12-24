@@ -2,9 +2,10 @@
 #include <string>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
-void egx::InsertDebugLabel(ref<VulkanCoreInterface>& CoreInterface, VkCommandBuffer cmd, uint32_t FrameIndex, std::string_view DebugLabelText, float r, float g, float b)
+void egx::InsertDebugLabel(ref<VulkanCoreInterface>& CoreInterface, VkCommandBuffer cmd, std::string_view DebugLabelText, float r, float g, float b)
 {
 	using namespace std;
+	uint32_t FrameIndex = CoreInterface->CurrentFrame;
 	std::string labelName = "[" + std::to_string(FrameIndex) + "]"s + DebugLabelText.data();
 	VkDebugUtilsLabelEXT debugLabel{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
 	debugLabel.pLabelName = labelName.c_str();

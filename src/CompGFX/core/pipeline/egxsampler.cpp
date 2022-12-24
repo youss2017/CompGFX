@@ -42,7 +42,7 @@ VkSampler& egx::Sampler::GetSampler()
 	createInfo.addressModeW = addressModeW;
 	createInfo.mipLodBias = mipLodBias;
 	createInfo.anisotropyEnable = anisotropyEnable;
-	createInfo.maxAnisotropy = maxAnisotropy;
+	createInfo.maxAnisotropy = std::min(_coreinterface->PhysicalDevice.Properties.limits.maxSamplerAnisotropy, maxAnisotropy);
 	createInfo.compareEnable = compareEnable;
 	createInfo.compareOp = compareOp;
 	createInfo.minLod = minLod;

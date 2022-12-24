@@ -123,7 +123,7 @@ namespace egx {
 			Layout->Bind(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE);
 		}
 
-		inline void PushConstants(VkCommandBuffer cmd, VkPipelineStageFlags stageFlags, uint32_t offset, uint32_t size, void* pData) {
+		inline void PushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, void* pData) {
 			vkCmdPushConstants(cmd, Layout->GetLayout(), stageFlags, offset, size, pData);
 		}
 

@@ -7,10 +7,10 @@
 #include <imgui/imgui.h>
 
 #ifdef _DEBUG
-#define DInsertDebugLabel(RefCoreInterface, cmd, FrameIndex, DebugLabelText, ColR, ColG, ColB) egx::InsertDebugLabel(RefCoreInterface, cmd, FrameIndex, DebugLabelText, ColR, ColG, ColB)
+#define DInsertDebugLabel(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB) egx::InsertDebugLabel(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB)
 #define DEndDebugLabel(RefCoreInterface, cmd) egx::EndDebugLabel(RefCoreInterface, cmd)
 #else
-#define DInsertDebugLabel(RefCoreInterface, cmd, FrameIndex, DebugLabelText, ColR, ColG, ColB)
+#define DInsertDebugLabel(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB)
 #define DEndDebugLabel(RefCoreInterface, cmd)
 #endif
 
@@ -188,7 +188,7 @@ namespace egx {
 		return query;
 	}
 
-	void EGX_API InsertDebugLabel(ref<VulkanCoreInterface>& CoreInterface, VkCommandBuffer cmd, uint32_t FrameIndex, const std::string_view DebugLabelText, float r, float g, float b);
+	void EGX_API InsertDebugLabel(ref<VulkanCoreInterface>& CoreInterface, VkCommandBuffer cmd, const std::string_view DebugLabelText, float r, float g, float b);
 	void EGX_API EndDebugLabel(ref<VulkanCoreInterface>& CoreInterface, VkCommandBuffer cmd);
 
 	//struct FrameData {

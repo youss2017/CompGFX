@@ -273,13 +273,13 @@ void egx::Image::generatemipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel
 }
 #pragma endregion
 
-egx::ref<egx::Image> EGX_API egx::Image::LoadFromDisk(ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout)
+egx::ref<egx::Image> EGX_API egx::Image::LoadFromDisk(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout)
 {
 	int x, y, c;
 	auto pixels = stbi_load(path.data(), &x, &y, &c, 4);
 	if (!pixels)
 		return { (Image*)nullptr };
-	auto image = egx::Image::FactoryCreate(CoreInterface, VK_IMAGE_ASPECT_COLOR_BIT, x, y, VK_FORMAT_R8G8B8A8_UNORM, usage, InitalLayout);
+	auto image = egx::Image::FactoryCreate(CoreInterface, VK_IMAGE_ASPECT_COLOR_BIT, x, y, VK_FORMAT_R8G8B8A8_SRGB, usage, InitalLayout);
 	image->write(pixels, InitalLayout, x, y, 0, 4 * x);
 	image->generatemipmap(InitalLayout);
 	return image;
@@ -328,7 +328,7 @@ VkImageView egx::Image::createview(uint32_t ViewId, VkComponentMapping RGBASwizz
 #pragma endregion
 
 #pragma region cubemap
-egx::ref<egx::Image> egx::Image::CreateCubemap(ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkFormat format)
+egx::ref<egx::Image> egx::Image::CreateCubemap(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkFormat format)
 {
 	int width, height, channels;
 	struct Pixel

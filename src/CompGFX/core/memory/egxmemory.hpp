@@ -126,6 +126,7 @@ namespace egx {
 		std::vector<int8_t*> _mapped_ptr;
 		bool _mapped_flag = false;
 		uint32_t _ResizeFlag = 0;
+		std::vector<bool> _ResizeFrameFlag;
 		bool _ResizeCopyOldContents = false;
 		size_t _ResizeBytes = 0;
 	};
@@ -229,8 +230,8 @@ namespace egx {
 			return _views[ViewId];
 		}
 
-		static egx::ref<egx::Image> EGX_API CreateCubemap(ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkFormat format);
-		static ref<Image> EGX_API LoadFromDisk(ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout);
+		static egx::ref<egx::Image> EGX_API CreateCubemap(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkFormat format);
+		static ref<Image> EGX_API LoadFromDisk(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout);
 
 		void EGX_API barrier(VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
 			VkImageLayout oldLayout, VkImageLayout newLayout,

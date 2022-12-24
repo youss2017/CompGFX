@@ -293,7 +293,7 @@ void egx::VulkanSwapchain::Present(const ref<Image>& image, uint32_t viewIndex)
 	}
 
 	CommandBuffer::StartCommandBuffer(_cmd[frame], 0);
-	DInsertDebugLabel(_CoreInterface, _cmd[frame], frame, "Swapchain Present", 0.5f, 0.4f, 0.65f);
+	DInsertDebugLabel(_CoreInterface, _cmd[frame], "Swapchain Present", 0.5f, 0.4f, 0.65f);
 
 	VkClearValue clear{};
 	VkRenderPassBeginInfo beginInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
