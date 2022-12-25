@@ -44,9 +44,9 @@ namespace egx {
 		EGX_API Buffer& operator=(Buffer&& move) noexcept;
 
 		EGX_API ref<Buffer> Clone(bool CopyContents = true);
-		EGX_API void Copy(const ref<Buffer>& source, size_t offset, size_t size);
+		EGX_API void Copy(const ref<Buffer>& source, size_t srcOffset, size_t dstOffset, size_t size);
 		// Copies including other frame data
-		EGX_API void CopyAll(const ref<Buffer>& source, size_t offset, size_t size);
+		EGX_API void CopyAll(const ref<Buffer>& source, size_t srcOffset, size_t dstOffset, size_t size);
 
 		EGX_API void Write(void* data, size_t offset, size_t size, bool keepMapped = false);
 		EGX_API void Write(void* data, size_t size, bool keepMapped = false);

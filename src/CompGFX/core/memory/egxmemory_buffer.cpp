@@ -138,26 +138,28 @@ egx::ref<egx::Buffer> egx::Buffer::Clone(bool CopyContents)
 	if (!clone.IsValidRef())
 		return clone;
 	if (CopyContents)
-		clone->CopyAll(ref<Buffer>::SelfReference(this), 0, Size);
+		clone->CopyAll(ref<Buffer>::SelfReference(this), 0, 0, Size);
 	return clone;
 }
 
-void Buffer::Copy(const ref<Buffer>& source, size_t offset, size_t size)
+void Buffer::Copy(const ref<Buffer>& source, size_t srcOffset, size_t dstOffset, size_t size)
 {
 	auto cmd = CommandBufferSingleUse(_coreinterface);
 	VkBufferCopy region{};
-	region.srcOffset = offset;
+	region.srcOffset = srcOffset;
+	region.dstOffset = dstOffset;
 	region.size = size;
 	vkCmdCopyBuffer(cmd.Cmd, source->GetBuffer(), GetBuffer(), 1, &region);
 	cmd.Execute();
 }
 
 // Copies including other frame data
-void Buffer::CopyAll(const ref<Buffer>& source, size_t offset, size_t size)
+void Buffer::CopyAll(const ref<Buffer>& source, size_t srcOffset, size_t dstOffset, size_t size)
 {
 	auto cmd = CommandBufferSingleUse(_coreinterface);
 	VkBufferCopy region{};
-	region.srcOffset = offset;
+	region.srcOffset = srcOffset;
+	region.dstOffset = dstOffset;
 	region.size = size;
 	for (uint32_t i = 0; i < _coreinterface->MaxFramesInFlight; i++)
 	{
@@ -192,7 +194,7 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size, bool keepMapped)
 	else {
 		ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, Type, false, false);
 		stage->Write(data);
-		Copy(stage, offset, size);
+		Copy(stage, 0, offset, size);
 	}
 }
 
