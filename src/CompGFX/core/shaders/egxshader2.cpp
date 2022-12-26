@@ -25,10 +25,11 @@ namespace egx::internal {
 		uint32_t ShaderStage{};
 		std::vector<uint32_t> Bytecode;
 		uint64_t LastModifiedDate{};
+		std::vector<std::pair<std::string, uint64_t>> IncludesLastModified;
 	};
 }
 
-ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, std::string_view File, BindingAttributes Attributes)
+ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, std::string_view File, BindingAttributes Attributes, bool compileDebug)
 {
 	if (!Exists(File)) {
 		LOGEXCEPT("\"{0}\" does not exist.", File.data());
@@ -38,14 +39,13 @@ ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInt
 		LOGEXCEPT("\"{0}\" has no file extention; cannot deduce shader type.", File.data());
 	}
 
-	if (Shader2::CacheFile.has_value()) {
-		auto cacheList = Shader2::LoadCacheInformation();
+	std::vector<egx::internal::ShaderCacheInformation> cacheList;
+	if (!compileDebug && Shader2::CacheFile.has_value()) {
+		cacheList = Shader2::LoadCacheInformation();
 		auto fullPath = fileInfo.string();
-		auto cache = std::ranges::find_if(cacheList, [&](const internal::ShaderCacheInformation& info) { return EqualIgnoreCase(fullPath, info.FilePath); });
-		if (cache != cacheList.end()) {
-			if (std::filesystem::last_write_time(File).time_since_epoch().count() == cache->LastModifiedDate) {
-				return CreateFromCache(CoreInterface, *cache, Attributes);
-			}
+		egx::internal::ShaderCacheInformation cache;
+		if (!CheckIfShaderHasBeenModified(cacheList, fullPath, cache)) {
+			return CreateFromCache(CoreInterface, cache, Attributes);
 		}
 	}
 
@@ -68,21 +68,22 @@ ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInt
 	if (!code.has_value()) {
 		LOGEXCEPT("Could not load file \"{0}\"", File.data());
 	}
-	auto processedCode = PreprocessInclude(fileInfo.string(), std::filesystem::absolute(fileInfo).parent_path().string(), *code);
-	auto result = FactoryCreateEx(CoreInterface, processedCode, shaderStage, Attributes, fileInfo.filename().string());
+	std::vector<std::pair<std::string, uint64_t>> includeLastModified;
+	auto processedCode = PreprocessInclude(fileInfo.string(), std::filesystem::absolute(fileInfo).parent_path().string(), *code, includeLastModified);
+	auto result = FactoryCreateEx(CoreInterface, processedCode, shaderStage, Attributes, fileInfo.filename().string(), compileDebug);
 
-	if (Shader2::CacheFile.has_value()) {
+	if (!compileDebug && Shader2::CacheFile.has_value()) {
 		internal::ShaderCacheInformation info;
 		info.FilePath = File.data();
 		info.LastModifiedDate = std::filesystem::last_write_time(fileInfo).time_since_epoch().count();
 		info.ShaderStage = shaderStage;
 		info.SourceCode = result->SourceCode;
 		info.Bytecode = result->Bytecode;
-		auto list = LoadCacheInformation();
-		if (list.size() > 0)
-			list.erase(std::remove_if(list.begin(), list.end(), [&](auto& x) {return x.FilePath == info.FilePath; }), list.end());
-		list.push_back(info);
-		SaveCacheInformation(list);
+		info.IncludesLastModified = includeLastModified;
+		if (cacheList.size() > 0)
+			cacheList.erase(std::remove_if(cacheList.begin(), cacheList.end(), [&](auto& x) {return x.FilePath == info.FilePath; }), cacheList.end());
+		cacheList.push_back(info);
+		SaveCacheInformation(cacheList);
 	}
 
 	return result;
@@ -91,7 +92,8 @@ ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInt
 ref<Shader2> egx::Shader2::FactoryCreateEx
 (const ref<VulkanCoreInterface>& CoreInterface, std::string_view Code, VkShaderStageFlags ShaderType,
 	BindingAttributes Attributes,
-	std::string_view OptionalFileName)
+	std::string_view OptionalFileName,
+	bool compileDebug)
 {
 	shaderc_shader_kind shaderKind{};
 	switch (ShaderType) {
@@ -104,12 +106,18 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 	shaderc::Compiler compiler;
 	shaderc::CompileOptions options;
 	options.SetTargetEnvironment(shaderc_target_env::shaderc_target_env_vulkan, VK_VERSION_1_2);
+
+	bool debug = compileDebug;
 #ifdef _DEBUG
-	options.SetOptimizationLevel(shaderc_optimization_level_zero);
-	options.SetGenerateDebugInfo();
-#else
-	options.SetOptimizationLevel(shaderc_optimization_level_performance);
+	debug &= true;
 #endif
+	if (debug) {
+		options.SetOptimizationLevel(shaderc_optimization_level_zero);
+		options.SetGenerateDebugInfo();
+	}
+	else {
+		options.SetOptimizationLevel(shaderc_optimization_level_performance);
+	}
 	auto start = std::chrono::high_resolution_clock::now();
 	auto compilationResult = compiler.CompileGlslToSpv(Code.data(), shaderKind, OptionalFileName.data(), "main", options);
 	auto end = std::chrono::high_resolution_clock::now();
@@ -138,7 +146,7 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 	return new Shader2(ShaderType, duration, bytecode, Code.data(), shaderModule, Attributes, reflection, shaderKind, CoreInterface);
 }
 
-std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code)
+std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code, std::vector<std::pair<std::string, uint64_t>>& includesLastModifiedDate)
 {
 	std::string output;
 	auto lines = Split(code.data(), "\n");
@@ -165,7 +173,8 @@ std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, st
 			LOGEXCEPT("Could not open #include file (READ FAIL) in \"{0}\" at line {1}", CurrentFilePath.data(), line_index);
 		}
 		std::filesystem::path p(include_file_path);
-		include_source_code = PreprocessInclude(include_file_path, p.parent_path().string(), *include_source_code);
+		includesLastModifiedDate.push_back({ p.string(), (uint64_t)std::filesystem::last_write_time(p).time_since_epoch().count() });
+		include_source_code = PreprocessInclude(include_file_path, p.parent_path().string(), *include_source_code, includesLastModifiedDate);
 		output += *include_source_code;
 		output.push_back('\n');
 		line_index++;
@@ -188,11 +197,11 @@ void Shader2::SetGlobalCacheFile(std::string_view CacheFolder)
 			CreateEmptyFile(path.string());
 		}
 		Shader2::CacheFile = path.string();
-	}
+		}
 	else {
 		LOG(WARNING, "Could not create '{0}' folder tree for Shader cache.", CacheFolder.data());
 	}
-}
+	}
 
 egx::Shader2::Shader2(Shader2&& move) noexcept
 {
@@ -227,22 +236,27 @@ std::vector<internal::ShaderCacheInformation> Shader2::LoadCacheInformation()
 	ordered_json j;
 	try {
 		j = ordered_json::parse(*cache);
+		std::vector< internal::ShaderCacheInformation> result;
+		for (auto& item : j) {
+			auto& p = result.emplace_back();
+			item.at("filePath").get_to(p.FilePath);
+			item.at("sourceCode").get_to(p.SourceCode);
+			item.at("shaderStage").get_to(p.ShaderStage);
+			item.at("byteCode").get_to(p.Bytecode);
+			item.at("lastModifiedDate").get_to(p.LastModifiedDate);
+			auto& includeLastModified = item.at("includeLastModified");
+			for (auto& ilm : includeLastModified)
+			{
+				auto& includeDirective = p.IncludesLastModified.emplace_back();
+				ilm.at("includePath").get_to<std::string>(includeDirective.first);
+				ilm.at("lastModified").get_to<uint64_t>(includeDirective.second);
+			}
+		}
+		return result;
 	}
 	catch (...) {
 		return {};
 	}
-	std::vector< internal::ShaderCacheInformation> result;
-	for (auto& item : j) {
-		auto& p = result.emplace_back();
-		item.at("filePath").get_to(p.FilePath);
-		item.at("sourceCode").get_to(p.SourceCode);
-		item.at("shaderStage").get_to(p.ShaderStage);
-		item.at("byteCode").get_to(p.Bytecode);
-		item.at("lastModifiedDate").get_to(p.LastModifiedDate);
-
-	}
-	//return json(*cache).get<std::vector<internal::ShaderCacheInformation>>();
-	return result;
 }
 
 void Shader2::SaveCacheInformation(const std::vector<internal::ShaderCacheInformation>& cacheInformation)
@@ -251,12 +265,21 @@ void Shader2::SaveCacheInformation(const std::vector<internal::ShaderCacheInform
 	std::lock_guard guard(Shader2::CacheWriteLock);
 	ordered_json out = json::array();
 	for (auto& item : cacheInformation) {
+		ordered_json includeLastModified;
+		for (auto& [path, lastModified] : item.IncludesLastModified)
+		{
+			includeLastModified.push_back({
+				{"includePath", path},
+				{"lastModified", lastModified}
+				});
+		}
 		out.push_back({
 			{"filePath", item.FilePath},
 			{"sourceCode", item.SourceCode},
 			{"shaderStage", item.ShaderStage},
 			{"byteCode", item.Bytecode},
-			{"lastModifiedDate", item.LastModifiedDate}
+			{"lastModifiedDate", item.LastModifiedDate},
+			{ "includeLastModified", includeLastModified }
 			});
 	}
 	WriteAllText(*Shader2::CacheFile, out.dump());
@@ -371,6 +394,24 @@ ShaderReflection Shader2::GenerateReflection(const std::vector<uint32_t>& Byteco
 	//readImageResources(resources.separate_samplers, VK_DESCRIPTOR_TYPE_SAMPLER);
 
 	return output;
+}
+
+// return true if modified otherwise false
+bool egx::Shader2::CheckIfShaderHasBeenModified(const std::vector<internal::ShaderCacheInformation>& cacheInformation, const std::string& shaderPath, egx::internal::ShaderCacheInformation& outCache)
+{
+	auto cache = std::ranges::find_if(cacheInformation, [&](const internal::ShaderCacheInformation& info) { return EqualIgnoreCase(shaderPath, info.FilePath); });
+	if (cache != cacheInformation.end()) {
+		if (std::filesystem::last_write_time(shaderPath).time_since_epoch().count() == cache->LastModifiedDate) {
+			for (auto& ilm : cache->IncludesLastModified) {
+				if (std::filesystem::last_write_time(ilm.first).time_since_epoch().count() != ilm.second) {
+					return true;
+				}
+			}
+			outCache = *cache;
+			return false;
+		}
+	}
+	return true;
 }
 
 ref<Shader2> Shader2::CreateFromCache(const ref<VulkanCoreInterface>& CoreInterface, const internal::ShaderCacheInformation& CacheInfo, BindingAttributes Attributes)

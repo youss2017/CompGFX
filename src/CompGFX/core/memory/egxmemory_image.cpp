@@ -25,6 +25,7 @@ egx::ref<egx::Image> egx::Image::FactoryCreateEx(
 	uint32_t arraylevel,
 	VkImageUsageFlags usage,
 	VkImageLayout InitalLayout,
+	bool createDefaultView,
 	bool StreamingMode)
 {
 	VkAlloc::IMAGE_DESCRIPITION desc{};
@@ -65,7 +66,8 @@ egx::ref<egx::Image> egx::Image::FactoryCreateEx(
 		result->_StreamingCmd.DelayInitialize(CoreInterface);
 		result->_StreamingFence = Fence::FactoryCreate(CoreInterface);
 	}
-
+	if (createDefaultView)
+		result->createview(0);
 	return result;
 }
 
@@ -109,7 +111,7 @@ void egx::Image::write(
 	uint32_t StrideSizeInBytes)
 {
 	assert(ArrayLevel < this->Arraylevels);
-	
+
 	auto commands = [&](VkCommandBuffer cmd, VkBuffer buffer) {
 		VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 		barrier.srcAccessMask = VK_ACCESS_NONE;
@@ -273,13 +275,13 @@ void egx::Image::generatemipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel
 }
 #pragma endregion
 
-egx::ref<egx::Image> EGX_API egx::Image::LoadFromDisk(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout)
+egx::ref<egx::Image> EGX_API egx::Image::LoadFromDisk(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout, VkFormat format)
 {
 	int x, y, c;
 	auto pixels = stbi_load(path.data(), &x, &y, &c, 4);
 	if (!pixels)
 		return { (Image*)nullptr };
-	auto image = egx::Image::FactoryCreate(CoreInterface, VK_IMAGE_ASPECT_COLOR_BIT, x, y, VK_FORMAT_R8G8B8A8_SRGB, usage, InitalLayout);
+	auto image = egx::Image::FactoryCreate(CoreInterface, VK_IMAGE_ASPECT_COLOR_BIT, x, y, format, usage, InitalLayout, true);
 	image->write(pixels, InitalLayout, x, y, 0, 4 * x);
 	image->generatemipmap(InitalLayout);
 	return image;
@@ -288,7 +290,11 @@ egx::ref<egx::Image> EGX_API egx::Image::LoadFromDisk(const ref<VulkanCoreInterf
 #pragma region image view
 VkImageView egx::Image::createview(uint32_t ViewId, uint32_t Miplevel, uint32_t MipCount, uint32_t ArrayLevel, uint32_t ArrayCount, VkComponentMapping RGBASwizzle)
 {
-	assert(_views.find(ViewId) == _views.end());
+	if (_views.find(ViewId) != _views.end())
+	{
+		LOG(WARNING, "Attempting to create a view on image that aleady exists, view id = {0}", ViewId);
+		return _views.at(ViewId);
+	}
 	VkImageViewCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	createInfo.image = Image_;
 	if (ArrayLevel <= 1)
@@ -407,7 +413,8 @@ egx::ref<egx::Image> egx::Image::CreateCubemap(const ref<VulkanCoreInterface>& C
 			1,
 			1,
 			0,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			false);
 		assert(cubeFaces[i].IsValidRef());
 		cubeFaces[i]->generatemipmap(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
@@ -422,7 +429,8 @@ egx::ref<egx::Image> egx::Image::CreateCubemap(const ref<VulkanCoreInterface>& C
 		0,
 		1,
 		VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		false);
 
 	auto cmd = CommandBufferSingleUse(CoreInterface);
 

@@ -6,13 +6,8 @@
 #include <string>
 #include <imgui/imgui.h>
 
-#ifdef _DEBUG
-#define DInsertDebugLabel(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB) egx::InsertDebugLabel(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB)
-#define DEndDebugLabel(RefCoreInterface, cmd) egx::EndDebugLabel(RefCoreInterface, cmd)
-#else
-#define DInsertDebugLabel(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB)
-#define DEndDebugLabel(RefCoreInterface, cmd)
-#endif
+#define BeginDebugLabelCmd(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB) egx::InsertDebugLabel(RefCoreInterface, cmd, DebugLabelText, ColR, ColG, ColB)
+#define EndDebugLabelCmd(RefCoreInterface, cmd) egx::EndDebugLabel(RefCoreInterface, cmd)
 
 namespace egx {
 

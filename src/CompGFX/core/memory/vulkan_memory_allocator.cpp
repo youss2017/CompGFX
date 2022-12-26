@@ -103,7 +103,7 @@ namespace VkAlloc
 			vmaCreateInfo.priority = desc.m_priority;
 			VkResult result = vmaCreateBuffer(context->m_allocator, &createInfo, &vmaCreateInfo, &buffer->m_buffer, &buffer->m_suballocation.m_allocation, &buffer->m_suballocation.m_allocation_info);
 			if (result != VK_SUCCESS) {
-				LOG(ERR, "VMA Failed.");
+				LOG(ERR, "VMA Failed allocating {0} bytes", desc.m_size);
 				cpp::DebugBreak();
 				delete buffer;
 				return result;

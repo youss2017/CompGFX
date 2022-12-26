@@ -110,7 +110,7 @@ namespace egx {
 		assert(_renderpass == nullptr);
 		assert(_colorattachements.find(ColorAttachmentId) == _colorattachements.end());
 #ifdef _DEBUG
-		LOG(INFO, "Creating FBO Color Attachment {0}x{1} Format: {2} Clear: <{3:%.3f}, {4:%.3f}, {5:%.3f}, {6:%.3f}>", 
+		LOG(INFO, "Creating FBO Color Attachment {0}x{1} Format: {2} Clear: <{3:%.3f}, {4:%.3f}, {5:%.3f}, {6:%.3f}>",
 			Width, Height, egx::_internal::DebugVkFormatToString(Format),
 			ClearValue.color.float32[0], ClearValue.color.float32[1], ClearValue.color.float32[2], ClearValue.color.float32[3]);
 #endif
@@ -127,10 +127,8 @@ namespace egx {
 			1,
 			1,
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CustomUsageFlags,
-			InitialLayout);
-
-		if (CreateDefaultView)
-			attachment.View = attachment.Attachment->createview(0);
+			InitialLayout,
+			CreateDefaultView);
 
 		attachment.Description.format = Format;
 		attachment.Description.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -172,10 +170,10 @@ namespace egx {
 			1,
 			1,
 			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CustomUsageFlags,
-			InitialLayout);
+			InitialLayout,
+			CreateDefaultView
+		);
 
-		if (CreateDefaultView)
-			attachment.View = attachment.Attachment->createview(0);
 
 		attachment.Description.format = Format;
 		attachment.Description.samples = VK_SAMPLE_COUNT_1_BIT;

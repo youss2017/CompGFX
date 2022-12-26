@@ -180,13 +180,13 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size, bool keepMapped)
 		int8_t* ptr = Map();
 		ptr += offset;
 		memcpy(ptr, data, size);
-		if (mapState && !keepMapped)
+		if (!mapState && !keepMapped)
 			Unmap();
 		else
 			Flush();
 		return;
 	}
-	if (size < UINT16_MAX) {
+	if (size <= UINT16_MAX) {
 		auto cmd = CommandBufferSingleUse(_coreinterface);
 		vkCmdUpdateBuffer(cmd.Cmd, GetBuffer(), offset, size, data);
 		cmd.Execute();

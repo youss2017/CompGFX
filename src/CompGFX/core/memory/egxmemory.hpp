@@ -157,6 +157,7 @@ namespace egx {
 			uint32_t arraylevel,
 			VkImageUsageFlags usage,
 			VkImageLayout InitialLayout,
+			bool createDefaultView,
 			bool StreamingMode = false);
 
 		static inline ref<Image> FactoryCreate(
@@ -167,10 +168,11 @@ namespace egx {
 			VkFormat format,
 			VkImageUsageFlags usage,
 			VkImageLayout InitialLayout,
+			bool createDefaultView,
 			uint32_t mipcount = 0,
 			bool StreamingMode = false
 		) {
-			return FactoryCreateEx(CoreInterface, aspect, width, height, 1, format, mipcount, 1, usage, InitialLayout, StreamingMode);
+			return FactoryCreateEx(CoreInterface, aspect, width, height, 1, format, mipcount, 1, usage, InitialLayout, createDefaultView, StreamingMode);
 		}
 
 		EGX_API ~Image() noexcept;
@@ -231,7 +233,8 @@ namespace egx {
 		}
 
 		static egx::ref<egx::Image> EGX_API CreateCubemap(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkFormat format);
-		static ref<Image> EGX_API LoadFromDisk(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout);
+		static ref<Image> EGX_API LoadFromDisk(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout,
+			VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
 
 		void EGX_API barrier(VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
 			VkImageLayout oldLayout, VkImageLayout newLayout,

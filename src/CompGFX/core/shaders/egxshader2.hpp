@@ -65,7 +65,8 @@ namespace egx
 		COMPGFX static ref<Shader2> FactoryCreate(
 			const ref<VulkanCoreInterface>& CoreInterface,
 			std::string_view File,
-			BindingAttributes Attributes = BindingAttributes::Default
+			BindingAttributes Attributes = BindingAttributes::Default,
+			bool CompileDebug = false
 		);
 
 		COMPGFX static ref<Shader2> FactoryCreateEx(
@@ -73,7 +74,8 @@ namespace egx
 			std::string_view Code,
 			VkShaderStageFlags ShaderType,
 			BindingAttributes Attributes,
-			std::string_view OptionalFileName = ""
+			std::string_view OptionalFileName = "",
+			bool CompileDebug = false
 		);
 
 		COMPGFX static void SetGlobalCacheFile(std::string_view CacheFolder);
@@ -150,9 +152,10 @@ namespace egx
 		static std::optional<std::string> CacheFile;
 		static std::mutex CacheWriteLock;
 
-		static std::string PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code);
+		static std::string PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code, std::vector<std::pair<std::string, uint64_t>>& includesLastModifiedDate);
 		static ShaderReflection GenerateReflection(const std::vector<uint32_t>& Bytecode, BindingAttributes Attributes);
 
+		static bool CheckIfShaderHasBeenModified(const std::vector<internal::ShaderCacheInformation>& cacheInformation, const std::string& shaderPath, egx::internal::ShaderCacheInformation& outCache);
 		static ref<Shader2> CreateFromCache(const ref<VulkanCoreInterface>& CoreInterface, const internal::ShaderCacheInformation& CacheInfo, BindingAttributes Attributes);
 
 	};
