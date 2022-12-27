@@ -84,7 +84,13 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 	for (size_t i = 0; i < (CpuWritePerFrameFlag ? CoreInterface->MaxFramesInFlight : 1); i++)
 	{
 		VkAlloc::BUFFER buffer;
-		VkResult ret = VkAlloc::CreateBuffers(CoreInterface->MemoryContext, 1, &desc, &buffer);
+		VkResult ret = VK_ERROR_MEMORY_MAP_FAILED;
+		try {
+			ret = VkAlloc::CreateBuffers(CoreInterface->MemoryContext, 1, &desc, &buffer);
+		}
+		catch (...) {
+			ret = VK_SUCCESS;
+		}
 		if (ret != VK_SUCCESS)
 		{
 			for (auto& buf : result->_buffers)
@@ -102,6 +108,20 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 
 egx::Buffer::~Buffer()
 {
+#ifdef _DEBUG
+	if (Size > 128ull * (1024ull))
+	{
+		if (CpuAccessPerFrame)
+		{
+			LOG(INFO, "Deleting a {0:%.4lf} x {1} Mb Buffer; Total {2:%.4lf} Mb",
+				(double)Size / (1024.0 * 1024.0),
+				_coreinterface->MaxFramesInFlight,
+				((double)Size / (1024.0 * 1024.0)) * double(_coreinterface->MaxFramesInFlight));
+		}
+		else
+			LOG(INFO, "Deleting a {0:%.4lf} Mb Buffer", (double)Size / (1024.0 * 1024.0));
+	}
+#endif
 	if (_mapped_flag)
 		Unmap();
 	for (auto& buf : _buffers)

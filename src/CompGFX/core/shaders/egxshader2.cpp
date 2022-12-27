@@ -197,11 +197,11 @@ void Shader2::SetGlobalCacheFile(std::string_view CacheFolder)
 			CreateEmptyFile(path.string());
 		}
 		Shader2::CacheFile = path.string();
-		}
+	}
 	else {
 		LOG(WARNING, "Could not create '{0}' folder tree for Shader cache.", CacheFolder.data());
 	}
-	}
+}
 
 egx::Shader2::Shader2(Shader2&& move) noexcept
 {
