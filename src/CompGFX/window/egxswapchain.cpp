@@ -267,6 +267,7 @@ void egx::VulkanSwapchain::Acquire()
 
 uint32_t egx::VulkanSwapchain::PresentInit()
 {
+	SetExecuting();
 	WaitAndReset();
 	return _CoreInterface->CurrentFrame;
 }
@@ -374,6 +375,7 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 	vkQueuePresentKHR(_CoreInterface->Queue, &presentInfo);
 
 	_CoreInterface->CurrentFrame = (_CoreInterface->CurrentFrame + 1u) % _CoreInterface->MaxFramesInFlight;
+	_CoreInterface->FrameCount++;
 }
 
 void egx::VulkanSwapchain::SetSyncInterval(bool VSync)

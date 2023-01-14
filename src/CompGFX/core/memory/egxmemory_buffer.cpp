@@ -20,7 +20,7 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 	bool BufferReference,
 	bool requireCoherent)
 {
-#ifdef _DEBUG
+#if _DEBUG && 0
 	if (size > 128ull * (1024ull))
 	{
 		if (CpuWritePerFrameFlag)
@@ -84,7 +84,7 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 	for (size_t i = 0; i < (CpuWritePerFrameFlag ? CoreInterface->MaxFramesInFlight : 1); i++)
 	{
 		VkAlloc::BUFFER buffer;
-		VkResult ret = VK_ERROR_MEMORY_MAP_FAILED;
+		VkResult ret = VK_RESULT_MAX_ENUM;
 		try {
 			ret = VkAlloc::CreateBuffers(CoreInterface->MemoryContext, 1, &desc, &buffer);
 		}
@@ -103,12 +103,13 @@ egx::ref<egx::Buffer> egx::Buffer::FactoryCreate(
 		result->_buffers.push_back(buffer);
 	}
 	result->_ResizeFrameFlag.resize(std::max<size_t>(result->_buffers.size(), 1), false);
+	result->_BufferPointers.resize(std::max<size_t>(result->_buffers.size(), 1), false);
 	return result;
 }
 
 egx::Buffer::~Buffer()
 {
-#ifdef _DEBUG
+#if _DEBUG && 0
 	if (Size > 128ull * (1024ull))
 	{
 		if (CpuAccessPerFrame)
@@ -192,7 +193,7 @@ void Buffer::CopyAll(const ref<Buffer>& source, size_t srcOffset, size_t dstOffs
 	cmd.Execute();
 }
 
-void egx::Buffer::Write(void* data, size_t offset, size_t size, bool keepMapped)
+void egx::Buffer::Write(const void* data, size_t offset, size_t size, bool keepMapped)
 {
 	if (Layout != memorylayout::local)
 	{
@@ -206,7 +207,7 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size, bool keepMapped)
 			Flush();
 		return;
 	}
-	if (size <= UINT16_MAX) {
+	if (size <= UINT16_MAX && size % 4 == 0) {
 		auto cmd = CommandBufferSingleUse(_coreinterface);
 		vkCmdUpdateBuffer(cmd.Cmd, GetBuffer(), offset, size, data);
 		cmd.Execute();
@@ -218,12 +219,12 @@ void egx::Buffer::Write(void* data, size_t offset, size_t size, bool keepMapped)
 	}
 }
 
-void egx::Buffer::Write(void* data, size_t size, bool keepMapped)
+void egx::Buffer::Write(const void* data, size_t size, bool keepMapped)
 {
 	return Write(data, 0, size, keepMapped);
 }
 
-void egx::Buffer::Write(void* data, bool keepMapped)
+void egx::Buffer::Write(const void* data, bool keepMapped)
 {
 	return Write(data, 0, Size, keepMapped);
 }
@@ -257,13 +258,15 @@ void egx::Buffer::Unmap()
 
 void egx::Buffer::Read(void* pOutput, size_t offset, size_t size)
 {
-	assert(offset + size < Size);
+	assert(offset + size <= Size);
 	if (Layout != memorylayout::local)
 	{
 		bool mapState = _mapped_flag;
 		int8_t* ptr = Map();
 		ptr += offset;
 		memcpy(pOutput, ptr, size);
+		if (!mapState)
+			Unmap();
 		return;
 	}
 	ref<Buffer> stage = FactoryCreate(_coreinterface, size, memorylayout::stream, BufferType_TransferOnly, false, false);
@@ -400,7 +403,7 @@ const VkBuffer& Buffer::GetBuffer() {
 	return _buffers[frame]->m_buffer;
 }
 
-std::vector<size_t> egx::Buffer::GetBufferBasePointer()
+std::vector<size_t> egx::Buffer::GetBufferBasePointers()
 {
 	std::vector<size_t> address;
 	address.reserve(_max_frames);
@@ -415,6 +418,17 @@ std::vector<size_t> egx::Buffer::GetBufferBasePointer()
 	return address;
 }
 
+size_t egx::Buffer::GetBufferBasePointer()
+{
+	VkBufferDeviceAddressInfo info{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+	info.buffer = GetBuffer();
+	auto& ptr = _BufferPointers[_coreinterface->CurrentFrame];
+	if (ptr == std::numeric_limits<size_t>::max()) {
+		ptr = vkGetBufferDeviceAddress(_coreinterface->Device, &info);
+	}
+	return ptr;
+}
+
 void egx::Buffer::Resize(size_t newSize, bool CopyOldContents)
 {
 	if (newSize == Size) return;
@@ -422,6 +436,7 @@ void egx::Buffer::Resize(size_t newSize, bool CopyOldContents)
 	_ResizeCopyOldContents = CopyOldContents;
 	_ResizeBytes = newSize;
 	std::fill(_ResizeFrameFlag.begin(), _ResizeFrameFlag.end(), true);
+	std::fill(_BufferPointers.begin(), _BufferPointers.end(), std::numeric_limits<size_t>::max());
 }
 
 void egx::Buffer::SetDebugName(const std::string& Name)

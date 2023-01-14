@@ -39,14 +39,13 @@ namespace egx {
 			ImGui::SetCurrentContext(GetContext());
 		}
 
-		std::vector<Device> EGX_API EnumerateDevices();
+		EGX_API std::vector<Device> EnumerateDevices();
 
-		void EGX_API EstablishDevice(const Device& Device);
+		EGX_API const ref<VulkanCoreInterface>& EstablishDevice(const Device& Device, const VkPhysicalDeviceFeatures2& features);
 
-		inline ref<VulkanCoreInterface> GetCoreInterface() noexcept { return CoreInterface; }
-				EGX_API cpp::Logger* GetEngineLogger();
+		EGX_API cpp::Logger* GetEngineLogger();
 
-		inline void WaitIdle() const { vkDeviceWaitIdle(CoreInterface->Device); }
+		inline void WaitIdle() const { vkDeviceWaitIdle(_CoreInterface->Device); }
 
 	private:
 		const bool UsingRenderDOC;
@@ -55,9 +54,9 @@ namespace egx {
 
 	public:
 		VulkanSwapchain* Swapchain = nullptr;
-		ref<VulkanCoreInterface> CoreInterface;
 	private:
 		VkDebugReportCallbackEXT _DebugCallbackHandle;
+		ref<VulkanCoreInterface> _CoreInterface;
 	};
 
 }

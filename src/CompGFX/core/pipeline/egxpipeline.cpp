@@ -28,7 +28,7 @@ egx::Pipeline& egx::Pipeline::operator=(Pipeline&& move) noexcept
 	return *this;
 }
 
-void  egx::Pipeline::invalidate(
+void  egx::Pipeline::Create(
 	const ref<Shader2>& vertex,
 	const ref<Shader2>& fragment,
 	const ref<Framebuffer>& framebuffer,
@@ -45,66 +45,7 @@ void  egx::Pipeline::invalidate(
 	const auto& freflect = fragment->Reflection;
 	Pool = SetPool::FactoryCreate(_coreinterface);
 	Layout = PipelineLayout::FactoryCreate(_coreinterface);
-	//// Create Descriptor Set Layout
-	//std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> setLayoutCreateInfos;
-	//auto buildSLCI = [&](const ShaderReflection& reflection) {
-	//	for (auto& [setId, bindings] : reflection.SetToManyBindings) {
-	//		Pool->IncrementSetCount();
-	//		std::vector<VkDescriptorSetLayoutBinding> ccbindings;
-	//		for (auto& [bindingId, binding] : bindings) {
-	//			VkDescriptorSetLayoutBinding slbinding{};
-	//			slbinding.binding = bindingId;
-	//			slbinding.descriptorCount = binding.DescriptorCount;
-	//			slbinding.descriptorType = binding.Type;
-	//			slbinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	//			ccbindings.push_back(slbinding);
-	//			Pool->AdjustForRequirements(SetPoolRequirementsInfo::Inline(binding.Type, 1, 0));
-	//		}
-	//		if (!setLayoutCreateInfos.contains(setId)) {
-	//			setLayoutCreateInfos[setId] = { ccbindings };
-	//			continue;
-	//		}
-	//		auto& slcc = setLayoutCreateInfos[setId];
-	//		auto newBindings = ccbindings | std::views::filter([&](VkDescriptorSetLayoutBinding& binding) {
-	//			return std::ranges::count_if(slcc, [&](const VkDescriptorSetLayoutBinding& binding2) {
-	//				return binding2.binding == binding.binding;
-	//				}) == 0;
-	//			});
-	//		auto existingBindings = slcc | std::views::filter([&](VkDescriptorSetLayoutBinding& binding) {
-	//			return std::ranges::count_if(ccbindings, [&](const VkDescriptorSetLayoutBinding& binding2) {
-	//				return binding2.binding == binding.binding;
-	//				}) > 0;
-	//			});
-	//		for (auto& nb : newBindings) {
-	//			slcc.push_back(nb);
-	//		}
-	//		std::ranges::for_each(existingBindings, [&](VkDescriptorSetLayoutBinding& existing_binding) {
-	//			VkDescriptorSetLayoutBinding current_binding = *std::ranges::find_if(ccbindings, [&](VkDescriptorSetLayoutBinding& ccbinding) {
-	//				return existing_binding.binding == ccbinding.binding;
-	//				});
-	//			existing_binding.stageFlags |= current_binding.stageFlags;
-	//			if (existing_binding.descriptorType != current_binding.descriptorType ||
-	//				existing_binding.descriptorCount != current_binding.descriptorCount) {
-	//				LOGEXCEPT("Set={0}, Binding={1} do not match in vertex/fragment shader.", setId, existing_binding.binding);
-	//			}
-	//			});
-	//	}
-	//};
-	//
-	//buildSLCI(vreflect);
-	//buildSLCI(freflect);
 
-	//for (auto& [setId, setLayoutBindings] : setLayoutCreateInfos)
-	//{
-	//	VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-	//	setLayoutCreateInfo.bindingCount = setLayoutBindings.size();
-	//	setLayoutCreateInfo.pBindings = setLayoutBindings.data();
-	//	VkDescriptorSetLayout setLayout;
-	//	if (vkCreateDescriptorSetLayout(_coreinterface->Device, &setLayoutCreateInfo, nullptr, &setLayout) != VK_SUCCESS) {
-	//		LOGEXCEPT("Could not create descriptor set layout for set={0}", setId);
-	//	}
-	//	_SetLayouts.push_back(setLayout);
-	//}
 	// Create Pipeline Layout
 	std::vector<VkPushConstantRange> ranges;
 	if (vreflect.Pushconstant.HasValue) {
@@ -132,15 +73,7 @@ void  egx::Pipeline::invalidate(
 			ranges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		}
 		else {
-			if (v.offset == 0 && f.offset == 0) {
-				LOGEXCEPT("Invalid pushcontant ranges for vertex and fragment shaders.");
-			}
-			if (f.offset > 0 && f.offset <= (v.offset + v.size)) {
-				LOGEXCEPT("Invalid pushcontant ranges for vertex and fragment shaders.");
-			}
-			if (v.offset > 0 && v.offset <= (f.offset + f.size)) {
-				LOGEXCEPT("Invalid pushcontant ranges for vertex and fragment shaders.");
-			}
+			ranges[0].stageFlags = ranges[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		}
 	}
 
@@ -148,13 +81,6 @@ void  egx::Pipeline::invalidate(
 		Layout->AddPushconstantRange(range.offset, range.size, range.stageFlags);
 	}
 
-	/*VkPipelineLayoutCreateInfo layoutCreateInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	layoutCreateInfo.setLayoutCount = _SetLayouts.size();
-	layoutCreateInfo.pSetLayouts = _SetLayouts.data();
-	layoutCreateInfo.pushConstantRangeCount = ranges.size();
-	layoutCreateInfo.pPushConstantRanges = ranges.data();
-	VkPipelineLayout pipelineLayout;
-	vkCreatePipelineLayout(_coreinterface->Device, &layoutCreateInfo, nullptr, &pipelineLayout);*/
 	// Create Descriptor Sets
 	auto createSets = [&](const ShaderReflection& reflect) {
 		for (auto& [setId, bindings] : reflect.SetToManyBindings) {
@@ -319,12 +245,14 @@ void  egx::Pipeline::invalidate(
 	DepthStencilState.minDepthBounds = 0.0f;
 	DepthStencilState.maxDepthBounds = 1.0f;
 
-	std::vector<VkPipelineColorBlendAttachmentState> BlendAttachmentStates(framebuffer->_colorattachements.size());
+	std::vector<VkPipelineColorBlendAttachmentState> BlendAttachmentStates;
 	{
-		int i = 0;
-		for (const auto& [Id, attachment] : framebuffer->_colorattachements) {
-			BlendAttachmentStates[i] = attachment.GetBlendState();
-			i++;
+		const auto& subpass = framebuffer->_subpass[PassId];
+		uint32_t offset = framebuffer->_depthattachment.has_value() ? 1 : 0;
+		for (uint32_t i = 0; i < subpass.colorAttachmentCount; i++)
+		{
+			auto& colorAttachment = subpass.pColorAttachments[i];
+			BlendAttachmentStates.push_back(framebuffer->_colorattachements.at(colorAttachment.attachment - offset).GetBlendState());
 		}
 	}
 
@@ -442,7 +370,7 @@ void  egx::Pipeline::invalidate(
 	vkCreateGraphicsPipelines(_coreinterface->Device, nullptr, 1, &createInfo, 0, &Pipeline_);
 }
 
-void egx::Pipeline::invalidate(const ref<Shader2>& compute)
+void egx::Pipeline::Create(const ref<Shader2>& compute)
 {
 	_graphics = false;
 	if (Pipeline_) {

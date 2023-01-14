@@ -28,6 +28,10 @@ enum EventDetailFlags {
 		EventFlagBits mEvents;
 		EventDetailBits mDetails;
 
+		static bool IsWindowMinimized(const Event& e) {
+			return e.mPayload.mWidth == 0 || e.mPayload.mHeight == 0;
+		}
+
 		struct {
 			int mClickX;
 			int mClickY;

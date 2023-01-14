@@ -7,29 +7,36 @@
 #include <ranges>
 #include "../memory/formatsize.hpp"
 #include <filesystem>
+#ifdef _WIN32
+#include <winsqlite/winsqlite3.h>
+#else
+#error
+#endif
 using namespace nlohmann;
 using namespace egx;
 using namespace cpp;
 
 std::optional<std::string> Shader2::CacheFile;
 std::mutex Shader2::CacheWriteLock;
+static sqlite3* GlobalDb = nullptr;
 
 constexpr const char* CacheFileName = "GlobalShaderCache";
 constexpr const char* CacheFileExtension = ".json";
+constexpr bool LazyLoadShaderSourceCode = true;
 
 namespace egx::internal {
 	struct ShaderCacheInformation
 	{
-		std::string FilePath;
-		std::string SourceCode;
+		uint32_t Id;
 		uint32_t ShaderStage{};
-		std::vector<uint32_t> Bytecode;
 		uint64_t LastModifiedDate{};
+		std::string FilePath;
+		std::vector<uint32_t> Bytecode;
 		std::vector<std::pair<std::string, uint64_t>> IncludesLastModified;
 	};
 }
 
-ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, std::string_view File, BindingAttributes Attributes, bool compileDebug)
+ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface, std::string_view File, BindingAttributes Attributes, Shader2Defines defines, bool compileDebug)
 {
 	if (!Exists(File)) {
 		LOGEXCEPT("\"{0}\" does not exist.", File.data());
@@ -40,7 +47,7 @@ ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInt
 	}
 
 	std::vector<egx::internal::ShaderCacheInformation> cacheList;
-	if (!compileDebug && Shader2::CacheFile.has_value()) {
+	if (!defines.HasValue() && !compileDebug && Shader2::CacheFile.has_value()) {
 		cacheList = Shader2::LoadCacheInformation();
 		auto fullPath = fileInfo.string();
 		egx::internal::ShaderCacheInformation cache;
@@ -70,14 +77,13 @@ ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInt
 	}
 	std::vector<std::pair<std::string, uint64_t>> includeLastModified;
 	auto processedCode = PreprocessInclude(fileInfo.string(), std::filesystem::absolute(fileInfo).parent_path().string(), *code, includeLastModified);
-	auto result = FactoryCreateEx(CoreInterface, processedCode, shaderStage, Attributes, fileInfo.filename().string(), compileDebug);
+	auto result = FactoryCreateEx(CoreInterface, processedCode, shaderStage, Attributes, std::filesystem::absolute(fileInfo).string(), fileInfo.filename().string(), defines, compileDebug);
 
-	if (!compileDebug && Shader2::CacheFile.has_value()) {
+	if (!defines.HasValue() && !compileDebug && Shader2::CacheFile.has_value()) {
 		internal::ShaderCacheInformation info;
 		info.FilePath = File.data();
 		info.LastModifiedDate = std::filesystem::last_write_time(fileInfo).time_since_epoch().count();
 		info.ShaderStage = shaderStage;
-		info.SourceCode = result->SourceCode;
 		info.Bytecode = result->Bytecode;
 		info.IncludesLastModified = includeLastModified;
 		if (cacheList.size() > 0)
@@ -92,7 +98,9 @@ ref<Shader2> egx::Shader2::FactoryCreate(const ref<VulkanCoreInterface>& CoreInt
 ref<Shader2> egx::Shader2::FactoryCreateEx
 (const ref<VulkanCoreInterface>& CoreInterface, std::string_view Code, VkShaderStageFlags ShaderType,
 	BindingAttributes Attributes,
+	std::string_view SourceCodeFilePath,
 	std::string_view OptionalFileName,
+	Shader2Defines defines,
 	bool compileDebug)
 {
 	shaderc_shader_kind shaderKind{};
@@ -109,7 +117,7 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 
 	bool debug = compileDebug;
 #ifdef _DEBUG
-	debug &= true;
+	debug |= true;
 #endif
 	if (debug) {
 		options.SetOptimizationLevel(shaderc_optimization_level_zero);
@@ -118,8 +126,23 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 	else {
 		options.SetOptimizationLevel(shaderc_optimization_level_performance);
 	}
+
+	std::string defineList;
+	for (auto& [preprocessor, value] : defines.Defines)
+	{
+		defineList += cpp::Format("#define {0} {1}\n", preprocessor, value);
+	}
+	// defines must be after #version
+	auto versionIndex = cpp::IndexOf(Code, "#version");
+	std::string_view code_without_version = Code.substr(versionIndex);
+	code_without_version = code_without_version.substr(cpp::IndexOf(code_without_version, "\n"));
+	std::string_view version = Code.substr(versionIndex, code_without_version.data() - Code.data());
+	std::stringstream code_stream;
+	code_stream << version << '\n' << defineList << code_without_version;
+	auto code = code_stream.str();
+
 	auto start = std::chrono::high_resolution_clock::now();
-	auto compilationResult = compiler.CompileGlslToSpv(Code.data(), shaderKind, OptionalFileName.data(), "main", options);
+	auto compilationResult = compiler.CompileGlslToSpv(code, shaderKind, OptionalFileName.data(), "main", options);
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	if (compilationResult.GetCompilationStatus() != shaderc_compilation_status::shaderc_compilation_status_success)
@@ -143,7 +166,29 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 		LOGEXCEPT("Could not create shader module for '{0}'.", OptionalFileName.data());
 	}
 	auto reflection = GenerateReflection(bytecode, Attributes);
-	return new Shader2(ShaderType, duration, bytecode, Code.data(), shaderModule, Attributes, reflection, shaderKind, CoreInterface);
+	auto result = new Shader2(ShaderType, duration, bytecode, shaderModule, Attributes, reflection, shaderKind, CoreInterface, SourceCodeFilePath.data());
+	if (SourceCodeFilePath.size() <= 0 || !LazyLoadShaderSourceCode || defines.HasValue()) {
+		result->_SourceCode = code;
+	}
+	return result;
+}
+
+std::string& egx::Shader2::GetSourceCode()
+{
+	if (_SourceCode.size() > 0) return _SourceCode;
+	std::vector<std::pair<std::string, uint64_t>> includeLastModified;
+	try {
+		auto code = cpp::ReadAllText(_SourceFilePath);
+		if (!code.has_value()) {
+			LOG(ERR, "Could not GetSourceCode() because {0} could not read. (Shader was loaded using LazyLoad source code)", _SourceFilePath);
+		}
+		_SourceCode = PreprocessInclude(_SourceFilePath, std::filesystem::absolute(_SourceFilePath).parent_path().string(), *code, includeLastModified);
+	}
+	catch (std::exception e)
+	{
+		LOG(ERR, e.what());
+	}
+	return _SourceCode;
 }
 
 std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code, std::vector<std::pair<std::string, uint64_t>>& includesLastModifiedDate)
@@ -193,6 +238,27 @@ void Shader2::SetGlobalCacheFile(std::string_view CacheFolder)
 		mode = "RELEASE";
 #endif
 		std::filesystem::path path = std::filesystem::path(CacheFolder) / Format("{0}_{1}{2}", CacheFileName, mode, CacheFileExtension);
+		//sqlite3_open(path.string().c_str(), &GlobalDb);
+		//if (!GlobalDb) {
+		//	LOG(ERR, "Could not create cache database.");
+		//	return;
+		//}
+		//std::string sql = R"(CREATE TABLE IF NOT EXISTS CacheRegistry (
+		//			Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+		//			FilePath TEXT NOT NULL,
+		//			LastModified INTEGER NOT NULL,
+		//			ByteCode BLOB NOT NULL,
+		//			SourceCode TEXT NOT NULL,
+		//			Defines TEXT NOT NULL
+		//	))";
+
+		//char* pErrorMessage = nullptr;
+		//if (sqlite3_exec(GlobalDb, sql.c_str(), nullptr, nullptr, &pErrorMessage) != SQLITE_OK) {
+		//	LOG(ERR, "SQLITE3 Create Table Error {0}", pErrorMessage);
+		//	sqlite3_free(pErrorMessage);
+		//	sqlite3_close(GlobalDb);
+		//	GlobalDb = nullptr;
+		//}
 		if (!std::filesystem::exists(path)) {
 			CreateEmptyFile(path.string());
 		}
@@ -240,7 +306,6 @@ std::vector<internal::ShaderCacheInformation> Shader2::LoadCacheInformation()
 		for (auto& item : j) {
 			auto& p = result.emplace_back();
 			item.at("filePath").get_to(p.FilePath);
-			item.at("sourceCode").get_to(p.SourceCode);
 			item.at("shaderStage").get_to(p.ShaderStage);
 			item.at("byteCode").get_to(p.Bytecode);
 			item.at("lastModifiedDate").get_to(p.LastModifiedDate);
@@ -275,7 +340,6 @@ void Shader2::SaveCacheInformation(const std::vector<internal::ShaderCacheInform
 		}
 		out.push_back({
 			{"filePath", item.FilePath},
-			{"sourceCode", item.SourceCode},
 			{"shaderStage", item.ShaderStage},
 			{"byteCode", item.Bytecode},
 			{"lastModifiedDate", item.LastModifiedDate},
@@ -283,6 +347,21 @@ void Shader2::SaveCacheInformation(const std::vector<internal::ShaderCacheInform
 			});
 	}
 	WriteAllText(*Shader2::CacheFile, out.dump());
+}
+
+internal::ShaderCacheInformation egx::Shader2::LoadCacheInformationDb(const std::string& filePath)
+{
+	//char* pErrorMsg = nullptr;
+	//sqlite3_exec(GlobalDb, cpp::Format("SELECT * FROM CacheRegistry WHERE FilePath='{0}'", filePath).c_str(), [](void*, int argc, char** argv, char** column) -> int {
+	//	
+	//	return SQLITE_ABORT;
+	//}, nullptr, &pErrorMsg);
+	//return internal::ShaderCacheInformation();
+	return {};
+}
+
+void egx::Shader2::SaveCacheInformationDb(const std::vector<internal::ShaderCacheInformation>& cacheInformation)
+{
 }
 
 ShaderReflection Shader2::GenerateReflection(const std::vector<uint32_t>& Bytecode, BindingAttributes Attributes)
@@ -437,7 +516,7 @@ ref<Shader2> Shader2::CreateFromCache(const ref<VulkanCoreInterface>& CoreInterf
 	if (vkCreateShaderModule(CoreInterface->Device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
 		LOGEXCEPT("Could not create shader module.");
 	}
-	return new Shader2(CacheInfo.ShaderStage, 0ull, CacheInfo.Bytecode, CacheInfo.SourceCode, shaderModule, Attributes, reflection, shaderKind, CoreInterface);
+	return new Shader2(CacheInfo.ShaderStage, 0ull, CacheInfo.Bytecode, shaderModule, Attributes, reflection, shaderKind, CoreInterface, CacheInfo.FilePath);
 }
 
 

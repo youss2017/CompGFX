@@ -8,7 +8,9 @@ namespace egx
 	class ISynchronization {
 	public:
 		ISynchronization(const ref<VulkanCoreInterface>& coreInterface, const std::string& implementersClassName)
-			: _CoreInterface(coreInterface), _ClassName(implementersClassName) {}
+			: _CoreInterface(coreInterface), _ClassName(implementersClassName) {
+			_IsExecuting.resize(_CoreInterface->MaxFramesInFlight, false);
+		}
 
 		// On the first call this function creates a semaphore
 		// The semaphore is used to signal when this Synchronization object
@@ -23,7 +25,8 @@ namespace egx
 		// therefore you can control until which pipeline stage "this" object has to wait before executing.
 		/// </summary>
 		virtual void AddWaitObject(ISynchronization* waitObject, VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) {
-			_WaitSemaphores.push_back(waitObject->GetOrCreateCompletionSemaphore());
+			waitObject->GetOrCreateCompletionSemaphore();
+			_WaitObjects.push_back(waitObject);
 			_WaitStageFlags.push_back(waitStage);
 		}
 
@@ -44,85 +47,23 @@ namespace egx
 			_Completion->Reset();
 		}
 
-		void InternalAddWaitSemaphore(const ref<Semaphore>& waitSemaphore, VkPipelineStageFlags stageFlags)
-		{
-			_WaitSemaphores.push_back(waitSemaphore);
-			_WaitStageFlags.push_back(stageFlags);
-		}
+		// every frame childern of this class must call this function to declare
+		// they are executing.
+		void SetExecuting() { _IsExecuting[_CoreInterface->CurrentFrame] = true; }
+		// tells other objects this will be executing, therefore perform synchronization
+		bool IsExecuting() const { return _IsExecuting[_CoreInterface->CurrentFrame]; }
+		void ResetExecution() { _IsExecuting[_CoreInterface->CurrentFrame] = false; }
 
 	protected:
 		ref<VulkanCoreInterface> _CoreInterface;
-		std::vector<egx::ref<Semaphore>> _WaitSemaphores;
+		std::vector<ISynchronization*> _WaitObjects;
 		std::vector<VkPipelineStageFlags> _WaitStageFlags;
 		std::string _ClassName;
 
 	private:
 		ref<Semaphore> _SignalSemaphore;
 		ref<Fence> _Completion;
+		std::vector<bool> _IsExecuting;
 	};
-
-	//class Synchronization
-	//{
-	//public:
-	//    Synchronization(const ref<VulkanCoreInterface>& CoreInterface) : _CoreInterface(CoreInterface) {}
-
-	//    void SetPredecessors(const std::initializer_list<Synchronization*>& predecessors)
-	//    {
-	//        for (Synchronization* item : predecessors)
-	//        {
-	//            item->SetSuccessor(*this);
-	//        }
-	//    }
-
-	//    // Can only have one successor (not timeline semaphores)
-	//    void SetSuccessor(Synchronization& Successor, VkPipelineStageFlags stageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-	//    {
-	//        auto& signal = GetOrCreateSignalSemaphore();
-	//        Successor.SyncObjAddClientWaitSemaphore(signal, stageFlag);
-	//    }
-
-	//protected:
-	//    // Must be used this frame or pointers may become invalid.
-	//    VkResult Submit(VkCommandBuffer cmd)
-	//    {
-	//        VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	//        submitInfo.waitSemaphoreCount = (uint32_t)_WaitSemaphores.size();
-	//        submitInfo.pWaitSemaphores = GetWaitSemaphores().data();
-	//        submitInfo.pWaitDstStageMask = _WaitStageFlags.data();
-	//        submitInfo.commandBufferCount = 1;
-	//        submitInfo.pCommandBuffers = &cmd;
-	//        if (_SignalSemaphore.IsValidRef()) {
-	//            submitInfo.signalSemaphoreCount = 1;
-	//            submitInfo.pSignalSemaphores = &_SignalSemaphore->GetSemaphore();
-	//        }
-	//        return vkQueueSubmit(_CoreInterface->Queue, 1, &submitInfo, nullptr);
-	//    }
-
-	//    [[nodiscard]] RefSemaphore& GetOrCreateSignalSemaphore()
-	//    {
-	//        if (_SignalSemaphore.IsValidRef())
-	//            return _SignalSemaphore;
-	//        _SignalSemaphore = Semaphore::FactoryCreate(_CoreInterface, "SynchronizationBase-SignalSemaphore");
-	//        return _SignalSemaphore;
-	//    }
-
-	//    void SyncObjAddClientWaitSemaphore(const RefSemaphore& semaphore, VkPipelineStageFlags stageFlag = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-	//    {
-	//        _WaitSemaphores.push_back(semaphore);
-	//        _WaitStageFlags.push_back(stageFlag);
-	//    }
-
-	//    std::vector<VkSemaphore>& GetWaitSemaphores() {
-	//        return Semaphore::GetSemaphores(_WaitSemaphores, _WaitSemaphoreVk);
-	//    }
-
-	//protected:
-	//    std::vector<RefSemaphore> _WaitSemaphores;
-	//    std::vector<VkPipelineStageFlags> _WaitStageFlags;
-	//    RefSemaphore _SignalSemaphore;
-	//    ref<VulkanCoreInterface> _CoreInterface;
-	//private:
-	//    std::vector<VkSemaphore> _WaitSemaphoreVk;
-	//};
 
 }

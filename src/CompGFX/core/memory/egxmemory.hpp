@@ -33,8 +33,8 @@ namespace egx {
 			size_t size,
 			memorylayout layout,
 			uint32_t type,
-			bool CpuWritePerFrameFlag,
-			bool BufferReference,
+			bool CpuWritePerFrameFlag = false,
+			bool BufferReference = false,
 			bool requireCoherent = false);
 
 		EGX_API ~Buffer();
@@ -48,17 +48,17 @@ namespace egx {
 		// Copies including other frame data
 		EGX_API void CopyAll(const ref<Buffer>& source, size_t srcOffset, size_t dstOffset, size_t size);
 
-		EGX_API void Write(void* data, size_t offset, size_t size, bool keepMapped = false);
-		EGX_API void Write(void* data, size_t size, bool keepMapped = false);
-		EGX_API void Write(void* data, bool keepMapped = false);
+		EGX_API void Write(const void* data, size_t offset, size_t size, bool keepMapped = false);
+		EGX_API void Write(const void* data, size_t size, bool keepMapped = false);
+		EGX_API void Write(const void* data, bool keepMapped = false);
 
 		// Write data(ptr) to all Frame 1 to Frame N buffers
-		EGX_API void WriteAll(void* data, bool keepMapped = false) {
+		EGX_API void WriteAll(const void* data, bool keepMapped = false) {
 			WriteAll(data, 0, Size, keepMapped);
 		}
 
 		// Write data(ptr) to all Frame 1 to Frame N buffers
-		EGX_API void WriteAll(void* data, size_t offset, size_t size, bool keepMapped) {
+		EGX_API void WriteAll(const void* data, size_t offset, size_t size, bool keepMapped) {
 			if (CpuAccessPerFrame) {
 				for (uint32_t i = 0; i < _coreinterface->MaxFramesInFlight; i++) {
 					SetStaticFrameIndex(i);
@@ -89,7 +89,8 @@ namespace egx {
 		EGX_API void SetDebugName(const std::string& Name);
 
 		EGX_API const VkBuffer& GetBuffer();
-		EGX_API std::vector<size_t> GetBufferBasePointer();
+		EGX_API std::vector<size_t> GetBufferBasePointers();
+		EGX_API size_t GetBufferBasePointer();
 
 		EGX_API void Resize(size_t newSize, bool CopyOldContents = false);
 
@@ -129,6 +130,7 @@ namespace egx {
 		std::vector<bool> _ResizeFrameFlag;
 		bool _ResizeCopyOldContents = false;
 		size_t _ResizeBytes = 0;
+		std::vector<size_t> _BufferPointers;
 	};
 #pragma endregion GPU Buffer
 
@@ -277,7 +279,10 @@ namespace egx {
 			return barr;
 		}
 
-		void EGX_API read(void* buffer, VkOffset3D offset, VkExtent3D size);
+		// currentImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, or VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR
+		void EGX_API Read(void* buffer, VkImageLayout currentImageLayout, uint32_t mipLevel, VkOffset3D offset, VkExtent3D size);
+		// currentImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, or VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR
+		egx::ref<egx::Buffer> EGX_API Read(VkImageLayout currentImageLayout, uint32_t mipLevel, VkOffset3D offset, VkExtent3D size);
 
 		/// <summary>
 		/// Clones image with the same properties and same content.
@@ -292,7 +297,8 @@ namespace egx {
 		EGX_API ImTextureID GetImGuiTextureID(VkSampler sampler, uint32_t viewId = 0);
 		
 		// cmd can be null, if it is null then the clear will be blocking and immediate
-		EGX_API void ClearImage(VkCommandBuffer cmd);
+		EGX_API void ClearImage(VkCommandBuffer cmd, const VkClearValue& clearValue);
+		EGX_API void ClearImage(const VkClearValue& clearValue);
 
 		EGX_API void SetDebugName(const std::string& Name);
 

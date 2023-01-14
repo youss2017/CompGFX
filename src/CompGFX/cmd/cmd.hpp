@@ -73,6 +73,7 @@ namespace egx
         std::vector<VkCommandBuffer> _cmd;
         std::vector<bool> _cmd_static_init;
         uint32_t _last_frame = UINT32_MAX;
+        size_t _last_frame_count = 0;
         VkQueue _Queue;
     };
 

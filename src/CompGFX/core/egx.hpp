@@ -3,7 +3,7 @@
 #include "pipeline/egxframebuffer.hpp"
 #include "pipeline/egxsampler.hpp"
 #include "pipeline/egxpipeline.hpp"
-#include "shaders/egxshader.hpp"
+#include "shaders/egxshader2.hpp"
 #include "shaders/egxshaderset.hpp"
 #include "EngineCore.hpp"
 #include "../cmd/cmd.hpp"

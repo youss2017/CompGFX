@@ -10,7 +10,7 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
 static VkBool32 DebugPrintfEXT_Callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData);
 
 EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool UsingRenderDOC)
-	: Swapchain(nullptr), CoreInterface(new VulkanCoreInterface()), UsingRenderDOC(UsingRenderDOC), _DebugCallbackHandle(nullptr)
+	: Swapchain(nullptr), _CoreInterface(new VulkanCoreInterface()), UsingRenderDOC(UsingRenderDOC), _DebugCallbackHandle(nullptr)
 {
 	glfwInit();
 	std::vector<const char*> layer_extensions;
@@ -61,12 +61,12 @@ EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool 
 	createInfo.pNext = &debugCreateInfo;
 #endif
 
-	vkCreateInstance(&createInfo, NULL, &CoreInterface->Instance);
+	vkCreateInstance(&createInfo, NULL, &_CoreInterface->Instance);
 #if defined(VK_NO_PROTOTYPES)
 	volkLoadInstance(instance);
 #endif
 #ifdef _DEBUG
-	if (CreateDebugUtilsMessengerEXT(CoreInterface->Instance, &debugCreateInfo, nullptr, &CoreInterface->DebugMessenger) != VK_SUCCESS)
+	if (CreateDebugUtilsMessengerEXT(_CoreInterface->Instance, &debugCreateInfo, nullptr, &_CoreInterface->DebugMessenger) != VK_SUCCESS)
 	{
 		LOG(WARNING, "Failed to set up debug messenger!");
 	}
@@ -79,9 +79,9 @@ EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool 
 	ci.pUserData = nullptr;
 
 	// Create the callback handle
-	PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(CoreInterface->Instance, "vkCreateDebugReportCallbackEXT");
+	PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(_CoreInterface->Instance, "vkCreateDebugReportCallbackEXT");
 	if (createDebugReportCallback)
-		createDebugReportCallback(CoreInterface->Instance, &ci, nullptr, &_DebugCallbackHandle);
+		createDebugReportCallback(_CoreInterface->Instance, &ci, nullptr, &_DebugCallbackHandle);
 #endif
 
 #if defined(VK_NO_PROTOTYPES)
@@ -95,8 +95,8 @@ EGX_API egx::EngineCore::~EngineCore()
 	WaitIdle();
 	if (_DebugCallbackHandle)
 	{
-		PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(CoreInterface->Instance, "vkDestroyDebugReportCallbackEXT");
-		DestroyDebugReportCallbackEXT(CoreInterface->Instance, _DebugCallbackHandle, nullptr);
+		PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(_CoreInterface->Instance, "vkDestroyDebugReportCallbackEXT");
+		DestroyDebugReportCallbackEXT(_CoreInterface->Instance, _DebugCallbackHandle, nullptr);
 	}
 	if (Swapchain)
 		delete Swapchain;
@@ -107,9 +107,9 @@ void EGX_API egx::EngineCore::_AssociateWindow(PlatformWindow* Window, uint32_t 
 	assert(Swapchain == nullptr);
 	// [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
 	// [NOTE]: there will be a mismatch of format between pipeline state objects and render pass
-	CoreInterface->MaxFramesInFlight = MaxFramesInFlight;
+	_CoreInterface->MaxFramesInFlight = MaxFramesInFlight;
 	Swapchain = new VulkanSwapchain(
-		CoreInterface,
+		_CoreInterface,
 		Window->GetWindow(),
 		VSync,
 		SetupImGui);
@@ -119,9 +119,9 @@ std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
 {
 	std::vector<egx::Device> list;
 	uint32_t Count = 0;
-	vkEnumeratePhysicalDevices(CoreInterface->Instance, &Count, nullptr);
+	vkEnumeratePhysicalDevices(_CoreInterface->Instance, &Count, nullptr);
 	std::vector<VkPhysicalDevice> Ids(Count);
-	vkEnumeratePhysicalDevices(CoreInterface->Instance, &Count, Ids.data());
+	vkEnumeratePhysicalDevices(_CoreInterface->Instance, &Count, Ids.data());
 
 	for (auto device : Ids) {
 		VkPhysicalDeviceProperties properties;
@@ -148,63 +148,11 @@ std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
 	return list;
 }
 
-void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
+const egx::ref<egx::VulkanCoreInterface>& egx::EngineCore::EstablishDevice(const egx::Device& Device, const VkPhysicalDeviceFeatures2& features)
 {
 	using namespace std;
 	VkDeviceCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 	VkDeviceQueueCreateInfo queueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
-
-	/*
-		Storage16 and Storage8 allow uint8_t, uint16_t, float16_t (and their derivatives) to be read but no arithmetics
-		shaderInt8, shaderInt16, shaderFloat16 allow arithmetics but are not supported.
-	*/
-
-	VkPhysicalDeviceDynamicRenderingFeatures DynamicRenderingFeature{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR };
-	DynamicRenderingFeature.pNext = nullptr;
-	DynamicRenderingFeature.dynamicRendering = VK_TRUE;
-
-	VkPhysicalDevice16BitStorageFeatures Storage16Bit{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
-	Storage16Bit.pNext = &DynamicRenderingFeature;
-	Storage16Bit.storageBuffer16BitAccess = VK_TRUE;
-	Storage16Bit.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-
-	VkPhysicalDeviceVulkan12Features vulkan12features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-	vulkan12features.pNext = &Storage16Bit;
-	vulkan12features.drawIndirectCount = VK_TRUE;
-	vulkan12features.shaderInt8 = VK_FALSE;
-	vulkan12features.storageBuffer8BitAccess = VK_FALSE;
-	vulkan12features.uniformAndStorageBuffer8BitAccess = VK_FALSE;
-	vulkan12features.scalarBlockLayout = VK_TRUE;
-	vulkan12features.descriptorIndexing = VK_TRUE;
-	vulkan12features.runtimeDescriptorArray = VK_TRUE;
-	vulkan12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-	vulkan12features.uniformBufferStandardLayout = VK_TRUE;
-	if (UsingRenderDOC) {
-		vulkan12features.bufferDeviceAddress = VK_FALSE;
-		CoreInterface->DebuggingWithRenderDOCFlag = true;
-	}
-	else {
-		vulkan12features.bufferDeviceAddress = VK_TRUE;
-	}
-
-	VkPhysicalDeviceShaderDrawParametersFeatures DrawParameters{};
-	DrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
-	DrawParameters.pNext = &vulkan12features;
-	DrawParameters.shaderDrawParameters = VK_TRUE;
-	VkPhysicalDeviceFeatures2 features{};
-	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-	features.pNext = &DrawParameters;
-	features.features.fillModeNonSolid = VK_TRUE;
-	features.features.samplerAnisotropy = VK_TRUE;
-	features.features.sampleRateShading = VK_TRUE;
-	features.features.multiDrawIndirect = VK_TRUE;
-	features.features.shaderInt64 = VK_FALSE;
-	features.features.wideLines = VK_TRUE;
-	features.features.shaderInt64 = VK_TRUE;
-
-	// unnecessary features.
-	features.features.pipelineStatisticsQuery = VK_TRUE;
-	vulkan12features.hostQueryReset = VK_TRUE;
 
 	if (!egx::GraphicsCardFeatureValidation_Check(Device.Id, features)) {
 		LOG(ERR, "{0} has failed feature validation check.", Device.VendorName);
@@ -255,15 +203,17 @@ void EGX_API egx::EngineCore::EstablishDevice(const egx::Device& Device)
 	createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
 	createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
-	vkCreateDevice(Device.Id, &createInfo, NULL, &this->CoreInterface->Device);
-	this->CoreInterface->QueueFamilyIndex = index;
+	vkCreateDevice(Device.Id, &createInfo, NULL, &this->_CoreInterface->Device);
+	this->_CoreInterface->QueueFamilyIndex = index;
 
-	vkGetDeviceQueue(this->CoreInterface->Device, index, 0, &this->CoreInterface->Queue);
+	vkGetDeviceQueue(this->_CoreInterface->Device, index, 0, &this->_CoreInterface->Queue);
 
-	this->CoreInterface->MemoryContext = VkAlloc::CreateContext(CoreInterface->Instance,
-		this->CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), !UsingRenderDOC);
-	this->CoreInterface->PhysicalDevice = Device;
-	CoreInterface->MaxFramesInFlight = 1;
+	this->_CoreInterface->MemoryContext = VkAlloc::CreateContext(_CoreInterface->Instance,
+		this->_CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), !UsingRenderDOC);
+	this->_CoreInterface->PhysicalDevice = Device;
+	_CoreInterface->MaxFramesInFlight = 1;
+	_CoreInterface->Features = features;
+	return _CoreInterface;
 }
 
 ImGuiContext* egx::EngineCore::GetContext() const

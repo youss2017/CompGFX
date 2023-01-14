@@ -1,4 +1,4 @@
-#include "egxutil.hpp"
+﻿#include "egxutil.hpp"
 #include <string>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
@@ -82,10 +82,49 @@ std::string egx::VkResultToString(VkResult result) {
 	return mapping[result];
 }
 
-EGX_API ImFont* LoadFont(const egx::ref<egx::VulkanCoreInterface>& CoreInterface, std::string_view path, float size)
+EGX_API ImFont* egx::LoadFont(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, float size, const ImFontConfig* fontConfig, const ImWchar* glyph_range)
 {
-	auto io = ImGui::GetIO();
-	ImFont* fftt = io.Fonts->AddFontFromFileTTF(path.data(), size);
+	auto& io = ImGui::GetIO();
+	auto font = io.Fonts->AddFontFromFileTTF(path.data(), size, fontConfig, glyph_range);
+	// Upload Fonts
+	{
+		// Use any command queue
+		VkCommandPoolCreateInfo createInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+		VkCommandPool command_pool;
+		vkCreateCommandPool(CoreInterface->Device, &createInfo, nullptr, &command_pool);
+		VkCommandBuffer command_buffer;
+		VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		allocInfo.commandPool = command_pool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
+		vkAllocateCommandBuffers(CoreInterface->Device, &allocInfo, &command_buffer);
+
+		vkResetCommandPool(CoreInterface->Device, command_pool, 0);
+		VkCommandBufferBeginInfo begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		vkBeginCommandBuffer(command_buffer, &begin_info);
+
+		ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+		VkSubmitInfo end_info = {};
+		end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		end_info.commandBufferCount = 1;
+		end_info.pCommandBuffers = &command_buffer;
+		vkEndCommandBuffer(command_buffer);
+		vkQueueSubmit(CoreInterface->Queue, 1, &end_info, NULL);
+
+		vkQueueWaitIdle(CoreInterface->Queue);
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
+		vkDestroyCommandPool(CoreInterface->Device, command_pool, nullptr);
+	}
+	return font;
+}
+
+EGX_API ImFont* LoadFont(const egx::ref<egx::VulkanCoreInterface>& CoreInterface, std::string_view path, float size, const ImFontConfig* fontConfig, const ImWchar* glyph_range)
+{
+	auto& io = ImGui::GetIO();
+	ImFont* fftt = io.Fonts->AddFontFromFileTTF(path.data(), size, fontConfig, glyph_range);
 	// Upload Fonts
 	// Use any command queue
 	VkCommandPoolCreateInfo createInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };

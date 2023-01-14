@@ -1,7 +1,7 @@
 workspace "GenericWorkspace"
     location "Generic"
     configurations({"Debug", "Release"})
-    platforms { "Win64" }
+    platforms { "x64" }
     cppdialect "C++17"
 
     includedirs { 
@@ -18,7 +18,7 @@ workspace "GenericWorkspace"
     filter {}
     flags { "MultiProcessorCompile" }
 
-    filter { "platforms:Win64" }
+    filter { "platforms:x64" }
         system "Windows"
         architecture "x86_64"
 
@@ -32,7 +32,7 @@ workspace "GenericWorkspace"
             "imgui/backends/imgui_impl_vulkan.h",
             "imgui/backends/imgui_impl_vulkan.cpp",
             "imgui/backends/imgui_impl_glfw.h",
-            "imgui/backends/imgui_impl_glfw.cpp",
+            "imgui/backends/imgui_impl_glfw.cpp"
         }
         removefiles { "*Test*", "*test*" }
 

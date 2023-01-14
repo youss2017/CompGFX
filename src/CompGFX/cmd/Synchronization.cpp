@@ -13,11 +13,20 @@ ref<Semaphore>& ISynchronization::GetOrCreateCompletionSemaphore()
 
 void ISynchronization::Submit(VkCommandBuffer cmd)
 {
+	std::vector<VkSemaphore> waitSemaphores;
 	std::vector<VkSemaphore> signalSemaphore;
 	if (_SignalSemaphore.IsValidRef())
 		signalSemaphore.push_back(_SignalSemaphore->GetSemaphore());
-	CommandBuffer::Submit(_CoreInterface, { cmd },
-		CommandBuffer::GetNativeSemaphoreList(_WaitSemaphores), _WaitStageFlags, signalSemaphore,
+
+	for (auto waitObj : _WaitObjects)
+	{
+		if (waitObj->IsExecuting()) {
+			waitObj->ResetExecution();
+			waitSemaphores.push_back(waitObj->GetOrCreateCompletionSemaphore()->GetSemaphore());
+		}
+	}
+
+	CommandBuffer::Submit(_CoreInterface, { cmd }, waitSemaphores, _WaitStageFlags, signalSemaphore,
 		_Completion.IsValidRef() ? _Completion->GetFence() : nullptr);
 
 }

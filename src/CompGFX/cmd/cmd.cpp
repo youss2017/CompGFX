@@ -58,11 +58,12 @@ namespace egx
 		assert(_cmd.size() > 0);
 		uint32_t current_frame = GetCurrentFrame();
 		VkCommandBuffer cmd = _cmd[current_frame];
-		if (current_frame != _last_frame)
+		if (_last_frame != current_frame || *_ptr_frame_count != _last_frame_count)
 		{
 			vkResetCommandBuffer(cmd, 0);
 			StartCommandBuffer(cmd, 0);
 			_last_frame = current_frame;
+			_last_frame_count = *_ptr_frame_count;
 			_cmd_static_init[current_frame] = false;
 		}
 		return cmd;

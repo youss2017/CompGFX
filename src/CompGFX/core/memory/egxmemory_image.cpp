@@ -546,8 +546,42 @@ VkImageMemoryBarrier egx::Image::barrier(VkImageLayout oldLayout, VkImageLayout 
 	return barr;
 }
 
-void egx::Image::read(void* buffer, VkOffset3D offset, VkExtent3D size)
+void egx::Image::Read(void* buffer, VkImageLayout currentImageLayout, uint32_t mipLevel, VkOffset3D offset, VkExtent3D size)
 {
+	auto readback = Read(currentImageLayout, mipLevel, offset, size);
+	if (readback.IsValidRef())
+		readback->Read(buffer);
+}
+
+egx::ref<egx::Buffer> egx::Image::Read(VkImageLayout currentImageLayout, uint32_t mipLevel, VkOffset3D offset, VkExtent3D size)
+{
+	size_t pixelSize = egx::_internal::FormatByteCount(Format);
+	size_t sizeBytes = (size_t)(size.height - offset.x) * (size.width - offset.y) * pixelSize * (size.depth - offset.z);
+	if (sizeBytes == 0) {
+		LOG(WARNING, "Could not readback image because size is 0 bytes (is depth 0 in VkExtent3D? at must at least 1)");
+		return {};
+	}
+	auto readback = egx::Buffer::FactoryCreate(_coreinterface, sizeBytes, egx::memorylayout::stream, BufferType_TransferOnly, false, false, false);
+	if (!readback.IsValidRef()) {
+		LOG(ERR, "Could not allocate readback buffer");
+		return {};
+	}
+	auto Cmd = CommandBufferSingleUse(_coreinterface);
+	barrier(Cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, currentImageLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_NONE, VK_ACCESS_MEMORY_READ_BIT);
+	VkBufferImageCopy region{};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = ImageAspect;
+	region.imageSubresource.baseArrayLayer = offset.z;
+	region.imageSubresource.layerCount = size.depth - offset.z;
+	region.imageSubresource.mipLevel = mipLevel;
+	region.imageOffset = offset;
+	region.imageExtent = size;
+	vkCmdCopyImageToBuffer(Cmd.Cmd, Image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readback->GetBuffer(), 1, &region);
+	barrier(Cmd.Cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currentImageLayout, VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_NONE);
+	Cmd.Execute();
+	return readback;
 }
 
 egx::ref<egx::Image> egx::Image::copy(VkImageLayout CurrentLayout, VkImageLayout CopyFinalLayout) const
@@ -594,6 +628,18 @@ ImTextureID egx::Image::GetImGuiTextureID(VkSampler sampler, uint32_t viewId)
 }
 
 #pragma endregion
+
+void egx::Image::ClearImage(VkCommandBuffer cmd, const VkClearValue& clearValue)
+{
+	//vkCmdClearColorImage(cmd, Image_, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1)
+}
+
+void egx::Image::ClearImage(const VkClearValue& clearValue)
+{
+	auto cmd = CommandBufferSingleUse(_coreinterface);
+	ClearImage(cmd.Cmd, clearValue);
+	cmd.Execute();
+}
 
 void egx::Image::SetDebugName(const std::string& Name)
 {

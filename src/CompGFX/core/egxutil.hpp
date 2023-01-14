@@ -163,7 +163,6 @@ namespace egx {
 
 	};
 
-
 	inline static ref<CommandPool> CreateCommandPool(
 		const ref<VulkanCoreInterface>& CoreInterface,
 		bool FrameFlightMode, bool MemoryShortLived, bool EnableIndividualReset, bool MakeProtected) {
@@ -195,6 +194,6 @@ namespace egx {
 
 	std::string VkResultToString(VkResult result);
 
-	EGX_API ImFont* LoadFont(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, float size);
+	EGX_API ImFont* LoadFont(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, float size, const ImFontConfig* fontConfig = nullptr, const ImWchar* glyph_range = nullptr);
 
 }

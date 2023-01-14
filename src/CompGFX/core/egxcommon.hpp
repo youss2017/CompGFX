@@ -37,7 +37,8 @@ namespace egx {
 		VkDebugUtilsMessengerEXT DebugMessenger = nullptr;
 		uint32_t MaxFramesInFlight = 1;
 		uint32_t CurrentFrame = 0;
-		bool DebuggingWithRenderDOCFlag = false;
+		size_t FrameCount = 0;
+		VkPhysicalDeviceFeatures2 Features{};
 
 		EGX_API VulkanCoreInterface() = default;
 		EGX_API ~VulkanCoreInterface();

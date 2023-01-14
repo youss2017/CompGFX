@@ -60,12 +60,23 @@ namespace egx
 		DynamicStorage = 0b100
 	};
 
+	struct Shader2Defines
+	{
+		std::vector<std::pair<std::string, std::string>> Defines;
+
+		void Add(const std::string& preprocessor) { Defines.push_back({ preprocessor, "" }); }
+		void Add(const std::string& preprocessor, const std::string& value) { Defines.push_back({ preprocessor, value }); }
+
+		bool HasValue() { return Defines.size() > 0; }
+	};
+
 	class Shader2 {
 	public:
 		COMPGFX static ref<Shader2> FactoryCreate(
 			const ref<VulkanCoreInterface>& CoreInterface,
 			std::string_view File,
 			BindingAttributes Attributes = BindingAttributes::Default,
+			Shader2Defines defines = {},
 			bool CompileDebug = false
 		);
 
@@ -74,9 +85,13 @@ namespace egx
 			std::string_view Code,
 			VkShaderStageFlags ShaderType,
 			BindingAttributes Attributes,
+			std::string_view SourceCodeFilePath = "",
 			std::string_view OptionalFileName = "",
+			Shader2Defines defines = {},
 			bool CompileDebug = false
 		);
+
+		COMPGFX std::string& GetSourceCode();
 
 		COMPGFX static void SetGlobalCacheFile(std::string_view CacheFolder);
 
@@ -113,7 +128,6 @@ namespace egx
 		VkShaderStageFlags ShaderStage;
 		uint64_t CompilationDurationMilliseconds;
 		std::vector<uint32_t> Bytecode;
-		std::string SourceCode;
 		VkShaderModule ShaderModule;
 		BindingAttributes Attributes;
 		ShaderReflection Reflection;
@@ -123,31 +137,36 @@ namespace egx
 		uint32_t _SpecializationOffset = 0;
 		std::vector<VkSpecializationMapEntry> _SpecializationConstants;
 		std::vector<uint8_t> _SpecializationData;
+		std::string _SourceCode;
+		std::string _SourceFilePath;
 
 	private:
 		COMPGFX Shader2(
 			VkShaderStageFlags shaderStage,
 			uint64_t compileDuration,
 			const std::vector<uint32_t>& bytecode,
-			const std::string& sourceCode,
 			VkShaderModule shaderModule,
 			BindingAttributes attributes,
 			ShaderReflection reflection,
 			shaderc_shader_kind shaderKind,
-			const ref<VulkanCoreInterface>& coreInterface) :
+			const ref<VulkanCoreInterface>& coreInterface,
+			const std::string sourceFilePath) :
 			ShaderStage(shaderStage),
 			CompilationDurationMilliseconds(compileDuration),
 			Bytecode(bytecode),
-			SourceCode(sourceCode),
 			ShaderModule(shaderModule),
 			Attributes(attributes),
 			Reflection(reflection),
 			_ShaderKind(shaderKind),
-			_CoreInterface(coreInterface)
+			_CoreInterface(coreInterface),
+			_SourceFilePath(sourceFilePath)
 		{}
 
 		static std::vector<internal::ShaderCacheInformation> LoadCacheInformation();
 		static void SaveCacheInformation(const std::vector<internal::ShaderCacheInformation>& cacheInformation);
+
+		static internal::ShaderCacheInformation LoadCacheInformationDb(const std::string& filePath);
+		static void SaveCacheInformationDb(const std::vector<internal::ShaderCacheInformation>& cacheInformation);
 
 		static std::optional<std::string> CacheFile;
 		static std::mutex CacheWriteLock;

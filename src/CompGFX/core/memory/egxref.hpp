@@ -34,7 +34,9 @@ namespace egx {
 		inline ref<T>(const ref& cp) noexcept {
 			this->base = cp.base;
 			this->refCount = cp.refCount;
-			*this->refCount += 1;
+			if (cp.refCount) {
+				*this->refCount += 1;
+			}
 		}
 
 		inline ref<T>(ref&& move) noexcept :
@@ -48,7 +50,8 @@ namespace egx {
 			}
 			this->base = cp.base;
 			this->refCount = cp.refCount;
-			*this->refCount += 1;
+			if (cp.refCount)
+				*this->refCount += 1;
 			return *this;
 		}
 

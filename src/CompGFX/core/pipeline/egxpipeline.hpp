@@ -8,55 +8,6 @@
 
 namespace egx {
 
-	/*class InputAssemblyDescription {
-
-	public:
-		InputAssemblyDescription(bool IsAligned = true) : IsAligned(IsAligned) {};
-		InputAssemblyDescription(InputAssemblyDescription& copy) = default;
-		InputAssemblyDescription(InputAssemblyDescription&& move) = default;
-		InputAssemblyDescription& operator=(InputAssemblyDescription&& move) = default;
-
-		inline void AddAttribute(
-			uint32_t BindingId, uint32_t Location,
-			uint32_t Size, VkFormat Format) {
-			uint32_t offset = 0;
-			for (auto& a : Attributes)
-				if ((a.BindingId == BindingId))
-					offset += a.Size;
-			Attributes.push_back(
-				{ BindingId, Location, offset, Size, Format }
-			);
-		}
-
-		inline uint32_t GetStride(uint32_t BindingId) const {
-			uint32_t stride = 0;
-			for (auto& e : Attributes) {
-				if (e.BindingId != BindingId) continue;
-				stride += e.Size;
-			}
-			return stride;
-		}
-
-		inline std::set<uint32_t> GetBindings() const {
-			std::set<uint32_t> bindings;
-			for (auto& a : Attributes) {
-				bindings.insert(a.BindingId);
-			}
-			return bindings;
-		}
-
-	public:
-		struct attribute {
-			uint32_t BindingId;
-			uint32_t Location;
-			uint32_t Offset;
-			uint32_t Size;
-			VkFormat Format;
-		};
-		std::vector<attribute> Attributes;
-		bool IsAligned;
-	};*/
-
 	enum cullmode : uint32_t {
 		cullmode_none,
 		cullmode_back,
@@ -110,13 +61,13 @@ namespace egx {
 		/// <param name="framebuffer"></param>
 		/// <param name="vertexDescription"></param>
 		/// <returns></returns>
-		void EGX_API invalidate(
+		void EGX_API Create(
 			const ref<Shader2>& vertex,
 			const ref<Shader2>& fragment,
 			const ref<Framebuffer>& framebuffer,
 			const uint32_t PassId);
 
-		void EGX_API invalidate(const ref<Shader2>& compute);
+		void EGX_API Create(const ref<Shader2>& compute);
 
 		inline void Bind(VkCommandBuffer cmd) const {
 			vkCmdBindPipeline(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline_);
@@ -129,6 +80,31 @@ namespace egx {
 
 		inline VkPipeline operator()() const { return Pipeline_; }
 		inline VkPipeline operator*() const { return Pipeline_; }
+
+		inline void SetBuffer(uint32_t setId, uint32_t bindingId, const ref<Buffer>& buffer, uint32_t offset = 0, uint32_t structSize = 0) {
+			Sets[setId]->SetBuffer(bindingId, buffer, structSize, offset);
+		}
+
+		inline void SetSampledImage(uint32_t setId, uint32_t bindingId, const egx::ref<Sampler>& sampler, const egx::ref<Image>& image, VkImageLayout imageLayout, uint32_t viewId) {
+			Sets[setId]->SetImage(bindingId, { image }, { sampler }, { imageLayout }, { viewId });
+		}
+
+		inline void SetStorageImage(uint32_t setId, uint32_t bindingId, const egx::ref<Image>& image, VkImageLayout imageLayout, uint32_t viewId) {
+			Sets[setId]->SetImage(bindingId, { image }, {}, { imageLayout }, { viewId });
+		}
+
+		// For imageLayouts, samplers, and viewIds if they only contain one element, then the first element is used for all images
+		// otherwise each element in the vector is used per image in order
+		inline void SetSampledImages(uint32_t setId, uint32_t bindingId, const std::vector<egx::ref<Sampler>>& samplers, 
+			const std::vector<egx::ref<Image>>& images, const std::vector<VkImageLayout>& imageLayouts, const std::vector<uint32_t>& viewIds) {
+			Sets[setId]->SetImage(bindingId, images, samplers, imageLayouts, viewIds);
+		}
+
+		// For imageLayouts and viewIds if they only contain one element, then the first element is used for all images
+		// otherwise each element in the vector is used per image in order
+		inline void SetStorageImages(uint32_t setId, uint32_t bindingId, const std::vector<egx::ref<Image>>& images, const std::vector<VkImageLayout>& imageLayouts, const std::vector<uint32_t>& viewIds) {
+			Sets[setId]->SetImage(bindingId, images, {}, imageLayouts, viewIds);
+		}
 
 	protected:
 		Pipeline(const ref<VulkanCoreInterface>& coreinterface) :
@@ -150,11 +126,11 @@ namespace egx {
 		VkPipeline Pipeline_ = nullptr;
 		ref<SetPool> Pool;
 		ref<PipelineLayout> Layout;
-		std::map<uint32_t, ref<DescriptorSet>> Sets;
 		bool DepthEnabled = false;
 		bool DepthWriteEnable = true;
 
 	protected:
+		std::map<uint32_t, ref<DescriptorSet>> Sets;
 		ref<VulkanCoreInterface> _coreinterface;
 		bool _graphics = false;
 
