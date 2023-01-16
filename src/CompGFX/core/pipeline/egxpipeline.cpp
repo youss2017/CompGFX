@@ -37,7 +37,7 @@ void  egx::Pipeline::Create(
 	_graphics = true;
 	if (Pipeline_) {
 		vkDestroyPipeline(_coreinterface->Device, Pipeline_, nullptr);
-		Sets.clear();
+		_Sets.clear();
 	}
 
 
@@ -84,7 +84,7 @@ void  egx::Pipeline::Create(
 	// Create Descriptor Sets
 	auto createSets = [&](const ShaderReflection& reflect) {
 		for (auto& [setId, bindings] : reflect.SetToManyBindings) {
-			if (!Sets.contains(setId)) {
+			if (!_Sets.contains(setId)) {
 				auto set = DescriptorSet::FactoryCreate(_coreinterface, setId);
 				for (auto& [bindingId, binding] : bindings) {
 					if (binding.IsBuffer)
@@ -92,10 +92,10 @@ void  egx::Pipeline::Create(
 					else
 						set->DescribeImage(bindingId, binding.DescriptorCount, binding.Type, VK_SHADER_STAGE_FRAGMENT_BIT);
 				}
-				Sets[setId] = set;
+				_Sets[setId] = set;
 			}
 			else {
-				auto& set = Sets[setId];
+				auto& set = _Sets[setId];
 				for (auto& [bindingId, binding] : bindings) {
 					if (binding.IsBuffer)
 						set->DescribeBuffer(bindingId, binding.Type, VK_SHADER_STAGE_ALL_GRAPHICS);
@@ -107,8 +107,8 @@ void  egx::Pipeline::Create(
 	};
 	createSets(vreflect);
 	createSets(freflect);
-	Pool->AdjustForRequirements(Sets);
-	for (auto& [id, set] : Sets) {
+	Pool->AdjustForRequirements(_Sets);
+	for (auto& [id, set] : _Sets) {
 		set->AllocateSet(Pool);
 		Layout->AddSets({ set });
 	}
@@ -375,7 +375,7 @@ void egx::Pipeline::Create(const ref<Shader2>& compute)
 	_graphics = false;
 	if (Pipeline_) {
 		vkDestroyPipeline(_coreinterface->Device, Pipeline_, nullptr);
-		Sets.clear();
+		_Sets.clear();
 	}
 
 	Layout = PipelineLayout::FactoryCreate(_coreinterface);
@@ -394,12 +394,12 @@ void egx::Pipeline::Create(const ref<Shader2>& compute)
 				else
 					set->DescribeImage(bindingId, binding.DescriptorCount, binding.Type, VK_SHADER_STAGE_COMPUTE_BIT);
 			}
-			Sets[setId] = std::move(set);
+			_Sets[setId] = std::move(set);
 		}
 	};
 	createSets(reflection);
-	Pool->AdjustForRequirements(Sets);
-	for (auto& [id, set] : Sets) {
+	Pool->AdjustForRequirements(_Sets);
+	for (auto& [id, set] : _Sets) {
 		set->AllocateSet(Pool);
 		Layout->AddSets({ set });
 	}

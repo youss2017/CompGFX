@@ -82,28 +82,28 @@ namespace egx {
 		inline VkPipeline operator*() const { return Pipeline_; }
 
 		inline void SetBuffer(uint32_t setId, uint32_t bindingId, const ref<Buffer>& buffer, uint32_t offset = 0, uint32_t structSize = 0) {
-			Sets[setId]->SetBuffer(bindingId, buffer, structSize, offset);
+			_Sets[setId]->SetBuffer(bindingId, buffer, structSize, offset);
 		}
 
 		inline void SetSampledImage(uint32_t setId, uint32_t bindingId, const egx::ref<Sampler>& sampler, const egx::ref<Image>& image, VkImageLayout imageLayout, uint32_t viewId) {
-			Sets[setId]->SetImage(bindingId, { image }, { sampler }, { imageLayout }, { viewId });
+			_Sets[setId]->SetImage(bindingId, { image }, { sampler }, { imageLayout }, { viewId });
 		}
 
 		inline void SetStorageImage(uint32_t setId, uint32_t bindingId, const egx::ref<Image>& image, VkImageLayout imageLayout, uint32_t viewId) {
-			Sets[setId]->SetImage(bindingId, { image }, {}, { imageLayout }, { viewId });
+			_Sets[setId]->SetImage(bindingId, { image }, {}, { imageLayout }, { viewId });
 		}
 
 		// For imageLayouts, samplers, and viewIds if they only contain one element, then the first element is used for all images
 		// otherwise each element in the vector is used per image in order
 		inline void SetSampledImages(uint32_t setId, uint32_t bindingId, const std::vector<egx::ref<Sampler>>& samplers, 
 			const std::vector<egx::ref<Image>>& images, const std::vector<VkImageLayout>& imageLayouts, const std::vector<uint32_t>& viewIds) {
-			Sets[setId]->SetImage(bindingId, images, samplers, imageLayouts, viewIds);
+			_Sets[setId]->SetImage(bindingId, images, samplers, imageLayouts, viewIds);
 		}
 
 		// For imageLayouts and viewIds if they only contain one element, then the first element is used for all images
 		// otherwise each element in the vector is used per image in order
 		inline void SetStorageImages(uint32_t setId, uint32_t bindingId, const std::vector<egx::ref<Image>>& images, const std::vector<VkImageLayout>& imageLayouts, const std::vector<uint32_t>& viewIds) {
-			Sets[setId]->SetImage(bindingId, images, {}, imageLayouts, viewIds);
+			_Sets[setId]->SetImage(bindingId, images, {}, imageLayouts, viewIds);
 		}
 
 	protected:
@@ -130,7 +130,7 @@ namespace egx {
 		bool DepthWriteEnable = true;
 
 	protected:
-		std::map<uint32_t, ref<DescriptorSet>> Sets;
+		std::map<uint32_t, ref<DescriptorSet>> _Sets;
 		ref<VulkanCoreInterface> _coreinterface;
 		bool _graphics = false;
 

@@ -132,6 +132,11 @@ namespace egx
 			const std::vector<VkImageLayout>& ImageLayouts,
 			const std::vector<uint32_t>& ViewIndex);
 
+		EGX_API void SetInputAttachment(uint32_t bindingId,
+			const egx::ref<egx::Image>& image,
+			VkImageLayout imageLayout,
+			uint32_t viewIndex);
+
 		EGX_API SetPoolRequirementsInfo GetDescriptorPoolRequirements() const;
 
 		// You must call DescribeBuffer()/DescribeImage() before this function
