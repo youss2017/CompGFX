@@ -87,6 +87,24 @@ namespace egx
 			VkImageUsageFlags CustomUsageFlags = 0,
 			bool CreateDefaultView = true);
 
+		void EGX_API CreateColorAttachmentFromTexture(
+			const egx::ref<egx::Image>& texture,
+			uint32_t ColorAttachmentId,
+			VkClearValue ClearValue,
+			VkAttachmentLoadOp LoadOp,
+			VkAttachmentStoreOp StoreOp,
+			VkImageLayout InitialLayout,
+			VkImageLayout FinalLayout,
+			VkPipelineColorBlendAttachmentState* pBlendState = nullptr);
+
+		void EGX_API CreateDepthAttachmentFromTexture(
+			const egx::ref<egx::Image>& texture,
+			VkClearValue ClearValue,
+			VkAttachmentLoadOp LoadOp,
+			VkAttachmentStoreOp StoreOp,
+			VkImageLayout InitialLayout,
+			VkImageLayout FinalLayout);
+
 		// std::pair<uint32_t, VkImageLayout>
 		// The uint32_t is the ColorAttachmentId
 		// The VkImageLayout is the image layout to use during the pass aka (VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -152,6 +170,14 @@ namespace egx
 			beginInfo.clearValueCount = (uint32_t)clearValues.size();
 			beginInfo.pClearValues = clearValues.data();
 			vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		}
+
+		inline bool HasDepthAttachment() const {
+			return _depthattachment.has_value();
+		}
+
+		inline uint32_t GetColorAttachmentCount() const {
+			return uint32_t(_colorattachements.size());
 		}
 
 	protected:

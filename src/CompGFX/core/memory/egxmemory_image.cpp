@@ -556,7 +556,7 @@ void egx::Image::Read(void* buffer, VkImageLayout currentImageLayout, uint32_t m
 egx::ref<egx::Buffer> egx::Image::Read(VkImageLayout currentImageLayout, uint32_t mipLevel, VkOffset3D offset, VkExtent3D size)
 {
 	size_t pixelSize = egx::_internal::FormatByteCount(Format);
-	size_t sizeBytes = (size_t)(size.height - offset.x) * (size.width - offset.y) * pixelSize * (size.depth - offset.z);
+	size_t sizeBytes = (size_t)(size.height * size.width * pixelSize * size.depth);
 	if (sizeBytes == 0) {
 		LOG(WARNING, "Could not readback image because size is 0 bytes (is depth 0 in VkExtent3D? at must at least 1)");
 		return {};

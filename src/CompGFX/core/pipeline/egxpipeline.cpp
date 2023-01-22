@@ -134,16 +134,7 @@ void  egx::Pipeline::Create(
 	InputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	InputAssemblyState.pNext = nullptr;
 	InputAssemblyState.flags = 0;
-	if (polgyontopology_trianglelist == Topology)
-		InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	else if (polgyontopology_linelist == Topology)
-		InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-	else if (polgyontopology_linestrip == Topology)
-		InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-	else if (polgyontopology_pointlist == Topology)
-		InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-	else
-		assert(0);
+	InputAssemblyState.topology = Topology;
 	InputAssemblyState.primitiveRestartEnable = VK_FALSE;
 
 	VkPipelineTessellationStateCreateInfo TessellationState{};
@@ -153,7 +144,6 @@ void  egx::Pipeline::Create(
 	TessellationState.patchControlPoints = 1;
 
 	// The viewport and scissor are based on the dimensions of the framebuffer.
-
 	VkViewport viewport{};
 	viewport.x = 0;
 	viewport.y = 0;
@@ -183,21 +173,8 @@ void  egx::Pipeline::Create(
 	RasterizationState.flags = 0;
 	RasterizationState.depthClampEnable = VK_FALSE;
 	RasterizationState.rasterizerDiscardEnable = VK_FALSE;
-	if (FillMode == polygonmode_fill)
-		RasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-	else if (FillMode == polygonmode_line)
-		RasterizationState.polygonMode = VK_POLYGON_MODE_LINE;
-	else if (FillMode == polygonmode_point)
-		RasterizationState.polygonMode = VK_POLYGON_MODE_POINT;
-	if (CullMode == cullmode_back)
-		RasterizationState.cullMode = VK_CULL_MODE_BACK_BIT;
-	else if (CullMode == cullmode_front)
-		RasterizationState.cullMode = VK_CULL_MODE_FRONT_BIT;
-	else if (CullMode == cullmode_front_and_back)
-		RasterizationState.cullMode = VK_CULL_MODE_FRONT_AND_BACK;
-	else if (CullMode == cullmode_none)
-		RasterizationState.cullMode = VK_CULL_MODE_NONE;
-	RasterizationState.frontFace = FrontFace == frontface_ccw ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+	RasterizationState.cullMode = FillMode;
+	RasterizationState.frontFace = FrontFace;
 	RasterizationState.depthBiasEnable = VK_FALSE;
 	RasterizationState.depthBiasConstantFactor = 0.0f;
 	RasterizationState.depthBiasClamp = 0.0f;
@@ -222,22 +199,7 @@ void  egx::Pipeline::Create(
 	DepthStencilState.flags = 0;
 	DepthStencilState.depthTestEnable = DepthEnabled;
 	DepthStencilState.depthWriteEnable = DepthWriteEnable;
-	if (DepthCompare == depthcompare_always)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-	else if (DepthCompare == depthcompare_equal)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_EQUAL;
-	else if (DepthCompare == depthcompare_greater)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER;
-	else if (DepthCompare == depthcompare_greater_equal)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-	else if (DepthCompare == depthcompare_less)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
-	else if (DepthCompare == depthcompare_less_equal)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-	else if (DepthCompare == depthcompare_never)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_NEVER;
-	else if (DepthCompare == depthcompare_not_equal)
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_NOT_EQUAL;
+	DepthStencilState.depthCompareOp = DepthCompare;
 	DepthStencilState.depthBoundsTestEnable = VK_FALSE;
 	DepthStencilState.stencilTestEnable = VK_FALSE;
 	DepthStencilState.front = {};

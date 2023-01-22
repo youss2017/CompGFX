@@ -135,7 +135,8 @@ void DescriptorSet::SetImage(
 	const std::vector<ref<Image>>& Images,
 	const std::vector<ref<Sampler>>& Samplers,
 	const std::vector<VkImageLayout>& ImageLayouts,
-	const std::vector<uint32_t>& ViewIndex)
+	const std::vector<uint32_t>& ViewIndex,
+	bool inputAttachment)
 {
 
 #ifdef _DEBUG
@@ -149,6 +150,7 @@ void DescriptorSet::SetImage(
 	desc.ImageSamplers = Samplers;
 	desc.ImageLayouts = ImageLayouts;
 	desc.ViewIndex = ViewIndex;
+	desc.IsInputAttachment = inputAttachment;
 	std::fill(desc.IssueUpdateList.begin(), desc.IssueUpdateList.end(), true);
 	_set_write_image_info.reserve(Images.size());
 	_perform_writes = _max_frames;

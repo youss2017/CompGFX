@@ -6,6 +6,8 @@
 #include "frameflight.hpp"
 #include "../../cmd/cmd.hpp"
 #include <optional>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 
 namespace egx {
 
@@ -301,6 +303,11 @@ namespace egx {
 		EGX_API void ClearImage(const VkClearValue& clearValue);
 
 		EGX_API void SetDebugName(const std::string& Name);
+
+		inline std::tuple<uint32_t, uint32_t, uint32_t> GetSize3D() const { return { Width, Height, Depth }; };
+		inline std::pair<uint32_t, uint32_t> GetSize2D() const { return { Width, Height }; };
+		inline glm::ivec2 GetSize2DGlm() const { return { Width, Height }; };
+		inline glm::ivec3 GetSize3DGlm() const { return { Width, Height, Depth }; };
 
 	protected:
 		EGX_API Image(uint32_t width, uint32_t height,

@@ -469,6 +469,7 @@ ShaderReflection Shader2::GenerateReflection(const std::vector<uint32_t>& Byteco
 	readImageResources(resources.storage_images, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 	readImageResources(resources.sampled_images, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	readImageResources(resources.separate_images, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+	readImageResources(resources.subpass_inputs, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
 	// (TODO) Read Samplers?
 	//readImageResources(resources.separate_samplers, VK_DESCRIPTOR_TYPE_SAMPLER);
 

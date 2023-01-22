@@ -8,42 +8,6 @@
 
 namespace egx {
 
-	enum cullmode : uint32_t {
-		cullmode_none,
-		cullmode_back,
-		cullmode_front,
-		cullmode_front_and_back
-	};
-
-	enum frontface : uint32_t {
-		frontface_cw,
-		frontface_ccw
-	};
-
-	enum depthcompare : uint32_t {
-		depthcompare_never,
-		depthcompare_less,
-		depthcompare_equal,
-		depthcompare_less_equal,
-		depthcompare_greater,
-		depthcompare_not_equal,
-		depthcompare_greater_equal,
-		depthcompare_always,
-	};
-
-	enum polygonmode : uint32_t {
-		polygonmode_point,
-		polygonmode_line,
-		polygonmode_fill
-	};
-
-	enum polygontopology : uint32_t {
-		polgyontopology_trianglelist,
-		polgyontopology_linelist,
-		polgyontopology_linestrip,
-		polgyontopology_pointlist,
-	};
-
 	class Pipeline {
 	public:
 		static ref<Pipeline> EGX_API FactoryCreate(const ref<VulkanCoreInterface>& CoreInterface);
@@ -82,28 +46,34 @@ namespace egx {
 		inline VkPipeline operator*() const { return Pipeline_; }
 
 		inline void SetBuffer(uint32_t setId, uint32_t bindingId, const ref<Buffer>& buffer, uint32_t offset = 0, uint32_t structSize = 0) {
-			_Sets[setId]->SetBuffer(bindingId, buffer, structSize, offset);
+			_Sets.at(setId)->SetBuffer(bindingId, buffer, structSize, offset);
 		}
 
 		inline void SetSampledImage(uint32_t setId, uint32_t bindingId, const egx::ref<Sampler>& sampler, const egx::ref<Image>& image, VkImageLayout imageLayout, uint32_t viewId) {
-			_Sets[setId]->SetImage(bindingId, { image }, { sampler }, { imageLayout }, { viewId });
+			_Sets.at(setId)->SetImage(bindingId, { image }, { sampler }, { imageLayout }, { viewId });
 		}
 
 		inline void SetStorageImage(uint32_t setId, uint32_t bindingId, const egx::ref<Image>& image, VkImageLayout imageLayout, uint32_t viewId) {
-			_Sets[setId]->SetImage(bindingId, { image }, {}, { imageLayout }, { viewId });
+			_Sets.at(setId)->SetImage(bindingId, { image }, {}, { imageLayout }, { viewId });
 		}
 
 		// For imageLayouts, samplers, and viewIds if they only contain one element, then the first element is used for all images
 		// otherwise each element in the vector is used per image in order
 		inline void SetSampledImages(uint32_t setId, uint32_t bindingId, const std::vector<egx::ref<Sampler>>& samplers, 
 			const std::vector<egx::ref<Image>>& images, const std::vector<VkImageLayout>& imageLayouts, const std::vector<uint32_t>& viewIds) {
-			_Sets[setId]->SetImage(bindingId, images, samplers, imageLayouts, viewIds);
+			_Sets.at(setId)->SetImage(bindingId, images, samplers, imageLayouts, viewIds);
 		}
 
 		// For imageLayouts and viewIds if they only contain one element, then the first element is used for all images
 		// otherwise each element in the vector is used per image in order
 		inline void SetStorageImages(uint32_t setId, uint32_t bindingId, const std::vector<egx::ref<Image>>& images, const std::vector<VkImageLayout>& imageLayouts, const std::vector<uint32_t>& viewIds) {
-			_Sets[setId]->SetImage(bindingId, images, {}, imageLayouts, viewIds);
+			_Sets.at(setId)->SetImage(bindingId, images, {}, imageLayouts, viewIds);
+		}
+
+		inline void SetInputAttachment(uint32_t setId, uint32_t bindingId, const egx::ref<egx::Image>& image, VkImageLayout imageLayout, uint32_t viewId)
+		{
+			throw std::runtime_error("Not Implemented.");
+			_Sets.at(setId)->SetImage(bindingId, { image }, {}, { imageLayout }, { viewId }, true);
 		}
 
 	protected:
@@ -113,11 +83,11 @@ namespace egx {
 	public:
 		/// Pipeline properties you do not have to set viewport width/height
 		// the default is to use the framebuffer
-		cullmode CullMode = cullmode_none;
-		frontface FrontFace = frontface_ccw;
-		depthcompare DepthCompare = depthcompare_always;
-		polygonmode FillMode = polygonmode_fill;
-		polygontopology Topology = polgyontopology_trianglelist;
+		VkCullModeFlags CullMode = VK_CULL_MODE_NONE;
+		VkFrontFace FrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		VkCompareOp DepthCompare = VK_COMPARE_OP_ALWAYS;
+		VkPolygonMode FillMode = VK_POLYGON_MODE_FILL;
+		VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		float NearField = 0.0f;
 		float FarField = 1.0f;
 		float LineWidth = 1.0f;

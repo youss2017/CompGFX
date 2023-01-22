@@ -103,6 +103,7 @@ namespace egx
 			std::vector<ref<Sampler>> ImageSamplers;
 			std::vector<VkImageLayout> ImageLayouts;
 			std::vector<uint32_t> ViewIndex = { 0 };
+			bool IsInputAttachment{ false };
 		};
 	}
 
@@ -130,12 +131,8 @@ namespace egx
 			const std::vector<ref<Image>>& Images,
 			const std::vector<ref<Sampler>>& Samplers,
 			const std::vector<VkImageLayout>& ImageLayouts,
-			const std::vector<uint32_t>& ViewIndex);
-
-		EGX_API void SetInputAttachment(uint32_t bindingId,
-			const egx::ref<egx::Image>& image,
-			VkImageLayout imageLayout,
-			uint32_t viewIndex);
+			const std::vector<uint32_t>& ViewIndex,
+			bool inputAttachment = false);
 
 		EGX_API SetPoolRequirementsInfo GetDescriptorPoolRequirements() const;
 

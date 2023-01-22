@@ -107,8 +107,7 @@ namespace egx {
 		bool CreateDefaultView,
 		VkPipelineColorBlendAttachmentState* pBlendState)
 	{
-		assert(_renderpass == nullptr);
-		assert(_colorattachements.find(ColorAttachmentId) == _colorattachements.end());
+		assert(_renderpass == nullptr && _colorattachements.find(ColorAttachmentId) == _colorattachements.end());
 #ifdef _DEBUG
 		LOG(INFO, "Creating FBO Color Attachment {0}x{1} Format: {2} Clear: <{3:%.3f}, {4:%.3f}, {5:%.3f}, {6:%.3f}>",
 			Width, Height, egx::_internal::DebugVkFormatToString(Format),
@@ -154,8 +153,7 @@ namespace egx {
 		VkImageUsageFlags CustomUsageFlags,
 		bool CreateDefaultView)
 	{
-		assert(_renderpass == nullptr);
-		assert(!_depthattachment.has_value());
+		assert(_renderpass == nullptr && !_depthattachment.has_value());
 #ifdef _DEBUG
 		LOG(INFO, "Creating FBO Depth Attachment {0}x{1} Format: {2}, Clear: {3:%.3f}", Width, Height, egx::_internal::DebugVkFormatToString(Format), ClearValue.depthStencil.depth);
 #endif
@@ -176,6 +174,66 @@ namespace egx {
 
 
 		attachment.Description.format = Format;
+		attachment.Description.samples = VK_SAMPLE_COUNT_1_BIT;
+		attachment.Description.loadOp = LoadOp;
+		attachment.Description.storeOp = StoreOp;
+		attachment.Description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment.Description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachment.Description.initialLayout = InitialLayout;
+		attachment.Description.finalLayout = FinalLayout;
+		attachment.ClearValue = ClearValue;
+
+		_depthattachment = attachment;
+	}
+
+	void Framebuffer::CreateColorAttachmentFromTexture(
+		const egx::ref<egx::Image>& texture,
+		uint32_t ColorAttachmentId,
+		VkClearValue ClearValue,
+		VkAttachmentLoadOp LoadOp,
+		VkAttachmentStoreOp StoreOp,
+		VkImageLayout InitialLayout,
+		VkImageLayout FinalLayout,
+		VkPipelineColorBlendAttachmentState* pBlendState)
+	{
+		assert(_renderpass == nullptr && _colorattachements.find(ColorAttachmentId) == _colorattachements.end());
+		if (texture->Width != Width || texture->Height != Height) {
+			LOG(ERR, "Invalid texture passed to CreateColorAttachmentFromTexture(). The texture must have the same resolution as the framebuffer({}, {}) vs texture ({}, {})",
+				Width, Height, texture->Width, texture->Height);
+			LOG(WARNING, "Color Attachmented not created for framebuffer");
+			return;
+		}
+		internal::egfxframebuffer_attachment attachment;
+		if (pBlendState)
+			attachment.BlendState = *pBlendState;
+		attachment.Attachment = texture;
+
+		attachment.Description.format = texture->Format;
+		attachment.Description.samples = VK_SAMPLE_COUNT_1_BIT;
+		attachment.Description.loadOp = LoadOp;
+		attachment.Description.storeOp = StoreOp;
+		attachment.Description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment.Description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachment.Description.initialLayout = InitialLayout;
+		attachment.Description.finalLayout = FinalLayout;
+		attachment.ClearValue = ClearValue;
+
+		_colorattachements.insert({ ColorAttachmentId, attachment });
+	}
+
+	void Framebuffer::CreateDepthAttachmentFromTexture(const egx::ref<egx::Image>& texture, VkClearValue ClearValue, VkAttachmentLoadOp LoadOp, VkAttachmentStoreOp StoreOp, VkImageLayout InitialLayout, VkImageLayout FinalLayout)
+	{
+		assert(_renderpass == nullptr && !_depthattachment.has_value());
+		if (texture->Width != Width || texture->Height != Height) {
+			LOG(ERR, "Invalid texture passed to CreateColorAttachmentFromTexture(). The texture must have the same resolution as the framebuffer({}, {}) vs texture ({}, {})",
+				Width, Height, texture->Width, texture->Height);
+			LOG(WARNING, "Depth Attachmented not created for framebuffer");
+			return;
+		}
+		internal::egfxframebuffer_attachment attachment;
+		attachment.Attachment = texture;
+
+		attachment.Description.format = texture->Format;
 		attachment.Description.samples = VK_SAMPLE_COUNT_1_BIT;
 		attachment.Description.loadOp = LoadOp;
 		attachment.Description.storeOp = StoreOp;
