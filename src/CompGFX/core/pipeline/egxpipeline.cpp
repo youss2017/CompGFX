@@ -173,7 +173,8 @@ void  egx::Pipeline::Create(
 	RasterizationState.flags = 0;
 	RasterizationState.depthClampEnable = VK_FALSE;
 	RasterizationState.rasterizerDiscardEnable = VK_FALSE;
-	RasterizationState.cullMode = FillMode;
+	RasterizationState.polygonMode = FillMode;
+	RasterizationState.cullMode = CullMode;
 	RasterizationState.frontFace = FrontFace;
 	RasterizationState.depthBiasEnable = VK_FALSE;
 	RasterizationState.depthBiasConstantFactor = 0.0f;

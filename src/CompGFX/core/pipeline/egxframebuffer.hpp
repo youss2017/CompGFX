@@ -150,6 +150,7 @@ namespace egx
 		// Starts render pass
 		void Bind(VkCommandBuffer cmd)
 		{
+			if (_framebuffer == nullptr) GetFramebuffer();
 			std::vector<VkClearValue> clearValues;
 			clearValues.reserve(15);
 			if (_depthattachment.has_value() && _depthattachment->Description.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
