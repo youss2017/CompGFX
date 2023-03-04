@@ -1,3 +1,4 @@
+#include "FeatureValidation.hpp"
 #include "vulkinc.hpp"
 #include "Utility/CppUtility.hpp"
 #include <stdio.h>
@@ -499,7 +500,7 @@ namespace egx {
 		return nullptr;
 	}
 
-	VkBool32 GraphicsCardFeatureValidation_Check(VkPhysicalDevice device, VkPhysicalDeviceFeatures2 requiredFeatures)
+	VkBool32 ValidateFeatures(VkPhysicalDevice device, VkPhysicalDeviceFeatures2 requiredFeatures)
 	{
 
 		// 1) Meets required specifications
@@ -577,7 +578,7 @@ namespace egx {
 
 #define Acquire(structTypedef) structTypedef nf = *(structTypedef*)pNext; structTypedef src = *(structTypedef*)GetCardFeature(type, features); bool error = false;
 #define Check(parameter) if (nf.parameter == VK_TRUE) error &= !(src.parameter & VK_TRUE);
-#define ECheck(structTypedef) if(error) { NF_ERROR(type); printf("%s ❌ \n", #structTypedef); } else { printf("%s ✓\n", #structTypedef); }
+#define ECheck(structTypedef) if(error) { NF_ERROR(type); printf("%s X \n", #structTypedef); } else { printf("%s ✓\n", #structTypedef); }
 
 		while (pNext) {
 			VkStructureType type = *(VkStructureType*)pNext;

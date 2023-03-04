@@ -6,7 +6,7 @@ egx::VulkanCoreInterface::~VulkanCoreInterface() {
 	VkAlloc::DestroyContext(MemoryContext);
 #ifdef _DEBUG
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr)
+	if (func && DebugMessenger)
 	{
 		func(Instance, DebugMessenger, nullptr);
 	}

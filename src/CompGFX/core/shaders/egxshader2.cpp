@@ -2,11 +2,12 @@
 #include <Utility/CppUtility.hpp>
 #include <stdexcept>
 #include <filesystem>
-#include <json/json.hpp>
+#include <json.hpp>
 #include <spirv_cross/spirv_cross.hpp>
 #include <ranges>
 #include "../memory/formatsize.hpp"
 #include <filesystem>
+#include <json.hpp>
 #ifdef _WIN32
 #include <winsqlite/winsqlite3.h>
 #else
@@ -119,6 +120,7 @@ ref<Shader2> egx::Shader2::FactoryCreateEx
 #ifdef _DEBUG
 	debug |= true;
 #endif
+	options.SetWarningsAsErrors();
 	if (debug) {
 		options.SetOptimizationLevel(shaderc_optimization_level_zero);
 		options.SetGenerateDebugInfo();
@@ -191,8 +193,12 @@ std::string& egx::Shader2::GetSourceCode()
 	return _SourceCode;
 }
 
-std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code, std::vector<std::pair<std::string, uint64_t>>& includesLastModifiedDate)
+std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code,
+	std::vector<std::pair<std::string, uint64_t>>& includesLastModifiedDate, std::optional<std::vector<std::string>> pragmaOnce)
 {
+	if (!pragmaOnce.has_value()) {
+		pragmaOnce = std::vector<std::string>();
+	}
 	std::string output;
 	auto lines = Split(code.data(), "\n");
 	int line_index = 1;
@@ -213,14 +219,19 @@ std::string egx::Shader2::PreprocessInclude(std::string_view CurrentFilePath, st
 		if (!std::filesystem::exists(include_file_path)) {
 			LOGEXCEPT("#include is not found in \"{0}\" at line {1}", CurrentFilePath.data(), line_index);
 		}
-		auto include_source_code = ReadAllText(include_file_path);
-		if (!include_source_code.has_value()) {
-			LOGEXCEPT("Could not open #include file (READ FAIL) in \"{0}\" at line {1}", CurrentFilePath.data(), line_index);
+		// did we already include the file
+		if (!std::ranges::any_of(pragmaOnce.value(), [&](std::string& t) {return t == include_file_path; })) {
+
+			auto include_source_code = ReadAllText(include_file_path);
+			if (!include_source_code.has_value()) {
+				LOGEXCEPT("Could not open #include file (READ FAIL) in \"{0}\" at line {1}", CurrentFilePath.data(), line_index);
+			}
+			std::filesystem::path p(include_file_path);
+			includesLastModifiedDate.push_back({ p.string(), (uint64_t)std::filesystem::last_write_time(p).time_since_epoch().count() });
+			include_source_code = PreprocessInclude(include_file_path, p.parent_path().string(), *include_source_code, includesLastModifiedDate, pragmaOnce);
+			output += *include_source_code;
+			pragmaOnce->push_back(cpp::UpperCase(include_file_path));
 		}
-		std::filesystem::path p(include_file_path);
-		includesLastModifiedDate.push_back({ p.string(), (uint64_t)std::filesystem::last_write_time(p).time_since_epoch().count() });
-		include_source_code = PreprocessInclude(include_file_path, p.parent_path().string(), *include_source_code, includesLastModifiedDate);
-		output += *include_source_code;
 		output.push_back('\n');
 		line_index++;
 	}

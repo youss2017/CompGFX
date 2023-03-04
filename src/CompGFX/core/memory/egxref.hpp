@@ -115,8 +115,19 @@ namespace egx {
 	public:
 		T* base;
 	protected:
+		template<typename Src, typename Dst>
+		friend ref<Dst> Cast(const ref<Src>& obj);
 		int32_t* refCount;
 	};
 #endif
+
+	template<typename Src, typename Dst>
+	ref<Dst> Cast(const ref<Src>& obj) {
+		ref<Dst> cast;
+		cast.base = (Dst*)obj.base;
+		cast.refCount = obj.refCount;
+		*cast.refCount += 1;
+		return cast;
+	}
 
 }

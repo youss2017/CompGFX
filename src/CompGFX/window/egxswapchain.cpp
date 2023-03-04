@@ -44,6 +44,15 @@ static const char* builtin_fragment_shader = R"(
 	}
 )";
 
+
+static const uint8_t builtin_vs_bytecode[] = {
+	3, 2, 35, 7, 0, 0, 1, 0, 10, 0, 13, 0, 47, 0, 0, 0, 0, 0, 0, 0, 17, 0, 2, 0, 1, 0, 0, 0, 11, 0, 6, 0, 1, 0, 0, 0, 71, 76, 83, 76, 46, 115, 116, 100, 46, 52, 53, 48, 0, 0, 0, 0, 14, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 15, 0, 8, 0, 0, 0, 0, 0, 4, 0, 0, 0, 109, 97, 105, 110, 0, 0, 0, 0, 23, 0, 0, 0, 31, 0, 0, 0, 38, 0, 0, 0, 3, 0, 3, 0, 2, 0, 0, 0, 194, 1, 0, 0, 4, 0, 10, 0, 71, 76, 95, 71, 79, 79, 71, 76, 69, 95, 99, 112, 112, 95, 115, 116, 121, 108, 101, 95, 108, 105, 110, 101, 95, 100, 105, 114, 101, 99, 116, 105, 118, 101, 0, 0, 4, 0, 8, 0, 71, 76, 95, 71, 79, 79, 71, 76, 69, 95, 105, 110, 99, 108, 117, 100, 101, 95, 100, 105, 114, 101, 99, 116, 105, 118, 101, 0, 5, 0, 4, 0, 4, 0, 0, 0, 109, 97, 105, 110, 0, 0, 0, 0, 5, 0, 3, 0, 9, 0, 0, 0, 118, 0, 0, 0, 5, 0, 6, 0, 23, 0, 0, 0, 103, 108, 95, 86, 101, 114, 116, 101, 120, 73, 110, 100, 101, 120, 0, 0, 5, 0, 5, 0, 26, 0, 0, 0, 105, 110, 100, 101, 120, 97, 98, 108, 101, 0, 0, 0, 5, 0, 3, 0, 31, 0, 0, 0, 85, 86, 0, 0, 5, 0, 6, 0, 36, 0, 0, 0, 103, 108, 95, 80, 101, 114, 86, 101, 114, 116, 101, 120, 0, 0, 0, 0, 6, 0, 6, 0, 36, 0, 0, 0, 0, 0, 0, 0, 103, 108, 95, 80, 111, 115, 105, 116, 105, 111, 110, 0, 6, 0, 7, 0, 36, 0, 0, 0, 1, 0, 0, 0, 103, 108, 95, 80, 111, 105, 110, 116, 83, 105, 122, 101, 0, 0, 0, 0, 6, 0, 7, 0, 36, 0, 0, 0, 2, 0, 0, 0, 103, 108, 95, 67, 108, 105, 112, 68, 105, 115, 116, 97, 110, 99, 101, 0, 6, 0, 7, 0, 36, 0, 0, 0, 3, 0, 0, 0, 103, 108, 95, 67, 117, 108, 108, 68, 105, 115, 116, 97, 110, 99, 101, 0, 5, 0, 3, 0, 38, 0, 0, 0, 0, 0, 0, 0, 71, 0, 4, 0, 23, 0, 0, 0, 11, 0, 0, 0, 42, 0, 0, 0, 71, 0, 4, 0, 31, 0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 72, 0, 5, 0, 36, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 72, 0, 5, 0, 36, 0, 0, 0, 1, 0, 0, 0, 11, 0, 0, 0, 1, 0, 0, 0, 72, 0, 5, 0, 36, 0, 0, 0, 2, 0, 0, 0, 11, 0, 0, 0, 3, 0, 0, 0, 72, 0, 5, 0, 36, 0, 0, 0, 3, 0, 0, 0, 11, 0, 0, 0, 4, 0, 0, 0, 71, 0, 3, 0, 36, 0, 0, 0, 2, 0, 0, 0, 19, 0, 2, 0, 2, 0, 0, 0, 33, 0, 3, 0, 3, 0, 0, 0, 2, 0, 0, 0, 22, 0, 3, 0, 6, 0, 0, 0, 32, 0, 0, 0, 23, 0, 4, 0, 7, 0, 0, 0, 6, 0, 0, 0, 4, 0, 0, 0, 32, 0, 4, 0, 8, 0, 0, 0, 7, 0, 0, 0, 7, 0, 0, 0, 21, 0, 4, 0, 10, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 43, 0, 4, 0, 10, 0, 0, 0, 11, 0, 0, 0, 6, 0, 0, 0, 28, 0, 4, 0, 12, 0, 0, 0, 7, 0, 0, 0, 11, 0, 0, 0, 43, 0, 4, 0, 6, 0, 0, 0, 13, 0, 0, 0, 0, 0, 128, 191, 43, 0, 4, 0, 6, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 44, 0, 7, 0, 7, 0, 0, 0, 15, 0, 0, 0, 13, 0, 0, 0, 13, 0, 0, 0, 14, 0, 0, 0, 14, 0, 0, 0, 43, 0, 4, 0, 6, 0, 0, 0, 16, 0, 0, 0, 0, 0, 128, 63, 44, 0, 7, 0, 7, 0, 0, 0, 17, 0, 0, 0, 13, 0, 0, 0, 16, 0, 0, 0, 14, 0, 0, 0, 16, 0, 0, 0, 44, 0, 7, 0, 7, 0, 0, 0, 18, 0, 0, 0, 16, 0, 0, 0, 13, 0, 0, 0, 16, 0, 0, 0, 14, 0, 0, 0, 44, 0, 7, 0, 7, 0, 0, 0, 19, 0, 0, 0, 16, 0, 0, 0, 16, 0, 0, 0, 16, 0, 0, 0, 16, 0, 0, 0, 44, 0, 9, 0, 12, 0, 0, 0, 20, 0, 0, 0, 15, 0, 0, 0, 17, 0, 0, 0, 18, 0, 0, 0, 17, 0, 0, 0, 19, 0, 0, 0, 18, 0, 0, 0, 21, 0, 4, 0, 21, 0, 0, 0, 32, 0, 0, 0, 1, 0, 0, 0, 32, 0, 4, 0, 22, 0, 0, 0, 1, 0, 0, 0, 21, 0, 0, 0, 59, 0, 4, 0, 22, 0, 0, 0, 23, 0, 0, 0, 1, 0, 0, 0, 32, 0, 4, 0, 25, 0, 0, 0, 7, 0, 0, 0, 12, 0, 0, 0, 23, 0, 4, 0, 29, 0, 0, 0, 6, 0, 0, 0, 2, 0, 0, 0, 32, 0, 4, 0, 30, 0, 0, 0, 3, 0, 0, 0, 29, 0, 0, 0, 59, 0, 4, 0, 30, 0, 0, 0, 31, 0, 0, 0, 3, 0, 0, 0, 43, 0, 4, 0, 10, 0, 0, 0, 34, 0, 0, 0, 1, 0, 0, 0, 28, 0, 4, 0, 35, 0, 0, 0, 6, 0, 0, 0, 34, 0, 0, 0, 30, 0, 6, 0, 36, 0, 0, 0, 7, 0, 0, 0, 6, 0, 0, 0, 35, 0, 0, 0, 35, 0, 0, 0, 32, 0, 4, 0, 37, 0, 0, 0, 3, 0, 0, 0, 36, 0, 0, 0, 59, 0, 4, 0, 37, 0, 0, 0, 38, 0, 0, 0, 3, 0, 0, 0, 43, 0, 4, 0, 21, 0, 0, 0, 39, 0, 0, 0, 0, 0, 0, 0, 32, 0, 4, 0, 45, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0, 54, 0, 5, 0, 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 248, 0, 2, 0, 5, 0, 0, 0, 59, 0, 4, 0, 8, 0, 0, 0, 9, 0, 0, 0, 7, 0, 0, 0, 59, 0, 4, 0, 25, 0, 0, 0, 26, 0, 0, 0, 7, 0, 0, 0, 61, 0, 4, 0, 21, 0, 0, 0, 24, 0, 0, 0, 23, 0, 0, 0, 62, 0, 3, 0, 26, 0, 0, 0, 20, 0, 0, 0, 65, 0, 5, 0, 8, 0, 0, 0, 27, 0, 0, 0, 26, 0, 0, 0, 24, 0, 0, 0, 61, 0, 4, 0, 7, 0, 0, 0, 28, 0, 0, 0, 27, 0, 0, 0, 62, 0, 3, 0, 9, 0, 0, 0, 28, 0, 0, 0, 61, 0, 4, 0, 7, 0, 0, 0, 32, 0, 0, 0, 9, 0, 0, 0, 79, 0, 7, 0, 29, 0, 0, 0, 33, 0, 0, 0, 32, 0, 0, 0, 32, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 62, 0, 3, 0, 31, 0, 0, 0, 33, 0, 0, 0, 61, 0, 4, 0, 7, 0, 0, 0, 40, 0, 0, 0, 9, 0, 0, 0, 79, 0, 7, 0, 29, 0, 0, 0, 41, 0, 0, 0, 40, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 81, 0, 5, 0, 6, 0, 0, 0, 42, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 81, 0, 5, 0, 6, 0, 0, 0, 43, 0, 0, 0, 41, 0, 0, 0, 1, 0, 0, 0, 80, 0, 7, 0, 7, 0, 0, 0, 44, 0, 0, 0, 42, 0, 0, 0, 43, 0, 0, 0, 14, 0, 0, 0, 16, 0, 0, 0, 65, 0, 5, 0, 45, 0, 0, 0, 46, 0, 0, 0, 38, 0, 0, 0, 39, 0, 0, 0, 62, 0, 3, 0, 46, 0, 0, 0, 44, 0, 0, 0, 253, 0, 1, 0, 56, 0, 1, 0
+};
+
+static const uint8_t builtin_fs_bytecode[] = {
+	3, 2, 35, 7, 0, 0, 1, 0, 10, 0, 13, 0, 20, 0, 0, 0, 0, 0, 0, 0, 17, 0, 2, 0, 1, 0, 0, 0, 11, 0, 6, 0, 1, 0, 0, 0, 71, 76, 83, 76, 46, 115, 116, 100, 46, 52, 53, 48, 0, 0, 0, 0, 14, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 15, 0, 7, 0, 4, 0, 0, 0, 4, 0, 0, 0, 109, 97, 105, 110, 0, 0, 0, 0, 9, 0, 0, 0, 17, 0, 0, 0, 16, 0, 3, 0, 4, 0, 0, 0, 7, 0, 0, 0, 3, 0, 3, 0, 2, 0, 0, 0, 194, 1, 0, 0, 4, 0, 10, 0, 71, 76, 95, 71, 79, 79, 71, 76, 69, 95, 99, 112, 112, 95, 115, 116, 121, 108, 101, 95, 108, 105, 110, 101, 95, 100, 105, 114, 101, 99, 116, 105, 118, 101, 0, 0, 4, 0, 8, 0, 71, 76, 95, 71, 79, 79, 71, 76, 69, 95, 105, 110, 99, 108, 117, 100, 101, 95, 100, 105, 114, 101, 99, 116, 105, 118, 101, 0, 5, 0, 4, 0, 4, 0, 0, 0, 109, 97, 105, 110, 0, 0, 0, 0, 5, 0, 5, 0, 9, 0, 0, 0, 70, 114, 97, 103, 67, 111, 108, 111, 114, 0, 0, 0, 5, 0, 5, 0, 13, 0, 0, 0, 66, 108, 105, 116, 73, 109, 97, 103, 101, 0, 0, 0, 5, 0, 3, 0, 17, 0, 0, 0, 85, 86, 0, 0, 71, 0, 4, 0, 9, 0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 71, 0, 4, 0, 13, 0, 0, 0, 34, 0, 0, 0, 0, 0, 0, 0, 71, 0, 4, 0, 13, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 71, 0, 4, 0, 17, 0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 19, 0, 2, 0, 2, 0, 0, 0, 33, 0, 3, 0, 3, 0, 0, 0, 2, 0, 0, 0, 22, 0, 3, 0, 6, 0, 0, 0, 32, 0, 0, 0, 23, 0, 4, 0, 7, 0, 0, 0, 6, 0, 0, 0, 4, 0, 0, 0, 32, 0, 4, 0, 8, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0, 59, 0, 4, 0, 8, 0, 0, 0, 9, 0, 0, 0, 3, 0, 0, 0, 25, 0, 9, 0, 10, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 27, 0, 3, 0, 11, 0, 0, 0, 10, 0, 0, 0, 32, 0, 4, 0, 12, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 59, 0, 4, 0, 12, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 23, 0, 4, 0, 15, 0, 0, 0, 6, 0, 0, 0, 2, 0, 0, 0, 32, 0, 4, 0, 16, 0, 0, 0, 1, 0, 0, 0, 15, 0, 0, 0, 59, 0, 4, 0, 16, 0, 0, 0, 17, 0, 0, 0, 1, 0, 0, 0, 54, 0, 5, 0, 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 248, 0, 2, 0, 5, 0, 0, 0, 61, 0, 4, 0, 11, 0, 0, 0, 14, 0, 0, 0, 13, 0, 0, 0, 61, 0, 4, 0, 15, 0, 0, 0, 18, 0, 0, 0, 17, 0, 0, 0, 87, 0, 5, 0, 7, 0, 0, 0, 19, 0, 0, 0, 14, 0, 0, 0, 18, 0, 0, 0, 62, 0, 3, 0, 9, 0, 0, 0, 19, 0, 0, 0, 253, 0, 1, 0, 56, 0, 1, 0
+};
+
 using namespace egx;
 
 egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, void* GlfwWindowPtr, bool VSync, bool SetupImGui)
@@ -51,7 +60,7 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 {
 	VkBool32 Supported{};
 	glfwCreateWindowSurface(_CoreInterface->Instance, (GLFWwindow*)GlfwWindowPtr, nullptr, &Surface);
-	vkGetPhysicalDeviceSurfaceSupportKHR(CoreInterface->PhysicalDevice.Id, CoreInterface->QueueFamilyIndex, Surface, &Supported);
+	vkGetPhysicalDeviceSurfaceSupportKHR(CoreInterface->PhysicalDevice.Id, CoreInterface->GraphicsQueueFamilyIndex, Surface, &Supported);
 	if (!Supported)
 	{
 		vkDestroySurfaceKHR(_CoreInterface->Instance, Surface, nullptr);
@@ -89,6 +98,19 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 	_descriptor_set_pool->AdjustForRequirements(req);
 	_descriptor_set_pool->IncrementSetCount(1000);
 
+	{
+		VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		createInfo.codeSize = sizeof(builtin_vs_bytecode);
+		createInfo.pCode = (uint32_t*)builtin_vs_bytecode;
+		vkCreateShaderModule(CoreInterface->Device, &createInfo, nullptr, &_builtin_vertex_module);
+	}
+	{
+		VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		createInfo.codeSize = sizeof(builtin_fs_bytecode);
+		createInfo.pCode = (uint32_t*)builtin_fs_bytecode;
+		vkCreateShaderModule(CoreInterface->Device, &createInfo, nullptr, &_builtin_fragment_module);
+	}
+
 	CreateRenderPass();
 	CreateSwapchain(_width, _height);
 	CreatePipelineObjects();
@@ -124,13 +146,13 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 		// io.ConfigDockingWithShift = true;
 
 		VkQueue queue;
-		vkGetDeviceQueue(CoreInterface->Device, CoreInterface->QueueFamilyIndex, 0, &queue);
+		vkGetDeviceQueue(CoreInterface->Device, CoreInterface->GraphicsQueueFamilyIndex, 0, &queue);
 		ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)this->GlfwWindowPtr, true);
 		ImGui_ImplVulkan_InitInfo init_info = {};
 		init_info.Instance = CoreInterface->Instance;
 		init_info.PhysicalDevice = CoreInterface->PhysicalDevice.Id;
 		init_info.Device = CoreInterface->Device;
-		init_info.QueueFamily = CoreInterface->QueueFamilyIndex;
+		init_info.QueueFamily = CoreInterface->GraphicsQueueFamilyIndex;
 		init_info.Queue = queue;
 		init_info.PipelineCache = NULL;
 		init_info.DescriptorPool = _descriptor_set_pool->GetSetPool();
@@ -174,6 +196,7 @@ egx::VulkanSwapchain::VulkanSwapchain(ref<VulkanCoreInterface>& CoreInterface, v
 			vkDestroyCommandPool(CoreInterface->Device, command_pool, nullptr);
 		}
 	}
+
 }
 
 egx::VulkanSwapchain::VulkanSwapchain(VulkanSwapchain&& other) noexcept
@@ -216,6 +239,8 @@ egx::VulkanSwapchain::~VulkanSwapchain()
 		vkDestroyDescriptorSetLayout(_CoreInterface->Device, _descriptor_layout, nullptr);
 	if (_blit_gfx)
 		vkDestroyPipeline(_CoreInterface->Device, _blit_gfx, nullptr);
+	vkDestroyShaderModule(_CoreInterface->Device, _builtin_vertex_module, nullptr);
+	vkDestroyShaderModule(_CoreInterface->Device, _builtin_fragment_module, nullptr);
 	GetOrCreateCompletionFence()->SynchronizeAllFrames();
 }
 
@@ -280,7 +305,7 @@ void egx::VulkanSwapchain::Present(const ref<Image>& image, uint32_t viewIndex)
 	{
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.sampler = _image_sampler->GetSampler();
-		imageInfo.imageView = image->view(viewIndex);
+		imageInfo.imageView = image->View(viewIndex);
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 		write.dstSet = _descriptor_set[frame];
@@ -363,7 +388,7 @@ void egx::VulkanSwapchain::PresentCommon(uint32_t frame, bool onlyimgui)
 	}
 
 	VkSemaphore blitLock = GetOrCreateCompletionSemaphore()->GetSemaphore();
-	
+
 	Submit(_cmd[frame]);
 
 	VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
@@ -480,7 +505,7 @@ void egx::VulkanSwapchain::CreateSwapchain(int width, int height)
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	createInfo.queueFamilyIndexCount = 1;
-	createInfo.pQueueFamilyIndices = &_CoreInterface->QueueFamilyIndex;
+	createInfo.pQueueFamilyIndices = (uint32_t*)&_CoreInterface->GraphicsQueueFamilyIndex;
 	createInfo.preTransform = _capabilities.currentTransform; // VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR /* VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR */;
 	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	createInfo.presentMode = GetPresentMode();
@@ -568,7 +593,7 @@ void egx::VulkanSwapchain::CreateRenderPass()
 	passCreateInfo.pAttachments = &attachmentDescription;
 	passCreateInfo.subpassCount = 1;
 	passCreateInfo.pSubpasses = &subpass;
-	passCreateInfo.dependencyCount = 1;
+	passCreateInfo.dependencyCount = viewportsEnabled ? 1 : 0;
 	passCreateInfo.pDependencies = viewportsEnabled ? &dependency : nullptr;
 	vkCreateRenderPass(_CoreInterface->Device, &passCreateInfo, nullptr, &RenderPass);
 }
@@ -603,8 +628,8 @@ void VulkanSwapchain::CreatePipelineObjects()
 		createInfo.pSetLayouts = &_descriptor_layout;
 		vkCreatePipelineLayout(_CoreInterface->Device, &createInfo, nullptr, &_blit_layout);
 	}
-	_builtin_vertex = Shader2::FactoryCreateEx(_CoreInterface, builtin_vertex_shader, VK_SHADER_STAGE_VERTEX_BIT, egx::BindingAttributes::Default, "_builting_vertex(swapchain)");
-	_builtin_fragment = Shader2::FactoryCreateEx(_CoreInterface, builtin_fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT, egx::BindingAttributes::Default, "_builting_fragment(swapchain)");
+	//_builtin_vertex = Shader2::FactoryCreateEx(_CoreInterface, builtin_vertex_shader, VK_SHADER_STAGE_VERTEX_BIT, egx::BindingAttributes::Default, "_builting_vertex(swapchain)");
+	//_builtin_fragment = Shader2::FactoryCreateEx(_CoreInterface, builtin_fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT, egx::BindingAttributes::Default, "_builting_fragment(swapchain)");
 }
 
 void VulkanSwapchain::CreatePipeline()
@@ -616,12 +641,12 @@ void VulkanSwapchain::CreatePipeline()
 	VkPipelineShaderStageCreateInfo stages[2]{};
 	stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	stages[0].module = _builtin_vertex->ShaderModule;
+	stages[0].module = _builtin_vertex_module; //_builtin_vertex->ShaderModule;
 	stages[0].pName = "main";
 
 	stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	stages[1].module = _builtin_fragment->ShaderModule;
+	stages[1].module = _builtin_fragment_module; //_builtin_fragment->ShaderModule;
 	stages[1].pName = "main";
 	createInfo.pStages = stages;
 

@@ -5,7 +5,7 @@
 #include "pipeline/egxpipeline.hpp"
 #include "shaders/egxshader2.hpp"
 #include "shaders/egxshaderset.hpp"
-#include "EngineCore.hpp"
+#include "egxengine.hpp"
 #include "../cmd/cmd.hpp"
 
 template<typename T>

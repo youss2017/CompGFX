@@ -2,17 +2,25 @@ workspace "CompGFX"
     configurations({"Debug", "Release"})
     platforms { "Win64" }
     includedirs { 
-        "include/", 
-        "include/imgui/", 
-        os.getenv('VULKAN_SDK') .. '/include' }
+        "dependency/assimp/include/",
+        "dependency/glfw/include/",
+        "dependency/glm/",
+        "dependency/imgui/",
+        "dependency/imgui/backends/",
+        "dependency/",
+        "dependency/VulkanMemoryAllocator/include",
+        "dependency/json/single_include/nlohmann",
+        "src/CompGFX/",
+        os.getenv('VULKAN_SDK') .. '/include'
+    }
     cppdialect "C++20"
     
     filter { "configurations:Debug" }
-    libdirs { "library/Debug" }
-    links { "assimp-vc143-mtd.lib", "zlibstaticd.lib" }
+    libdirs { "lib/Debug" }
+    links { "assimp-vc143-mtd.lib", "zlibstaticd.lib", "Dependencies.lib" }
     filter { "configurations:Release" }
-    libdirs { "library/Release" }
-    links { "assimp-vc143-mt.lib", "zlibstatic.lib" }
+    libdirs { "lib/Release" }
+    links { "assimp-vc143-mt.lib", "zlibstatic.lib", "Dependencies.lib" }
     filter {}
     
     libdirs { os.getenv('VULKAN_SDK') .. "/lib" }
@@ -38,6 +46,7 @@ workspace "CompGFX"
     buildoptions "/MD"
 
     project "CompGFX"
+        -- SharedLib
         kind "SharedLib"
         language "C++"
         location "src/CompGFX"
@@ -45,17 +54,18 @@ workspace "CompGFX"
             "src/CompGFX/**.h",
             "src/CompGFX/**.hpp",
             "src/CompGFX/**.c",
-            "src/CompGFX/**.cpp",
+            "src/CompGFX/**.cpp"
         }
 
         filter { "system:Windows" }
-        links { "kernel32.lib", "user32.lib", "gdi32.lib", "glfw3.lib", "vulkan-1.lib", "Generic.lib", "shaderc_shared.lib" }
+        links { "glfw3.lib", "vulkan-1.lib" }
         filter "configurations:Debug"
-        links { "spirv-cross-cored.lib" }
+        links { "spirv-cross-cored.lib", "shaderc_sharedd.lib" }
         filter "configurations:Release"
-        links { "spirv-cross-core.lib" }
+        links { "spirv-cross-core.lib", "shaderc_shared.lib" }
         filter { }
-        defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS", "BUILD_GRAPHICS_DLL=1", "NOMINMAX" }
+        -- "BUILD_GRAPHICS_DLL=1"
+        defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS", "NOMINMAX", "BUILD_GRAPHICS_DLL=1" }
         postbuildcommands { "cmd /c \"cd \"$(ProjectDir)\" && python postbuild.py\"" }
         
         
@@ -63,16 +73,16 @@ workspace "CompGFX"
     kind "ConsoleApp"
     language "C++"
     location "src/Sandbox"
-    links { "CompGFX.lib" }
-    files { 
-        "src/Sandbox/**.h",
+        links { "CompGFX.lib" }
+        files { 
+            "src/Sandbox/**.h",
             "src/Sandbox/**.hpp",
             "src/Sandbox/**.c",
             "src/Sandbox/**.cpp",
         }
         
         filter { "system:Windows" }
-        links { "kernel32.lib", "user32.lib", "gdi32.lib", "glfw3.lib", "vulkan-1.lib", "Generic.lib", "shaderc_shared.lib" }
+        links { "kernel32.lib", "user32.lib", "gdi32.lib", "glfw3.lib", "vulkan-1.lib", "shaderc_shared.lib" }
         defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS", "BUILD_GRAPHICS_DLL=1", "NOMINMAX" }
         postbuildcommands { "cmd /c \"cd \"$(ProjectDir)\" && python postbuild.py\"" }
         dependson { "CompGFX" }

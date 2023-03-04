@@ -58,7 +58,7 @@ egx::ref<egx::Image> egx::Image::FactoryCreateEx(
 	auto result = new Image(width, height, depth, mipcount, desc.m_arrayLayers,
 		image->m_image, desc.m_usage, CoreInterface->MemoryContext, image, CoreInterface, format, aspect, InitalLayout, StreamingMode);
 	if (InitalLayout != VK_IMAGE_LAYOUT_UNDEFINED)
-		result->setlayout(VK_IMAGE_LAYOUT_UNDEFINED, InitalLayout);
+		result->SetLayout(VK_IMAGE_LAYOUT_UNDEFINED, InitalLayout);
 
 	if (StreamingMode) {
 		size_t streamBufferSize = (width * (size_t)_internal::FormatByteCount(format)) * height;
@@ -67,7 +67,7 @@ egx::ref<egx::Image> egx::Image::FactoryCreateEx(
 		result->_StreamingFence = Fence::FactoryCreate(CoreInterface);
 	}
 	if (createDefaultView)
-		result->createview(0);
+		result->CreateView(0);
 	return result;
 }
 
@@ -83,7 +83,7 @@ egx::Image::~Image() noexcept
 }
 
 #pragma region Image write
-void egx::Image::setlayout(VkImageLayout OldLayout, VkImageLayout NewLayout)
+void egx::Image::SetLayout(VkImageLayout OldLayout, VkImageLayout NewLayout)
 {
 	auto cmd = egx::CommandBufferSingleUse(_coreinterface);
 	VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -98,8 +98,8 @@ void egx::Image::setlayout(VkImageLayout OldLayout, VkImageLayout NewLayout)
 	cmd.Execute();
 }
 
-void egx::Image::write(
-	uint8_t* Data,
+void egx::Image::Write(
+	const void* Data,
 	VkImageLayout CurrentLayout,
 	uint32_t xOffset,
 	uint32_t yOffset,
@@ -162,24 +162,24 @@ void egx::Image::write(
 	}
 }
 
-void egx::Image::write(uint8_t* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t Depth, uint32_t ArrayLevel, uint32_t StrideInBytes)
+void egx::Image::Write(const void* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t Depth, uint32_t ArrayLevel, uint32_t StrideInBytes)
 {
-	this->write(Data, CurrentLayout, 0u, 0u, 0u, Width, Height, Depth, ArrayLevel, StrideInBytes);
+	Write(Data, CurrentLayout, 0u, 0u, 0u, Width, Height, Depth, ArrayLevel, StrideInBytes);
 }
 
-void egx::Image::write(uint8_t* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t ArrayLevel, uint32_t StrideInBytes)
+void egx::Image::Write(const void* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t ArrayLevel, uint32_t StrideInBytes)
 {
-	this->write(Data, CurrentLayout, 0u, 0u, 0u, Width, Height, 1u, ArrayLevel, StrideInBytes);
+	Write(Data, CurrentLayout, 0u, 0u, 0u, Width, Height, 1u, ArrayLevel, StrideInBytes);
 }
 
-void egx::Image::write(uint8_t* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t ArrayLevel, uint32_t StrideInBytes)
+void egx::Image::Write(const void* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t ArrayLevel, uint32_t StrideInBytes)
 {
-	this->write(Data, CurrentLayout, 0u, 0u, 0u, Width, 1u, 1u, ArrayLevel, StrideInBytes);
+	Write(Data, CurrentLayout, 0u, 0u, 0u, Width, 1u, 1u, ArrayLevel, StrideInBytes);
 }
 #pragma endregion
 
 #pragma region generate mipmap
-void egx::Image::generatemipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel)
+void egx::Image::GenerateMipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel)
 {
 	assert(Mipcount > 1);
 	auto cmd = CommandBufferSingleUse(_coreinterface);
@@ -282,13 +282,13 @@ egx::ref<egx::Image> EGX_API egx::Image::LoadFromDisk(const ref<VulkanCoreInterf
 	if (!pixels)
 		return { (Image*)nullptr };
 	auto image = egx::Image::FactoryCreate(CoreInterface, VK_IMAGE_ASPECT_COLOR_BIT, x, y, format, usage, InitalLayout, true);
-	image->write(pixels, InitalLayout, x, y, 0, 4 * x);
-	image->generatemipmap(InitalLayout);
+	image->Write(pixels, InitalLayout, x, y, 0, 4 * x);
+	image->GenerateMipmap(InitalLayout);
 	return image;
 }
 
 #pragma region image view
-VkImageView egx::Image::createview(uint32_t ViewId, uint32_t Miplevel, uint32_t MipCount, uint32_t ArrayLevel, uint32_t ArrayCount, VkComponentMapping RGBASwizzle)
+VkImageView egx::Image::CreateView(uint32_t ViewId, uint32_t Miplevel, uint32_t MipCount, uint32_t ArrayLevel, uint32_t ArrayCount, VkComponentMapping RGBASwizzle)
 {
 	if (_views.find(ViewId) != _views.end())
 	{
@@ -327,9 +327,9 @@ VkImageView egx::Image::createview(uint32_t ViewId, uint32_t Miplevel, uint32_t 
 	_views[ViewId] = view;
 	return view;
 }
-VkImageView egx::Image::createview(uint32_t ViewId, VkComponentMapping RGBASwizzle)
+VkImageView egx::Image::CreateView(uint32_t ViewId, VkComponentMapping RGBASwizzle)
 {
-	return createview(ViewId, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS, RGBASwizzle);
+	return CreateView(ViewId, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_MIP_LEVELS, RGBASwizzle);
 }
 #pragma endregion
 
@@ -416,7 +416,7 @@ egx::ref<egx::Image> egx::Image::CreateCubemap(const ref<VulkanCoreInterface>& C
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			false);
 		assert(cubeFaces[i].IsValidRef());
-		cubeFaces[i]->generatemipmap(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		cubeFaces[i]->GenerateMipmap(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
 	ref<Image> cubeMap = Image::FactoryCreateEx(
@@ -512,7 +512,7 @@ egx::ref<egx::Image> egx::Image::CreateCubemap(const ref<VulkanCoreInterface>& C
 
 #pragma endregion
 
-void egx::Image::barrier(VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
+void egx::Image::Barrier(VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
 	VkImageLayout oldLayout, VkImageLayout newLayout,
 	VkAccessFlags srcAccess, VkAccessFlags dstAccess,
 	uint32_t miplevel,
@@ -520,11 +520,11 @@ void egx::Image::barrier(VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkP
 	uint32_t mipcount,
 	uint32_t arraycount) const
 {
-	auto barr = barrier(oldLayout, newLayout, srcAccess, dstAccess, miplevel, arraylevel, mipcount, arraycount);
+	auto barr = Barrier(oldLayout, newLayout, srcAccess, dstAccess, miplevel, arraylevel, mipcount, arraycount);
 	vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, 0, 0, 0, 1, &barr);
 }
 
-VkImageMemoryBarrier egx::Image::barrier(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccess, VkAccessFlags dstAccess,
+VkImageMemoryBarrier egx::Image::Barrier(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccess, VkAccessFlags dstAccess,
 	uint32_t miplevel,
 	uint32_t arraylevel,
 	uint32_t mipcount,
@@ -567,7 +567,7 @@ egx::ref<egx::Buffer> egx::Image::Read(VkImageLayout currentImageLayout, uint32_
 		return {};
 	}
 	auto Cmd = CommandBufferSingleUse(_coreinterface);
-	barrier(Cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, currentImageLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_NONE, VK_ACCESS_MEMORY_READ_BIT);
+	Barrier(Cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, currentImageLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_NONE, VK_ACCESS_MEMORY_READ_BIT);
 	VkBufferImageCopy region{};
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
@@ -579,7 +579,7 @@ egx::ref<egx::Buffer> egx::Image::Read(VkImageLayout currentImageLayout, uint32_
 	region.imageOffset = offset;
 	region.imageExtent = size;
 	vkCmdCopyImageToBuffer(Cmd.Cmd, Image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readback->GetBuffer(), 1, &region);
-	barrier(Cmd.Cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currentImageLayout, VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_NONE);
+	Barrier(Cmd.Cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currentImageLayout, VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_NONE);
 	Cmd.Execute();
 	return readback;
 }
@@ -601,14 +601,14 @@ egx::ref<egx::Image> egx::Image::copy(VkImageLayout CurrentLayout, VkImageLayout
 		regions[i].dstSubresource = regions[i].srcSubresource;
 		regions[i].extent = { Width, Height, Depth };
 	}
-	this->barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, CurrentLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+	Barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, CurrentLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		VK_ACCESS_NONE, VK_ACCESS_TRANSFER_READ_BIT);
-	result->barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	result->Barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT);
 	vkCmdCopyImage(cmd.Cmd, Image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, result->Image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)regions.size(), regions.data());
-	this->barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, CurrentLayout,
+	Barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, CurrentLayout,
 		VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_NONE);
-	result->barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CopyFinalLayout,
+	result->Barrier(cmd.Cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CopyFinalLayout,
 		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_NONE);
 	cmd.Execute();
 	return result;
@@ -623,7 +623,7 @@ ImTextureID egx::Image::GetImGuiTextureID(VkSampler sampler, uint32_t viewId)
 {
 	if (_imgui_textureid)
 		return _imgui_textureid;
-	_imgui_textureid = ImGui_ImplVulkan_AddTexture(sampler, view(viewId), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	_imgui_textureid = ImGui_ImplVulkan_AddTexture(sampler, View(viewId), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	return _imgui_textureid;
 }
 

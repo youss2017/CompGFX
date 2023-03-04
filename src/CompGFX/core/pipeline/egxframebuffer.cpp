@@ -35,7 +35,7 @@ void  egx::egxframebuffer::CreateColorAttachment(
 		1,
 		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | CustomUsageFlags,
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	attachment.View = attachment.Attachment->createview(0);
+	attachment.View = attachment.Attachment->CreateView(0);
 
 	attachment.AttachmentInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
 	attachment.AttachmentInfo.imageView = attachment.View;
@@ -72,7 +72,7 @@ void  egx::egxframebuffer::CreateDepthAttachment(
 		1,
 		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | CustomUsageFlags,
 		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-	attachment.View = attachment.Attachment->createview(0);
+	attachment.View = attachment.Attachment->CreateView(0);
 
 	attachment.AttachmentInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
 	attachment.AttachmentInfo.imageView = attachment.View;
@@ -307,11 +307,11 @@ namespace egx {
 		std::vector<VkImageView> attachmentViews;
 		if (_depthattachment.has_value()) {
 			attachments.push_back(_depthattachment->Description);
-			attachmentViews.push_back(_depthattachment->Attachment->view(0));
+			attachmentViews.push_back(_depthattachment->Attachment->View(0));
 		}
 		for (auto& [id, attachment] : _colorattachements) {
 			attachments.push_back(attachment.Description);
-			attachmentViews.push_back(attachment.Attachment->view(0));
+			attachmentViews.push_back(attachment.Attachment->View(0));
 		}
 		VkRenderPassCreateInfo passCreateInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
 		passCreateInfo.attachmentCount = (uint32_t)attachments.size();

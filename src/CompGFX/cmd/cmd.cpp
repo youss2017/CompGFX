@@ -9,7 +9,8 @@ namespace egx
 	// _cmd_pool (of all threads) are destroyed.
 	namespace internal
 	{
-		static thread_local egx::ref<egx::CommandPool> _cmd_pool = nullptr;
+		// We are using a map to allow multiple CoreInterface contexts.
+		static thread_local std::map<VkQueue, egx::ref<egx::CommandPool>> _cmd_pool;
 	}
 
 	CommandBuffer::CommandBuffer(const ref<VulkanCoreInterface>& CoreInterface)
@@ -19,14 +20,15 @@ namespace egx
 
 	void CommandBuffer::DelayInitialize(const ref<VulkanCoreInterface>& CoreInterface)
 	{
-		if (!internal::_cmd_pool.IsValidRef())
+		if (!internal::_cmd_pool.contains(CoreInterface->Queue))
 		{
-			internal::_cmd_pool = CreateCommandPool(CoreInterface, true, false, true, false);
+			auto pool = CreateCommandPool(CoreInterface, true, false, true, false);
+			internal::_cmd_pool[CoreInterface->Queue] = pool;
 #ifdef _DEBUG
-			LOG(INFO, "[Vulkan] Command Pool Initalized, Ref {{0x{0:%p}}}", internal::_cmd_pool.base);
+			LOG(INFO, "[Vulkan] Command Pool Initalized, Ref {{0x{0:%p}}}", pool.base);
 #endif
 		}
-		_cmd = internal::_cmd_pool->AllocateBufferFrameFlightMode(true);
+		_cmd = internal::_cmd_pool[CoreInterface->Queue]->AllocateBufferFrameFlightMode(true);
 		_cmd_static_init.resize(CoreInterface->MaxFramesInFlight, false);
 		DelayInitalizeFF(CoreInterface);
 		_Queue = CoreInterface->Queue;
@@ -44,13 +46,14 @@ namespace egx
 	{
 		this->_cmd = std::move(move._cmd);
 		this->_cmd_static_init = std::move(move._cmd_static_init);
+		_Queue = move._Queue;
 		move._cmd.resize(0);
 	}
 
 	CommandBuffer::~CommandBuffer() noexcept
 	{
-		if (_cmd.size() > 0 && internal::_cmd_pool.IsValidRef())
-			internal::_cmd_pool->FreeCommandBuffers(_cmd);
+		if (_cmd.size() > 0)
+			internal::_cmd_pool[_Queue]->FreeCommandBuffers(_cmd);
 	}
 
 	const VkCommandBuffer CommandBuffer::GetBuffer()
@@ -99,16 +102,18 @@ namespace egx
 	ref<CommandBuffer> CommandBuffer::CreateSingleBuffer(const ref<VulkanCoreInterface>& CoreInterface)
 	{
 		ref<CommandBuffer> cmd = new CommandBuffer;
-		if (!internal::_cmd_pool.IsValidRef())
+		if (!internal::_cmd_pool.contains(CoreInterface->Queue))
 		{
-			internal::_cmd_pool = CreateCommandPool(CoreInterface, true, false, true, false);
+			auto pool = CreateCommandPool(CoreInterface, true, false, true, false);
+			internal::_cmd_pool[CoreInterface->Queue] = pool;
 #ifdef _DEBUG
-			LOG(INFO, "[Vulkan] Command Pool Initalized, Ref {{{0}}}", internal::_cmd_pool.base);
+			LOG(INFO, "[Vulkan] Command Pool Initalized, Ref {{0x{0:%p}}}", pool.base);
 #endif
 		}
-		cmd->_cmd.push_back(internal::_cmd_pool->AllocateBuffer(true));
+		cmd->_cmd.push_back(internal::_cmd_pool[CoreInterface->Queue]->AllocateBuffer(true));
 		cmd->_cmd_static_init.resize(1, false);
 		cmd->DelayInitalizeFF(CoreInterface, true);
+		cmd->_Queue = CoreInterface->Queue;
 		return cmd;
 	}
 

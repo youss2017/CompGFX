@@ -4,7 +4,6 @@
 #include <shaderc/shaderc.hpp>
 #include <mutex>
 #include <optional>
-#include <json/json.hpp>
 
 namespace egx
 {
@@ -171,7 +170,9 @@ namespace egx
 		static std::optional<std::string> CacheFile;
 		static std::mutex CacheWriteLock;
 
-		static std::string PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code, std::vector<std::pair<std::string, uint64_t>>& includesLastModifiedDate);
+		static std::string PreprocessInclude(std::string_view CurrentFilePath, std::string_view SourceDirectory, std::string_view code, 
+			std::vector<std::pair<std::string, uint64_t>>& includesLastModifiedDate, std::optional<std::vector<std::string>> pragmaOnce = {});
+
 		static ShaderReflection GenerateReflection(const std::vector<uint32_t>& Bytecode, BindingAttributes Attributes);
 
 		static bool CheckIfShaderHasBeenModified(const std::vector<internal::ShaderCacheInformation>& cacheInformation, const std::string& shaderPath, egx::internal::ShaderCacheInformation& outCache);

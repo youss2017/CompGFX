@@ -25,6 +25,8 @@ namespace egx {
 		std::string VendorName;
 		bool IsDedicated;
 		VkPhysicalDeviceProperties Properties;
+		bool CardHasDedicatedCompute = false;
+		bool CardHasDedicatedTransfer = false;
 	};
 
 	struct VulkanCoreInterface {
@@ -32,7 +34,11 @@ namespace egx {
 		Device PhysicalDevice = {};
 		VkDevice Device = nullptr;
 		VkQueue Queue = nullptr;
-		uint32_t QueueFamilyIndex = -1;
+		VkQueue DedicatedTransfer = nullptr;
+		VkQueue DedicatedCompute = nullptr;
+		int32_t GraphicsQueueFamilyIndex = -1;
+		int32_t ComputeQueueFamilyIndex = -1;
+		int32_t TransferQueueFamilyIndex = -1;
 		VkAlloc::CONTEXT MemoryContext = nullptr;
 		VkDebugUtilsMessengerEXT DebugMessenger = nullptr;
 		uint32_t MaxFramesInFlight = 1;

@@ -201,10 +201,10 @@ namespace egx {
 			return *this;
 		}
 
-		EGX_API void setlayout(VkImageLayout OldLayout, VkImageLayout NewLayout);
+		EGX_API void SetLayout(VkImageLayout OldLayout, VkImageLayout NewLayout);
 
-		EGX_API void write(
-			uint8_t* Data,
+		EGX_API void Write(
+			const void* Data,
 			VkImageLayout CurrentLayout,
 			uint32_t xOffset,
 			uint32_t yOffset,
@@ -215,13 +215,13 @@ namespace egx {
 			uint32_t ArrayLevel,
 			uint32_t StrideSizeInBytes);
 
-		EGX_API void write(uint8_t* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t Depth, uint32_t ArrayLevel, uint32_t StrideInBytes);
-		EGX_API void write(uint8_t* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t ArrayLevel, uint32_t StrideInBytes);
-		EGX_API void write(uint8_t* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t ArrayLevel, uint32_t StrideInBytes);
+		EGX_API void Write(const void* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t Depth, uint32_t ArrayLevel, uint32_t StrideInBytes);
+		EGX_API void Write(const void* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t Height, uint32_t ArrayLevel, uint32_t StrideInBytes);
+		EGX_API void Write(const void* Data, VkImageLayout CurrentLayout, uint32_t Width, uint32_t ArrayLevel, uint32_t StrideInBytes);
 
-		EGX_API void generatemipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel = 0);
+		EGX_API void GenerateMipmap(VkImageLayout CurrentLayout, uint32_t ArrayLevel = 0);
 
-		EGX_API VkImageView createview(
+		EGX_API VkImageView CreateView(
 			uint32_t ViewId,
 			uint32_t Miplevel,
 			uint32_t MipCount,
@@ -229,9 +229,9 @@ namespace egx {
 			uint32_t ArrayCount,
 			VkComponentMapping RGBASwizzle = {});
 
-		EGX_API VkImageView createview(uint32_t ViewId, VkComponentMapping RGBASwizzle = {});
+		EGX_API VkImageView CreateView(uint32_t ViewId, VkComponentMapping RGBASwizzle = {});
 
-		inline const VkImageView view(uint32_t ViewId) noexcept {
+		inline const VkImageView View(uint32_t ViewId) noexcept {
 			assert(_views.find(ViewId) != _views.end());
 			return _views[ViewId];
 		}
@@ -240,7 +240,7 @@ namespace egx {
 		static ref<Image> EGX_API LoadFromDisk(const ref<VulkanCoreInterface>& CoreInterface, std::string_view path, VkImageUsageFlags usage, VkImageLayout InitalLayout,
 			VkFormat format = VK_FORMAT_R8G8B8A8_SRGB);
 
-		void EGX_API barrier(VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
+		void EGX_API Barrier(VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage,
 			VkImageLayout oldLayout, VkImageLayout newLayout,
 			VkAccessFlags srcAccess, VkAccessFlags dstAccess,
 			uint32_t miplevel = 0,
@@ -248,7 +248,7 @@ namespace egx {
 			uint32_t mipcount = VK_REMAINING_MIP_LEVELS,
 			uint32_t arraycount = VK_REMAINING_ARRAY_LAYERS) const;
 
-		VkImageMemoryBarrier EGX_API barrier(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccess, VkAccessFlags dstAccess,
+		VkImageMemoryBarrier EGX_API Barrier(VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccess, VkAccessFlags dstAccess,
 			uint32_t miplevel = 0,
 			uint32_t arraylevel = 0,
 			uint32_t mipcount = VK_REMAINING_MIP_LEVELS,

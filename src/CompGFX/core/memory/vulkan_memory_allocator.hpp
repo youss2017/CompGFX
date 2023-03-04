@@ -2,15 +2,8 @@
 #include <vulkan/vulkan_core.h>
 #include <vector>
 #include <map>
-#include <vma/vk_mem_alloc.h>
+#include <vk_mem_alloc.h>
 
-#define VK_ALLOC_KB(x) ((unsigned long long)(x * 1024.))
-#define VK_ALLOC_MB(x) ((unsigned long long)(x * 1024. * 1024.))
-#define VK_ALLOC_GB(x) ((unsigned long long)(x * 1024. * 1024. * 1024.))
-
-#define VK_ALLOC_B_TO_KB(x) ((unsigned long long)(x / (1024.)))
-#define VK_ALLOC_B_TO_MB(x) ((unsigned long long)(x / (1024. * 1024.0)))
-#define VK_ALLOC_B_TO_GB(x) ((unsigned long long)(x / (1024. * 1024. * 1024.)))
 
 namespace VkAlloc
 {

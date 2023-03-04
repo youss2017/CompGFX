@@ -21,7 +21,7 @@ namespace egx {
 	class EngineCore {
 	public:
 		// debugFeatures only available in debug mode
-		EGX_API EngineCore(EngineCoreDebugFeatures debugFeatures, bool UsingRenderDOC);
+		EGX_API EngineCore(EngineCoreDebugFeatures debugFeatures, bool UsingBufferReference);
 		EGX_API ~EngineCore();
 		EGX_API EngineCore(EngineCore& cp) = delete;
 		EGX_API EngineCore(EngineCore&& cp) = delete;
@@ -33,30 +33,32 @@ namespace egx {
 		/// <summary>
 		/// Creates swapchain for window and initalizes ImGui
 		/// </summary>
-		inline void AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui)
+		/// <returns>Swapchain Object</returns>
+		inline VulkanSwapchain* AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui)
 		{
 			_AssociateWindow(Window, MaxFramesInFlight, VSync, SetupImGui);
 			ImGui::SetCurrentContext(GetContext());
+			return _Swapchain;
 		}
 
 		EGX_API std::vector<Device> EnumerateDevices();
 
-		EGX_API const ref<VulkanCoreInterface>& EstablishDevice(const Device& Device, const VkPhysicalDeviceFeatures2& features);
+		EGX_API ref<VulkanCoreInterface> EstablishDevice(const Device& Device, const VkPhysicalDeviceFeatures2& features = {});
 
 		EGX_API cpp::Logger* GetEngineLogger();
 
 		inline void WaitIdle() const { vkDeviceWaitIdle(_CoreInterface->Device); }
 
 	private:
-		const bool UsingRenderDOC;
+		const bool UsingBufferReference;
 		EGX_API ImGuiContext* GetContext() const;
 		void EGX_API _AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui);
 
 	public:
-		VulkanSwapchain* Swapchain = nullptr;
 	private:
 		VkDebugReportCallbackEXT _DebugCallbackHandle;
 		ref<VulkanCoreInterface> _CoreInterface;
+		VulkanSwapchain* _Swapchain = nullptr;
 	};
 
 }

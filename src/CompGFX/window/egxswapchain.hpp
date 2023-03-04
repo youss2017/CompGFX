@@ -66,8 +66,11 @@ namespace egx {
 		VkSurfaceKHR Surface = nullptr;
 		void* GlfwWindowPtr = nullptr;
 		
-		ref<Shader2> _builtin_vertex;
-		ref<Shader2> _builtin_fragment;
+		VkShaderModule _builtin_vertex_module;
+		VkShaderModule _builtin_fragment_module;
+
+		//ref<Shader2> _builtin_vertex;
+		//ref<Shader2> _builtin_fragment;
 		ref<Sampler> _image_sampler;
 		ref<SetPool> _descriptor_set_pool;
 		VkDescriptorSetLayout _descriptor_layout = nullptr;

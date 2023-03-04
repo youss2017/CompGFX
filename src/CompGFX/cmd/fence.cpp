@@ -71,6 +71,7 @@ namespace egx
     void Fence::SynchronizeAllFrames()
     {
         vkWaitForFences(_core_interface->Device, (uint32_t)_fences.size(), _fences.data(), VK_TRUE, UINT64_MAX);
+        vkResetFences(_core_interface->Device, (uint32_t)_fences.size(), _fences.data());
     }
 
     ref<Fence> Fence::CreateSingleFence(const ref<VulkanCoreInterface> &CoreInterface, bool CreateSignaled)

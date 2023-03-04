@@ -17,6 +17,25 @@ namespace egx {
 		EGX_API Pipeline& operator=(Pipeline&& move) noexcept;
 
 		/// <summary>
+		/// Also known as Alpha Blending
+		/// </summary>
+		/// <returns></returns>
+		EGX_API static VkPipelineColorBlendAttachmentState NormalBlendingPreset();
+		EGX_API static VkPipelineColorBlendAttachmentState AdditiveBlendingPreset();
+		EGX_API static VkPipelineColorBlendAttachmentState SubtractBlendingPreset();
+		EGX_API static VkPipelineColorBlendAttachmentState MultiplyBlendingPreset();
+		/// <summary>
+		/// No Blending
+		/// </summary>
+		/// <returns></returns>
+		static VkPipelineColorBlendAttachmentState DefaultBlendingState();
+		/// <summary>
+		/// For more info see https://www.youtube.com/watch?v=AxopC4yW4uY
+		/// </summary>
+		/// <returns></returns>
+		static VkPipelineColorBlendAttachmentState CombinedAdditiveAlphaBlendingState();
+
+		/// <summary>
 		/// PassId is determined from Framebuffer::CreatePass()
 		/// </summary>
 		/// <param name="layout"></param>
@@ -29,7 +48,8 @@ namespace egx {
 			const ref<Shader2>& vertex,
 			const ref<Shader2>& fragment,
 			const ref<Framebuffer>& framebuffer,
-			const uint32_t PassId);
+			const uint32_t PassId,
+			const std::map<uint32_t, VkPipelineColorBlendAttachmentState>& customBlendStates = {});
 
 		void EGX_API Create(const ref<Shader2>& compute);
 
@@ -38,7 +58,7 @@ namespace egx {
 			Layout->Bind(cmd, _graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE);
 		}
 
-		inline void PushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, void* pData) {
+		inline void PushConstants(VkCommandBuffer cmd, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pData) {
 			vkCmdPushConstants(cmd, Layout->GetLayout(), stageFlags, offset, size, pData);
 		}
 

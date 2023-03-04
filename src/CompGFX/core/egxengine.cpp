@@ -1,5 +1,5 @@
-#include "EngineCore.hpp"
-#include "GraphicsCardFeatureValidation.hpp"
+#include "egxengine.hpp"
+#include "FeatureValidation.hpp"
 #include <iostream>
 #include <Utility/CppUtility.hpp>
 #include <cassert>
@@ -9,8 +9,8 @@ static VkBool32 VKAPI_ATTR ApiDebugCallback(VkDebugUtilsMessageSeverityFlagBitsE
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 static VkBool32 DebugPrintfEXT_Callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData);
 
-EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool UsingRenderDOC)
-	: Swapchain(nullptr), _CoreInterface(new VulkanCoreInterface()), UsingRenderDOC(UsingRenderDOC), _DebugCallbackHandle(nullptr)
+EGX_API egx::EngineCore::EngineCore(EngineCoreDebugFeatures debugFeatures, bool UsingBufferReference)
+	: _Swapchain(nullptr), _CoreInterface(new VulkanCoreInterface()), UsingBufferReference(UsingBufferReference), _DebugCallbackHandle(nullptr)
 {
 	glfwInit();
 	std::vector<const char*> layer_extensions;
@@ -98,17 +98,17 @@ EGX_API egx::EngineCore::~EngineCore()
 		PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(_CoreInterface->Instance, "vkDestroyDebugReportCallbackEXT");
 		DestroyDebugReportCallbackEXT(_CoreInterface->Instance, _DebugCallbackHandle, nullptr);
 	}
-	if (Swapchain)
-		delete Swapchain;
+	if (_Swapchain)
+		delete _Swapchain;
 }
 
 void EGX_API egx::EngineCore::_AssociateWindow(PlatformWindow* Window, uint32_t MaxFramesInFlight, bool VSync, bool SetupImGui)
 {
-	assert(Swapchain == nullptr);
+	assert(_Swapchain == nullptr);
 	// [NOTE]: ImGui multi-viewport uses VK_FORMAT_B8G8R8A8_UNORM, if we use a different format
 	// [NOTE]: there will be a mismatch of format between pipeline state objects and render pass
 	_CoreInterface->MaxFramesInFlight = MaxFramesInFlight;
-	Swapchain = new VulkanSwapchain(
+	_Swapchain = new VulkanSwapchain(
 		_CoreInterface,
 		Window->GetWindow(),
 		VSync,
@@ -142,19 +142,40 @@ std::vector<egx::Device> EGX_API egx::EngineCore::EnumerateDevices()
 				d.SharedSystemRam += memProp.memoryHeaps[j].size;
 			}
 		}
+
+		uint32_t QueueCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(d.Id, &QueueCount, nullptr);
+		std::vector<VkQueueFamilyProperties> QueueFamilies(QueueCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(d.Id, &QueueCount, QueueFamilies.data());
+
+		auto containsDedicatedQueue = [&](VkQueueFlags flag) -> bool {
+			for (auto& queue : QueueFamilies) {
+				if (queue.queueFlags & flag && !(queue.queueFlags & VK_QUEUE_GRAPHICS_BIT)) return true;
+			}
+			return false;
+		};
+
+		d.CardHasDedicatedCompute = containsDedicatedQueue(VK_QUEUE_COMPUTE_BIT);
+		d.CardHasDedicatedTransfer = containsDedicatedQueue(VK_QUEUE_TRANSFER_BIT);
+
 		list.push_back(d);
 	}
 
 	return list;
 }
 
-const egx::ref<egx::VulkanCoreInterface>& egx::EngineCore::EstablishDevice(const egx::Device& Device, const VkPhysicalDeviceFeatures2& features)
+egx::ref<egx::VulkanCoreInterface> egx::EngineCore::EstablishDevice(const egx::Device& Device, const VkPhysicalDeviceFeatures2& features_)
 {
 	using namespace std;
 	VkDeviceCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-	VkDeviceQueueCreateInfo queueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 
-	if (!egx::GraphicsCardFeatureValidation_Check(Device.Id, features)) {
+	VkPhysicalDeviceFeatures2 features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+
+	if (features_.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2) {
+		features = features_;
+	}
+
+	if (!egx::ValidateFeatures(Device.Id, features)) {
 		LOG(ERR, "{0} has failed feature validation check.", Device.VendorName);
 	}
 	else
@@ -167,27 +188,56 @@ const egx::ref<egx::VulkanCoreInterface>& egx::EngineCore::EstablishDevice(const
 	std::vector<VkQueueFamilyProperties> QueueFamilies(QueueCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(Device.Id, &QueueCount, QueueFamilies.data());
 
-	int index = 0;
-	bool set = false;
-	for (const auto& queue : QueueFamilies)
-	{
-		if (queue.queueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT))
+	int graphicsIndex = -1, transferIndex = -1, computeIndex = -1;
+	std::vector<uint32_t> queueIndices;
+
+	// extract in following order
+	// 1) graphics
+	// 2) compute
+	// 3) transfer
+
+	for (int j = 0; j < 3; j++) {
+		int index = 0;
+		for (const auto& queue : QueueFamilies)
 		{
-			set = true;
-			break;
+			if (graphicsIndex == -1) {
+				if (queue.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+					graphicsIndex = index;
+					queueIndices.push_back(index);
+					_CoreInterface->GraphicsQueueFamilyIndex = index;
+				}
+			}
+			else if (computeIndex == -1) {
+				if ((queue.queueFlags & VK_QUEUE_COMPUTE_BIT) && index != graphicsIndex && index != transferIndex) {
+					computeIndex = index;
+					queueIndices.push_back(index);
+					_CoreInterface->ComputeQueueFamilyIndex = index;
+				}
+			}
+			else if (transferIndex == -1) {
+				if ((queue.queueFlags & VK_QUEUE_TRANSFER_BIT) && index != graphicsIndex && index != computeIndex) {
+					transferIndex = index;
+					queueIndices.push_back(index);
+					_CoreInterface->TransferQueueFamilyIndex = index;
+				}
+			}
+			else {
+				break;
+			}
+			index++;
 		}
-		index++;
 	}
 
-	if (!set)
-	{
-		LOG(ERR, "Could not create logical device since the Queue Flags could not be found!");
-	}
+	float priority = 1.0f;
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfo;
 
-	float priorities = { 1.0f };
-	queueCreateInfo.queueCount = 1;
-	queueCreateInfo.pQueuePriorities = &priorities;
-	queueCreateInfo.queueFamilyIndex = index;
+	for (size_t i = 0; i < queueIndices.size(); i++) {
+		VkDeviceQueueCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+		createInfo.queueCount = 1;
+		createInfo.pQueuePriorities = &priority;
+		createInfo.queueFamilyIndex = queueIndices[i];
+		queueCreateInfo.push_back(createInfo);
+	}
 
 	std::vector<const char*> enabledExtensions;
 	enabledExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -198,19 +248,25 @@ const egx::ref<egx::VulkanCoreInterface>& egx::EngineCore::EstablishDevice(const
 	enabledExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 #endif
 
-	createInfo.queueCreateInfoCount = 1;
-	createInfo.pQueueCreateInfos = &queueCreateInfo;
+	createInfo.queueCreateInfoCount = (uint32_t)queueCreateInfo.size();
+	createInfo.pQueueCreateInfos = queueCreateInfo.data();
 	createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
 	createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
 	vkCreateDevice(Device.Id, &createInfo, NULL, &this->_CoreInterface->Device);
-	this->_CoreInterface->QueueFamilyIndex = index;
 
-	vkGetDeviceQueue(this->_CoreInterface->Device, index, 0, &this->_CoreInterface->Queue);
+	vkGetDeviceQueue(_CoreInterface->Device, _CoreInterface->GraphicsQueueFamilyIndex, 0, &_CoreInterface->Queue);
+	if (_CoreInterface->ComputeQueueFamilyIndex != -1)
+		vkGetDeviceQueue(_CoreInterface->Device, _CoreInterface->ComputeQueueFamilyIndex, 0, &_CoreInterface->DedicatedCompute);
+	if (_CoreInterface->TransferQueueFamilyIndex != -1)
+		vkGetDeviceQueue(_CoreInterface->Device, _CoreInterface->TransferQueueFamilyIndex, 0, &_CoreInterface->DedicatedTransfer);
 
-	this->_CoreInterface->MemoryContext = VkAlloc::CreateContext(_CoreInterface->Instance,
-		this->_CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), !UsingRenderDOC);
-	this->_CoreInterface->PhysicalDevice = Device;
+	if (!_CoreInterface->DedicatedCompute) _CoreInterface->DedicatedCompute = _CoreInterface->Queue;
+	if (!_CoreInterface->DedicatedTransfer) _CoreInterface->DedicatedTransfer = _CoreInterface->Queue;
+
+	_CoreInterface->MemoryContext = VkAlloc::CreateContext(_CoreInterface->Instance,
+		_CoreInterface->Device, Device.Id, /* 64 mb*/ 64 * (1024 * 1024), UsingBufferReference);
+	_CoreInterface->PhysicalDevice = Device;
 	_CoreInterface->MaxFramesInFlight = 1;
 	_CoreInterface->Features = features;
 	return _CoreInterface;

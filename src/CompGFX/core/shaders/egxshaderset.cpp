@@ -275,7 +275,7 @@ const VkDescriptorSet& DescriptorSet::GetSet()
 				auto& imageInfo = pImageInfos[i];
 				if (image.ImageSamplers.size() > 0) imageInfo.sampler = image.ImageSamplers.size() > 1 ? image.ImageSamplers[i]->GetSampler() : image.ImageSamplers[0]->GetSampler();
 				else imageInfo.sampler = nullptr;
-				imageInfo.imageView = image.ImageRef[i]->view(viewIndex);
+				imageInfo.imageView = image.ImageRef[i]->View(viewIndex);
 				imageInfo.imageLayout = image.ImageLayouts.size() > 1 ? image.ImageLayouts[i] : image.ImageLayouts[0];
 			}
 			auto& write = _set_writes.emplace_back();

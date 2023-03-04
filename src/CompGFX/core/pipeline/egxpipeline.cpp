@@ -28,11 +28,83 @@ egx::Pipeline& egx::Pipeline::operator=(Pipeline&& move) noexcept
 	return *this;
 }
 
+VkPipelineColorBlendAttachmentState egx::Pipeline::NormalBlendingPreset()
+{
+	VkPipelineColorBlendAttachmentState state{};
+	state.blendEnable = true;
+	state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	state.colorBlendOp = VK_BLEND_OP_ADD;
+	state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	state.alphaBlendOp = VK_BLEND_OP_ADD;
+	state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	return state;
+
+}
+
+VkPipelineColorBlendAttachmentState egx::Pipeline::AdditiveBlendingPreset()
+{
+	VkPipelineColorBlendAttachmentState state{};
+	state.blendEnable = true;
+	state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	state.colorBlendOp = VK_BLEND_OP_ADD;
+	state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	state.alphaBlendOp = VK_BLEND_OP_ADD;
+	state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	return state;
+
+}
+
+VkPipelineColorBlendAttachmentState egx::Pipeline::SubtractBlendingPreset()
+{
+	VkPipelineColorBlendAttachmentState state = AdditiveBlendingPreset();
+	state.colorBlendOp = VK_BLEND_OP_SUBTRACT;
+	state.alphaBlendOp = VK_BLEND_OP_SUBTRACT;
+	return state;
+}
+
+VkPipelineColorBlendAttachmentState egx::Pipeline::MultiplyBlendingPreset()
+{
+	return VkPipelineColorBlendAttachmentState();
+}
+
+VkPipelineColorBlendAttachmentState egx::Pipeline::DefaultBlendingState()
+{
+	VkPipelineColorBlendAttachmentState state{};
+	state.blendEnable = false;
+	state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	state.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+	state.colorBlendOp = VK_BLEND_OP_ADD;
+	state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	state.alphaBlendOp = VK_BLEND_OP_ADD;
+	state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	return state;
+}
+
+VkPipelineColorBlendAttachmentState egx::Pipeline::CombinedAdditiveAlphaBlendingState()
+{
+	VkPipelineColorBlendAttachmentState state{};
+	state.blendEnable = true;
+	state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	state.colorBlendOp = VK_BLEND_OP_ADD;
+	state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	state.alphaBlendOp = VK_BLEND_OP_ADD;
+	state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	return state;
+}
+
 void  egx::Pipeline::Create(
 	const ref<Shader2>& vertex,
 	const ref<Shader2>& fragment,
 	const ref<Framebuffer>& framebuffer,
-	const uint32_t PassId)
+	const uint32_t PassId,
+	const std::map<uint32_t, VkPipelineColorBlendAttachmentState>& customBlendStates)
 {
 	_graphics = true;
 	if (Pipeline_) {
@@ -215,7 +287,13 @@ void  egx::Pipeline::Create(
 		for (uint32_t i = 0; i < subpass.colorAttachmentCount; i++)
 		{
 			auto& colorAttachment = subpass.pColorAttachments[i];
-			BlendAttachmentStates.push_back(framebuffer->_colorattachements.at(colorAttachment.attachment - offset).GetBlendState());
+			uint32_t colorAttachmentId = colorAttachment.attachment - offset;
+			if (customBlendStates.contains(colorAttachmentId)) {
+				BlendAttachmentStates.push_back(customBlendStates.at(colorAttachmentId));
+			}
+			else {
+				BlendAttachmentStates.push_back(framebuffer->_colorattachements.at(colorAttachmentId).GetBlendState());
+			}
 		}
 	}
 

@@ -1,5 +1,4 @@
 #include "vulkan_memory_allocator.hpp"
-#include <vma/vk_mem_alloc.h>
 #include "../vulkinc.hpp"
 #include <functional>
 #include <algorithm>
@@ -8,6 +7,15 @@
 #include <sstream>
 #include <iostream>
 #include <Utility/CppUtility.hpp>
+
+#define VK_ALLOC_KB(x) ((unsigned long long)(x * 1024.))
+#define VK_ALLOC_MB(x) ((unsigned long long)(x * 1024. * 1024.))
+#define VK_ALLOC_GB(x) ((unsigned long long)(x * 1024. * 1024. * 1024.))
+
+#define VK_ALLOC_B_TO_KB(x) ((unsigned long long)(x / (1024.)))
+#define VK_ALLOC_B_TO_MB(x) ((unsigned long long)(x / (1024. * 1024.0)))
+#define VK_ALLOC_B_TO_GB(x) ((unsigned long long)(x / (1024. * 1024. * 1024.)))
+
 
 namespace VkAlloc
 {
@@ -40,16 +48,7 @@ namespace VkAlloc
 
 		VkPhysicalDeviceMemoryProperties memory_description;
 		vkGetPhysicalDeviceMemoryProperties(context->m_physical_device, &memory_description);
-		using namespace std;
-		stringstream info;
-		for (uint32_t i = 0; i < memory_description.memoryHeapCount; i++)
-		{
-			if (memory_description.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
-			{
-				info << "DEVICE_LOCAL_HEAP --- " << memory_description.memoryHeaps[i].size << ", " << VK_ALLOC_B_TO_MB(memory_description.memoryHeaps[i].size) << " mb" << endl;
-			}
-		}
-
+		
 		return context;
 	}
 	void DestroyContext(CONTEXT context)

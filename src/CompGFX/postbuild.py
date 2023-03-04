@@ -24,5 +24,5 @@ target_path =  "../../include/egx/"
 copy(source_path, target_path, '*.h')
 copy(source_path, target_path, '*.hpp')
 print('Copying library files')
-copy("../../bin/CompGFX/Debug-x86_64/", "../../library/Debug/", "*.*")
-copy("../../bin/CompGFX/Release-x86_64/", "../../library/Release/", "*.*")
+copy("../../bin/CompGFX/Debug-x86_64/", "../../lib/Debug/", "*.*")
+copy("../../bin/CompGFX/Release-x86_64/", "../../lib/Release/", "*.*")

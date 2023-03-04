@@ -123,6 +123,8 @@ egx::Buffer::~Buffer()
 			LOG(INFO, "Deleting a {0:%.4lf} Mb Buffer", (double)Size / (1024.0 * 1024.0));
 	}
 #endif
+	// we must block to make sure were not in use
+	vkQueueWaitIdle(_coreinterface->Queue);
 	if (_mapped_flag)
 		Unmap();
 	for (auto& buf : _buffers)
@@ -195,6 +197,17 @@ void Buffer::CopyAll(const ref<Buffer>& source, size_t srcOffset, size_t dstOffs
 
 void egx::Buffer::Write(const void* data, size_t offset, size_t size, bool keepMapped)
 {
+	VkBuffer vkBuffer = GetBuffer();
+#ifdef _DEBUG
+	if (size + offset > Size && !_ResizeFlag) {
+		LOG(ERR, "Buffer::Write() fail because offset:{} + size:{}={} which is greater than buffer size={}", offset, size, offset + size, Size);
+		return;
+	}
+	if (_ResizeFlag && size + offset > _ResizeBytes) {
+		LOG(ERR, "Buffer::Write() fail because offset:{} + size:{}={} which is greater than buffer size={}", offset, size, offset + size, Size);
+		return;
+	}
+#endif
 	if (Layout != memorylayout::local)
 	{
 		bool mapState = _mapped_flag;
@@ -209,7 +222,7 @@ void egx::Buffer::Write(const void* data, size_t offset, size_t size, bool keepM
 	}
 	if (size <= UINT16_MAX && size % 4 == 0) {
 		auto cmd = CommandBufferSingleUse(_coreinterface);
-		vkCmdUpdateBuffer(cmd.Cmd, GetBuffer(), offset, size, data);
+		vkCmdUpdateBuffer(cmd.Cmd, vkBuffer, offset, size, data);
 		cmd.Execute();
 	}
 	else {
@@ -226,7 +239,7 @@ void egx::Buffer::Write(const void* data, size_t size, bool keepMapped)
 
 void egx::Buffer::Write(const void* data, bool keepMapped)
 {
-	return Write(data, 0, Size, keepMapped);
+	return Write(data, 0, _ResizeFlag ? _ResizeBytes : Size, keepMapped);
 }
 
 int8_t* egx::Buffer::Map()
@@ -371,11 +384,15 @@ void egx::Buffer::Invalidate(size_t offset, size_t size)
 }
 
 const VkBuffer& Buffer::GetBuffer() {
-	if(!_ResizeFlag)
+	if (!_ResizeFlag)
 		return _buffers[GetCurrentFrame()]->m_buffer;
-	if(!_ResizeFrameFlag[GetCurrentFrame()])
+	if (!_ResizeFrameFlag[GetCurrentFrame()])
 		return _buffers[GetCurrentFrame()]->m_buffer;
 	_ResizeFlag--;
+	if (_buffers.size() == 1) {
+		// Must block
+		vkQueueWaitIdle(_coreinterface->Queue);
+	}
 	auto frame = GetCurrentFrame();
 	_ResizeFrameFlag[frame] = false;
 	Size = _ResizeBytes;

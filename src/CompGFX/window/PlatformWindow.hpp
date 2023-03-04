@@ -16,6 +16,15 @@ namespace egx {
 	class PlatformWindow {
 
 	public:
+
+		EGX_API static void ResetConfigrations();
+		EGX_API static void ConfigureResizable(bool resizable);
+		EGX_API static void ConfigureVisible(bool visible);
+		EGX_API static void ConfigureDecorated(bool decorated);
+		EGX_API static void ConfigureFocused(bool focused);
+		EGX_API static void ConfigureFloating(bool floating);
+		EGX_API static void ConfigureMaximized(bool maximized);
+
 		EGX_API PlatformWindow(std::string title, int width, int height);
 		EGX_API ~PlatformWindow();
 
@@ -27,6 +36,8 @@ namespace egx {
 		inline int GetHeight() { return m_height; }
 		inline bool IsWindowFocus() { return m_focus; }
 		EGX_API bool IsWindowMinimized();
+
+		EGX_API void CenterWindow();
 
 		// This function returns ID (index) of the callback which can be used later to remove the callback
 		EGX_API int RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined);
