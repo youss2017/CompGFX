@@ -3,7 +3,9 @@ workspace "TemplateSolution"
     platforms { "Win64" }
     includedirs { 
         "include/", 
-        "include/imgui/", 
+        "include/vma/", 
+        "include/egx/", 
+        "include/imgui/",
         os.getenv('VULKAN_SDK') .. '/include' }
     cppdialect "C++20"
     
@@ -48,7 +50,11 @@ workspace "TemplateSolution"
         }
 
         filter { "system:Windows" }
-        links { "CompGFX.lib" }
+        links { "CompGFX.lib", "vulkan-1.lib", "glfw3.lib", "Dependencies.lib" }
+        filter "configurations:Debug"
+        links { "zlibstaticd.lib", "assimp-vc143-mtd.lib" }
+        filter "configurations:Release"
+        links { "zlibstatic.lib", "assimp-vc143-mt.lib" }
         filter { }
         defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS", "NOMINMAX" }
         prebuildcommands { 

@@ -185,8 +185,8 @@ namespace egx {
 		glfwGetWindowSize(window, &window_width, &window_height);
 
 		// Halve the window size and use it to adjust the window position to the center of the window
-		window_width *= 0.5;
-		window_height *= 0.5;
+		window_width /= 2;
+		window_height /= 2;
 
 		window_x += window_width;
 		window_y += window_height;
@@ -237,7 +237,7 @@ namespace egx {
 
 		if (owner != NULL) {
 			// Set the window position to the center of the owner monitor
-			glfwSetWindowPos(window, owner_x + (owner_width * 0.5) - window_width, owner_y + (owner_height * 0.5) - window_height);
+			glfwSetWindowPos(window, owner_x + (owner_width / 2) - window_width, owner_y + (owner_height / 2) - window_height);
 		}
 	}
 
@@ -269,23 +269,23 @@ namespace egx {
 		s_Internal_Windows[m_window] = this;
 	}
 
-	EGX_API PlatformWindow::~PlatformWindow()
+	PlatformWindow::~PlatformWindow()
 	{
 		s_Internal_Windows.erase(m_window);
 		glfwDestroyWindow(m_window);
 	}
 
-	EGX_API void PlatformWindow::Poll()
+	void PlatformWindow::Poll()
 	{
 		glfwPollEvents();
 	}
 
-	EGX_API bool PlatformWindow::ShouldClose()
+	 bool PlatformWindow::ShouldClose()
 	{
 		return glfwWindowShouldClose(m_window);
 	}
 
-	EGX_API bool PlatformWindow::IsWindowMinimized()
+	 bool PlatformWindow::IsWindowMinimized()
 	{
 		int w, h;
 		glfwGetWindowSize(m_window, &w, &h);
@@ -297,7 +297,7 @@ namespace egx {
 		glfwSetWindowCenter(m_window);
 	}
 
-	EGX_API int PlatformWindow::RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined) {
+	 int PlatformWindow::RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined) {
 		PlatformWindowCallback callback;
 		callback.pFunc = func;
 		callback.pUserDefined = pUserDefined;
@@ -305,7 +305,7 @@ namespace egx {
 		return (int)mCallbacks.size() - 1 + nCallbackRemoveOffset;
 	}
 
-	EGX_API void PlatformWindow::RemoveCallback(int ID)
+	 void PlatformWindow::RemoveCallback(int ID)
 	{
 		// ID is basically the index in vector, however since we remove elements
 		// their indices changes theirfore we use this offset to get the correct index
@@ -322,6 +322,19 @@ namespace egx {
 			KeyCode = toupper(KeyCode);
 		}
 		return _key_state[KeyCode];
+	}
+
+	void PlatformWindow::SetFullscreen(bool state)
+	{
+		if (state) {
+			auto monitor = glfwGetPrimaryMonitor();
+			auto mode = glfwGetVideoMode(monitor);
+			glfwSetWindowMonitor(m_window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+		}
+		else {
+			glfwSetWindowMonitor(m_window, NULL, 0, 0, 1920, 1080, 0);
+			CenterWindow();
+		}
 	}
 
 }

@@ -47,7 +47,7 @@ workspace "CompGFX"
 
     project "CompGFX"
         -- SharedLib
-        kind "SharedLib"
+        kind "StaticLib"
         language "C++"
         location "src/CompGFX"
         files { 

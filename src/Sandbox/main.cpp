@@ -1,82 +1,105 @@
 #include <Utility/CppUtility.hpp>
-#include <egx/core/egx.hpp>
-#include <memory>
-#include <random>
-#include <stb/stb_image.h>
+#include <core/egx.hpp>
+#include <pipeline/shaders/shader.hpp>
+#include <pipeline/pipeline.hpp>
+#include <pipeline/RenderGraph.hpp>
+#include <pipeline/RenderTarget.hpp>
+#include <memory/egxbuffer.hpp>
 #include <stb/stb_image_write.h>
-#include "escapi.h"
-#include <glm/glm.hpp>
-#include <algorithm>
+#include <window/swapchain.hpp>
+#include <pipeline/Sampler.hpp>
 
+#pragma comment(lib, "CompGFX.lib")
+using namespace std;
 using namespace egx;
-
-int GetWorkGroupCount(int size, int localSize) {
-	return std::max((size + std::max<int>(size - localSize, 0)) / localSize, 1);
-}
 
 int main()
 {
-	LOG(INFO, "SANDBOX");
+	cpp::Logger::GetGlobalLogger().Options.ShowMessageBoxOnError = true;
 
-	auto engine = EngineCore(EngineCoreDebugFeatures::GPUAssisted, true);
-	auto& options = engine.GetEngineLogger()->Options;
-	options.ShowMessageBoxOnError = true;
+	auto state = VulkanICDState::Create("Sandbox", true, true, VK_API_VERSION_1_3, &cpp::Logger::GetGlobalLogger(), nullptr);
+	auto gpus = state->QueryGPGPUDevices();
+	vk::PhysicalDeviceSynchronization2Features synchornizationFeature(true);
+	gpus[0].EnabledFeatures.pNext = &synchornizationFeature;
+	auto ctx = state->CreateDevice(gpus[0]);
+	ctx->FramesInFlight = 3;
 
-	VkPhysicalDeviceFeatures2 features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-
-	auto& core = engine.EstablishDevice(engine.EnumerateDevices()[0], features);
-
-	const char* comp = R"(
-#version 450 core
-layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
-
-layout (binding = 0) buffer InDataBlock {
-	float InData[];
-};
-
-layout (binding = 1) buffer OutDataBlock {
-	float OutData[];
-};
-
-layout (push_constant) uniform pushblock {
-	int DataSize;
-};
-
-void main() {
-	if(gl_GlobalInvocationID.x < DataSize) {
-		float x = InData[gl_GlobalInvocationID.x];
-		float fout = 0.0;
-		for(float i = 0; i < 10; i++) {
-			fout += sin(x) / i;
-		}
-		fout = (fout + acos(x)) / 2.0;
-		OutData[gl_GlobalInvocationID.x] = fout;
+	for (auto& gpu : gpus) {
+		LOG(INFO, "{} [{}]", gpu.Name, vk::to_string(gpu.Type));
 	}
-}
-)";
 
-	uint32_t LocalSizeX = 32;
-	auto compShader = Shader2::FactoryCreateEx(core, comp, VK_SHADER_STAGE_COMPUTE_BIT, egx::BindingAttributes::Default, "main.cpp", "Comp(x)");
-	compShader->SetSpecializationConstant<uint32_t>(0, LocalSizeX);
-	auto pipeline = Pipeline::FactoryCreate(core);
-	pipeline->Create(compShader);
+	PlatformWindow window("Hello", 1000, 1000);
+	SwapchainController swapchain(ctx, &window);
+	swapchain.Invalidate();
 
-	std::vector<float> data(10000);
-	for (int i = 0; i < data.size(); i++) data[i] = i;
-	auto inputBuffer = Buffer::FactoryCreate(core, data.size() * sizeof(float), egx::memorylayout::dynamic, BufferType_Storage, false, false);
-	auto outputBuffer = inputBuffer->Clone(false);
+	RenderGraph swapGraph(ctx);
+	vk::ClearColorValue clearValue;
+	clearValue.setFloat32({ 1.0, 0.0, 0.0, 1.0 });
+	RenderTarget swapRT(ctx, swapchain, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR, vk::AttachmentLoadOp::eClear,
+		vk::AttachmentStoreOp::eStore, clearValue);
+	swapRT.Invalidate();
 
-	inputBuffer->Write(data.data());
+	SamplerBuilder sampler(ctx);
+	sampler.Invalidate();
+	egx::GraphicsPipeline gtest(ctx, Shader(ctx, "gtest1.vert"), Shader(ctx, "gtest1.frag"), swapRT);
+	gtest.Invalidate();
 
-	pipeline->SetBuffer(0, 0, inputBuffer);
-	pipeline->SetBuffer(0, 1, outputBuffer);
+	Image2D output(ctx, 1024, 1024, vk::Format::eB8G8R8A8Unorm, 1, vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled, vk::ImageLayout::eShaderReadOnlyOptimal, false);
+	output.CreateView(0);
+	ComputePipeline raytracing(ctx, Shader(ctx, "raytracing.comp"));
+	auto rtd0 = swapGraph.CreateResourceDescriptor(raytracing);
+	auto rtd1 = swapGraph.CreateResourceDescriptor(gtest);
+	rtd0.SetInput(0, vk::ImageLayout::eGeneral, 0, output);
+	rtd1.SetInput(0, vk::ImageLayout::eShaderReadOnlyOptimal, 0, output, sampler.GetSampler());
 
-	auto cmd = CommandBufferSingleUse(core);
-	pipeline->Bind(cmd.Cmd);
-	int size = data.size();
-	pipeline->PushConstants(cmd.Cmd, VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &size);
-	vkCmdDispatch(cmd.Cmd, GetWorkGroupCount(size, LocalSizeX), 1, 1);
-	cmd.Execute();
+	swapGraph
+		.Add(0, raytracing, [&](vk::CommandBuffer cmd) {
+		vk::DependencyInfo info;
+		info.setImageMemoryBarriers(vk::ImageMemoryBarrier2()
+			.setImage(output.GetHandle())
+			.setSrcAccessMask(vk::AccessFlagBits2::eNone)
+			.setDstAccessMask(vk::AccessFlagBits2::eMemoryWrite)
+			.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+			.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+			.setSrcStageMask(vk::PipelineStageFlagBits2::eTopOfPipe)
+			.setDstStageMask(vk::PipelineStageFlagBits2::eComputeShader)
+			.setOldLayout(output.CurrentLayout)
+			.setNewLayout(vk::ImageLayout::eGeneral)
+			.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS)));
+		cmd.pipelineBarrier2(info);
+		output.CurrentLayout = vk::ImageLayout::eGeneral;
 
-	outputBuffer->Read(&data[0]);
+		rtd0.Bind(cmd, raytracing.BindPoint(), raytracing.Layout());
+		cmd.dispatch(32, 32, 1);
+
+		info = vk::DependencyInfo();
+		info.setImageMemoryBarriers(vk::ImageMemoryBarrier2()
+			.setImage(output.GetHandle())
+			.setSrcAccessMask(vk::AccessFlagBits2::eShaderStorageWrite)
+			.setDstAccessMask(vk::AccessFlagBits2::eShaderRead)
+			.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+			.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+			.setSrcStageMask(vk::PipelineStageFlagBits2::eComputeShader)
+			.setDstStageMask(vk::PipelineStageFlagBits2::eFragmentShader)
+			.setOldLayout(output.CurrentLayout)
+			.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+			.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS)));
+		cmd.pipelineBarrier2(info);
+		output.CurrentLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			})
+		.Add(1, gtest, [&](vk::CommandBuffer cmd) {
+				swapRT.Begin(cmd);
+				rtd1.Bind(cmd, gtest.BindPoint(), gtest.Layout());
+				cmd.draw(6, 1, 0, 0);
+				swapRT.End(cmd);
+			});
+
+
+			while (!window.ShouldClose()) {
+				PlatformWindow::Poll();
+				swapchain.Acquire();
+				swapGraph.RunAsync();
+				swapchain.Present();
+			}
+
 }

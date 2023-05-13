@@ -1,6 +1,6 @@
 #include "FeatureValidation.hpp"
-#include "vulkinc.hpp"
 #include "Utility/CppUtility.hpp"
+#include <vulkan/vulkan.hpp>
 #include <stdio.h>
 #include <string.h>
 

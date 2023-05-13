@@ -1,19 +1,102 @@
 #pragma once
-#include "memory/egxmemory.hpp"
-#include "pipeline/egxframebuffer.hpp"
-#include "pipeline/egxsampler.hpp"
-#include "pipeline/egxpipeline.hpp"
-#include "shaders/egxshader2.hpp"
-#include "shaders/egxshaderset.hpp"
-#include "egxengine.hpp"
-#include "../cmd/cmd.hpp"
+#include "Utility/CppUtility.hpp"
+#include <vulkan/vulkan.hpp>
+#include <vma/vk_mem_alloc.h>
+#include <memory>
 
-template<typename T>
-using Ref = egx::ref<T>;
+namespace egx
+{
+	struct PhysicalDeviceAndQueueFamilyInfo
+	{
+		char Name[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+		vk::PhysicalDevice PhysicalDevice;
+		vk::PhysicalDeviceType Type;
+		std::vector<std::pair<uint32_t, std::vector<vk::QueueFlags>>> QueueFamilyInfo;
+		VkPhysicalDeviceFeatures2 EnabledFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+		bool SupportSwapchain = false;
 
-using Buffer = egx::Buffer;
-using Image = egx::Image;
+		bool SupportExtension(const char *pExtensionName)
+		{
+			auto extensions = PhysicalDevice.enumerateDeviceExtensionProperties();
+			for (auto &e : extensions)
+			{
+				if (strcmp(e.extensionName, pExtensionName) == 0)
+					return true;
+			}
+			return false;
+		}
+	};
 
-using RefBuffer = Ref<egx::Buffer>;
-using RefImage = Ref<egx::Image>;
+	class VulkanICDState;
 
+	struct DeviceContext
+	{
+		PhysicalDeviceAndQueueFamilyInfo PhysicalDeviceQuery;
+		bool SwapchainExtensionEnable = false;
+
+		uint32_t FramesInFlight = 1;
+		uint32_t CurrentFrame = 0;
+
+		vk::Device Device;
+		vk::Queue Queue;
+		vk::Queue DedicatedTransfer;
+		vk::Queue DedicatedCompute;
+		int32_t GraphicsQueueFamilyIndex = -1;
+		int32_t ComputeQueueFamilyIndex = -1;
+		int32_t TransferQueueFamilyIndex = -1;
+
+		VmaAllocator Allocator;
+
+		cpp::Logger *pLogger;
+		std::shared_ptr<VulkanICDState> ICDState;
+
+		~DeviceContext();
+
+		template <cpp::LogLevel level = cpp::LogLevel::INFO, typename... Arg>
+		void Log(const std::string &message, Arg &&...args, int ln = __LINE__, const char *file = __FILENAME__) const
+		{
+			pLogger->print(level, file, ln, message, std::forward(args));
+		}
+
+		void NextFrame() {
+			CurrentFrame++, CurrentFrame %= FramesInFlight;
+		}
+	};
+
+	using DeviceCtx = std::shared_ptr<DeviceContext>;
+
+	class VulkanICDState : public std::enable_shared_from_this<VulkanICDState>
+	{
+	public:
+		static std::shared_ptr<VulkanICDState> Create(const std::string &pApplicationName,
+					   bool enableValidation,
+					   bool useGpuAssistedValidation,
+					   uint32_t vkApiVersion,
+					   cpp::Logger *pOptionalLogger,
+					   PFN_vkDebugUtilsMessengerCallbackEXT pCustomCallback);
+					   
+		~VulkanICDState();
+
+		std::vector<PhysicalDeviceAndQueueFamilyInfo> QueryGPGPUDevices();
+		DeviceCtx CreateDevice(const PhysicalDeviceAndQueueFamilyInfo &deviceInformation);
+		vk::Instance Instance() const { return m_Instance; }
+	private:
+		VulkanICDState(const std::string &pApplicationName,
+					   bool enableValidation,
+					   bool useGpuAssistedValidation,
+					   uint32_t vkApiVersion,
+					   cpp::Logger *pOptionalLogger,
+					   PFN_vkDebugUtilsMessengerCallbackEXT pCustomCallback);
+
+	private:
+		vk::Instance m_Instance;
+		std::string m_ApplicationName;
+		bool m_ValidationEnabled = false;
+		bool m_GPUAssistedValidation = false;
+		uint32_t m_ApiVersion = VK_API_VERSION_1_2;
+		cpp::Logger *pOptionalLogger;
+		PFN_vkDebugUtilsMessengerCallbackEXT pDebugCallback;
+		vk::DebugUtilsMessengerEXT m_DebugMessengerEXT;
+	};
+
+}

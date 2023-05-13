@@ -1,10 +1,10 @@
 #pragma once
-#include "../core/egxcommon.hpp"
-#include <string>
+#include <core/egx.hpp>
 #include "Event.hpp"
 #include <functional>
 #include <GLFW/glfw3.h>
 #include <glm/vec2.hpp>
+#include <string>
 
 namespace egx {
 
@@ -17,37 +17,39 @@ namespace egx {
 
 	public:
 
-		EGX_API static void ResetConfigrations();
-		EGX_API static void ConfigureResizable(bool resizable);
-		EGX_API static void ConfigureVisible(bool visible);
-		EGX_API static void ConfigureDecorated(bool decorated);
-		EGX_API static void ConfigureFocused(bool focused);
-		EGX_API static void ConfigureFloating(bool floating);
-		EGX_API static void ConfigureMaximized(bool maximized);
+		static void ResetConfigrations();
+		static void ConfigureResizable(bool resizable);
+		static void ConfigureVisible(bool visible);
+		static void ConfigureDecorated(bool decorated);
+		static void ConfigureFocused(bool focused);
+		static void ConfigureFloating(bool floating);
+		static void ConfigureMaximized(bool maximized);
 
-		EGX_API PlatformWindow(std::string title, int width, int height);
-		EGX_API ~PlatformWindow();
+		PlatformWindow(std::string title, int width, int height);
+		~PlatformWindow();
 
-		EGX_API static void Poll();
+		static void Poll();
 
 		inline GLFWwindow* GetWindow() { return m_window; }
-		EGX_API bool ShouldClose();
+		bool ShouldClose();
 		inline int GetWidth() { return m_width; }
 		inline int GetHeight() { return m_height; }
 		inline bool IsWindowFocus() { return m_focus; }
-		EGX_API bool IsWindowMinimized();
+		bool IsWindowMinimized();
 
-		EGX_API void CenterWindow();
+		void CenterWindow();
 
 		// This function returns ID (index) of the callback which can be used later to remove the callback
-		EGX_API int RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined);
-		EGX_API void RemoveCallback(int ID);
+		int RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined);
+		void RemoveCallback(int ID);
 		glm::vec2 GetWindowSize() { return glm::vec2(m_width, m_height); }
 
 		/// @brief Checks the key state (pressed or not)
 		/// @param KeyCode you can enter key as ascii code e.g. 'A' or 'a' or you can eneter GLFW VK codes ex: GLFW_KEY_UP 
 		/// @return Returns whether the key is pressed or not
-		EGX_API bool GetKeyState(uint16_t KeyCode);
+		bool GetKeyState(uint16_t KeyCode);
+
+		void SetFullscreen(bool state);
 
 	private:
 		int m_width;

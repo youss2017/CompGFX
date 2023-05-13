@@ -1,0 +1,15 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(binding = 0, rgba32f) uniform image2D OutputImage; 
+
+void main() {
+    ivec2 size = imageSize(OutputImage);
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    if(coord.x >= size.x || coord.y >= size.y) return;
+
+    
+
+    imageStore(OutputImage, coord, vec4(vec2(gl_LocalInvocationID.xy) / vec2(32), 0.0, 1.0));
+}
