@@ -204,7 +204,7 @@ std::vector<PhysicalDeviceAndQueueFamilyInfo> egx::VulkanICDState::QueryGPGPUDev
 	return query;
 }
 
-DeviceCtx egx::VulkanICDState::CreateDevice(const PhysicalDeviceAndQueueFamilyInfo& deviceQuery)
+DeviceCtx egx::VulkanICDState::CreateDevice(const PhysicalDeviceAndQueueFamilyInfo& deviceQuery, uint32_t max_frames_in_flight)
 {
 	int32_t graphics = -1, compute = -1, transfer = -1;
 	for (auto& [index, queues] : deviceQuery.QueueFamilyInfo)
@@ -337,7 +337,7 @@ DeviceCtx egx::VulkanICDState::CreateDevice(const PhysicalDeviceAndQueueFamilyIn
 	allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
 	vmaCreateAllocator(&allocatorCreateInfo, &ctx->Allocator);
-
+	ctx->FramesInFlight = max_frames_in_flight;
 	return ctx;
 }
 

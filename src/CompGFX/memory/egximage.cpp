@@ -1,8 +1,10 @@
 #include "egximage.hpp"
 #include "formatsize.hpp"
 #include <core/ScopedCommandBuffer.hpp>
+#include <imgui/backends/imgui_impl_vulkan.h>
 
 using namespace egx;
+using namespace std;
 
 Image2D::Image2D(const DeviceCtx& pCtx, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initialLayout, bool streaming)
 	: Width(width), Height(height), Format(format), StreamingMode(streaming), Usage(usage), CurrentLayout(vk::ImageLayout::eUndefined)
@@ -75,7 +77,7 @@ void Image2D::GetPixel(int mipLevel, int x, int y)
 
 void Image2D::SetImageData(int mipLevel, int xOffset, int yOffset, int width, int height, const void* pData)
 {
-	auto commands = [&](VkCommandBuffer cmd, VkBuffer buffer) {
+	auto commands = [&](VkCommandBuffer cmd, VkBuffer particle_buffer) {
 		VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 		barrier.srcAccessMask = VK_ACCESS_NONE;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -98,13 +100,13 @@ void Image2D::SetImageData(int mipLevel, int xOffset, int yOffset, int width, in
 		region.imageSubresource.baseArrayLayer = 0;
 		region.imageSubresource.layerCount = 1;
 		region.imageSubresource.mipLevel = 0;
-		vkCmdCopyBufferToImage(cmd, buffer, m_Data->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(cmd, particle_buffer, m_Data->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VkImageLayout(CurrentLayout);
 		barrier.srcAccessMask = barrier.dstAccessMask;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		barrier.dstAccessMask = VK_ACCESS_NONE;
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	};
 
 	ScopedCommandBuffer cmd(m_Data->m_Ctx);
@@ -177,6 +179,7 @@ void Image2D::Read(int mipLevel, int xOffset, int yOffset, int width, int height
 				1
 			)
 		));
+
 	cmd.RunNow();
 
 	size_t memorySize = (static_cast<size_t>(width) * m_TexelBytes) * height;
@@ -321,7 +324,17 @@ vk::Image Image2D::GetHandle() const
 	return m_Data->m_Image;
 }
 
+ImTextureID Image2D::GetImGuiTextureID(vk::Sampler sampler, uint32_t viewId)
+{
+	if (m_Data->m_TextureID) return m_Data->m_TextureID;
+	m_Data->m_TextureID = ImGui_ImplVulkan_AddTexture(sampler, GetView(viewId), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	return m_Data->m_TextureID;
+}
+
 Image2D::DataWrapper::~DataWrapper() {
+	if (m_TextureID)
+		ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)m_TextureID);
+
 	for (auto& [id, view] : m_Views) {
 		m_Ctx->Device.destroyImageView(view);
 	}

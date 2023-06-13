@@ -1,6 +1,8 @@
 #pragma once
 #include "egxbuffer.hpp"
+#include <imgui/imgui.h>
 #include <map>
+#include <glm/vec2.hpp>
 
 namespace egx
 {
@@ -9,7 +11,10 @@ namespace egx
 	{
 	public:
 		Image2D() = default;
-		Image2D(const DeviceCtx &pCtx, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout, bool streaming);
+		Image2D(const DeviceCtx& pCtx, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout, bool streaming);
+		Image2D(const DeviceCtx &pCtx, glm::ivec2 resolution, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout, bool streaming) :
+			Image2D(pCtx, resolution.x, resolution.y, format, mipLevels, usage, initalLayout, streaming)
+		{}
 		static Image2D CreateFromHandle(const DeviceCtx &pCtx, vk::Image handle, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout);
 
 		void SetPixel(int mipLevel, int x, int y, const void *pixelData);
@@ -31,6 +36,7 @@ namespace egx
 		}
 
 		vk::Image GetHandle() const;
+		ImTextureID GetImGuiTextureID(vk::Sampler sampler, uint32_t viewId = 0);
 
 	public:
 		int Width;
@@ -48,6 +54,7 @@ namespace egx
 			std::unique_ptr<egx::Buffer> m_StageBuffer;
 			std::map<int, vk::ImageView> m_Views;
 			VmaAllocation m_Allocation = nullptr;
+			ImTextureID m_TextureID = nullptr;
 
 			DataWrapper() = default;
 

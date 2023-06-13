@@ -15,8 +15,19 @@ namespace egx
 		virtual inline vk::Pipeline Pipeline() const = 0;
 		virtual inline std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const = 0;
 		virtual inline ShaderReflection Reflection() const = 0;
-        // This function is used to allow polymorphism
+		// This function is used to allow polymorphism
 		virtual std::unique_ptr<PipelineType> MakeHandle() const = 0;
+		virtual vk::PipelineLayout Layout() const = 0;
+	};
+
+	class NullPipelineType : public PipelineType {
+	public:
+		virtual inline vk::PipelineBindPoint BindPoint() const { return {}; }
+		virtual inline vk::Pipeline Pipeline() const { return{}; }
+		virtual inline std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const { return{}; }
+		virtual inline ShaderReflection Reflection() const { return {}; }
+		// This function is used to allow polymorphism
+		virtual std::unique_ptr<PipelineType> MakeHandle() const { return nullptr; }
 	};
 
 	class ComputePipeline : public PipelineType
@@ -61,7 +72,7 @@ namespace egx
 		std::shared_ptr<DataWrapper> m_Data;
 	};
 
-    struct PipelineSpecification {
+	struct PipelineSpecification {
 		/// Pipeline properties. You do not have to set viewport width/height
 		// the default is to use the framebuffer
 		vk::CullModeFlags CullMode = (vk::CullModeFlags)VK_CULL_MODE_NONE;
@@ -79,30 +90,30 @@ namespace egx
 		bool DynamicViewport = false;
 		bool DynamicScissor = false;
 
-        PipelineSpecification& SetCullMode(vk::CullModeFlags cullMode) { CullMode = cullMode; return *this; }
-        PipelineSpecification& SetFrontFace(vk::FrontFace frontFace) { FrontFace = frontFace; return *this; }
-        PipelineSpecification& SetDepthCompare(vk::CompareOp depthCompare) { DepthCompare = depthCompare; return *this; }
-        PipelineSpecification& SetFillMode(vk::PolygonMode fillMode) { FillMode = fillMode; return *this; }
-        PipelineSpecification& SetTopology(vk::PrimitiveTopology topology) { Topology = topology; return *this; }
-        PipelineSpecification& SetDepthFields(float nearField, float farField) { NearField = nearField, FarField = farField; return *this; }
-        PipelineSpecification& SetLineWidth(float width = 1.0f) { LineWidth = width; return *this; }
-        PipelineSpecification& SetViewport(uint32_t width, uint32_t height) { ViewportWidth = width, ViewportHeight = height; return *this; }
-        PipelineSpecification& SetDepthEnabled(bool enabled, bool writeEnable) { DepthEnabled = enabled, DepthWriteEnable = writeEnable; return *this; }
-		PipelineSpecification& UseDynamicViewport() { DynamicViewport = true; return *this;}
+		PipelineSpecification& SetCullMode(vk::CullModeFlags cullMode) { CullMode = cullMode; return *this; }
+		PipelineSpecification& SetFrontFace(vk::FrontFace frontFace) { FrontFace = frontFace; return *this; }
+		PipelineSpecification& SetDepthCompare(vk::CompareOp depthCompare) { DepthCompare = depthCompare; return *this; }
+		PipelineSpecification& SetFillMode(vk::PolygonMode fillMode) { FillMode = fillMode; return *this; }
+		PipelineSpecification& SetTopology(vk::PrimitiveTopology topology) { Topology = topology; return *this; }
+		PipelineSpecification& SetDepthFields(float nearField, float farField) { NearField = nearField, FarField = farField; return *this; }
+		PipelineSpecification& SetLineWidth(float width = 1.0f) { LineWidth = width; return *this; }
+		PipelineSpecification& SetViewport(uint32_t width, uint32_t height) { ViewportWidth = width, ViewportHeight = height; return *this; }
+		PipelineSpecification& SetDepthEnabled(bool enabled, bool writeEnable) { DepthEnabled = enabled, DepthWriteEnable = writeEnable; return *this; }
+		PipelineSpecification& UseDynamicViewport() { DynamicViewport = true; return *this; }
 		PipelineSpecification& UseDynamicScissor() { DynamicScissor = true; return *this; }
-    };
+	};
 
-	class GraphicsPipeline : public PipelineType
+	class IGraphicsPipeline : public PipelineType, public ICopyableCallback
 	{
 	public:
-		GraphicsPipeline() = default;
-		GraphicsPipeline(const DeviceCtx& pCtx, const Shader& vertex, const Shader& fragment, const RenderTarget& rt, const PipelineSpecification& specification = {});
+		IGraphicsPipeline() = default;
+		IGraphicsPipeline(const DeviceCtx& pCtx, const Shader& vertex, const Shader& fragment, const IRenderTarget& rt, const PipelineSpecification& specification = {});
 
 		virtual inline vk::PipelineBindPoint BindPoint() const override { return vk::PipelineBindPoint::eGraphics; }
 		virtual inline std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const override { return m_Data->m_SetLayouts; }
 		virtual inline ShaderReflection Reflection() const override { return m_Data->m_Reflection; }
 
-		GraphicsPipeline& SetBlendingState(uint32_t colorAttachmentId, const vk::PipelineColorBlendAttachmentState& state)
+		IGraphicsPipeline& SetBlendingState(uint32_t colorAttachmentId, const vk::PipelineColorBlendAttachmentState& state)
 		{
 			if (!m_Data->m_RenderTarget.ContainsAttachment(colorAttachmentId))
 			{
@@ -123,7 +134,7 @@ namespace egx
 		}
 
 		virtual std::unique_ptr<PipelineType> MakeHandle() const override {
-			std::unique_ptr<GraphicsPipeline> handle = std::make_unique<GraphicsPipeline>();
+			std::unique_ptr<IGraphicsPipeline> handle = std::make_unique<IGraphicsPipeline>();
 			handle->m_Data = m_Data;
 			return handle;
 		}
@@ -191,15 +202,15 @@ namespace egx
 			state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 			return state;
 		}
-		GraphicsPipeline& SetRenderTarget(const RenderTarget& renderTarget) { m_Data->m_RenderTarget = renderTarget; return *this; }
+		IGraphicsPipeline& SetRenderTarget(const IRenderTarget& renderTarget) { m_Data->m_RenderTarget = renderTarget; return *this; }
 		void Invalidate();
 
+		virtual void _CallbackProtocol(void* pUserData) override;
+		virtual std::unique_ptr<ICopyableCallback> _MakeHandle() override;
+	
 	public:
 		PipelineSpecification Specification;
-	
-	private:
-		Shader m_Vertex;
-		Shader m_Fragment;
+
 
 	private:
 		struct DataWrapper
@@ -211,7 +222,9 @@ namespace egx
 			vk::Pipeline m_Pipeline = nullptr;
 			std::vector<vk::Pipeline> m_SwapchainPipelines;
 			std::map<uint32_t, vk::PipelineColorBlendAttachmentState> m_BlendStates;
-			RenderTarget m_RenderTarget;
+			IRenderTarget m_RenderTarget;
+			Shader m_Vertex;
+			Shader m_Fragment;
 
 			void Reinvalidate();
 

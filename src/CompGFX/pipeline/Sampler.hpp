@@ -1,12 +1,13 @@
+#pragma once
 #include <core/egx.hpp>
 
 namespace egx
 {
 
-    class SamplerBuilder
+    class ISamplerBuilder
     {
     public:
-        SamplerBuilder(const DeviceCtx& ctx);
+        ISamplerBuilder(const DeviceCtx& ctx);
         void Invalidate();
         vk::Sampler GetSampler() const { return m_Data->m_Sampler; }
 
@@ -25,6 +26,10 @@ namespace egx
         float maxLod = 1000.0;
         vk::BorderColor borderColor = (vk::BorderColor)VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
         bool unnormalizedCoordinates = VK_FALSE;
+
+        operator vk::Sampler() const {
+            return GetSampler();
+        }
 
     private:
         struct DataWrapper

@@ -40,11 +40,13 @@ egx::ComputePipeline::DataWrapper::~DataWrapper()
     }
 }
 
-egx::GraphicsPipeline::GraphicsPipeline(const DeviceCtx &pCtx, const Shader &vertex, const Shader &fragment, const RenderTarget &rt, const PipelineSpecification &specification)
-    : Specification(specification), m_Vertex(vertex), m_Fragment(fragment)
+egx::IGraphicsPipeline::IGraphicsPipeline(const DeviceCtx &pCtx, const Shader &vertex, const Shader &fragment, const IRenderTarget &rt, const PipelineSpecification &specification)
+    : Specification(specification)
 {
-    m_Data = make_shared<GraphicsPipeline::DataWrapper>();
+    m_Data = make_shared<IGraphicsPipeline::DataWrapper>();
     m_Data->m_Ctx = pCtx;
+    m_Data->m_Vertex = vertex;
+    m_Data->m_Fragment = fragment;
     m_Data->m_Reflection = ShaderReflection::Combine({vertex.Reflection(), fragment.Reflection()});
     m_Data->m_RenderTarget = rt;
     if (rt.SwapchainFlag()) {
@@ -56,16 +58,17 @@ egx::GraphicsPipeline::GraphicsPipeline(const DeviceCtx &pCtx, const Shader &ver
             continue;
         m_Data->m_BlendStates[id] = DefaultBlendingPreset();
     }
+    rt.GetSwapchain().AddResizeCallback(this, nullptr);
 }
 
-void egx::GraphicsPipeline::Invalidate()
+void egx::IGraphicsPipeline::Invalidate()
 {
     m_Data->Reinvalidate();
 
     // Create descriptor set layout
-    m_Data->m_SetLayouts = Shader::CreateDescriptorSetLayouts({m_Vertex, m_Fragment});
+    m_Data->m_SetLayouts = Shader::CreateDescriptorSetLayouts({ m_Data->m_Vertex,m_Data->m_Fragment});
     auto scalarSetLayouts = Shader::GetDescriptorSetLayoutsAsScalar(m_Data->m_SetLayouts);
-    auto pushblock = Shader::GetPushconstants({m_Vertex, m_Fragment});
+    auto pushblock = Shader::GetPushconstants({ m_Data->m_Vertex, m_Data->m_Fragment});
     // Create pipeline layout
     vk::PipelineLayoutCreateInfo layoutCreateInfo;
     layoutCreateInfo.setSetLayouts(scalarSetLayouts)
@@ -76,11 +79,11 @@ void egx::GraphicsPipeline::Invalidate()
 
     // 1) Shader Stages
     array<PipelineShaderStageCreateInfo, 2> stages;
-    stages[0].setModule(m_Vertex.GetModule()).setPName("main").setStage(vk::ShaderStageFlagBits::eVertex).setPSpecializationInfo(&m_Vertex.GetSpecializationConstants());
-    stages[1].setModule(m_Fragment.GetModule()).setPName("main").setStage(vk::ShaderStageFlagBits::eFragment).setPSpecializationInfo(&m_Fragment.GetSpecializationConstants());
+    stages[0].setModule(m_Data->m_Vertex.GetModule()).setPName("main").setStage(vk::ShaderStageFlagBits::eVertex).setPSpecializationInfo(&m_Data->m_Vertex.GetSpecializationConstants());
+    stages[1].setModule(m_Data->m_Fragment.GetModule()).setPName("main").setStage(vk::ShaderStageFlagBits::eFragment).setPSpecializationInfo(&m_Data->m_Fragment.GetSpecializationConstants());
 
     // 2) Vertex Shader I/O
-    auto vsReflection = m_Vertex.Reflection();
+    auto vsReflection = m_Data->m_Vertex.Reflection();
     PipelineVertexInputStateCreateInfo vertexInput;
 
     vector<VertexInputBindingDescription> vertexBindings;
@@ -163,8 +166,8 @@ void egx::GraphicsPipeline::Invalidate()
     DepthStencilState.depthCompareOp = Specification.DepthCompare;
     DepthStencilState.depthBoundsTestEnable = VK_FALSE;
     DepthStencilState.stencilTestEnable = VK_FALSE;
-    DepthStencilState.minDepthBounds = 0.0f;
-    DepthStencilState.maxDepthBounds = 1.0f;
+    DepthStencilState.minDepthBounds = Specification.NearField;
+    DepthStencilState.maxDepthBounds = Specification.FarField;
 
     vector<PipelineColorBlendAttachmentState> BlendAttachmentStates;
     for (auto &[id, state] : m_Data->m_BlendStates)
@@ -212,7 +215,19 @@ void egx::GraphicsPipeline::Invalidate()
     m_Data->m_Pipeline = result.value;
 }
 
-void egx::GraphicsPipeline::DataWrapper::Reinvalidate()
+void egx::IGraphicsPipeline::_CallbackProtocol(void* pUserData)
+{
+    Invalidate();
+}
+
+std::unique_ptr<ICopyableCallback> egx::IGraphicsPipeline::_MakeHandle()
+{
+    unique_ptr<IGraphicsPipeline> self = make_unique<IGraphicsPipeline>();
+    self->m_Data = m_Data;
+    return self;
+}
+
+void egx::IGraphicsPipeline::DataWrapper::Reinvalidate()
 {
     for (auto &[id, setLayout] : m_SetLayouts)
         m_Ctx->Device.destroyDescriptorSetLayout(setLayout);
@@ -222,7 +237,7 @@ void egx::GraphicsPipeline::DataWrapper::Reinvalidate()
     m_SetLayouts.clear();
 }
 
-egx::GraphicsPipeline::DataWrapper::~DataWrapper()
+egx::IGraphicsPipeline::DataWrapper::~DataWrapper()
 {
     if (m_Ctx && m_Pipeline)
     {

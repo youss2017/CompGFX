@@ -1,0 +1,68 @@
+[Window][Debug##Default]
+Pos=60,60
+Size=400,400
+Collapsed=0
+
+[Window][Dear ImGui Debug Log]
+ViewportPos=1603,476
+ViewportId=0xA4D966FE
+Size=550,680
+Collapsed=0
+DockId=0x00000001,0
+
+[Window][Dear ImGui Demo]
+ViewportPos=1603,476
+ViewportId=0xA4D966FE
+Size=550,680
+Collapsed=0
+DockId=0x00000001,1
+
+[Window][About Dear ImGui]
+Pos=54,188
+Size=570,442
+Collapsed=0
+
+[Window][Stacked 1]
+ViewportPos=1831,647
+ViewportId=0x4FF3CADB
+Size=409,172
+Collapsed=0
+
+[Window][Stacked 2]
+ViewportPos=1922,697
+ViewportId=0xD6FA9B61
+Size=226,71
+Collapsed=0
+
+[Table][0x9B8E7538,3]
+Column 0  Weight=1.0000
+Column 1  Weight=1.0000
+Column 2  Weight=1.0000
+
+[Table][0xA43C3885,3]
+RefScale=13
+Column 0  Width=56
+Column 1  Width=56
+Column 2  Width=56
+
+[Table][0x82CBB907,3]
+Column 0  Weight=1.0000
+Column 1  Weight=1.0000
+Column 2  Weight=1.0000
+
+[Table][0x49D11DC0,3]
+RefScale=13
+Column 0  Width=86
+Column 1  Width=86
+Column 2  Width=86
+
+[Table][0x20DF7A63,4]
+RefScale=13
+Column 0  Width=28 Sort=0v
+Column 1  Width=98
+Column 2  Width=60
+Column 3  Weight=1.0000
+
+[Docking][Data]
+DockNode  ID=0x00000001 Pos=1603,476 Size=550,680 Selected=0xE87781F4
+

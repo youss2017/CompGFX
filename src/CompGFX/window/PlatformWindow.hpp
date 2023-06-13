@@ -25,12 +25,13 @@ namespace egx {
 		static void ConfigureFloating(bool floating);
 		static void ConfigureMaximized(bool maximized);
 
+		PlatformWindow() = default;
 		PlatformWindow(std::string title, int width, int height);
 		~PlatformWindow();
 
 		static void Poll();
 
-		inline GLFWwindow* GetWindow() { return m_window; }
+		inline GLFWwindow* GetWindow() const { return m_window; }
 		bool ShouldClose();
 		inline int GetWidth() { return m_width; }
 		inline int GetHeight() { return m_height; }
@@ -40,12 +41,12 @@ namespace egx {
 		void CenterWindow();
 
 		// This function returns ID (index) of the callback which can be used later to remove the callback
-		int RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined);
+		int RegisterCallback(EventFlagBits events, const std::function<void(const Event& e, void* pUserDefined)>& func, void* pUserDefined = nullptr);
 		void RemoveCallback(int ID);
 		glm::vec2 GetWindowSize() { return glm::vec2(m_width, m_height); }
 
 		/// @brief Checks the key state (pressed or not)
-		/// @param KeyCode you can enter key as ascii code e.g. 'A' or 'a' or you can eneter GLFW VK codes ex: GLFW_KEY_UP 
+		/// @param KeyCode you can enter key as ascii code e.g. 'A' or 'a' or you can enter GLFW VK codes ex: GLFW_KEY_UP 
 		/// @return Returns whether the key is pressed or not
 		bool GetKeyState(uint16_t KeyCode);
 

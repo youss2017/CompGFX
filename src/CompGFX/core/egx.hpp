@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <vma/vk_mem_alloc.h>
 #include <memory>
+#include <vector>
 
 namespace egx
 {
@@ -12,13 +13,13 @@ namespace egx
 		vk::PhysicalDevice PhysicalDevice;
 		vk::PhysicalDeviceType Type;
 		std::vector<std::pair<uint32_t, std::vector<vk::QueueFlags>>> QueueFamilyInfo;
-		VkPhysicalDeviceFeatures2 EnabledFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+		VkPhysicalDeviceFeatures2 EnabledFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 		bool SupportSwapchain = false;
 
-		bool SupportExtension(const char *pExtensionName)
+		bool SupportExtension(const char* pExtensionName)
 		{
 			auto extensions = PhysicalDevice.enumerateDeviceExtensionProperties();
-			for (auto &e : extensions)
+			for (auto& e : extensions)
 			{
 				if (strcmp(e.extensionName, pExtensionName) == 0)
 					return true;
@@ -47,13 +48,13 @@ namespace egx
 
 		VmaAllocator Allocator;
 
-		cpp::Logger *pLogger;
+		cpp::Logger* pLogger;
 		std::shared_ptr<VulkanICDState> ICDState;
 
 		~DeviceContext();
 
 		template <cpp::LogLevel level = cpp::LogLevel::INFO, typename... Arg>
-		void Log(const std::string &message, Arg &&...args, int ln = __LINE__, const char *file = __FILENAME__) const
+		void Log(const std::string& message, Arg &&...args, int ln = __LINE__, const char* file = __FILENAME__) const
 		{
 			pLogger->print(level, file, ln, message, std::forward(args));
 		}
@@ -68,25 +69,25 @@ namespace egx
 	class VulkanICDState : public std::enable_shared_from_this<VulkanICDState>
 	{
 	public:
-		static std::shared_ptr<VulkanICDState> Create(const std::string &pApplicationName,
-					   bool enableValidation,
-					   bool useGpuAssistedValidation,
-					   uint32_t vkApiVersion,
-					   cpp::Logger *pOptionalLogger,
-					   PFN_vkDebugUtilsMessengerCallbackEXT pCustomCallback);
-					   
+		static std::shared_ptr<VulkanICDState> Create(const std::string& pApplicationName,
+			bool enableValidation,
+			bool useGpuAssistedValidation,
+			uint32_t vkApiVersion,
+			cpp::Logger* pOptionalLogger,
+			PFN_vkDebugUtilsMessengerCallbackEXT pCustomCallback);
+
 		~VulkanICDState();
 
 		std::vector<PhysicalDeviceAndQueueFamilyInfo> QueryGPGPUDevices();
-		DeviceCtx CreateDevice(const PhysicalDeviceAndQueueFamilyInfo &deviceInformation);
+		DeviceCtx CreateDevice(const PhysicalDeviceAndQueueFamilyInfo& deviceInformation, uint32_t max_frames_in_flight = 2);
 		vk::Instance Instance() const { return m_Instance; }
 	private:
-		VulkanICDState(const std::string &pApplicationName,
-					   bool enableValidation,
-					   bool useGpuAssistedValidation,
-					   uint32_t vkApiVersion,
-					   cpp::Logger *pOptionalLogger,
-					   PFN_vkDebugUtilsMessengerCallbackEXT pCustomCallback);
+		VulkanICDState(const std::string& pApplicationName,
+			bool enableValidation,
+			bool useGpuAssistedValidation,
+			uint32_t vkApiVersion,
+			cpp::Logger* pOptionalLogger,
+			PFN_vkDebugUtilsMessengerCallbackEXT pCustomCallback);
 
 	private:
 		vk::Instance m_Instance;
@@ -94,9 +95,71 @@ namespace egx
 		bool m_ValidationEnabled = false;
 		bool m_GPUAssistedValidation = false;
 		uint32_t m_ApiVersion = VK_API_VERSION_1_2;
-		cpp::Logger *pOptionalLogger;
+		cpp::Logger* pOptionalLogger;
 		PFN_vkDebugUtilsMessengerCallbackEXT pDebugCallback;
 		vk::DebugUtilsMessengerEXT m_DebugMessengerEXT;
+	};
+
+	class FramedSemaphore {
+	public:
+		// Creates a semaphore for each frame
+		FramedSemaphore(const DeviceCtx& ctx) : m_Device(ctx->Device)
+		{
+			m_Semaphores = std::make_shared<std::vector<vk::Semaphore>>();
+			for (size_t i = 0; i < ctx->FramesInFlight; i++)
+				m_Semaphores->push_back(m_Device.createSemaphore({}));
+			m_pCurrentFrame = &ctx->CurrentFrame;
+		}
+
+		/// <summary>
+		/// Wrapper for a single semaphore (does not create semaphore per frame)
+		/// This is useful to allow single semaphore and framed semaphore to be in
+		/// the same container (e.g. vector<FramedSemaphore>)
+		/// </summary>
+		/// <param name="semaphore"></param>
+		FramedSemaphore(vk::Semaphore semaphore) : m_Semaphore(semaphore) {}
+
+		~FramedSemaphore() {
+			if (m_Semaphores.use_count() == 1) {
+				for (vk::Semaphore semaphore : *m_Semaphores.get()) {
+					m_Device.destroySemaphore(semaphore);
+				}
+			}
+		}
+
+		inline vk::Semaphore Get() const {
+			if (m_Semaphore) return m_Semaphore;
+			return m_Semaphores->at(*m_pCurrentFrame);
+		}
+
+		operator vk::Semaphore() {
+			return Get();
+		}
+
+	protected:
+		vk::Device m_Device;
+		std::shared_ptr<std::vector<vk::Semaphore>> m_Semaphores;
+		vk::Semaphore m_Semaphore = nullptr;
+		uint32_t* m_pCurrentFrame = nullptr;
+	};
+
+	class SynchronizationPrimitive {
+	public:
+		virtual void AddWaitSemaphore(vk::Semaphore semaphore, vk::PipelineStageFlags waitStageFlags) {
+			m_WaitSemaphores.push_back(semaphore), m_WaitStageFlags.push_back(waitStageFlags);
+		}
+		virtual VkSemaphore GetSignalSemaphore() { return {}; }
+
+
+	protected:
+		std::vector<vk::Semaphore> m_WaitSemaphores;
+		std::vector<vk::PipelineStageFlags> m_WaitStageFlags;
+	};
+
+	class ICopyableCallback {
+	public:
+		virtual void _CallbackProtocol(void* pUserData) = 0;
+		virtual std::unique_ptr<ICopyableCallback> _MakeHandle() = 0;
 	};
 
 }

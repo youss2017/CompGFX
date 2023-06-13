@@ -3,9 +3,9 @@
 using namespace std;
 using namespace egx;
 
-SwapchainController::SwapchainController(const DeviceCtx &pCtx, PlatformWindow *pTargetWindow, vk::Format format)
+ISwapchainController::ISwapchainController(const DeviceCtx &pCtx, PlatformWindow *pTargetWindow, vk::Format format)
 {
-	m_Data = make_shared<SwapchainController::DataWrapper>();
+	m_Data = make_shared<ISwapchainController::DataWrapper>();
 	m_Data->m_Ctx = pCtx;
 	m_Data->m_Window = pTargetWindow;
 	m_Data->m_PresentWait.resize(1);
@@ -28,8 +28,11 @@ SwapchainController::SwapchainController(const DeviceCtx &pCtx, PlatformWindow *
 	LOG(WARNING, "(TODO) Make swapchain controller format dynamic.");
 }
 
-void SwapchainController::Invalidate(bool blockQueue)
+void ISwapchainController::Invalidate(bool blockQueue)
 {
+	if (blockQueue)
+		m_Data->m_Ctx->Queue.waitIdle();
+
 	auto physicalDevice = m_Data->m_Ctx->PhysicalDeviceQuery.PhysicalDevice;
 	auto props = physicalDevice.getProperties();
 
@@ -37,9 +40,7 @@ void SwapchainController::Invalidate(bool blockQueue)
 	{
 		m_Data->m_Ctx->Device.destroySemaphore(imageReady);
 	}
-
-	if (blockQueue)
-		m_Data->m_Ctx->Queue.waitIdle();
+	m_Data->m_ImageReady.clear();
 
 	auto surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(m_Data->m_Surface);
 	uint32_t backBufferCount = std::min<int>(surfaceCapabilities.maxImageCount, std::max<int>(m_Data->m_FramesInFlight, surfaceCapabilities.minImageCount));
@@ -96,20 +97,30 @@ void SwapchainController::Invalidate(bool blockQueue)
 
 }
 
-vk::Semaphore SwapchainController::Acquire()
+void egx::ISwapchainController::Resize(int width, int height, bool blockQueue)
 {
-	const auto imageReadySemaphore = m_Data->m_ImageReady[m_Data->m_Ctx->CurrentFrame];
+	m_Data->m_Width = width, m_Data->m_Height = height;
+	Invalidate(blockQueue);
+	for (auto& [callback, pUserData] : m_Data->m_ResizeCallbacks)
+		callback->_CallbackProtocol(pUserData);
+}
+
+vk::Semaphore ISwapchainController::Acquire()
+{
+	const vk::Semaphore imageReadySemaphore = m_Data->m_ImageReady[m_Data->m_Ctx->CurrentFrame];
 	// We wait until the swapchain can give us the next image
 	const auto errorCode = m_Data->m_Ctx->Device.acquireNextImageKHR(m_Data->m_Swapchain, numeric_limits<uint64_t>::max(), imageReadySemaphore, {}, &m_Data->m_CurrentBackBufferIndex);
+	m_Data->m_Ctx->CurrentFrame = m_Data->m_Ctx->CurrentFrame;
 
-	if (errorCode == vk::Result::eErrorOutOfDateKHR)
+	if (errorCode == vk::Result::eErrorOutOfDateKHR || errorCode == vk::Result::eSuboptimalKHR)
 	{
 		if (m_Data->m_ResizeOnWindowResize)
 		{
 			Resize(m_Data->m_Window->GetWidth(), m_Data->m_Window->GetHeight(), true);
+			return Acquire();
 		}
 	}
-	else if (errorCode != vk::Result::eSuccess && errorCode != vk::Result::eSuboptimalKHR)
+	else if (errorCode != vk::Result::eSuccess && errorCode != vk::Result::eErrorOutOfDateKHR && errorCode != vk::Result::eSuboptimalKHR)
 	{
 		// (TODO) Alert user
 	}
@@ -117,22 +128,24 @@ vk::Semaphore SwapchainController::Acquire()
 	return imageReadySemaphore;
 }
 
-uint32_t SwapchainController::AcquireFullLock()
+uint32_t ISwapchainController::AcquireFullLock()
 {
 	if (VkFence(m_Data->m_AcquireFullLock) == nullptr)
 	{
 		m_Data->m_AcquireFullLock = m_Data->m_Ctx->Device.createFence({});
 	}
+	const auto imageReadySemaphore = m_Data->m_ImageReady[m_Data->m_Ctx->CurrentFrame];
 
-	const auto errorCode = m_Data->m_Ctx->Device.acquireNextImageKHR(m_Data->m_Swapchain, UINT64_MAX, {}, m_Data->m_AcquireFullLock, &m_Data->m_CurrentBackBufferIndex);
+	const auto errorCode = m_Data->m_Ctx->Device.acquireNextImageKHR(m_Data->m_Swapchain, UINT64_MAX, imageReadySemaphore, m_Data->m_AcquireFullLock, &m_Data->m_CurrentBackBufferIndex);
 	m_Data->m_Ctx->Device.waitForFences(m_Data->m_AcquireFullLock, true, UINT64_MAX);
 	m_Data->m_Ctx->Device.resetFences(m_Data->m_AcquireFullLock);
 
-	if (errorCode == vk::Result::eErrorOutOfDateKHR)
+	if (errorCode == vk::Result::eErrorOutOfDateKHR || errorCode == vk::Result::eSuboptimalKHR)
 	{
 		if (m_Data->m_ResizeOnWindowResize)
 		{
 			Resize(m_Data->m_Window->GetWidth(), m_Data->m_Window->GetHeight(), true);
+			return AcquireFullLock();
 		}
 	}
 	else if (errorCode != vk::Result::eSuccess && errorCode != vk::Result::eSuboptimalKHR)
@@ -140,10 +153,11 @@ uint32_t SwapchainController::AcquireFullLock()
 		// (TODO) Alert user
 	}
 
+	m_Data->m_PresentWait[0] = imageReadySemaphore;
 	return m_Data->m_CurrentBackBufferIndex;
 }
 
-void SwapchainController::Present(const std::vector<vk::Semaphore> &presentReadySemaphore)
+void ISwapchainController::Present(const std::vector<vk::Semaphore> &presentReadySemaphore)
 {
 	vk::PresentInfoKHR presentInfo;
 	presentInfo.setWaitSemaphores(presentReadySemaphore)
@@ -156,7 +170,7 @@ void SwapchainController::Present(const std::vector<vk::Semaphore> &presentReady
 	m_Data->m_Ctx->NextFrame();
 }
 
-SwapchainController::DataWrapper::~DataWrapper()
+ISwapchainController::DataWrapper::~DataWrapper()
 {
 	if (m_Ctx && m_Swapchain)
 	{

@@ -223,10 +223,10 @@ ShaderReflection Shader::GenerateReflection(const std::vector<uint32_t> &Bytecod
 
     if (resources.push_constant_buffers.size() > 0)
     {
-        auto &buffer = resources.push_constant_buffers[0];
-        auto &type = compiler.get_type(buffer.type_id);
-        output.Pushconstant.Name = compiler.get_name(buffer.id);
-        output.Pushconstant.Offset = (uint32_t)compiler.get_decoration(buffer.id, spv::DecorationOffset);
+        auto &particle_buffer = resources.push_constant_buffers[0];
+        auto &type = compiler.get_type(particle_buffer.type_id);
+        output.Pushconstant.Name = compiler.get_name(particle_buffer.id);
+        output.Pushconstant.Offset = (uint32_t)compiler.get_decoration(particle_buffer.id, spv::DecorationOffset);
         output.Pushconstant.Size = (uint32_t)compiler.get_declared_struct_size(type);
         output.Pushconstant.HasValue = true;
     }

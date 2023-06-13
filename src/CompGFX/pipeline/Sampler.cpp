@@ -3,13 +3,13 @@ using namespace std;
 using namespace egx;
 using namespace vk;
 
-egx::SamplerBuilder::SamplerBuilder(const DeviceCtx &ctx)
+egx::ISamplerBuilder::ISamplerBuilder(const DeviceCtx &ctx)
 {
-    m_Data = make_shared<SamplerBuilder::DataWrapper>();
+    m_Data = make_shared<ISamplerBuilder::DataWrapper>();
     m_Data->m_Ctx = ctx;
 }
 
-void egx::SamplerBuilder::Invalidate()
+void egx::ISamplerBuilder::Invalidate()
 {
     m_Data->Reinvalidate();
     SamplerCreateInfo createInfo;
@@ -31,7 +31,7 @@ void egx::SamplerBuilder::Invalidate()
     m_Data->m_Sampler = m_Data->m_Ctx->Device.createSampler(createInfo);
 }
 
-void egx::SamplerBuilder::DataWrapper::Reinvalidate()
+void egx::ISamplerBuilder::DataWrapper::Reinvalidate()
 {
     if(m_Ctx && m_Sampler) {
         m_Ctx->Device.destroySampler(m_Sampler);
@@ -39,7 +39,7 @@ void egx::SamplerBuilder::DataWrapper::Reinvalidate()
     }
 }
 
-egx::SamplerBuilder::DataWrapper::~DataWrapper()
+egx::ISamplerBuilder::DataWrapper::~DataWrapper()
 {
     Reinvalidate();
 }

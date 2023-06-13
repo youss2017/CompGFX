@@ -10,74 +10,26 @@ egx::Buffer::Buffer(const DeviceCtx &pCtx, size_t size, MemoryPreset memoryPrese
 	usage |= vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
 	Usage = usage;
 
-	if (size == 0)
-	{
-		throw std::invalid_argument("Size == 0, cannot create buffer with size 0");
-	}
-	VkBufferCreateInfo createInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-	createInfo.size = size;
-	createInfo.usage = VkBufferUsageFlags(usage);
-	createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	VmaAllocationCreateInfo allocCreateInfo{};
-	allocCreateInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT;
-
-	switch (memoryAccess)
-	{
-	case HostMemoryAccess::None:
-		break;
-	case HostMemoryAccess::Sequential:
-		allocCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		allocCreateInfo.flags = allocCreateInfo.flags | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-		break;
-	case HostMemoryAccess::Random:
-		allocCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-		allocCreateInfo.flags = allocCreateInfo.flags | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-		break;
-	default:
-		throw std::invalid_argument("HostMemoryAccess is invalid.");
-	}
-
-	switch (memoryPreset)
-	{
-	case MemoryPreset::DeviceOnly:
-		if (memoryAccess != HostMemoryAccess::None)
-		{
-			throw std::invalid_argument("HostMemoryAccess must be none with DeviceOnly memory preset.");
-		}
-		allocCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-		break;
-	case MemoryPreset::DeviceAndHost:
-		allocCreateInfo.preferredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-		allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-		break;
-	case MemoryPreset::HostOnly:
-		allocCreateInfo.preferredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-		allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-		break;
-	default:
-		throw std::invalid_argument("MemoryPreset is invalid.");
-	}
-
 	m_Data = std::make_shared<Buffer::DataWrapper>();
 	m_Data->m_Ctx = pCtx;
 
 	if (!IsFrameResource)
 	{
-		VkBuffer temp;
-		VkResult result = vmaCreateBuffer(pCtx->Allocator, &createInfo, &allocCreateInfo, &temp, &m_Data->m_Allocation, nullptr);
+		VkResult result = _CreateBufferVma((VkBuffer*)&m_Data->m_Buffer, &m_Data->m_Allocation);
+
 		if (result != VK_SUCCESS)
 		{
 			throw std::runtime_error(cpp::Format("Could create buffer with {} bytes, usage={}, error code {}", size, vk::to_string(usage), vk::to_string(vk::Result(result))));
 		}
-		m_Data->m_Buffer = temp;
 	}
 	else
 	{
+		m_Data->m_Allocations.resize(pCtx->FramesInFlight);
+		m_Data->m_MappedPtrs.resize(pCtx->FramesInFlight);
 		for (uint32_t i = 0; i < pCtx->FramesInFlight; i++)
 		{
 			VkBuffer temp;
-			VkResult result = vmaCreateBuffer(pCtx->Allocator, &createInfo, &allocCreateInfo, &temp, &m_Data->m_Allocations[i], nullptr);
+			VkResult result = _CreateBufferVma(&temp, &m_Data->m_Allocations[i]);
 			if (result != VK_SUCCESS)
 			{
 				throw std::runtime_error(cpp::Format("Could create buffer with {} bytes, usage={}, error code {}", size, vk::to_string(usage), vk::to_string(vk::Result(result))));
@@ -93,6 +45,9 @@ uint8_t &Buffer::operator[](size_t index)
 
 void Buffer::_Write(const void *pData, size_t offset, size_t size, int resourceId)
 {
+	// Issue potential resize
+	GetHandle(resourceId);
+
 	if (m_MemoryType != MemoryPreset::DeviceOnly)
 	{
 		bool previousMappedState = m_Data->m_IsMapped;
@@ -224,14 +179,80 @@ void Buffer::Read(void *pOutData)
 	Read(0, m_Size, pOutData);
 }
 
-void Buffer::Resize(size_t size)
+bool Buffer::Resize(size_t size)
 {
-	throw std::logic_error("Resize not yet implemented.");
+	if (size == m_Size)
+		return false;
+	m_Data->m_ResizeBufferFrameIds.clear();
+	if (!IsFrameResource) {
+		m_Data->m_ResizeBufferFrameIds.push_back(0);
+	}
+	else {
+		for (uint32_t i = 0; i < m_Data->m_Allocations.size(); i++) {
+			m_Data->m_ResizeBufferFrameIds.push_back(i);
+		}
+	}
+	m_Size = size;
+	return true;
 }
 
 void Buffer::_CopyTo(vk::CommandBuffer cmd, Buffer &dst, size_t srcOffset, size_t dstOffset, size_t size, int dstResourceId)
 {
 	cmd.copyBuffer(GetHandle(dstResourceId), dst.GetHandle(dstResourceId), vk::BufferCopy(srcOffset, dstOffset, size));
+}
+
+VkResult egx::Buffer::_CreateBufferVma(VkBuffer* pOutBuffer, VmaAllocation* pOutAllocation) const
+{
+	if (m_Size == 0)
+	{
+		throw std::invalid_argument("Size == 0, cannot create buffer with size 0");
+	}
+	VkBufferCreateInfo createInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+	createInfo.size = m_Size;
+	createInfo.usage = VkBufferUsageFlags(Usage);
+	createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	VmaAllocationCreateInfo allocCreateInfo{};
+	allocCreateInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT;
+
+	switch (m_MemoryAccessBehavior)
+	{
+	case HostMemoryAccess::None:
+		break;
+	case HostMemoryAccess::Sequential:
+		allocCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		allocCreateInfo.flags = allocCreateInfo.flags | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+		break;
+	case HostMemoryAccess::Random:
+		allocCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+		allocCreateInfo.flags = allocCreateInfo.flags | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+		break;
+	default:
+		throw std::invalid_argument("HostMemoryAccess is invalid.");
+	}
+
+	switch (m_MemoryType)
+	{
+	case MemoryPreset::DeviceOnly:
+		if (m_MemoryAccessBehavior != HostMemoryAccess::None)
+		{
+			throw std::invalid_argument("HostMemoryAccess must be none with DeviceOnly memory preset.");
+		}
+		allocCreateInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		break;
+	case MemoryPreset::DeviceAndHost:
+		allocCreateInfo.preferredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		break;
+	case MemoryPreset::HostOnly:
+		allocCreateInfo.preferredFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		break;
+	default:
+		throw std::invalid_argument("MemoryPreset is invalid.");
+	}
+
+	return vmaCreateBuffer(m_Data->m_Ctx->Allocator, &createInfo, &allocCreateInfo, pOutBuffer, pOutAllocation, nullptr);
 }
 
 void Buffer::CopyTo(vk::CommandBuffer cmd, Buffer &dst, size_t srcOffset, size_t dstOffset, size_t size)
@@ -246,7 +267,45 @@ void Buffer::CopyTo(vk::CommandBuffer cmd, Buffer &dst)
 
 vk::Buffer Buffer::GetHandle(int specificFrameIndex) const
 {
-	return IsFrameResource ? m_Data->m_Buffers[specificFrameIndex == -1 ? m_Data->m_Ctx->CurrentFrame : specificFrameIndex] : m_Data->m_Buffer;
+	uint32_t frame = specificFrameIndex < 0 ? m_Data->m_Ctx->CurrentFrame : specificFrameIndex;
+	if (m_Data->m_ResizeBufferFrameIds.size() == 0) {
+		return IsFrameResource ? m_Data->m_Buffers[frame] : m_Data->m_Buffer;
+	}
+	else {
+		// Resize buffer and return handle
+		if (IsFrameResource) {
+			bool resize_flag = false;
+			uint32_t i = 0;
+			for (; i < m_Data->m_ResizeBufferFrameIds.size(); i++) {
+				if (frame == m_Data->m_ResizeBufferFrameIds[i]) {
+					resize_flag = true;
+					break;
+				}
+			}
+
+			if (resize_flag) {
+				m_Data->m_ResizeBufferFrameIds.erase(m_Data->m_ResizeBufferFrameIds.begin() + i);
+				vmaDestroyBuffer(m_Data->m_Ctx->Allocator, m_Data->m_Buffers[frame], m_Data->m_Allocations[frame]);
+				auto result = _CreateBufferVma((VkBuffer*)&m_Data->m_Buffers[frame], &m_Data->m_Allocations[frame]);
+				if (result != VK_SUCCESS)
+				{
+					throw std::runtime_error(cpp::Format("Could create buffer with {} bytes, usage={}, error code {}", m_Size, vk::to_string(Usage), vk::to_string(vk::Result(result))));
+				}
+			}
+
+			return m_Data->m_Buffers[frame];
+		}
+		else {
+			m_Data->m_ResizeBufferFrameIds.clear();
+			vmaDestroyBuffer(m_Data->m_Ctx->Allocator, m_Data->m_Buffer, m_Data->m_Allocation);
+			auto result = _CreateBufferVma((VkBuffer*)&m_Data->m_Buffer, &m_Data->m_Allocation);
+			if (result != VK_SUCCESS)
+			{
+				throw std::runtime_error(cpp::Format("Could create buffer with {} bytes, usage={}, error code {}", m_Size, vk::to_string(Usage), vk::to_string(vk::Result(result))));
+			}
+			return m_Data->m_Buffer;
+		}
+	}
 }
 
 Buffer::DataWrapper::~DataWrapper()

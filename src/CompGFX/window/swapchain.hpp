@@ -8,45 +8,45 @@
 
 namespace egx
 {
-	class SwapchainController
+	class ISwapchainController : public SynchronizationPrimitive
 	{
 	public:
-		SwapchainController() = default;
-		SwapchainController(const DeviceCtx &pCtx, PlatformWindow *pTargetWindow, vk::Format format = vk::Format::eUndefined);
+		ISwapchainController() = default;
+		ISwapchainController(const DeviceCtx& pCtx, PlatformWindow* pTargetWindow, vk::Format format = vk::Format::eUndefined);
 
-		SwapchainController &SetVSync(bool state)
+		ISwapchainController& SetVSync(bool state)
 		{
 			m_Data->m_VSync = state;
 			Invalidate(true);
 			return *this;
 		}
 
-		SwapchainController &SetResizeOnWindowResize(bool resizeOnWindowResize)
+		ISwapchainController& SetResizeOnWindowResize(bool resizeOnWindowResize)
 		{
 			m_Data->m_ResizeOnWindowResize = resizeOnWindowResize;
 			return *this;
 		}
 
-		SwapchainController &SetupImGui()
+		ISwapchainController& SetupImGui()
 		{
 			m_Data->m_SetupImGui = true;
 			return *this;
 		}
 
-		SwapchainController &SetSurfaceFormat(vk::SurfaceFormatKHR surfaceFormat)
+		ISwapchainController& SetSurfaceFormat(vk::SurfaceFormatKHR surfaceFormat)
 		{
 			m_Data->m_SurfaceFormat = surfaceFormat;
 			return *this;
 		}
 
-		SwapchainController &SetSize(int width, int height)
+		ISwapchainController& SetSize(int width, int height)
 		{
 			m_Data->m_Width = width, m_Data->m_Height = height;
 			return *this;
 		}
 
-		const std::vector<vk::SurfaceFormatKHR> &QuerySurfaceFormats() { return m_Data->m_SurfaceFormats; }
-		ImGuiContext *GetContext() { return m_Data->m_Context; }
+		const std::vector<vk::SurfaceFormatKHR>& QuerySurfaceFormats() { return m_Data->m_SurfaceFormats; }
+		ImGuiContext* GetContext() { return m_Data->m_Context; }
 
 		std::vector<vk::Image> GetSwapchainBackBuffers()
 		{
@@ -55,28 +55,21 @@ namespace egx
 
 		void Invalidate(bool blockQueue = true);
 
-		void Resize(int width, int height, bool blockQueue = true)
-		{
-			m_Data->m_Width = width, m_Data->m_Height = height;
-			Invalidate(blockQueue);
-		}
+		void Resize(int width, int height, bool blockQueue = true);
+
+		void AddResizeCallback(ICopyableCallback* callbackObject, void* pUserData) { m_Data->m_ResizeCallbacks.push_back({ callbackObject->_MakeHandle(), pUserData}); }
 
 		int Width() const { return m_Data->m_Width; }
 		int Height() const { return m_Data->m_Height; }
 		std::vector<vk::Image> GetBackBuffers() const { return m_Data->m_Ctx->Device.getSwapchainImagesKHR(m_Data->m_Swapchain); }
 		vk::Format GetFormat() const { return m_Data->m_Format; }
 
-		SwapchainController& AddPresentWaitSemaphore(vk::Semaphore semaphore) {
-			m_Data->m_PresentWait.push_back(semaphore);
-			return *this;
-		}
-
 		/// @brief Acquires next frame from swapchain
-		/// @return ImageReadySemaphore, you must wait on this semaphore before drawing onto swapchain RenderTarget
+		/// @return ImageReadySemaphore, you must wait on this semaphore before drawing onto swapchain IRenderTarget
 		vk::Semaphore Acquire();
 		uint32_t AcquireFullLock();
-		inline void Present(vk::Semaphore semaphore) { Present({semaphore}); }
-		void Present(const std::vector<vk::Semaphore> &presentReadySemaphore);
+		inline void Present(vk::Semaphore semaphore) { Present({ semaphore }); }
+		void Present(const std::vector<vk::Semaphore>& presentReadySemaphore);
 		// Presents using PresentWaitSemaphore
 		void Present() {
 			Present(m_Data->m_PresentWait);
@@ -86,7 +79,7 @@ namespace egx
 		struct DataWrapper
 		{
 			DeviceCtx m_Ctx;
-			PlatformWindow *m_Window;
+			PlatformWindow* m_Window;
 			bool m_VSync = true;
 			bool m_ResizeOnWindowResize = true;
 			bool m_SetupImGui = false;
@@ -105,7 +98,8 @@ namespace egx
 			std::vector<vk::Semaphore> m_PresentWait;
 			vk::SurfaceKHR m_Surface;
 			vk::SwapchainKHR m_Swapchain;
-			ImGuiContext *m_Context = nullptr;
+			ImGuiContext* m_Context = nullptr;
+			std::vector<std::pair<std::unique_ptr<ICopyableCallback>, void*>> m_ResizeCallbacks;
 
 			~DataWrapper();
 		};

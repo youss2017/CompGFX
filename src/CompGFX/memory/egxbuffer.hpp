@@ -46,7 +46,14 @@ namespace egx
 		void Read(size_t offset, size_t size, void* pOutData);
 		void Read(void* pOutData);
 
-		void Resize(size_t size);
+		/// <summary>
+		/// This function issues a resize commands,
+		/// when GetHandle() is called, the current frame's
+		/// buffer is resized.
+		/// </summary>
+		/// <param name="size"></param>
+		/// <returns>Was the buffer resized.</returns>
+		bool Resize(size_t size);
 
 		void CopyTo(vk::CommandBuffer cmd, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size);
 		void CopyTo(vk::CommandBuffer cmd, Buffer& dst);
@@ -63,18 +70,21 @@ namespace egx
 	private:
 		void _Write(const void* pData, size_t offset, size_t size, int resourceId);
 		void _CopyTo(vk::CommandBuffer cmd, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size, int dstResourceId);
+		VkResult _CreateBufferVma(VkBuffer* pOutBuffer, VmaAllocation* pOutAllocation) const;
 
 		struct DataWrapper
 		{
 			DeviceCtx m_Ctx;
-			vk::Buffer m_Buffer;
-			void* m_MappedPtr = nullptr;
+			mutable std::vector<uint32_t> m_ResizeBufferFrameIds;
 
-			std::vector<vk::Buffer> m_Buffers;
+			mutable vk::Buffer m_Buffer;
+			mutable std::vector<vk::Buffer> m_Buffers;
+			
+			void* m_MappedPtr = nullptr;
 			std::vector<void*> m_MappedPtrs;
 
-			VmaAllocation m_Allocation = nullptr;
-			std::vector<VmaAllocation> m_Allocations;
+			mutable VmaAllocation m_Allocation = nullptr;
+			mutable std::vector<VmaAllocation> m_Allocations;
 
 			bool m_IsMapped = false;
 
