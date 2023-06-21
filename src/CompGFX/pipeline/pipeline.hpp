@@ -8,15 +8,13 @@
 namespace egx
 {
 
-	class PipelineType
+	class PipelineType : public IUniqueHandle
 	{
 	public:
 		virtual inline vk::PipelineBindPoint BindPoint() const = 0;
 		virtual inline vk::Pipeline Pipeline() const = 0;
 		virtual inline std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const = 0;
 		virtual inline ShaderReflection Reflection() const = 0;
-		// This function is used to allow polymorphism
-		virtual std::unique_ptr<PipelineType> MakeHandle() const = 0;
 		virtual vk::PipelineLayout Layout() const = 0;
 	};
 
@@ -27,7 +25,7 @@ namespace egx
 		virtual inline std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const { return{}; }
 		virtual inline ShaderReflection Reflection() const { return {}; }
 		// This function is used to allow polymorphism
-		virtual std::unique_ptr<PipelineType> MakeHandle() const { return nullptr; }
+		virtual std::unique_ptr<IUniqueHandle> MakeHandle() const { return nullptr; }
 	};
 
 	class ComputePipeline : public PipelineType
@@ -49,7 +47,7 @@ namespace egx
 		virtual inline vk::PipelineBindPoint BindPoint() const override { return vk::PipelineBindPoint::eCompute; }
 		virtual inline std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const override { return m_Data->m_SetLayouts; }
 		virtual inline ShaderReflection Reflection() const override { return m_Data->m_Reflection; }
-		virtual std::unique_ptr<PipelineType> MakeHandle() const override {
+		virtual std::unique_ptr<IUniqueHandle> MakeHandle() const override {
 			std::unique_ptr<ComputePipeline> handle = std::make_unique<ComputePipeline>();
 			handle->m_Data = m_Data;
 			return handle;
@@ -103,7 +101,7 @@ namespace egx
 		PipelineSpecification& UseDynamicScissor() { DynamicScissor = true; return *this; }
 	};
 
-	class IGraphicsPipeline : public PipelineType, public ICopyableCallback
+	class IGraphicsPipeline : public PipelineType, public ICallback
 	{
 	public:
 		IGraphicsPipeline() = default;
@@ -133,7 +131,7 @@ namespace egx
 			return m_Data->m_Layout;
 		}
 
-		virtual std::unique_ptr<PipelineType> MakeHandle() const override {
+		virtual std::unique_ptr<IUniqueHandle> MakeHandle() const override {
 			std::unique_ptr<IGraphicsPipeline> handle = std::make_unique<IGraphicsPipeline>();
 			handle->m_Data = m_Data;
 			return handle;
@@ -205,8 +203,7 @@ namespace egx
 		IGraphicsPipeline& SetRenderTarget(const IRenderTarget& renderTarget) { m_Data->m_RenderTarget = renderTarget; return *this; }
 		void Invalidate();
 
-		virtual void _CallbackProtocol(void* pUserData) override;
-		virtual std::unique_ptr<ICopyableCallback> _MakeHandle() override;
+		virtual void CallbackProtocol(void* pUserData) override;
 	
 	public:
 		PipelineSpecification Specification;

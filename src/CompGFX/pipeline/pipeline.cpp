@@ -58,7 +58,7 @@ egx::IGraphicsPipeline::IGraphicsPipeline(const DeviceCtx &pCtx, const Shader &v
             continue;
         m_Data->m_BlendStates[id] = DefaultBlendingPreset();
     }
-    rt.GetSwapchain().AddResizeCallback(this, nullptr);
+    rt.GetSwapchain().AddResizeCallback(reinterpret_cast<IUniqueWithCallback*>(this), nullptr);
 }
 
 void egx::IGraphicsPipeline::Invalidate()
@@ -215,16 +215,9 @@ void egx::IGraphicsPipeline::Invalidate()
     m_Data->m_Pipeline = result.value;
 }
 
-void egx::IGraphicsPipeline::_CallbackProtocol(void* pUserData)
+void egx::IGraphicsPipeline::CallbackProtocol(void* pUserData)
 {
     Invalidate();
-}
-
-std::unique_ptr<ICopyableCallback> egx::IGraphicsPipeline::_MakeHandle()
-{
-    unique_ptr<IGraphicsPipeline> self = make_unique<IGraphicsPipeline>();
-    self->m_Data = m_Data;
-    return self;
 }
 
 void egx::IGraphicsPipeline::DataWrapper::Reinvalidate()

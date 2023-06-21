@@ -81,6 +81,7 @@ namespace egx
 		std::vector<PhysicalDeviceAndQueueFamilyInfo> QueryGPGPUDevices();
 		DeviceCtx CreateDevice(const PhysicalDeviceAndQueueFamilyInfo& deviceInformation, uint32_t max_frames_in_flight = 2);
 		vk::Instance Instance() const { return m_Instance; }
+
 	private:
 		VulkanICDState(const std::string& pApplicationName,
 			bool enableValidation,
@@ -100,66 +101,27 @@ namespace egx
 		vk::DebugUtilsMessengerEXT m_DebugMessengerEXT;
 	};
 
-	class FramedSemaphore {
+	class IUniqueHandle {
 	public:
-		// Creates a semaphore for each frame
-		FramedSemaphore(const DeviceCtx& ctx) : m_Device(ctx->Device)
-		{
-			m_Semaphores = std::make_shared<std::vector<vk::Semaphore>>();
-			for (size_t i = 0; i < ctx->FramesInFlight; i++)
-				m_Semaphores->push_back(m_Device.createSemaphore({}));
-			m_pCurrentFrame = &ctx->CurrentFrame;
-		}
+		virtual std::unique_ptr<IUniqueHandle> MakeHandle() const = 0;
+	};
 
+	class ICallback {
+	public:
+		virtual void CallbackProtocol(void* pUserData) = 0;
+	};
+
+	class IUniqueWithCallback : public IUniqueHandle, public ICallback {};
+
+	class ISynchronizationObject {
+	public:
 		/// <summary>
-		/// Wrapper for a single semaphore (does not create semaphore per frame)
-		/// This is useful to allow single semaphore and framed semaphore to be in
-		/// the same container (e.g. vector<FramedSemaphore>)
+		/// Returns the semaphore for the current frame,
+		/// that describes 
 		/// </summary>
-		/// <param name="semaphore"></param>
-		FramedSemaphore(vk::Semaphore semaphore) : m_Semaphore(semaphore) {}
-
-		~FramedSemaphore() {
-			if (m_Semaphores.use_count() == 1) {
-				for (vk::Semaphore semaphore : *m_Semaphores.get()) {
-					m_Device.destroySemaphore(semaphore);
-				}
-			}
-		}
-
-		inline vk::Semaphore Get() const {
-			if (m_Semaphore) return m_Semaphore;
-			return m_Semaphores->at(*m_pCurrentFrame);
-		}
-
-		operator vk::Semaphore() {
-			return Get();
-		}
-
-	protected:
-		vk::Device m_Device;
-		std::shared_ptr<std::vector<vk::Semaphore>> m_Semaphores;
-		vk::Semaphore m_Semaphore = nullptr;
-		uint32_t* m_pCurrentFrame = nullptr;
-	};
-
-	class SynchronizationPrimitive {
-	public:
-		virtual void AddWaitSemaphore(vk::Semaphore semaphore, vk::PipelineStageFlags waitStageFlags) {
-			m_WaitSemaphores.push_back(semaphore), m_WaitStageFlags.push_back(waitStageFlags);
-		}
-		virtual VkSemaphore GetSignalSemaphore() { return {}; }
-
-
-	protected:
-		std::vector<vk::Semaphore> m_WaitSemaphores;
-		std::vector<vk::PipelineStageFlags> m_WaitStageFlags;
-	};
-
-	class ICopyableCallback {
-	public:
-		virtual void _CallbackProtocol(void* pUserData) = 0;
-		virtual std::unique_ptr<ICopyableCallback> _MakeHandle() = 0;
+		/// <returns></returns>
+		virtual std::pair<vk::Semaphore, vk::PipelineStageFlagBits> GetCurrentSignalSemaphore() const { return {}; };
+		virtual bool IsUsingSignalSemaphore() const { return false; }
 	};
 
 }

@@ -26,24 +26,24 @@ egx::IRenderTarget::IRenderTarget(const DeviceCtx& ctx, const ISwapchainControll
 	m_Data->swapchain_info.clearColor = clearColor;
 	m_Data->swapchain_info.stencilLoadOp = stencilLoadOp;
 	m_Data->swapchain_info.stencilStoreOp = stencilStoreOp;
-	_FetchSwapchainBackBuffers();
+	FetchSwapchainBackBuffers();
 	m_Data->m_Swapchain.AddResizeCallback(this, nullptr);
 }
 
-void egx::IRenderTarget::_CallbackProtocol(void* pUserData)
+void egx::IRenderTarget::CallbackProtocol(void* pUserData)
 {
-	_FetchSwapchainBackBuffers();
+	FetchSwapchainBackBuffers();
 	Invalidate();
 }
 
-std::unique_ptr<ICopyableCallback> egx::IRenderTarget::_MakeHandle()
+std::unique_ptr<IUniqueHandle> egx::IRenderTarget::MakeHandle() const
 {
 	unique_ptr<IRenderTarget> rt = make_unique<IRenderTarget>();
 	rt->m_Data = m_Data;
 	return rt;
 }
 
-void egx::IRenderTarget::_FetchSwapchainBackBuffers()
+void egx::IRenderTarget::FetchSwapchainBackBuffers()
 {
 	m_Data->m_Width = m_Data->m_Swapchain.Width(), m_Data->m_Height = m_Data->m_Swapchain.Height();
 	auto backBuffers = m_Data->m_Swapchain.GetBackBuffers();

@@ -102,7 +102,7 @@ void egx::ISwapchainController::Resize(int width, int height, bool blockQueue)
 	m_Data->m_Width = width, m_Data->m_Height = height;
 	Invalidate(blockQueue);
 	for (auto& [callback, pUserData] : m_Data->m_ResizeCallbacks)
-		callback->_CallbackProtocol(pUserData);
+		callback->CallbackProtocol(pUserData);
 }
 
 vk::Semaphore ISwapchainController::Acquire()
@@ -125,6 +125,7 @@ vk::Semaphore ISwapchainController::Acquire()
 		// (TODO) Alert user
 	}
 	m_Data->m_PresentWait[0] = imageReadySemaphore;
+	m_Data->m_CurrentAcquireSemaphore = imageReadySemaphore;
 	return imageReadySemaphore;
 }
 
@@ -134,7 +135,7 @@ uint32_t ISwapchainController::AcquireFullLock()
 	{
 		m_Data->m_AcquireFullLock = m_Data->m_Ctx->Device.createFence({});
 	}
-	const auto imageReadySemaphore = m_Data->m_ImageReady[m_Data->m_Ctx->CurrentFrame];
+	const vk::Semaphore imageReadySemaphore = m_Data->m_ImageReady[m_Data->m_Ctx->CurrentFrame];
 
 	const auto errorCode = m_Data->m_Ctx->Device.acquireNextImageKHR(m_Data->m_Swapchain, UINT64_MAX, imageReadySemaphore, m_Data->m_AcquireFullLock, &m_Data->m_CurrentBackBufferIndex);
 	m_Data->m_Ctx->Device.waitForFences(m_Data->m_AcquireFullLock, true, UINT64_MAX);
@@ -168,6 +169,24 @@ void ISwapchainController::Present(const std::vector<vk::Semaphore> &presentRead
 		LOG(WARNING, "vkQueuePresentKHR(...) = ", vk::to_string(result));
 	}
 	m_Data->m_Ctx->NextFrame();
+	m_Data->m_CurrentAcquireSemaphore = nullptr;
+}
+
+std::unique_ptr<IUniqueHandle> egx::ISwapchainController::MakeHandle() const
+{
+	unique_ptr<ISwapchainController> self = make_unique< ISwapchainController>();
+	self->m_Data = m_Data;
+	return self;
+}
+
+std::pair<vk::Semaphore, vk::PipelineStageFlagBits> egx::ISwapchainController::GetCurrentSignalSemaphore() const
+{
+	return { vk::Semaphore(m_Data->m_CurrentAcquireSemaphore), vk::PipelineStageFlagBits::eColorAttachmentOutput };
+}
+
+bool egx::ISwapchainController::IsUsingSignalSemaphore() const
+{
+	return m_Data->m_CurrentAcquireSemaphore != nullptr;
 }
 
 ISwapchainController::DataWrapper::~DataWrapper()

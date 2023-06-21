@@ -4,9 +4,11 @@
 using namespace glm;
 using namespace std;
 
-inline const int width = 1280;
-inline const int height = 720;
-inline const int block_size = 40;
+inline constexpr int window_width = 1280;
+inline constexpr int window_height = 720;
+inline constexpr int width = 16*100;
+inline constexpr int height = 9*100;
+inline constexpr int block_size = 40;
 inline bool wrap_pixel_mode = true;
 vector<uint32_t>* back_buffer = nullptr;
 vector<uint8_t> depth_buffer = vector<uint8_t>(width * height);
@@ -135,3 +137,8 @@ __forceinline float rand_float() {
 __forceinline float rand_unit_float() {
 	return 2.0f * rand_float() - 1.0f;
 }
+
+
+
+
+

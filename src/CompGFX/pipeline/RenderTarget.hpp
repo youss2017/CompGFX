@@ -8,7 +8,7 @@
 namespace egx
 {
 
-    class IRenderTarget : public ICopyableCallback
+    class IRenderTarget : public IUniqueWithCallback
     {
     public:
         struct Attachment {
@@ -74,11 +74,11 @@ namespace egx
         inline ISwapchainController GetSwapchain() const { return m_Data->m_Swapchain; }
 
     public:
-        virtual void _CallbackProtocol(void* pUserData) override;
-        virtual std::unique_ptr<ICopyableCallback> _MakeHandle() override;
+        virtual std::unique_ptr<IUniqueHandle> MakeHandle() const override;
+        virtual void CallbackProtocol(void* pUserData) override;
 
     private:
-        void _FetchSwapchainBackBuffers();
+        void FetchSwapchainBackBuffers();
 
     private:
         struct DataWrapper

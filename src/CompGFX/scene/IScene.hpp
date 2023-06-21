@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <pipeline/RenderTarget.hpp>
+
 namespace egx {
 
 	namespace DataRegistryTable {

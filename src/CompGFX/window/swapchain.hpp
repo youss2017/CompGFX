@@ -8,7 +8,7 @@
 
 namespace egx
 {
-	class ISwapchainController : public SynchronizationPrimitive
+	class ISwapchainController : public ISynchronizationObject, public IUniqueHandle
 	{
 	public:
 		ISwapchainController() = default;
@@ -54,10 +54,12 @@ namespace egx
 		}
 
 		void Invalidate(bool blockQueue = true);
-
 		void Resize(int width, int height, bool blockQueue = true);
-
-		void AddResizeCallback(ICopyableCallback* callbackObject, void* pUserData) { m_Data->m_ResizeCallbacks.push_back({ callbackObject->_MakeHandle(), pUserData}); }
+		void AddResizeCallback(IUniqueWithCallback* callbackObject, void* pUserData) {
+			m_Data->m_ResizeCallbacks.push_back({ 
+				std::unique_ptr<IUniqueWithCallback>(static_cast<IUniqueWithCallback*>(callbackObject->MakeHandle().release())),
+			pUserData });
+		}
 
 		int Width() const { return m_Data->m_Width; }
 		int Height() const { return m_Data->m_Height; }
@@ -74,6 +76,11 @@ namespace egx
 		void Present() {
 			Present(m_Data->m_PresentWait);
 		}
+
+	public:
+		virtual std::unique_ptr<IUniqueHandle> MakeHandle() const override;
+		virtual std::pair<vk::Semaphore, vk::PipelineStageFlagBits> GetCurrentSignalSemaphore() const override;
+		virtual bool IsUsingSignalSemaphore() const override;
 
 	private:
 		struct DataWrapper
@@ -99,7 +106,9 @@ namespace egx
 			vk::SurfaceKHR m_Surface;
 			vk::SwapchainKHR m_Swapchain;
 			ImGuiContext* m_Context = nullptr;
-			std::vector<std::pair<std::unique_ptr<ICopyableCallback>, void*>> m_ResizeCallbacks;
+			std::vector<std::pair<std::unique_ptr<IUniqueWithCallback>, void*>> m_ResizeCallbacks;
+
+			VkSemaphore m_CurrentAcquireSemaphore = nullptr;
 
 			~DataWrapper();
 		};

@@ -117,16 +117,18 @@ egx::VulkanICDState::VulkanICDState(const std::string& pApplicationName, bool en
 		throw runtime_error("Could not create vulkan ICD instance. Does your device support vulkan.");
 	}
 
-	// Set up the debug messenger
-	vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-	debugCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-	debugCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-	debugCreateInfo.pfnUserCallback = pDebugCallback;
-	debugCreateInfo.pUserData = this;
+	if (enableValidation) {
+		// Set up the debug messenger
+		vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+		debugCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+		debugCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+		debugCreateInfo.pfnUserCallback = pDebugCallback;
+		debugCreateInfo.pUserData = this;
 
-	// Register the debug messenger
-	vk::DispatchLoaderDynamic dldy(m_Instance, vkGetInstanceProcAddr);
-	m_DebugMessengerEXT = m_Instance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, dldy);
+		// Register the debug messenger
+		vk::DispatchLoaderDynamic dldy(m_Instance, vkGetInstanceProcAddr);
+		m_DebugMessengerEXT = m_Instance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, dldy);
+	}
 }
 
 egx::VulkanICDState::~VulkanICDState()

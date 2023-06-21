@@ -112,7 +112,7 @@ BitmapWindow::~BitmapWindow() {
 
 void egx::BitmapWindow::SwapBuffers()
 {
-	m_Swapchain.AcquireFullLock();
+	m_Swapchain.Acquire();
 	m_Scene->Process();
 	m_Swapchain.Present();
 }

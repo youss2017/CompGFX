@@ -9,7 +9,7 @@ ResourceDescriptor::ResourceDescriptor(const DeviceCtx& pCtx, const ResourceDesc
 	m_Data = make_shared<ResourceDescriptor::DataWrapper>();
 	m_Data->m_Ctx = pCtx;
 	m_Data->m_Pool = pool;
-	m_Data->m_Pipeline = pipeline.MakeHandle();
+	m_Data->m_Pipeline = unique_ptr<PipelineType>(static_cast<PipelineType*>(pipeline.MakeHandle().release()));
 	m_Reflection = pipeline.Reflection();
 	auto setLayouts = pipeline.GetDescriptorSetLayouts();
 
@@ -110,11 +110,40 @@ void egx::ResourceDescriptor::Bind(vk::CommandBuffer cmd)
 	cmd.bindDescriptorSets(m_Data->m_Pipeline->BindPoint(), m_Data->m_Pipeline->Layout(), firstSet, setCount, sets.data(), (uint32_t)m_Data->m_Offsets.size(), m_Data->m_Offsets.data());
 }
 
+egx::ResourceDescriptorPool::ResourceDescriptorPool(const DeviceCtx& pCtx) : m_Ctx(pCtx)
+{
+	vk::DescriptorPoolSize poolSizes[] = {
+	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(1000)},
+	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eStorageBufferDynamic).setDescriptorCount(1000)},
+	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eSampledImage).setDescriptorCount(1000)},
+	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eStorageImage).setDescriptorCount(1000)},
+	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eSampler).setDescriptorCount(1000)},
+	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1000)},
+	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBufferDynamic).setDescriptorCount(1000)},
+	};
+	auto pool = pCtx->Device.createDescriptorPool(
+		vk::DescriptorPoolCreateInfo()
+		.setMaxSets(1000)
+		.setPoolSizes(poolSizes)
+		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind));
+
+	m_Pool = make_shared<vk::DescriptorPool>(pool);
+}
+
+egx::ResourceDescriptorPool::~ResourceDescriptorPool()
+{
+	if (m_Pool.use_count() == 1) {
+		m_Ctx->Device.destroyDescriptorPool(*m_Pool);
+	}
+}
+
+
 ResourceDescriptor::DataWrapper::~DataWrapper()
 {
 	LOG(WARNING, "(TODO) Free descriptor set.");
 }
 
+#if 0
 egx::RenderGraph::RenderGraph(const DeviceCtx& ctx)
 {
 	m_Data = make_shared<RenderGraph::DataWrapper>();
@@ -212,30 +241,4 @@ ResourceDescriptor egx::RenderGraph::CreateResourceDescriptor(const PipelineType
 	return {};
 	//return ResourceDescriptor(m_Data->m_Ctx, m_Data->m_DescriptorPool, pipeline.Reflection(), pipeline.GetDescriptorSetLayouts());
 }
-
-egx::ResourceDescriptorPool::ResourceDescriptorPool(const DeviceCtx& pCtx) : m_Ctx(pCtx)
-{
-	vk::DescriptorPoolSize poolSizes[] = {
-	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(1000)},
-	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eStorageBufferDynamic).setDescriptorCount(1000)},
-	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eSampledImage).setDescriptorCount(1000)},
-	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eStorageImage).setDescriptorCount(1000)},
-	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eSampler).setDescriptorCount(1000)},
-	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(1000)},
-	{vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBufferDynamic).setDescriptorCount(1000)},
-	};
-	auto pool = pCtx->Device.createDescriptorPool(
-		vk::DescriptorPoolCreateInfo()
-		.setMaxSets(1000)
-		.setPoolSizes(poolSizes)
-		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind));
-	
-	m_Pool = make_shared<vk::DescriptorPool>(pool);
-}
-
-egx::ResourceDescriptorPool::~ResourceDescriptorPool()
-{
-	if (m_Pool.use_count() == 1) {
-		m_Ctx->Device.destroyDescriptorPool(*m_Pool);
-	}
-}
+#endif

@@ -77,41 +77,38 @@ void Image2D::GetPixel(int mipLevel, int x, int y)
 
 void Image2D::SetImageData(int mipLevel, int xOffset, int yOffset, int width, int height, const void* pData)
 {
-	auto commands = [&](VkCommandBuffer cmd, VkBuffer particle_buffer) {
-		VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-		barrier.srcAccessMask = VK_ACCESS_NONE;
-		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.oldLayout = VkImageLayout(CurrentLayout);
-		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = m_Data->m_Image;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-		barrier.subresourceRange.levelCount = 1;
-		barrier.subresourceRange.baseMipLevel = 0;
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-		VkBufferImageCopy region{};
-		region.imageOffset = { (int32_t)xOffset, (int32_t)yOffset, (int32_t)0 };
-		region.imageExtent = { (uint32_t)width, (uint32_t)height, 1 };
-		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.imageSubresource.baseArrayLayer = 0;
-		region.imageSubresource.layerCount = 1;
-		region.imageSubresource.mipLevel = 0;
-		vkCmdCopyBufferToImage(cmd, particle_buffer, m_Data->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.newLayout = VkImageLayout(CurrentLayout);
-		barrier.srcAccessMask = barrier.dstAccessMask;
-		barrier.dstAccessMask = VK_ACCESS_NONE;
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-	};
-
 	ScopedCommandBuffer cmd(m_Data->m_Ctx);
 	m_Data->m_StageBuffer->Write(pData, 0, (width * m_TexelBytes) * height);
-	commands(*cmd, m_Data->m_StageBuffer->GetHandle());
+
+	VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	barrier.srcAccessMask = VK_ACCESS_NONE;
+	barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.oldLayout = VkImageLayout(CurrentLayout);
+	barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = m_Data->m_Image;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseMipLevel = 0;
+	vkCmdPipelineBarrier(cmd.Get(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+	VkBufferImageCopy region{};
+	region.imageOffset = { (int32_t)xOffset, (int32_t)yOffset, (int32_t)0 };
+	region.imageExtent = { (uint32_t)width, (uint32_t)height, 1 };
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageSubresource.mipLevel = 0;
+	vkCmdCopyBufferToImage(cmd.Get(), m_Data->m_StageBuffer->GetHandle(), m_Data->m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout = VkImageLayout(CurrentLayout);
+	barrier.srcAccessMask = barrier.dstAccessMask;
+	barrier.dstAccessMask = VK_ACCESS_NONE;
+	vkCmdPipelineBarrier(cmd.Get(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void Image2D::SetImageData(int mipLevel, const void* pData)
@@ -288,7 +285,7 @@ void egx::Image2D::SetLayout(vk::ImageLayout layout)
 		.setSrcStageMask(vk::PipelineStageFlagBits2::eAllGraphics).setDstStageMask(vk::PipelineStageFlagBits2::eAllGraphics)
 		.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED).setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 		.setSubresourceRange(vk::ImageSubresourceRange().setAspectMask(GetFormatAspectFlags(Format))
-		.setLevelCount(VK_REMAINING_MIP_LEVELS).setLayerCount(VK_REMAINING_ARRAY_LAYERS))
+			.setLevelCount(VK_REMAINING_MIP_LEVELS).setLayerCount(VK_REMAINING_ARRAY_LAYERS))
 		.setImage(m_Data->m_Image);
 
 	vk::DependencyInfo barrier;

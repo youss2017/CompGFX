@@ -120,6 +120,7 @@ namespace egx
 		vk::DependencyInfo m_Dependency;
 	};
 
+#if 0
 	class RenderGraph
 	{
 	public:
@@ -173,5 +174,6 @@ namespace egx
 	private:
 		std::shared_ptr<DataWrapper> m_Data;
 	};
+#endif
 
 }

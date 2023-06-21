@@ -29,6 +29,7 @@ namespace egx {
 			if (!m_Executed) {
 				RunNow();
 			}
+			m_Ctx->Device.freeCommandBuffers(m_Pool, m_Cmd);
 			m_Ctx->Device.destroyFence(m_Fence);
 			m_Ctx->Device.destroyCommandPool(m_Pool);
 		}
