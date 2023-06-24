@@ -11,8 +11,8 @@
 #include <numbers>
 
 #include "graphics.hpp"
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <scene/font/FontAtlas.hpp>
+#include <stb/stb_image_write.h>
 
 using namespace std;
 using namespace egx;
@@ -146,36 +146,6 @@ int main() {
 	shared_ptr<VulkanICDState> icd = VulkanICDState::Create("Application", false, false, VK_API_VERSION_1_3, nullptr, nullptr);
 	DeviceCtx ctx = icd->CreateDevice(icd->QueryGPGPUDevices()[0]);
 
-
-
-	//vk::Device device = ctx->Device;
-//	while (true) {
-//#if 1
-//		vk::CommandPool pool = device.createCommandPool({});
-//		vk::CommandBuffer cmd = device.allocateCommandBuffers(vk::CommandBufferAllocateInfo(pool, vk::CommandBufferLevel::ePrimary, 1))[0];
-//		device.destroyCommandPool(pool);
-//#else
-//		VkCommandPool pool;
-//		VkCommandBuffer cmd;
-//
-//		VkCommandPoolCreateInfo createInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-//		createInfo.queueFamilyIndex = ctx->GraphicsQueueFamilyIndex;
-//		vkCreateCommandPool(device, &createInfo, nullptr, &pool);
-//		VkCommandBufferAllocateInfo cmdAllocate{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-//		cmdAllocate.commandBufferCount = 1;
-//		cmdAllocate.commandPool = pool;
-//		cmdAllocate.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-//		vkAllocateCommandBuffers(device, &cmdAllocate, &cmd);
-//
-//		vkDestroyCommandPool(device, pool, nullptr);
-//#endif
-//		this_thread::sleep_for(chrono::milliseconds(1));
-//	}
-
-
-
-
-
 	BitmapWindow window(ctx, "Application", width, height);
 	back_buffer = &window.GetBackBuffer();
 	wrap_pixel_mode = false;
@@ -184,7 +154,18 @@ int main() {
 		auto& p = e.mPayload;
 		mouse = { p.mPositionX, p.mPositionY };
 		direction_exponential_time = glm::max(direction_exponential_time - delta_time, 0.15f);
-		});
+	});
+
+	FontAtlas arial;
+	arial.LoadTTFont("C:\\Windows\\Fonts\\Arial.ttf")
+		.SetAtlasForMinimalMemoryUsage()
+		.SetCharacterSet(L"qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890!@#$%^&*()-=_+[]\\{}|;':\",./<>?")
+		.BuildAtlas(32, true, true);
+
+	arial.SavePng("arial_sdf.png");
+
+	arial.BuildAtlas(32, false, true);
+	arial.SavePng("arial.png");
 
 	StopWatch frame_watch;
 	StopWatch print_timer;

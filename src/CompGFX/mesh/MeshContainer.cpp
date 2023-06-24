@@ -99,8 +99,8 @@ MeshContainer& egx::MeshContainer::Load(const std::string& file, IndicesType typ
 				indices[counter++] = scene->mMeshes[meshId]->mFaces[faceId].mIndices[2];
 			}
 		}
-		mesh->m_VerticesCount = mesh->m_Vertices.size();
-		mesh->m_IndicesCount = std::max(mesh->m_Indice16.size(), mesh->m_Indice32.size());
+		mesh->m_VerticesCount = (uint32_t)mesh->m_Vertices.size();
+		mesh->m_IndicesCount = (uint32_t)std::max(mesh->m_Indice16.size(), mesh->m_Indice32.size());
 		m_MeshData.push_back(move(mesh));
 	}
 	importer.FreeScene();
@@ -129,7 +129,7 @@ IndicesType egx::MeshContainer::GetIndicesType() const
 
 uint32_t egx::MeshContainer::MeshCount() const
 {
-	return m_MeshData.size();
+	return (uint32_t)m_MeshData.size();
 }
 
 uint32_t egx::MeshContainer::GetVerticesCount(uint32_t meshId) const

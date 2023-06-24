@@ -18,7 +18,7 @@ __forceinline uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 __forceinline uint32_t rgb(fvec3 color) {
-	return rgb(color.r * 255.0f, color.g * 255.0f, color.b * 255.0f);
+	return rgb(uint8_t(color.r * 255.0f), uint8_t(color.g * 255.0f), uint8_t(color.b * 255.0f));
 }
 
 __forceinline uint32_t rgb(ivec3 color) {

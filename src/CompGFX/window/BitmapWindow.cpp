@@ -43,7 +43,7 @@ namespace egx {
 		}
 
 		virtual void Process(vk::CommandBuffer cmd) override {
-			float resolution[2] = { m_Width, m_Height };
+			float resolution[2] = { (float)m_Width, (float)m_Height };
 
 			auto window = (BitmapWindow*)m_Registry.Read<size_t>(BitmapWindow_Address);
 			m_Image.SetImageData(0, window->GetBackBuffer().data());

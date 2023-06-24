@@ -167,7 +167,7 @@ namespace egx
 
 		vk::PipelineColorBlendAttachmentState SubtractBlendingPreset()
 		{
-			VkPipelineColorBlendAttachmentState state = AdditiveBlendingPreset();
+			VkPipelineColorBlendAttachmentState state = (VkPipelineColorBlendAttachmentState)AdditiveBlendingPreset();
 			state.colorBlendOp = VK_BLEND_OP_SUBTRACT;
 			state.alphaBlendOp = VK_BLEND_OP_SUBTRACT;
 			return state;
@@ -200,6 +200,7 @@ namespace egx
 			state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 			return state;
 		}
+
 		IGraphicsPipeline& SetRenderTarget(const IRenderTarget& renderTarget) { m_Data->m_RenderTarget = renderTarget; return *this; }
 		void Invalidate();
 
