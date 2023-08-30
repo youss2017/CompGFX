@@ -33,6 +33,14 @@ egx::IRenderTarget::IRenderTarget(const DeviceCtx& ctx, const ISwapchainControll
 void egx::IRenderTarget::CallbackProtocol(void* pUserData)
 {
 	FetchSwapchainBackBuffers();
+	// resize all attachments
+	for(auto& [id, attachment] : m_Data->m_ColorAttachments) {
+		if(id < 0) continue;
+		attachment.Image.RecreateImageWithDifferentResolution(Width(), Height());
+	}
+	if(m_Data->m_DepthAttachment) {
+		m_Data->m_DepthAttachment->Image.RecreateImageWithDifferentResolution(Width(), Height());
+	}
 	Invalidate();
 }
 
@@ -64,6 +72,9 @@ IRenderTarget& egx::IRenderTarget::CreateColorAttachment(int32_t id, vk::Format 
 	vk::ClearValue clearColor, vk::AttachmentLoadOp stencilLoadOp,
 	vk::AttachmentStoreOp stencilStoreOp)
 {
+	if(id < 0) {
+		throw runtime_error(cpp::Format("Cannot create color attachments with id < 0; id = {}", id));
+	}
 	if (m_Data->m_ColorAttachments.contains(id))
 	{
 		throw runtime_error(cpp::Format("Color Attachment already exists with id {}", id));

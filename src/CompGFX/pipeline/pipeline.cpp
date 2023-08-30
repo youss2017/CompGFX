@@ -41,7 +41,6 @@ egx::ComputePipeline::DataWrapper::~DataWrapper()
 }
 
 egx::IGraphicsPipeline::IGraphicsPipeline(const DeviceCtx &pCtx, const Shader &vertex, const Shader &fragment, const IRenderTarget &rt, const PipelineSpecification &specification)
-    : Specification(specification)
 {
     m_Data = make_shared<IGraphicsPipeline::DataWrapper>();
     m_Data->m_Ctx = pCtx;
@@ -49,6 +48,7 @@ egx::IGraphicsPipeline::IGraphicsPipeline(const DeviceCtx &pCtx, const Shader &v
     m_Data->m_Fragment = fragment;
     m_Data->m_Reflection = ShaderReflection::Combine({vertex.Reflection(), fragment.Reflection()});
     m_Data->m_RenderTarget = rt;
+    m_Data->m_Specification = specification;
     if (rt.SwapchainFlag()) {
         m_Data->m_BlendStates[-1] = DefaultBlendingPreset();
     }
@@ -64,7 +64,7 @@ egx::IGraphicsPipeline::IGraphicsPipeline(const DeviceCtx &pCtx, const Shader &v
 void egx::IGraphicsPipeline::Invalidate()
 {
     m_Data->Reinvalidate();
-
+    auto Specification = m_Data->m_Specification;
     // Create descriptor set layout
     m_Data->m_SetLayouts = Shader::CreateDescriptorSetLayouts({ m_Data->m_Vertex,m_Data->m_Fragment});
     auto scalarSetLayouts = Shader::GetDescriptorSetLayoutsAsScalar(m_Data->m_SetLayouts);

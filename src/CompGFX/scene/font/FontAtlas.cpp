@@ -3,6 +3,7 @@
 #include <execution>
 #include <Utility/CppUtility.hpp>
 #include <stb/stb_image_write.h>
+#include <immintrin.h>
 using namespace std;
 using namespace egx;
 
@@ -17,15 +18,6 @@ FontAtlas& egx::FontAtlas::LoadTTFont(const std::string& file)
 	return *this;
 }
 
-FontAtlas& egx::FontAtlas::LoadTTFont(const void* pFileMemoryStream, size_t length)
-{
-	m_StbFontInfoStructure = {};
-	if (!stbtt_InitFont(&m_StbFontInfoStructure, (const uint8_t*)pFileMemoryStream, 0)) {
-		throw runtime_error(cpp::Format("Could not load font."));
-	}
-	return *this;
-}
-
 void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 {
 	vector<tuple<wchar_t, int, int, vector<uint8_t>>> unordered_bitmaps;
@@ -34,7 +26,7 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 
 	mutex m;
 	auto gen_codepoint = [&](wchar_t ch) {
-		int w, h;
+		uint32_t w, h;
 		vector<uint8_t> character_bitmap;
 		if (sdf)
 			character_bitmap = _GenerateSdfCodepoint(fontSize, ch, &w, &h);
@@ -102,7 +94,7 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 			// loop through all character that are behind this character
 			vector<CharacterInfo> overlapping_characters;
 			overlapping_characters.reserve(5);
-			for (int i = character_map.size() - 1 - line_character_count; i >= 0; i--) {
+			for (size_t i = character_map.size() - line_character_count - 1; i >= 0; i--) {
 				const auto& previous_character = character_map[i];
 				int x_min = cinfo.start_x;
 				int x_max = x_min + cinfo.width;
@@ -163,38 +155,55 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 	AtlasHeight = font_map_height;
 }
 
-std::vector<uint8_t> egx::FontAtlas::_GenerateCodepoint(float fontSize, wchar_t ch, int* pWidth, int* pHeight)
+std::vector<uint8_t> egx::FontAtlas::_GenerateCodepoint(float fontSize, wchar_t ch, uint32_t* pWidth, uint32_t* pHeight)
 {
 	int w = 0, h = 0;
 	auto bmp_raw = stbtt_GetCodepointBitmap(&m_StbFontInfoStructure, 0, stbtt_ScaleForPixelHeight(&m_StbFontInfoStructure, fontSize), ch, &w, &h, 0, 0);
 	vector<uint8_t> bmp(w * h);
 	::memcpy(bmp.data(), bmp_raw, static_cast<size_t>(w) * h);
 	::free(bmp_raw);
-	*pWidth = w, *pHeight = h;
+	*pWidth = w, * pHeight = h;
 	return bmp;
 }
 
-std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar_t ch, int* pWidth, int* pHeight, int targetResolution)
+std::vector<uint8_t> egx::FontAtlas::_GenerateCodepointAligned(float fontSize, wchar_t ch, uint32_t* pWidth, uint32_t* pHeight, uint8_t alignment)
+{
+	int w = 0, h = 0;
+	auto bmp_raw = stbtt_GetCodepointBitmap(&m_StbFontInfoStructure, 0, stbtt_ScaleForPixelHeight(&m_StbFontInfoStructure, fontSize), ch, &w, &h, 0, 0);
+	vector<uint8_t> bmp((w + alignment) * h);
+	for (int y = 0; y < h; y++) {
+		memcpy(&bmp[y * (w + alignment)], &bmp_raw[y * w], w);
+		//for (int x = 0; x < w; x++) {
+		//bmp[y * (w + alignment) + x] = bmp_raw[y * w + x];
+		//}
+	}
+	::free(bmp_raw);
+	*pWidth = w, * pHeight = h;
+	return bmp;
+}
+
+std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar_t ch, uint32_t* pWidth, uint32_t* pHeight, uint32_t targetResolution)
 {
 	// develop sdf
 	int upscale_resolution;
 	if (targetResolution == 0) {
 		upscale_resolution = std::min(int(fontSize) << 3, 2048);
 		if (fontSize > upscale_resolution) {
-			upscale_resolution = fontSize;
+			upscale_resolution = int(fontSize);
 		}
 	}
 	else {
 		upscale_resolution = targetResolution;
 	}
-	const int spread = upscale_resolution / 2;
-	int up_w, up_h;
-	auto upscale_bitmap = _GenerateCodepoint(upscale_resolution, ch, &up_w, &up_h);
+	const uint32_t spread = upscale_resolution / 2;
+	uint32_t up_w, up_h;
+
+	auto upscale_bitmap = _GenerateCodepoint(float(upscale_resolution), ch, &up_w, &up_h);
 
 	float widthScale = up_w / (float)upscale_resolution;
 	float heightScale = up_h / (float)upscale_resolution;
-	int characterWidth = fontSize * widthScale;
-	int characterHeight = fontSize * heightScale;
+	int characterWidth = int(fontSize * widthScale);
+	int characterHeight = int(fontSize * heightScale);
 	float bitmapScaleX = up_w / (float)characterWidth;
 	float bitmapScaleY = up_h / (float)characterHeight;
 	vector<uint8_t> sdf_bitmap(characterWidth * characterHeight);
@@ -202,44 +211,69 @@ std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar
 	for (int y = 0; y < characterHeight; y++) {
 		for (int x = 0; x < characterWidth; x++) {
 			// map from [0, characterWidth] (font size scale) to [0, up_w]
-			int pixelX = (x / (float)characterWidth) * up_w;
-			int pixelY = (y / (float)characterHeight) * up_h;
+			uint32_t pixelX = uint32_t((x / (float)characterWidth) * up_w);
+			uint32_t pixelY = uint32_t((y / (float)characterHeight) * up_h);
 			///////////////////// find nearest pixel
-			// (TODO): This is perfect for SIMD optimization or find different approach
 
 			auto read_pixel = [](const vector<uint8_t>& bitmap, int x, int y, int width, int height) -> bool {
 				if (x < 0 || x >= width || y < 0 || y >= height) return false;
 				uint8_t value = bitmap[y * width + x];
-				return value & 0xFF;
+				return value == 0xFF;
 			};
+			uint32_t minX = max(pixelX - spread, 0u);
+			uint32_t maxX = min(pixelX + spread, up_w);
+			uint32_t minY = max(pixelY - spread, 0u);
+			uint32_t maxY = min(pixelY + spread, up_h);
+			uint32_t minDistance = spread * spread;
 
-			int minX = pixelX - spread;
-			int maxX = pixelX + spread;
-			int minY = pixelY - spread;
-			int maxY = pixelY + spread;
-			float minDistance = spread * spread;
-
-			for (int yy = minY; yy < maxY; yy++) {
-				for (int xx = minX; xx < maxX; xx++) {
-					bool pixelState = read_pixel(upscale_bitmap, xx, yy, up_w, up_h);
-					if (pixelState) {
-						float dxSquared = (xx - pixelX) * (xx - pixelX);
-						float dySquared = (yy - pixelY) * (yy - pixelY);
-						float distanceSquared = dxSquared + dySquared;
-						minDistance = std::min(minDistance, distanceSquared);
+			if (m_OptimalQuaility) {
+				for (uint32_t yy = minY; yy < maxY; yy++) {
+					for (uint32_t xx = minX; xx < maxX; xx++) {
+						bool pixelState = upscale_bitmap[yy * up_w + xx] == 0xff;
+						if (pixelState) {
+							uint32_t dxSquared = (xx - pixelX) * (xx - pixelX);
+							uint32_t dySquared = (yy - pixelY) * (yy - pixelY);
+							uint32_t distanceSquared = dxSquared + dySquared;
+							minDistance = std::min(minDistance, distanceSquared);
+							if (xx >= pixelX) {
+								break;
+							}
+						}
 					}
 				}
 			}
-
-			minDistance = sqrtf(minDistance);
+			else {
+				for (uint32_t  yy = minY; yy < maxY; yy++) {
+					bool pixelState = upscale_bitmap[yy * up_w + pixelX];
+					if (pixelState) {
+						uint32_t dxSquared = 0;
+						uint32_t dySquared = (yy - pixelY) * (yy - pixelY);
+						uint32_t distanceSquared = dxSquared + dySquared;
+						minDistance = std::min(minDistance, distanceSquared);
+					}
+				}
+				for (uint32_t  xx = minX; xx < maxX; xx++) {
+					bool pixelState = upscale_bitmap[pixelY * up_w + xx];
+					if (pixelState) {
+						uint32_t dxSquared = (xx - pixelX) * (xx - pixelX);
+						uint32_t dySquared = 0;
+						uint32_t distanceSquared = dxSquared + dySquared;
+						minDistance = std::min(minDistance, distanceSquared);
+						if (xx >= pixelX) {
+							break;
+						}
+					}
+				}
+			}
+			float minimumDistance = sqrtf((float)minDistance);
 			bool state = read_pixel(upscale_bitmap, pixelX, pixelY, up_w, up_h);
-			float output = (minDistance - 0.5f) / (spread - 0.5f);
+			float output = (minimumDistance - 0.5f) / (spread - 0.5f);
 			output *= state == 0 ? -1 : 1;
 			// Map from [-1, 1] to [1, 1]
 			output = (output + 1.0f) * 0.5f;
 
 			// store pixel
-			sdf_bitmap[y * characterWidth + x] = output * 255.0f;
+			sdf_bitmap[y * characterWidth + x] = uint8_t(output * 255.0f);
 		}
 	}
 	*pWidth = characterWidth;

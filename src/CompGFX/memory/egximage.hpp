@@ -13,8 +13,10 @@ namespace egx
 		Image2D() = default;
 		Image2D(const DeviceCtx& pCtx, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout, bool streaming);
 		Image2D(const DeviceCtx &pCtx, glm::ivec2 resolution, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout, bool streaming) :
-			Image2D(pCtx, resolution.x, resolution.y, format, mipLevels, usage, initalLayout, streaming)
-		{}
+			Image2D(pCtx, resolution.x, resolution.y, format, mipLevels, usage, initalLayout, streaming) {}
+
+		Image2D(const Image2D&) = default;
+
 		static Image2D CreateFromHandle(const DeviceCtx &pCtx, vk::Image handle, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout);
 
 		void SetPixel(int mipLevel, int x, int y, const void *pixelData);
@@ -28,6 +30,8 @@ namespace egx
 
 		void GenerateMipmaps();
 		void SetLayout(vk::ImageLayout layout);
+
+		void RecreateImageWithDifferentResolution(int width, int height);
 
 		vk::ImageView CreateView(int id, int mipLevel = 0, int mipCount = VK_REMAINING_MIP_LEVELS, vk::ComponentMapping RGBASwizzle = {});
 		vk::ImageView GetView(int id) const;
@@ -56,6 +60,8 @@ namespace egx
 			VmaAllocation m_Allocation = nullptr;
 			ImTextureID m_TextureID = nullptr;
 
+			void Reset();
+
 			DataWrapper() = default;
 
 			DataWrapper(DataWrapper &) = delete;
@@ -65,6 +71,7 @@ namespace egx
 		};
 
 		std::shared_ptr<DataWrapper> m_Data;
+		int m_RequestedMipLevels;
 		int m_MipLevels;
 		int m_TexelBytes;
 	};

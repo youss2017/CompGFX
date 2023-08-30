@@ -104,7 +104,7 @@ namespace egx
                Shader::Type type, BindingAttributes attributes = BindingAttributes::Default,
                PreprocessDefines defines = {}, bool compileDebug = false);
 
-        void GetSourceCode(std::string &out) const;
+        //void GetSourceCode(std::string &out) const;
         vk::ShaderModule GetModule() const { return m_Data->m_Module; }
 
         template <typename T>
@@ -158,6 +158,8 @@ namespace egx
             return scalar;
         }
 
+        static void SetGlobalCacheDirectory(const std::string& directory);
+
     private:
         static std::string PreprocessIncludeFiles(std::string_view CurrentFilePath,
                                                   std::string_view SourceDirectory, std::string_view code,
@@ -169,6 +171,9 @@ namespace egx
         static std::vector<uint32_t> CompileGlslToBytecode(const std::string &sourceCode,
                                                            Type type, const PreprocessDefines &defines,
                                                            bool compileDebug, const std::string &fileName);
+
+        std::optional<std::vector<uint32_t>> _LoadFromCache(const std::string& filePath);
+        void _CacheCompiledShader(const std::string& filePath, const std::vector<uint32_t>& bytecode, const std::vector<std::pair<std::string, size_t>>& includeLastWriteTime);
 
         struct DataWrapper
         {
@@ -192,6 +197,7 @@ namespace egx
         uint32_t m_SpecializationOffset = 0;
         std::vector<vk::SpecializationMapEntry> m_SpecializationConstants;
         std::vector<uint8_t> m_SpecializationData;
+        static std::string m_CachingDirectory;
     };
 
     class IShaderCache

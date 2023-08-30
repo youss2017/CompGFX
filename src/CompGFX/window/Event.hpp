@@ -1,5 +1,4 @@
 #pragma once
-
 typedef unsigned int EventFlagBits;
 typedef unsigned int EventDetailBits;
 
@@ -49,9 +48,9 @@ enum EventDetailFlags {
 					int mHeight;
 				};
 			};
-			int NonASCIKey;
-			char KeyLowerCase;
-			char KeyUpperCase;
+			uint16_t NonASCIKey;
+			uint8_t KeyLowerCase;
+			uint8_t KeyUpperCase;
 		} mPayload;
 	};
 

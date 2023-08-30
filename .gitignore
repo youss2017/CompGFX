@@ -2,6 +2,10 @@
 *.bmp
 *.png
 *.stl
+*.bin
+*.log
+src/Sandbox/shaders/
+src/Sandbox/spirv/
 .vscode
 submodules/imgui
 submodules/Utility

@@ -34,6 +34,12 @@ namespace egx {
 			m_Ctx->Device.destroyCommandPool(m_Pool);
 		}
 
+		void Reset() {
+			m_Ctx->Device.resetCommandPool(m_Pool);
+			m_Ctx->Device.resetFences(m_Fence);
+			m_Cmd.begin(vk::CommandBufferBeginInfo());
+		}
+
 		vk::CommandBuffer* operator->() { return &m_Cmd; }
 		vk::CommandBuffer& operator*() { return m_Cmd; }
 

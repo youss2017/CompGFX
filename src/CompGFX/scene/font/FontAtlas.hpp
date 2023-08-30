@@ -18,7 +18,6 @@ namespace egx {
 
 	public:
 		FontAtlas& LoadTTFont(const std::string& file);
-		FontAtlas& LoadTTFont(const void* pFileMemoryStream, size_t length);
 		/// <summary>
 		/// Creates bitmap using ideal resolution
 		/// ex: 32, 64, 128, 256 ...
@@ -34,6 +33,26 @@ namespace egx {
 		/// <returns></returns>
 		FontAtlas& SetAtlasForMinimalMemoryUsage() {
 			m_OptimalMemoryAccess = false;
+			return *this;
+		}
+
+		/// <summary>
+		/// A more accurate SDF at the cost
+		/// of higher computation time.
+		/// </summary>
+		/// <returns></returns>
+		FontAtlas& SetOptimalQuaility() {
+			m_OptimalQuaility = true;
+			return *this;
+		}
+
+		/// <summary>
+		/// A significat reduction in atlas (for SDF) generation
+		/// at the cost of visual artifacts.
+		/// </summary>
+		/// <returns></returns>
+		FontAtlas& SetOptimalSpeed() {
+			m_OptimalQuaility = false;
 			return *this;
 		}
 
@@ -53,13 +72,15 @@ namespace egx {
 		uint32_t AtlasHeight = 0;
 
 	private:
-		std::vector<uint8_t> _GenerateCodepoint(float fontSize, wchar_t ch, int* pWidth, int* pHeight);
-		std::vector<uint8_t> _GenerateSdfCodepoint(float fontSize, wchar_t ch, int* pWidth, int* pHeight, int targetResolution = 0);
+		std::vector<uint8_t> _GenerateCodepoint(float fontSize, wchar_t ch, uint32_t* pWidth, uint32_t* pHeight);
+		std::vector<uint8_t> _GenerateCodepointAligned(float fontSize, wchar_t ch, uint32_t* pWidth, uint32_t* pHeight, uint8_t alignment);
+		std::vector<uint8_t> _GenerateSdfCodepoint(float fontSize, wchar_t ch, uint32_t* pWidth, uint32_t* pHeight, uint32_t targetResolution = 0);
 	private:
 		std::wstring m_CharacterSet;
 		std::optional<std::vector<uint8_t>> m_TTFile;
 		stbtt_fontinfo m_StbFontInfoStructure;
 		bool m_OptimalMemoryAccess = true;
+		bool m_OptimalQuaility = true;
 	};
 
 }

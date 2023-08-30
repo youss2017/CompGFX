@@ -202,14 +202,11 @@ namespace egx
 		}
 
 		IGraphicsPipeline& SetRenderTarget(const IRenderTarget& renderTarget) { m_Data->m_RenderTarget = renderTarget; return *this; }
+		PipelineSpecification& GetSpecification() { return m_Data->m_Specification; }
 		void Invalidate();
 
 		virtual void CallbackProtocol(void* pUserData) override;
 	
-	public:
-		PipelineSpecification Specification;
-
-
 	private:
 		struct DataWrapper
 		{
@@ -221,6 +218,7 @@ namespace egx
 			std::vector<vk::Pipeline> m_SwapchainPipelines;
 			std::map<uint32_t, vk::PipelineColorBlendAttachmentState> m_BlendStates;
 			IRenderTarget m_RenderTarget;
+			PipelineSpecification m_Specification;
 			Shader m_Vertex;
 			Shader m_Fragment;
 

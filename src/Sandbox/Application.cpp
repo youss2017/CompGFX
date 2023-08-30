@@ -146,51 +146,38 @@ int main() {
 	shared_ptr<VulkanICDState> icd = VulkanICDState::Create("Application", false, false, VK_API_VERSION_1_3, nullptr, nullptr);
 	DeviceCtx ctx = icd->CreateDevice(icd->QueryGPGPUDevices()[0]);
 
-	BitmapWindow window(ctx, "Application", width, height);
-	back_buffer = &window.GetBackBuffer();
+	PlatformWindow window("Application", width, height);
+	ISwapchainController swapchain(ctx, &window);
+	swapchain.SetResizeOnWindowResize(true).SetupImGui().SetVSync(true).Invalidate();
+	//back_buffer = &window.GetBackBuffer();
 	wrap_pixel_mode = false;
+
+	Shader::SetGlobalCacheDirectory("./spirv");
 
 	window.RegisterCallback(EVENT_FLAGS_MOUSE_MOVE, [](const Event& e, void*) {
 		auto& p = e.mPayload;
 		mouse = { p.mPositionX, p.mPositionY };
 		direction_exponential_time = glm::max(direction_exponential_time - delta_time, 0.15f);
-	});
+		});
 
 	FontAtlas arial;
 	arial.LoadTTFont("C:\\Windows\\Fonts\\Arial.ttf")
 		.SetAtlasForMinimalMemoryUsage()
 		.SetCharacterSet(L"qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890!@#$%^&*()-=_+[]\\{}|;':\",./<>?")
-		.BuildAtlas(32, true, true);
+		.SetOptimalQuaility()
+		.BuildAtlas(48, true, true);
 
-	arial.SavePng("arial_sdf.png");
-
-	arial.BuildAtlas(32, false, true);
-	arial.SavePng("arial.png");
 
 	StopWatch frame_watch;
-	StopWatch print_timer;
 	while (!window.ShouldClose()) {
 		frame_watch.Reset();
-		BitmapWindow::Poll();
-		// poll user input
-		up_key = window.GetKeyState(GLFW_KEY_UP);
-		down_key = window.GetKeyState(GLFW_KEY_DOWN);
-		left_key = window.GetKeyState(GLFW_KEY_LEFT);
-		right_key = window.GetKeyState(GLFW_KEY_RIGHT);
-		space_key = window.GetKeyState(GLFW_KEY_SPACE);
-		a_key = window.GetKeyState(GLFW_KEY_A);
-		d_key = window.GetKeyState(GLFW_KEY_D);
-		w_key = window.GetKeyState(GLFW_KEY_W);
-		s_key = window.GetKeyState(GLFW_KEY_S);
-		render();
-		window.SwapBuffers();
+		PlatformWindow::Poll();
+		swapchain.Acquire();
+
+		swapchain.Present();
 		frame_watch.Stop();
 		fps = frame_watch.RatePerSecond();
 		delta_time = frame_watch.TimeAsSeconds();
-		if (print_timer.TriggerSeconds(0.250)) {
-			cout << cpp::Format("\33[2K\rBandwidth usage for frame copy is {:.5lf} Megabytes/Second --- {:.5lf} fps dt: {:.5lf}", ((1.0 / delta_time) * (width * height * 4.0)) / (1024.0 * 1024.0),
-				1.0 / delta_time, delta_time);
-		}
 	}
 
 	ctx->Device.waitIdle();

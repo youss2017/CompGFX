@@ -5,9 +5,11 @@
 
 using namespace egx;
 using namespace std;
+using namespace glm;
 
 Image2D::Image2D(const DeviceCtx& pCtx, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initialLayout, bool streaming)
-	: Width(width), Height(height), Format(format), StreamingMode(streaming), Usage(usage), CurrentLayout(vk::ImageLayout::eUndefined)
+	: Width(width), Height(height), Format(format), StreamingMode(streaming), Usage(usage), CurrentLayout(vk::ImageLayout::eUndefined),
+	m_RequestedMipLevels(mipLevels)
 {
 	int maxMipLevels = (int)std::min(std::log2(width), std::log2(height));
 	if (mipLevels <= 0) {
@@ -50,7 +52,36 @@ Image2D::Image2D(const DeviceCtx& pCtx, int width, int height, vk::Format format
 	SetLayout(initialLayout);
 }
 
-Image2D egx::Image2D::CreateFromHandle(const DeviceCtx& pCtx, vk::Image handle, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout)
+#if 0
+egx::Image2D::Image2D(Image2D &&move) noexcept
+{
+	Width = exchange(move.Width, 0);
+	Height = exchange(move.Height, 0);
+	Format = exchange(move.Format, vk::Format::eUndefined);
+	StreamingMode = exchange(move.StreamingMode, false);
+	Usage = exchange(move.Usage, 0);
+	CurrentLayout = exchange(move.CurrentLayout, vk::ImageLayout::eUndefined);
+	m_Data = exchange(move.m_Data, nullptr);
+	m_MipLevels = exchange(move.m_MipLevels, 0);
+	m_TexelBytes = exchange(move.m_TexelBytes, 0);
+}
+
+Image2D &egx::Image2D::operator=(Image2D &&move) noexcept
+{
+	Width = exchange(move.Width, 0);
+	Height = exchange(move.Height, 0);
+	Format = exchange(move.Format, vk::Format::eUndefined);
+	StreamingMode = exchange(move.StreamingMode, false);
+	Usage = exchange(move.Usage, 0);
+	CurrentLayout = exchange(move.CurrentLayout, vk::ImageLayout::eUndefined);
+	m_Data = exchange(move.m_Data, nullptr);
+	m_MipLevels = exchange(move.m_MipLevels, 0);
+	m_TexelBytes = exchange(move.m_TexelBytes, 0);
+	return *this;
+}
+#endif
+
+Image2D egx::Image2D::CreateFromHandle(const DeviceCtx &pCtx, vk::Image handle, int width, int height, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout)
 {
 	Image2D image;
 	image.Width = width;
@@ -329,13 +360,27 @@ ImTextureID Image2D::GetImGuiTextureID(vk::Sampler sampler, uint32_t viewId)
 }
 
 Image2D::DataWrapper::~DataWrapper() {
+	Reset();
+}
+
+void egx::Image2D::DataWrapper::Reset()
+{
 	if (m_TextureID)
 		ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)m_TextureID);
 
 	for (auto& [id, view] : m_Views) {
 		m_Ctx->Device.destroyImageView(view);
 	}
+	m_Views.clear();
 	if (m_Ctx && m_Allocation) {
 		vmaDestroyImage(m_Ctx->Allocator, m_Image, m_Allocation);
+		m_Allocation = nullptr;
 	}
+}
+
+void egx::Image2D::RecreateImageWithDifferentResolution(int width, int height)
+{
+	Image2D resized_image(m_Data->m_Ctx, ivec2{width, height}, Format, m_RequestedMipLevels, Usage, vk::ImageLayout::eUndefined, StreamingMode);
+	resized_image.SetLayout(CurrentLayout);
+	m_Data = resized_image.m_Data;
 }
