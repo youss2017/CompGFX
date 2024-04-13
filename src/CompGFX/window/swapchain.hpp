@@ -77,6 +77,8 @@ namespace egx
 			Present(m_Data->m_PresentWait);
 		}
 
+		inline bool IsValid() const { return m_Data.use_count() > 0; }
+
 	public:
 		virtual std::unique_ptr<IUniqueHandle> MakeHandle() const override;
 		virtual std::pair<vk::Semaphore, vk::PipelineStageFlagBits> GetCurrentSignalSemaphore() const override;

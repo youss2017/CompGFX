@@ -42,6 +42,8 @@ namespace egx
 		vk::Image GetHandle() const;
 		ImTextureID GetImGuiTextureID(vk::Sampler sampler, uint32_t viewId = 0);
 
+		static Image2D CreateFromFile(const DeviceCtx& pCtx, const std::string& filePath, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout, bool streaming);
+
 	public:
 		int Width;
 		int Height;

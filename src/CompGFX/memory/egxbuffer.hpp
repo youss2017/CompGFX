@@ -58,10 +58,17 @@ namespace egx
 		void CopyTo(vk::CommandBuffer cmd, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size);
 		void CopyTo(vk::CommandBuffer cmd, Buffer& dst);
 
-		vk::Buffer GetHandle(int specificFrameIndex = -1) const;
+		vk::Buffer GetHandle(int specificFrameIndex = -1, bool* pOutResizeFlag = nullptr) const;
 
 		bool IsMapped() const { return m_Data->m_IsMapped; }
 		size_t Size() const { return m_Size; }
+
+		template<typename T>
+		static Buffer CreateFromVector(const DeviceCtx& device, const std::vector<T>& data, MemoryPreset memoryPreset, HostMemoryAccess memoryAccess, vk::BufferUsageFlags usage, bool isFrameResource) {
+			Buffer result(device, data.size() * sizeof(T), memoryPreset, memoryAccess, usage, isFrameResource);
+			result.WriteAll(data.data());
+			return result;
+		}
 
 	public:
 		vk::BufferUsageFlags Usage;

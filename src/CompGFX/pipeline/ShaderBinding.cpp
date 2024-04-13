@@ -1,4 +1,4 @@
-#include "RenderGraph.hpp"
+#include "ShaderBinding.hpp"
 
 using namespace std;
 using namespace egx;
@@ -9,6 +9,7 @@ ResourceDescriptor::ResourceDescriptor(const DeviceCtx& pCtx, const ResourceDesc
 	m_Data = make_shared<ResourceDescriptor::DataWrapper>();
 	m_Data->m_Ctx = pCtx;
 	m_Data->m_Pool = pool;
+	m_Data->m_vkPool = pool.GetPool();
 	m_Data->m_Pipeline = unique_ptr<PipelineType>(static_cast<PipelineType*>(pipeline.MakeHandle().release()));
 	m_Reflection = pipeline.Reflection();
 	auto setLayouts = pipeline.GetDescriptorSetLayouts();
@@ -24,6 +25,50 @@ ResourceDescriptor::ResourceDescriptor(const DeviceCtx& pCtx, const ResourceDesc
 
 	vk::DescriptorSetAllocateInfo allocateInfo;
 	allocateInfo.descriptorPool = pool.GetPool();
+	allocateInfo.descriptorSetCount = (uint32_t)layouts.size();
+	allocateInfo.pSetLayouts = layouts.data();
+	auto sets = pCtx->Device.allocateDescriptorSets(allocateInfo);
+	// Map vk::DescriptorSet with setId in std::map<uint32_t(setId), vk::DescriptorSet>
+	for (uint32_t frame = 0; frame < pCtx->FramesInFlight; frame++) {
+		int i = 0;
+		for (auto& [setId, _] : setLayouts)
+		{
+			m_Data->m_Sets[frame][setId] = sets[i++];
+		}
+	}
+
+	for (auto& [setId, bindings] : m_Reflection.SetToManyBindings)
+	{
+		for (auto& [bindingId, info] : bindings)
+		{
+			if (info.IsDynamic && info.IsBuffer)
+			{
+				m_Data->m_Offsets.resize(m_Data->m_Offsets.size() + 1);
+			}
+		}
+	}
+}
+
+egx::ResourceDescriptor::ResourceDescriptor(const DeviceCtx& pCtx, vk::DescriptorPool pool, const PipelineType& pipeline)
+{
+	m_Data = make_shared<ResourceDescriptor::DataWrapper>();
+	m_Data->m_Ctx = pCtx;
+	m_Data->m_vkPool = pool;
+	m_Data->m_Pipeline = unique_ptr<PipelineType>(static_cast<PipelineType*>(pipeline.MakeHandle().release()));
+	m_Reflection = pipeline.Reflection();
+	auto setLayouts = pipeline.GetDescriptorSetLayouts();
+
+	if (setLayouts.size() == 0)
+	{
+		throw std::runtime_error("Cannot create a resource descriptor with 0 descriptor set layouts.");
+	}
+
+	vector<vk::DescriptorSetLayout> layouts;
+	for (auto& [_, setLayout] : setLayouts)
+		layouts.push_back(setLayout);
+
+	vk::DescriptorSetAllocateInfo allocateInfo;
+	allocateInfo.descriptorPool = pool;
 	allocateInfo.descriptorSetCount = (uint32_t)layouts.size();
 	allocateInfo.pSetLayouts = layouts.data();
 	auto sets = pCtx->Device.allocateDescriptorSets(allocateInfo);
@@ -143,7 +188,7 @@ ResourceDescriptor::DataWrapper::~DataWrapper()
 	LOG(WARNING, "(TODO) Free descriptor set.");
 }
 
-#if 0
+#if 1
 egx::RenderGraph::RenderGraph(const DeviceCtx& ctx)
 {
 	m_Data = make_shared<RenderGraph::DataWrapper>();
@@ -208,7 +253,8 @@ vk::Fence egx::RenderGraph::RunAsync()
 	for (auto& stage : m_Data->m_Stages)
 	{
 		if (stage.Pipeline) {
-			cmd.bindPipeline(stage.Pipeline->BindPoint(), stage.Pipeline->Pipeline());
+			PipelineType* pipeline = (PipelineType*)stage.Pipeline.get();
+			cmd.bindPipeline(pipeline->BindPoint(), pipeline->Pipeline());
 		}
 		stage.Callback(cmd);
 		if (stage.Synchronization.BarrierCount()) {
@@ -238,7 +284,6 @@ RenderGraph::DataWrapper::~DataWrapper()
 
 ResourceDescriptor egx::RenderGraph::CreateResourceDescriptor(const PipelineType& pipeline)
 {
-	return {};
-	//return ResourceDescriptor(m_Data->m_Ctx, m_Data->m_DescriptorPool, pipeline.Reflection(), pipeline.GetDescriptorSetLayouts());
+	return ResourceDescriptor(m_Data->m_Ctx, m_Data->m_DescriptorPool, pipeline);
 }
 #endif

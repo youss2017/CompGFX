@@ -2,6 +2,7 @@
 #include "formatsize.hpp"
 #include <core/ScopedCommandBuffer.hpp>
 #include <imgui/backends/imgui_impl_vulkan.h>
+#include <stb/stb_image.h>
 
 using namespace egx;
 using namespace std;
@@ -357,6 +358,17 @@ ImTextureID Image2D::GetImGuiTextureID(vk::Sampler sampler, uint32_t viewId)
 	if (m_Data->m_TextureID) return m_Data->m_TextureID;
 	m_Data->m_TextureID = ImGui_ImplVulkan_AddTexture(sampler, GetView(viewId), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	return m_Data->m_TextureID;
+}
+
+Image2D egx::Image2D::CreateFromFile(const DeviceCtx& pCtx, const std::string& filePath, vk::Format format, int mipLevels, vk::ImageUsageFlags usage, vk::ImageLayout initalLayout, bool streaming)
+{
+	int w, h, c;
+	stbi_uc* pixels = stbi_load(filePath.c_str(), &w, &h, &c, 4);
+	Image2D image = Image2D(pCtx, w, h, format, mipLevels, usage, initalLayout, streaming);
+	image.SetImageData(0, pixels);
+	image.GenerateMipmaps();
+	free(pixels);
+	return image;
 }
 
 Image2D::DataWrapper::~DataWrapper() {

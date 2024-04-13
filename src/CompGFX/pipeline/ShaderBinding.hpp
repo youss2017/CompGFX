@@ -24,11 +24,12 @@ namespace egx
 	public:
 		ResourceDescriptor() = default;
 		ResourceDescriptor(const DeviceCtx& pCtx, const ResourceDescriptorPool& pool, const PipelineType& pipeline);
+		ResourceDescriptor(const DeviceCtx& pCtx, vk::DescriptorPool pool, const PipelineType& pipeline);
 
-		ResourceDescriptor& SetInput(int setId, int bindingId, const Buffer& particle_buffer);
+		ResourceDescriptor& SetInput(int setId, int bindingId, const Buffer& buffer);
 		ResourceDescriptor& SetInput(int setId, int bindingId, vk::ImageLayout layout, int viewId, const Image2D& image, vk::Sampler sampler = {});
 
-		ResourceDescriptor& SetInput(int bindingId, const Buffer& particle_buffer) { return SetInput(0, bindingId, particle_buffer); }
+		ResourceDescriptor& SetInput(int bindingId, const Buffer& buffer) { return SetInput(0, bindingId, buffer); }
 		ResourceDescriptor& SetInput(int bindingId, vk::ImageLayout layout, int viewId, const Image2D& image, vk::Sampler sampler = {})
 		{
 			return SetInput(0, bindingId, layout, viewId, image, sampler);
@@ -44,6 +45,7 @@ namespace egx
 		{
 			DeviceCtx m_Ctx;
 			ResourceDescriptorPool m_Pool;
+			vk::DescriptorPool m_vkPool = nullptr;
 			std::unique_ptr<PipelineType> m_Pipeline;
 			// [frame, [set id, set]]
 			std::map<uint32_t, std::map<uint32_t, vk::DescriptorSet>> m_Sets;
@@ -69,6 +71,7 @@ namespace egx
 		4) Integrate RenderGraph with swapchain
 	*/
 
+#if 1
 	class GraphSynchronization
 	{
 	public:
@@ -120,7 +123,6 @@ namespace egx
 		vk::DependencyInfo m_Dependency;
 	};
 
-#if 0
 	class RenderGraph
 	{
 	public:
@@ -149,7 +151,7 @@ namespace egx
 	private:
 		struct Stage
 		{
-			std::unique_ptr<PipelineType> Pipeline;
+			std::unique_ptr<IUniqueHandle> Pipeline;
 			std::function<void(vk::CommandBuffer)> Callback;
 			GraphSynchronization Synchronization;
 		};

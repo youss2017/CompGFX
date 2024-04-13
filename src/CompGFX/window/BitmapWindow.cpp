@@ -1,7 +1,7 @@
 #include "BitmapWindow.hpp"
 #include <scene/IScene.hpp>
 #include <pipeline/pipeline.hpp>
-#include <pipeline/RenderGraph.hpp>
+#include <pipeline/ShaderBinding.hpp>
 #include <pipeline/RenderTarget.hpp>
 #include <glm/vec4.hpp>
 

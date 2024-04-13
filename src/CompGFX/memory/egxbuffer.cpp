@@ -3,7 +3,7 @@
 
 using namespace egx;
 
-egx::Buffer::Buffer(const DeviceCtx &pCtx, size_t size, MemoryPreset memoryPreset, HostMemoryAccess memoryAccess, vk::BufferUsageFlags usage, bool isFrameResource)
+egx::Buffer::Buffer(const DeviceCtx& pCtx, size_t size, MemoryPreset memoryPreset, HostMemoryAccess memoryAccess, vk::BufferUsageFlags usage, bool isFrameResource)
 	: m_Size(size), m_MemoryAccessBehavior(memoryAccess), m_MemoryType(memoryPreset)
 	, IsFrameResource(isFrameResource)
 {
@@ -38,12 +38,12 @@ egx::Buffer::Buffer(const DeviceCtx &pCtx, size_t size, MemoryPreset memoryPrese
 		}
 	}
 }
-uint8_t &Buffer::operator[](size_t index)
+uint8_t& Buffer::operator[](size_t index)
 {
-	return *(((uint8_t *)Map()) + index);
+	return *(((uint8_t*)Map()) + index);
 }
 
-void Buffer::_Write(const void *pData, size_t offset, size_t size, int resourceId)
+void Buffer::_Write(const void* pData, size_t offset, size_t size, int resourceId)
 {
 	// Issue potential resize
 	GetHandle(resourceId);
@@ -55,13 +55,13 @@ void Buffer::_Write(const void *pData, size_t offset, size_t size, int resourceI
 
 		if (IsFrameResource)
 		{
-			uint8_t *pMemory = (uint8_t *)m_Data->m_MappedPtrs[resourceId];
+			uint8_t* pMemory = (uint8_t*)m_Data->m_MappedPtrs[resourceId];
 			memcpy(pMemory + offset, pData, size);
 			vmaFlushAllocation(m_Data->m_Ctx->Allocator, m_Data->m_Allocations[resourceId], offset, size);
 		}
 		else
 		{
-			uint8_t *pMemory = (uint8_t *)Map();
+			uint8_t* pMemory = (uint8_t*)Map();
 			memcpy(pMemory + offset, pData, size);
 			vmaFlushAllocation(m_Data->m_Ctx->Allocator, m_Data->m_Allocation, offset, size);
 		}
@@ -78,31 +78,39 @@ void Buffer::_Write(const void *pData, size_t offset, size_t size, int resourceI
 	stage._CopyTo(*cmd, *this, 0, offset, size, resourceId);
 }
 
-void Buffer::Write(const void *pData, size_t offset, size_t size)
+void Buffer::Write(const void* pData, size_t offset, size_t size)
 {
 	_Write(pData, offset, size, m_Data->m_Ctx->CurrentFrame);
 }
-void Buffer::Write(const void *pData)
+void Buffer::Write(const void* pData)
 {
 	Write(pData, 0, m_Size);
 }
-void *Buffer::Map()
+void* Buffer::Map()
 {
-	if (!m_Data->m_IsMapped)
+	// Issue potential resize
+	bool resizeFlag = false;
+	this->GetHandle(-1, &resizeFlag);
+	auto currentFrame = m_Data->m_Ctx->CurrentFrame;
+	if (!m_Data->m_IsMapped || resizeFlag)
 	{
 		if (!IsFrameResource)
 			vmaMapMemory(m_Data->m_Ctx->Allocator, m_Data->m_Allocation, &m_Data->m_MappedPtr);
 		else
 		{
-			for (uint32_t i = 0; i < m_Data->m_Ctx->FramesInFlight; i++)
-			{
-				vmaMapMemory(m_Data->m_Ctx->Allocator, m_Data->m_Allocations[i], &m_Data->m_MappedPtrs[i]);
+			if (resizeFlag) {
+				vmaMapMemory(m_Data->m_Ctx->Allocator, m_Data->m_Allocations[currentFrame], &m_Data->m_MappedPtrs[currentFrame]);
+			}
+			else {
+				for (auto i = 0; i < m_Data->m_Ctx->FramesInFlight; i++) {
+					vmaMapMemory(m_Data->m_Ctx->Allocator, m_Data->m_Allocations[i], &m_Data->m_MappedPtrs[i]);
+				}
 			}
 		}
 	}
 	m_Data->m_IsMapped = true;
 	if (IsFrameResource)
-		return m_Data->m_MappedPtrs[m_Data->m_Ctx->CurrentFrame];
+		return m_Data->m_MappedPtrs[currentFrame];
 	return m_Data->m_MappedPtr;
 }
 void Buffer::Unmap()
@@ -141,7 +149,7 @@ void Buffer::InvalidateToCpu()
 		vmaInvalidateAllocation(m_Data->m_Ctx->Allocator, m_Data->m_Allocation, 0, m_Size);
 }
 
-void Buffer::WriteAll(const void *pData, size_t offset, size_t size)
+void Buffer::WriteAll(const void* pData, size_t offset, size_t size)
 {
 	if (IsFrameResource)
 	{
@@ -154,12 +162,12 @@ void Buffer::WriteAll(const void *pData, size_t offset, size_t size)
 		_Write(pData, offset, size, 0);
 }
 
-void Buffer::WriteAll(const void *pData)
+void Buffer::WriteAll(const void* pData)
 {
 	WriteAll(pData, 0, m_Size);
 }
 
-void Buffer::Read(size_t offset, size_t size, void *pOutData)
+void Buffer::Read(size_t offset, size_t size, void* pOutData)
 {
 	if (m_MemoryType != MemoryPreset::DeviceOnly)
 	{
@@ -174,7 +182,7 @@ void Buffer::Read(size_t offset, size_t size, void *pOutData)
 	memcpy(pOutData, stage.Map(), size);
 }
 
-void Buffer::Read(void *pOutData)
+void Buffer::Read(void* pOutData)
 {
 	Read(0, m_Size, pOutData);
 }
@@ -193,10 +201,11 @@ bool Buffer::Resize(size_t size)
 		}
 	}
 	m_Size = size;
+	Unmap();
 	return true;
 }
 
-void Buffer::_CopyTo(vk::CommandBuffer cmd, Buffer &dst, size_t srcOffset, size_t dstOffset, size_t size, int dstResourceId)
+void Buffer::_CopyTo(vk::CommandBuffer cmd, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size, int dstResourceId)
 {
 	cmd.copyBuffer(GetHandle(dstResourceId), dst.GetHandle(dstResourceId), vk::BufferCopy(srcOffset, dstOffset, size));
 }
@@ -255,19 +264,21 @@ VkResult egx::Buffer::_CreateBufferVma(VkBuffer* pOutBuffer, VmaAllocation* pOut
 	return vmaCreateBuffer(m_Data->m_Ctx->Allocator, &createInfo, &allocCreateInfo, pOutBuffer, pOutAllocation, nullptr);
 }
 
-void Buffer::CopyTo(vk::CommandBuffer cmd, Buffer &dst, size_t srcOffset, size_t dstOffset, size_t size)
+void Buffer::CopyTo(vk::CommandBuffer cmd, Buffer& dst, size_t srcOffset, size_t dstOffset, size_t size)
 {
 	_CopyTo(cmd, dst, srcOffset, dstOffset, size, -1);
 }
 
-void Buffer::CopyTo(vk::CommandBuffer cmd, Buffer &dst)
+void Buffer::CopyTo(vk::CommandBuffer cmd, Buffer& dst)
 {
 	CopyTo(cmd, dst, 0, 0, m_Size);
 }
 
-vk::Buffer Buffer::GetHandle(int specificFrameIndex) const
+vk::Buffer Buffer::GetHandle(int specificFrameIndex, bool* pOutResizeFlag) const
 {
 	uint32_t frame = specificFrameIndex < 0 ? m_Data->m_Ctx->CurrentFrame : specificFrameIndex;
+	if (pOutResizeFlag)
+		*pOutResizeFlag = false;
 	if (m_Data->m_ResizeBufferFrameIds.size() == 0) {
 		return IsFrameResource ? m_Data->m_Buffers[frame] : m_Data->m_Buffer;
 	}
@@ -293,6 +304,9 @@ vk::Buffer Buffer::GetHandle(int specificFrameIndex) const
 				}
 			}
 
+			if (pOutResizeFlag)
+				*pOutResizeFlag = resize_flag;
+
 			return m_Data->m_Buffers[frame];
 		}
 		else {
@@ -303,6 +317,8 @@ vk::Buffer Buffer::GetHandle(int specificFrameIndex) const
 			{
 				throw std::runtime_error(cpp::Format("Could create buffer with {} bytes, usage={}, error code {}", m_Size, vk::to_string(Usage), vk::to_string(vk::Result(result))));
 			}
+			if (pOutResizeFlag)
+				*pOutResizeFlag = true;
 			return m_Data->m_Buffer;
 		}
 	}
