@@ -69,24 +69,6 @@ workspace "CompGFX"
         postbuildcommands { "cmd /c \"cd \"$(ProjectDir)\" && python postbuild.py\"" }
         
         
-    project "Sandbox"
-    kind "ConsoleApp"
-    language "C++"
-    location "src/Sandbox"
-        links { "CompGFX.lib" }
-        files { 
-            "src/Sandbox/**.h",
-            "src/Sandbox/**.hpp",
-            "src/Sandbox/**.c",
-            "src/Sandbox/**.cpp",
-        }
-        
-        filter { "system:Windows" }
-        links { "kernel32.lib", "user32.lib", "gdi32.lib", "glfw3.lib", "vulkan-1.lib", "shaderc_shared.lib" }
-        defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS", "BUILD_GRAPHICS_DLL=1", "NOMINMAX" }
-        postbuildcommands { "cmd /c \"cd \"$(ProjectDir)\" && python postbuild.py\"" }
-        dependson { "CompGFX" }
-        
 newaction {
     trigger = "clean",
     description = "Remove vs files.",

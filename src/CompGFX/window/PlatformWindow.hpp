@@ -33,9 +33,9 @@ namespace egx {
 
 		inline GLFWwindow* GetWindow() const { return m_window; }
 		bool ShouldClose();
-		inline int GetWidth() { return m_width; }
-		inline int GetHeight() { return m_height; }
-		inline bool IsWindowFocus() { return m_focus; }
+		int GetWidth();
+		int GetHeight();
+		bool IsWindowFocus();
 		bool IsWindowMinimized();
 
 		void CenterWindow();

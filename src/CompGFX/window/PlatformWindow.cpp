@@ -285,6 +285,23 @@ namespace egx {
 		return glfwWindowShouldClose(m_window);
 	}
 
+	 int PlatformWindow::GetWidth()
+	 {
+		 glfwGetWindowSize(m_window, &m_width, &m_height);
+		 return m_width;
+	 }
+
+	 int PlatformWindow::GetHeight()
+	 {
+		 glfwGetWindowSize(m_window, &m_width, &m_height);
+		 return m_height;
+	 }
+
+	 bool PlatformWindow::IsWindowFocus()
+	 {
+		 return m_focus;
+	 }
+
 	 bool PlatformWindow::IsWindowMinimized()
 	{
 		int w, h;

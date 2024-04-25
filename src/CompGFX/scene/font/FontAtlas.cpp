@@ -32,9 +32,10 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 			character_bitmap = _GenerateSdfCodepoint(fontSize, ch, &w, &h);
 		else
 			character_bitmap = _GenerateCodepoint(fontSize, ch, &w, &h);
-		lock_guard<mutex> g(m);
+		m.lock();
 		unordered_bitmaps.push_back({ ch, w, h, move(character_bitmap) });
 		total_pixel_area += w * h;
+		m.unlock();
 	};
 
 	if (multithreaded) {
@@ -59,9 +60,8 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 	dimension <<= 1;
 
 	CharMap.clear();
-	vector<CharacterInfo>& character_map = CharMap;
+	map<wchar_t, CharacterInfo>& character_map = CharMap;
 
-	character_map.reserve(m_CharacterSet.size());
 	vector<uint8_t> font_bitmap(dimension * dimension);
 	int cursor_x = 0;
 	int cursor_y = 0;
@@ -94,7 +94,7 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 			// loop through all character that are behind this character
 			vector<CharacterInfo> overlapping_characters;
 			overlapping_characters.reserve(5);
-			for (size_t i = character_map.size() - line_character_count - 1; i >= 0; i--) {
+			for (int32_t i = (int32_t)character_map.size() - line_character_count - 1; i >= 0; i--) {
 				const auto& previous_character = character_map[i];
 				int x_min = cinfo.start_x;
 				int x_max = x_min + cinfo.width;
@@ -117,7 +117,7 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 			cinfo.start_y = 0;
 			for (auto& overlapping_ch : overlapping_characters) {
 				int start_y = overlapping_ch.start_y + overlapping_ch.height;
-				cinfo.start_y = std::max(cinfo.start_y, start_y);
+				cinfo.start_y = std::max(cinfo.start_y, start_y) + 2;
 			}
 		}
 		// copy character bitmap to font bitmap
@@ -129,8 +129,8 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 			}
 		}
 		font_map_height = std::max(font_map_height, cinfo.start_y + cinfo.height);
-		cursor_x += w;
-		character_map.push_back(cinfo);
+		cursor_x += w + 2;
+		character_map[ch] = cinfo;
 		ch_bitmap.clear();
 	}
 
@@ -195,10 +195,10 @@ std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar
 	else {
 		upscale_resolution = targetResolution;
 	}
-	const uint32_t spread = upscale_resolution / 2;
-	uint32_t up_w, up_h;
+	const int32_t spread = upscale_resolution / 2;
+	int32_t up_w, up_h;
 
-	auto upscale_bitmap = _GenerateCodepoint(float(upscale_resolution), ch, &up_w, &up_h);
+	auto upscale_bitmap = _GenerateCodepoint(float(upscale_resolution), ch, (uint32_t*)&up_w, (uint32_t*)&up_h);
 
 	float widthScale = up_w / (float)upscale_resolution;
 	float heightScale = up_h / (float)upscale_resolution;
@@ -211,8 +211,8 @@ std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar
 	for (int y = 0; y < characterHeight; y++) {
 		for (int x = 0; x < characterWidth; x++) {
 			// map from [0, characterWidth] (font size scale) to [0, up_w]
-			uint32_t pixelX = uint32_t((x / (float)characterWidth) * up_w);
-			uint32_t pixelY = uint32_t((y / (float)characterHeight) * up_h);
+			int32_t pixelX = int32_t((x / (float)characterWidth) * up_w);
+			int32_t pixelY = int32_t((y / (float)characterHeight) * up_h);
 			///////////////////// find nearest pixel
 
 			auto read_pixel = [](const vector<uint8_t>& bitmap, int x, int y, int width, int height) -> bool {
@@ -220,20 +220,20 @@ std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar
 				uint8_t value = bitmap[y * width + x];
 				return value == 0xFF;
 			};
-			uint32_t minX = max(pixelX - spread, 0u);
-			uint32_t maxX = min(pixelX + spread, up_w);
-			uint32_t minY = max(pixelY - spread, 0u);
-			uint32_t maxY = min(pixelY + spread, up_h);
-			uint32_t minDistance = spread * spread;
+			int32_t minX = max(pixelX - spread, 0);
+			int32_t maxX = min(pixelX + spread, up_w);
+			int32_t minY = max(pixelY - spread, 0);
+			int32_t maxY = min(pixelY + spread, up_h);
+			int32_t minDistance = spread * spread;
 
 			if (m_OptimalQuaility) {
 				for (uint32_t yy = minY; yy < maxY; yy++) {
 					for (uint32_t xx = minX; xx < maxX; xx++) {
 						bool pixelState = upscale_bitmap[yy * up_w + xx] == 0xff;
 						if (pixelState) {
-							uint32_t dxSquared = (xx - pixelX) * (xx - pixelX);
-							uint32_t dySquared = (yy - pixelY) * (yy - pixelY);
-							uint32_t distanceSquared = dxSquared + dySquared;
+							int32_t dxSquared = (xx - pixelX) * (xx - pixelX);
+							int32_t dySquared = (yy - pixelY) * (yy - pixelY);
+							int32_t distanceSquared = dxSquared + dySquared;
 							minDistance = std::min(minDistance, distanceSquared);
 							if (xx >= pixelX) {
 								break;
@@ -246,18 +246,18 @@ std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar
 				for (uint32_t  yy = minY; yy < maxY; yy++) {
 					bool pixelState = upscale_bitmap[yy * up_w + pixelX];
 					if (pixelState) {
-						uint32_t dxSquared = 0;
-						uint32_t dySquared = (yy - pixelY) * (yy - pixelY);
-						uint32_t distanceSquared = dxSquared + dySquared;
+						int32_t dxSquared = 0;
+						int32_t dySquared = (yy - pixelY) * (yy - pixelY);
+						int32_t distanceSquared = dxSquared + dySquared;
 						minDistance = std::min(minDistance, distanceSquared);
 					}
 				}
 				for (uint32_t  xx = minX; xx < maxX; xx++) {
 					bool pixelState = upscale_bitmap[pixelY * up_w + xx];
 					if (pixelState) {
-						uint32_t dxSquared = (xx - pixelX) * (xx - pixelX);
-						uint32_t dySquared = 0;
-						uint32_t distanceSquared = dxSquared + dySquared;
+						int32_t dxSquared = (xx - pixelX) * (xx - pixelX);
+						int32_t dySquared = 0;
+						int32_t distanceSquared = dxSquared + dySquared;
 						minDistance = std::min(minDistance, distanceSquared);
 						if (xx >= pixelX) {
 							break;
@@ -289,4 +289,64 @@ void FontAtlas::SaveBmp(const std::string& fileName) const {
 void FontAtlas::SavePng(const std::string& fileName) const {
 	if (AtlasWidth <= 0 || AtlasHeight <= 0) return;
 	stbi_write_png(fileName.data(), AtlasWidth, AtlasHeight, 1, AtlasBmp.data(), AtlasWidth);
+}
+
+std::vector<FontAtlas::QuadVertex> egx::FontAtlas::GenerateTextMesh(const std::wstring& text, int x, int y, int screenWidth, int screenHeight, float pixelSize)
+{
+	vector<QuadVertex> mesh(text.size() * 6);
+
+	int i = 0;
+	float xoffset = (2.0f * x / screenWidth) - 1.0f;
+	float yoffset = (2.0f * y / screenHeight) - 1.0f;
+	for (const wchar_t c : text) {
+		const auto& bmpInfo = CharMap[c];
+		float cWidth  = ((pixelSize / screenWidth)) / 2.0f;
+		float cHeight = ((pixelSize / screenHeight)) / 2.0f;
+
+		float sx = bmpInfo.start_x / (float)AtlasWidth;
+		float sy = bmpInfo.start_y / (float)AtlasHeight;
+		float ex = (bmpInfo.width / (float)AtlasWidth) + sx;
+		float ey = (bmpInfo.height / (float)AtlasHeight) + sy;
+		
+		auto& v1 = mesh[i++];
+		auto& v2 = mesh[i++];
+		auto& v3 = mesh[i++];
+		auto& v4 = mesh[i++];
+		auto& v5 = mesh[i++];
+		auto& v6 = mesh[i++];
+
+		v1.x = xoffset;
+		v1.y = yoffset;
+		v1.u = sx;//0;
+		v1.v = ey;//1.0f;
+
+		v2.x = xoffset + cWidth;
+		v2.y = yoffset;
+		v2.u = ex;
+		v2.v = ey;
+
+		v3.x = xoffset;
+		v3.y = yoffset + cHeight;
+		v3.u = sx;
+		v3.v = sy;
+
+		v4.x = xoffset;
+		v4.y = yoffset + cHeight;
+		v4.u = sx;
+		v4.v = sy;
+
+		v5.x = xoffset + cWidth;
+		v5.y = yoffset;
+		v5.u = ex;
+		v5.v = ey;
+
+		v6.x = xoffset + cWidth;
+		v6.y = yoffset + cHeight;
+		v6.u = ex;
+		v6.v = sy;
+
+		xoffset += cWidth;
+	}
+
+	return mesh;
 }

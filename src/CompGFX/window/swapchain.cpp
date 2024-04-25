@@ -99,6 +99,8 @@ void ISwapchainController::Invalidate(bool blockQueue)
 
 void egx::ISwapchainController::Resize(int width, int height, bool blockQueue)
 {
+	if (!width || !height)
+		return;
 	m_Data->m_Width = width, m_Data->m_Height = height;
 	Invalidate(blockQueue);
 	for (auto& [callback, pUserData] : m_Data->m_ResizeCallbacks)

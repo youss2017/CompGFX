@@ -1,8 +1,10 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <map>
 #include <optional>
 #include <stb/stb_truetype.h>
+#include <mesh/MeshContainer.hpp>
 
 namespace egx {
 
@@ -65,8 +67,15 @@ namespace egx {
 		void SaveBmp(const std::string& fileName) const;
 		void SavePng(const std::string& fileName) const;
 
+		struct QuadVertex {
+			float x, y;
+			float u, v;
+		};
+
+		std::vector<QuadVertex> GenerateTextMesh(const std::wstring& text, int x, int y, int screenWidth, int screenHeight, float pixelSize);
+
 	public:
-		std::vector<CharacterInfo> CharMap;
+		std::map<wchar_t, CharacterInfo> CharMap;
 		std::vector<uint8_t> AtlasBmp;
 		uint32_t AtlasWidth = 0;
 		uint32_t AtlasHeight = 0;
