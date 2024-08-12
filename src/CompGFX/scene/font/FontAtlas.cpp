@@ -1,9 +1,7 @@
 #include "FontAtlas.hpp"
 #include <algorithm>
 #include <execution>
-#include <Utility/CppUtility.hpp>
 #include <stb/stb_image_write.h>
-#include <immintrin.h>
 using namespace std;
 using namespace egx;
 
@@ -71,6 +69,20 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 	for (auto& [ch, w, h, ch_bitmap] : bitmaps) {
 		CharacterInfo cinfo{};
 		cinfo.ch = ch, cinfo.width = w, cinfo.height = h;
+
+		// Load Font Metrics
+		int glyphIndex = stbtt_FindGlyphIndex(&m_StbFontInfoStructure, ch);
+		int advanceWidth, leftSideBearing;
+		stbtt_GetGlyphHMetrics(&m_StbFontInfoStructure, glyphIndex, &advanceWidth, &leftSideBearing);
+
+		int x0, y0, x1, y1;
+		stbtt_GetGlyphBitmapBox(&m_StbFontInfoStructure, glyphIndex, fontSize, fontSize, &x0, &y0, &x1, &y1);
+
+		cinfo.leftSideBearing = leftSideBearing * fontSize; // Equivalent to bitmap_left
+		cinfo.topSideBearing = y1; // Equivalent to bitmap_top
+
+		cinfo.advanceX = advanceWidth * fontSize; // Equivalent to advance.x
+
 		if (dimension - cursor_x >= w) {
 			// add character at end of line
 			cinfo.start_x = cursor_x;
@@ -150,6 +162,7 @@ void egx::FontAtlas::BuildAtlas(float fontSize, bool sdf, bool multithreaded)
 	else {
 		font_bitmap.resize(/* width */ dimension * /* height */ font_map_height);
 	}
+
 	AtlasBmp = move(font_bitmap);
 	AtlasWidth = dimension;
 	AtlasHeight = font_map_height;
@@ -243,7 +256,7 @@ std::vector<uint8_t> egx::FontAtlas::_GenerateSdfCodepoint(float fontSize, wchar
 				}
 			}
 			else {
-				for (uint32_t  yy = minY; yy < maxY; yy++) {
+				for (int32_t yy = minY; yy < maxY; yy++) {
 					bool pixelState = upscale_bitmap[yy * up_w + pixelX];
 					if (pixelState) {
 						int32_t dxSquared = 0;

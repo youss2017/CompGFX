@@ -23,9 +23,6 @@ cd ..
 cd stb
 git pull
 cd ..
-cd VulkanMemoryAllocator
-git pull
-cd ..
 cd glm
 git pull
 cd ..

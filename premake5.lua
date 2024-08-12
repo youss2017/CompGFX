@@ -56,9 +56,8 @@ workspace "CompGFX"
             "src/CompGFX/**.c",
             "src/CompGFX/**.cpp"
         }
-
         filter { "system:Windows" }
-        links { "glfw3.lib", "vulkan-1.lib" }
+        links { "glfw3.lib", "vulkan-1.lib", "Dependencies.lib" }
         filter "configurations:Debug"
         links { "spirv-cross-cored.lib", "shaderc_sharedd.lib" }
         filter "configurations:Release"
@@ -68,6 +67,20 @@ workspace "CompGFX"
         defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS", "NOMINMAX", "BUILD_GRAPHICS_DLL=1" }
         postbuildcommands { "cmd /c \"cd \"$(ProjectDir)\" && python postbuild.py\"" }
         
+    project "Engine-Tester"
+        dependson { "CompGFX" }
+        kind "ConsoleApp"
+        language "C++"
+        location "src/Engine-Tester"
+        files {
+            "src/Engine-Tester/**.h",
+            "src/Engine-Tester/**.hpp",
+            "src/Engine-Tester/**.c",
+            "src/Engine-Tester/**.cpp",
+            "src/Engine-Tester/shaders/**"
+        }
+        includedirs { "include/", "include/imgui" }
+        links { "CompGFX.lib" }
         
 newaction {
     trigger = "clean",

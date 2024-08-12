@@ -3,7 +3,6 @@ import os
 import shutil
 from pathlib import Path
 
-# extenions example '*.bmp'
 # copies files based on extension and recreates folder structure inside destination
 def copy(src, dest, ext):
     for file_path in glob.glob(os.path.join(src, '**', ext), recursive=True):

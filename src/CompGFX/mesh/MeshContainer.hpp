@@ -13,7 +13,7 @@ namespace egx {
 	};
 
 	enum class IndicesType {
-		Int16, Int32
+		UInt16, UInt32
 	};
 
 	class MeshContainer {
@@ -36,7 +36,7 @@ namespace egx {
 			uint32_t m_VerticesCount;
 			uint32_t m_IndicesCount;
 		};
-		IndicesType m_IndicesType = IndicesType::Int32;
+		IndicesType m_IndicesType = IndicesType::UInt32;
 		std::vector<std::unique_ptr<Mesh>> m_MeshData;
 	};
 

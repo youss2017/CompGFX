@@ -49,17 +49,17 @@ egx::IGraphicsPipeline::IGraphicsPipeline(const DeviceCtx& pCtx, const Shader& v
 	m_Data->m_Reflection = ShaderReflection::Combine({ vertex.Reflection(), fragment.Reflection() });
 	m_Data->m_RenderTarget = rt;
 	m_Data->m_Specification = specification;
-	if (rt.SwapchainFlag()) {
+	if (rt.SwapChainFlag()) {
 		m_Data->m_BlendStates[-1] = DefaultBlendingPreset();
 	}
 	for (auto& [id, attachment] : rt.EnumerateColorAttachments())
 	{
-		if (id < 0 && m_Data->m_RenderTarget.SwapchainFlag())
+		if (id < 0 && m_Data->m_RenderTarget.SwapChainFlag())
 			continue;
 		m_Data->m_BlendStates[id] = DefaultBlendingPreset();
 	}
-	if (rt.GetSwapchain().IsValid())
-		rt.GetSwapchain().AddResizeCallback(reinterpret_cast<IUniqueWithCallback*>(this), nullptr);
+	if (rt.GetSwapChain().IsValid())
+		rt.GetSwapChain().AddResizeCallback(reinterpret_cast<IUniqueWithCallback*>(this), nullptr);
 }
 
 void egx::IGraphicsPipeline::Invalidate()

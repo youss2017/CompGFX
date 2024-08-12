@@ -6,7 +6,8 @@ workspace "Dependencies"
         "./",
         "imgui/",
         "glfw/include/",
-        os.getenv('VULKAN_SDK') .. '/include'
+        os.getenv('VULKAN_SDK') .. '/include',
+        os.getenv('VULKAN_SDK') .. '/include/vma'
     }
     cppdialect "C++20"
     
@@ -41,8 +42,7 @@ workspace "Dependencies"
             "CompinedDependencies/*.cpp",
             "imgui/*.cpp",
             "imgui/backends/imgui_impl_vulkan.cpp",
-            "imgui/backends/imgui_impl_glfw.cpp",
-            "VulkanMemoryAllocator/src/*.cpp"
+            "imgui/backends/imgui_impl_glfw.cpp"
         }
         defines { "WINDOWS", "_CRT_SECURE_NO_WARNINGS", "NOMINMAX" }
         postbuildcommands { 

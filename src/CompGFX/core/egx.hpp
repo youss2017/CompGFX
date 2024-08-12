@@ -65,6 +65,7 @@ namespace egx
 	};
 
 	using DeviceCtx = std::shared_ptr<DeviceContext>;
+	using VulkanICD = std::shared_ptr<VulkanICDState>;
 
 	class VulkanICDState : public std::enable_shared_from_this<VulkanICDState>
 	{

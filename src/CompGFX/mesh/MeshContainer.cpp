@@ -80,7 +80,7 @@ MeshContainer& egx::MeshContainer::Load(const std::string& file, IndicesType typ
 		}
 
 		// Load indices
-		if (type == IndicesType::Int16) {
+		if (type == IndicesType::UInt16) {
 			auto& indices = mesh->m_Indice16;
 			indices.resize(scene->mMeshes[meshId]->mNumFaces * 3ull);
 			for (uint32_t faceId = 0, counter = 0; faceId < scene->mMeshes[meshId]->mNumFaces; faceId++) {
@@ -90,7 +90,7 @@ MeshContainer& egx::MeshContainer::Load(const std::string& file, IndicesType typ
 			}
 		}
 		else {
-			// Int32
+			// UInt32
 			auto& indices = mesh->m_Indice32;
 			indices.resize(scene->mMeshes[meshId]->mNumFaces * 3ull);
 			for (uint32_t faceId = 0, counter = 0; faceId < scene->mMeshes[meshId]->mNumFaces; faceId++) {
@@ -156,7 +156,7 @@ MeshContainer& egx::BufferedMeshContainer::Load(const std::string& file, Indices
 		vertexBuffer.Write(mesh->m_Vertices.data());
 		m_Data->m_VertexBuffers.push_back(vertexBuffer);
 
-		if (m_IndicesType == IndicesType::Int16) {
+		if (m_IndicesType == IndicesType::UInt16) {
 			Buffer indexBuffer(m_Data->m_Ctx, mesh->m_Indice16.size() * sizeof(uint16_t), MemoryPreset::DeviceOnly, HostMemoryAccess::None, vk::BufferUsageFlagBits::eIndexBuffer, false);
 			indexBuffer.Write(mesh->m_Indice16.data());
 			m_Data->m_IndexBuffers.push_back(indexBuffer);

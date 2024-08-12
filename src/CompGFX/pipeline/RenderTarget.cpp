@@ -1,5 +1,6 @@
 #include "RenderTarget.hpp"
 #include <memory/formatsize.hpp>
+#include <core/CommandBuffer.hpp>
 
 using namespace std;
 using namespace egx;
@@ -11,8 +12,8 @@ egx::IRenderTarget::IRenderTarget(const DeviceCtx& ctx, uint32_t width, uint32_t
 	m_Data->m_Ctx = ctx, m_Data->m_Width = width, m_Data->m_Height = height;
 }
 
-egx::IRenderTarget::IRenderTarget(const DeviceCtx& ctx, const ISwapchainController& swapchain, vk::ImageLayout initialLayout, 
-	vk::ImageLayout subpassLayout, vk::ImageLayout finalLayout, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp, 
+egx::IRenderTarget::IRenderTarget(const DeviceCtx& ctx, const ISwapchainController& swapchain, vk::ImageLayout initialLayout,
+	vk::ImageLayout subpassLayout, vk::ImageLayout finalLayout, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp,
 	vk::ClearValue clearColor, vk::AttachmentLoadOp stencilLoadOp, vk::AttachmentStoreOp stencilStoreOp)
 	: IRenderTarget(ctx, swapchain.Width(), swapchain.Height())
 {
@@ -26,19 +27,19 @@ egx::IRenderTarget::IRenderTarget(const DeviceCtx& ctx, const ISwapchainControll
 	m_Data->swapchain_info.clearColor = clearColor;
 	m_Data->swapchain_info.stencilLoadOp = stencilLoadOp;
 	m_Data->swapchain_info.stencilStoreOp = stencilStoreOp;
-	FetchSwapchainBackBuffers();
+	FetchSwapChainBackBuffers();
 	m_Data->m_Swapchain.AddResizeCallback(this, nullptr);
 }
 
 void egx::IRenderTarget::CallbackProtocol(void* pUserData)
 {
-	FetchSwapchainBackBuffers();
+	FetchSwapChainBackBuffers();
 	// resize all attachments
-	for(auto& [id, attachment] : m_Data->m_ColorAttachments) {
-		if(id < 0) continue;
+	for (auto& [id, attachment] : m_Data->m_ColorAttachments) {
+		if (id < 0) continue;
 		attachment.Image.RecreateImageWithDifferentResolution(Width(), Height());
 	}
-	if(m_Data->m_DepthAttachment) {
+	if (m_Data->m_DepthAttachment) {
 		m_Data->m_DepthAttachment->Image.RecreateImageWithDifferentResolution(Width(), Height());
 	}
 	Invalidate();
@@ -51,7 +52,7 @@ std::unique_ptr<IUniqueHandle> egx::IRenderTarget::MakeHandle() const
 	return rt;
 }
 
-void egx::IRenderTarget::FetchSwapchainBackBuffers()
+void egx::IRenderTarget::FetchSwapChainBackBuffers()
 {
 	m_Data->m_Width = m_Data->m_Swapchain.Width(), m_Data->m_Height = m_Data->m_Swapchain.Height();
 	auto backBuffers = m_Data->m_Swapchain.GetBackBuffers();
@@ -72,7 +73,7 @@ IRenderTarget& egx::IRenderTarget::CreateColorAttachment(int32_t id, vk::Format 
 	vk::ClearValue clearColor, vk::AttachmentLoadOp stencilLoadOp,
 	vk::AttachmentStoreOp stencilStoreOp)
 {
-	if(id < 0) {
+	if (id < 0) {
 		throw runtime_error(cpp::Format("Cannot create color attachments with id < 0; id = {}", id));
 	}
 	if (m_Data->m_ColorAttachments.contains(id))
@@ -231,6 +232,32 @@ void egx::IRenderTarget::Invalidate()
 	else {
 		m_Data->m_Framebuffer = m_Data->m_Ctx->Device.createFramebuffer(framebufferCreateInfo);
 	}
+
+	// 4) Update the image layouts
+	ScopedCommandBuffer cmd(m_Data->m_Ctx);
+	for (auto& [id, attach] : m_Data->m_ColorAttachments) {
+		vk::ImageSubresourceRange range;
+
+		range.setAspectMask(vk::ImageAspectFlagBits::eColor)
+			.setLayerCount(RemainingArrayLayers)
+			.setLevelCount(RemainingMipLevels);
+
+		vk::ImageMemoryBarrier2 memoryBarrier;
+		memoryBarrier.setSrcAccessMask(vk::AccessFlagBits2::eNone)
+			.setDstAccessMask(vk::AccessFlagBits2::eNone)
+			.setSrcStageMask(vk::PipelineStageFlagBits2::eAllGraphics)
+			.setDstStageMask(vk::PipelineStageFlagBits2::eAllGraphics)
+			.setOldLayout(vk::ImageLayout::eUndefined)
+			.setNewLayout(attach.Description.finalLayout)
+			.setImage(attach.Image.GetHandle())
+			.setSubresourceRange(range);
+
+		vk::DependencyInfo depInfo;
+		depInfo.setImageMemoryBarriers(memoryBarrier);
+
+		cmd->pipelineBarrier2(depInfo);
+	}
+	cmd.RunNow();
 }
 
 Image2D egx::IRenderTarget::GetAttachment(int32_t id)
@@ -285,14 +312,14 @@ void IRenderTarget::End(vk::CommandBuffer cmd)
 	cmd.endRenderPass2(endInfo);
 }
 
-void egx::IRenderTarget::BeginDearImguiFrame()
+void egx::IRenderTarget::BeginDearImGuiFrame()
 {
 	if (m_Data->m_DearImGuiFlag) {
 		m_Data->m_ImGuiController.BeginFrame();
 	}
 }
 
-void egx::IRenderTarget::EndDearImguiFrame(vk::CommandBuffer cmd)
+void egx::IRenderTarget::EndDearImGuiFrame(vk::CommandBuffer cmd)
 {
 	if (m_Data->m_DearImGuiFlag) {
 		m_Data->m_ImGuiController.EndFrame(cmd);

@@ -66,11 +66,13 @@ namespace egx
 		std::vector<vk::Image> GetBackBuffers() const { return m_Data->m_Ctx->Device.getSwapchainImagesKHR(m_Data->m_Swapchain); }
 		vk::Format GetFormat() const { return m_Data->m_Format; }
 
-		/// @brief Acquires next frame from swapchain
-		/// @return ImageReadySemaphore, you must wait on this semaphore before drawing onto swapchain IRenderTarget
+		/// <summary>
+		/// Acquires next frame from swapchain
+		/// </summary>
+		/// <returns>ImageReadySemaphore, you must wait on this semaphore before drawing onto SwapChain IRenderTarget</returns>
 		vk::Semaphore Acquire();
 		uint32_t AcquireFullLock();
-		inline void Present(vk::Semaphore semaphore) { Present({ semaphore }); }
+
 		void Present(const std::vector<vk::Semaphore>& presentReadySemaphore);
 		// Presents using PresentWaitSemaphore
 		void Present() {
@@ -83,6 +85,14 @@ namespace egx
 		virtual std::unique_ptr<IUniqueHandle> MakeHandle() const override;
 		virtual std::pair<vk::Semaphore, vk::PipelineStageFlagBits> GetCurrentSignalSemaphore() const override;
 		virtual bool IsUsingSignalSemaphore() const override;
+
+	private:
+		/// <summary>
+		/// Manages window resize
+		/// </summary>
+		/// <param name="result">true if need to recall Acquire()</param>
+		/// <returns></returns>
+		bool _HandleAcquireError(vk::Result result);
 
 	private:
 		struct DataWrapper

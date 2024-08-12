@@ -2,6 +2,9 @@
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
+
 using namespace egx;
 using namespace std;
 

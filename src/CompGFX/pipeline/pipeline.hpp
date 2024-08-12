@@ -11,11 +11,14 @@ namespace egx
 	class PipelineType : public IUniqueHandle
 	{
 	public:
-		virtual inline vk::PipelineBindPoint BindPoint() const = 0;
-		virtual inline vk::Pipeline Pipeline() const = 0;
-		virtual inline std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const = 0;
-		virtual inline ShaderReflection Reflection() const = 0;
+		virtual vk::PipelineBindPoint BindPoint() const = 0;
+		virtual vk::Pipeline Pipeline() const = 0;
+		virtual std::map<uint32_t, vk::DescriptorSetLayout> GetDescriptorSetLayouts() const = 0;
+		virtual ShaderReflection Reflection() const = 0;
 		virtual vk::PipelineLayout Layout() const = 0;
+
+		virtual void Bind(vk::CommandBuffer cmd) const = 0;
+
 	};
 
 	class NullPipelineType : public PipelineType {
@@ -51,6 +54,11 @@ namespace egx
 			std::unique_ptr<ComputePipeline> handle = std::make_unique<ComputePipeline>();
 			handle->m_Data = m_Data;
 			return handle;
+		}
+
+		virtual void Bind(vk::CommandBuffer cmd) const override
+		{
+			cmd.bindPipeline(BindPoint(), Pipeline());
 		}
 
 	private:
@@ -199,6 +207,11 @@ namespace egx
 			state.alphaBlendOp = VK_BLEND_OP_ADD;
 			state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 			return state;
+		}
+
+		virtual void Bind(vk::CommandBuffer cmd) const override
+		{
+			cmd.bindPipeline(BindPoint(), Pipeline());
 		}
 
 		IGraphicsPipeline& SetRenderTarget(const IRenderTarget& renderTarget) { m_Data->m_RenderTarget = renderTarget; return *this; }

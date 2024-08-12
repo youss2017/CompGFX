@@ -1,7 +1,7 @@
 #include "DearImGuiController.hpp"
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
-#include <core/ScopedCommandBuffer.hpp>
+#include <core/CommandBuffer.hpp>
 
 using namespace std;
 using namespace egx;
@@ -31,15 +31,10 @@ egx::DearImGuiController::DearImGuiController(const DeviceCtx& ctx, GLFWwindow* 
 	init_info.MinImageCount = ctx->FramesInFlight;
 	init_info.ImageCount = ctx->FramesInFlight;
 	init_info.CheckVkResultFn = NULL;
-	ImGui_ImplVulkan_Init(&init_info, renderpass);
+	init_info.RenderPass = renderpass;
+	ImGui_ImplVulkan_Init(&init_info);
 
 	m_Data->m_ImGuiContext = ImGui::GetCurrentContext();
-
-	// Upload Fonts
-	ScopedCommandBuffer cmd(ctx);
-	ImGui_ImplVulkan_CreateFontsTexture(cmd.Get());
-	cmd.RunNow();
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 ImGuiContext* egx::DearImGuiController::GetContext()

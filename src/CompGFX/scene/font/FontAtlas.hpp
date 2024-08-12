@@ -16,6 +16,9 @@ namespace egx {
 			int start_y;
 			int width;
 			int height;
+			int leftSideBearing;
+			int topSideBearing;
+			int advanceX;
 		};
 
 	public:

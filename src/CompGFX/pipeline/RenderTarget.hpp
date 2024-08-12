@@ -53,14 +53,14 @@ namespace egx
         virtual void Begin(vk::CommandBuffer cmd);
         virtual void End(vk::CommandBuffer cmd);
 
-        virtual void BeginDearImguiFrame();
+        virtual void BeginDearImGuiFrame();
         /// <summary>
         /// This function must be called before End() because
         /// this function issues the draw calls for imgui and it must
         /// be within the render pass.
         /// </summary>
         /// <param name="cmd"></param>
-        virtual void EndDearImguiFrame(vk::CommandBuffer cmd);
+        virtual void EndDearImGuiFrame(vk::CommandBuffer cmd);
 
         virtual Image2D GetAttachment(int32_t id);
         virtual vk::AttachmentDescription2 GetAttachmentDescription(int32_t id);
@@ -70,15 +70,15 @@ namespace egx
         virtual uint32_t Width() const { return m_Data->m_Width; }
         virtual uint32_t Height() const { return m_Data->m_Height; }
         virtual vk::RenderPass RenderPass() const { return m_Data->m_RenderPass; }
-        inline bool SwapchainFlag() const { return m_Data->m_SwapchainFlag; }
-        inline ISwapchainController GetSwapchain() const { return m_Data->m_Swapchain; }
+        inline bool SwapChainFlag() const { return m_Data->m_SwapchainFlag; }
+        inline ISwapchainController GetSwapChain() const { return m_Data->m_Swapchain; }
 
     public:
         virtual std::unique_ptr<IUniqueHandle> MakeHandle() const override;
         virtual void CallbackProtocol(void* pUserData) override;
 
     private:
-        void FetchSwapchainBackBuffers();
+        void FetchSwapChainBackBuffers();
 
     private:
         struct DataWrapper

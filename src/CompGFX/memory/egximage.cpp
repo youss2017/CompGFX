@@ -1,6 +1,6 @@
 #include "egximage.hpp"
 #include "formatsize.hpp"
-#include <core/ScopedCommandBuffer.hpp>
+#include <core/CommandBuffer.hpp>
 #include <imgui/backends/imgui_impl_vulkan.h>
 #include <stb/stb_image.h>
 

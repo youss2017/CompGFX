@@ -26,7 +26,7 @@ void egx::IScene::Process()
 
 	if (m_RT) {
 		m_RT->Begin(cmd);
-		m_RT->BeginDearImguiFrame();
+		m_RT->BeginDearImGuiFrame();
 	}
 
 	for (auto& stage : m_Stages) {
@@ -34,7 +34,7 @@ void egx::IScene::Process()
 	}
 
 	if (m_RT) {
-		m_RT->EndDearImguiFrame(cmd);
+		m_RT->EndDearImGuiFrame(cmd);
 		m_RT->End(cmd);
 	}
 	cmd.end();

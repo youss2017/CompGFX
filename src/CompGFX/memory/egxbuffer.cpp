@@ -1,5 +1,5 @@
 #include "egxbuffer.hpp"
-#include <core/ScopedCommandBuffer.hpp>
+#include <core/CommandBuffer.hpp>
 
 using namespace egx;
 

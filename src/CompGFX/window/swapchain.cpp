@@ -31,7 +31,7 @@ ISwapchainController::ISwapchainController(const DeviceCtx &pCtx, PlatformWindow
 void ISwapchainController::Invalidate(bool blockQueue)
 {
 	if (blockQueue)
-		m_Data->m_Ctx->Queue.waitIdle();
+		m_Data->m_Ctx->Device.waitIdle();
 
 	auto physicalDevice = m_Data->m_Ctx->PhysicalDeviceQuery.PhysicalDevice;
 	auto props = physicalDevice.getProperties();
@@ -114,18 +114,10 @@ vk::Semaphore ISwapchainController::Acquire()
 	const auto errorCode = m_Data->m_Ctx->Device.acquireNextImageKHR(m_Data->m_Swapchain, numeric_limits<uint64_t>::max(), imageReadySemaphore, {}, &m_Data->m_CurrentBackBufferIndex);
 	m_Data->m_Ctx->CurrentFrame = m_Data->m_Ctx->CurrentFrame;
 
-	if (errorCode == vk::Result::eErrorOutOfDateKHR || errorCode == vk::Result::eSuboptimalKHR)
-	{
-		if (m_Data->m_ResizeOnWindowResize)
-		{
-			Resize(m_Data->m_Window->GetWidth(), m_Data->m_Window->GetHeight(), true);
-			return Acquire();
-		}
+	if (_HandleAcquireError(errorCode)) {
+		return Acquire();
 	}
-	else if (errorCode != vk::Result::eSuccess && errorCode != vk::Result::eErrorOutOfDateKHR && errorCode != vk::Result::eSuboptimalKHR)
-	{
-		// (TODO) Alert user
-	}
+
 	m_Data->m_PresentWait[0] = imageReadySemaphore;
 	m_Data->m_CurrentAcquireSemaphore = imageReadySemaphore;
 	return imageReadySemaphore;
@@ -143,17 +135,8 @@ uint32_t ISwapchainController::AcquireFullLock()
 	m_Data->m_Ctx->Device.waitForFences(m_Data->m_AcquireFullLock, true, UINT64_MAX);
 	m_Data->m_Ctx->Device.resetFences(m_Data->m_AcquireFullLock);
 
-	if (errorCode == vk::Result::eErrorOutOfDateKHR || errorCode == vk::Result::eSuboptimalKHR)
-	{
-		if (m_Data->m_ResizeOnWindowResize)
-		{
-			Resize(m_Data->m_Window->GetWidth(), m_Data->m_Window->GetHeight(), true);
-			return AcquireFullLock();
-		}
-	}
-	else if (errorCode != vk::Result::eSuccess && errorCode != vk::Result::eSuboptimalKHR)
-	{
-		// (TODO) Alert user
+	if (_HandleAcquireError(errorCode)) {
+		return AcquireFullLock();
 	}
 
 	m_Data->m_PresentWait[0] = imageReadySemaphore;
@@ -167,7 +150,9 @@ void ISwapchainController::Present(const std::vector<vk::Semaphore> &presentRead
 				.setSwapchains(m_Data->m_Swapchain)
 				.setImageIndices(m_Data->m_CurrentBackBufferIndex);
 	auto result = m_Data->m_Ctx->Queue.presentKHR(presentInfo);
-	if (result != vk::Result::eSuccess) {
+	if (result != vk::Result::eSuccess &&
+			m_Data->m_Window->GetWidth() &&
+			m_Data->m_Window->GetHeight()) {
 		LOG(WARNING, "vkQueuePresentKHR(...) = ", vk::to_string(result));
 	}
 	m_Data->m_Ctx->NextFrame();
@@ -189,6 +174,26 @@ std::pair<vk::Semaphore, vk::PipelineStageFlagBits> egx::ISwapchainController::G
 bool egx::ISwapchainController::IsUsingSignalSemaphore() const
 {
 	return m_Data->m_CurrentAcquireSemaphore != nullptr;
+}
+
+bool egx::ISwapchainController::_HandleAcquireError(vk::Result errorCode)
+{
+	if (errorCode == vk::Result::eErrorOutOfDateKHR || errorCode == vk::Result::eSuboptimalKHR)
+	{
+		if (m_Data->m_ResizeOnWindowResize &&
+			m_Data->m_Window->GetWidth() > 0 &&
+			m_Data->m_Window->GetHeight() > 0)
+		{
+			Resize(m_Data->m_Window->GetWidth(), m_Data->m_Window->GetHeight(), true);
+			return true;
+		}
+	}
+	else if (errorCode != vk::Result::eSuccess && errorCode != vk::Result::eErrorOutOfDateKHR && errorCode != vk::Result::eSuboptimalKHR)
+	{
+		// (TODO) Alert user
+		throw runtime_error("SwapChain encountered invalid state.");
+	}
+	return false;
 }
 
 ISwapchainController::DataWrapper::~DataWrapper()
